@@ -12,6 +12,7 @@ jobs:
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 4.13.1
+      - run: opam install dune
       - run: opam install ppx_deriving visitors easy_logging zarith yojson core_unix odoc menhir
       - run: make build
       - run: make test
