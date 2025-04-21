@@ -1273,7 +1273,9 @@ pub fn test_crate::sum_array<const N : usize>(@1: Array<u32, const N : usize>) -
             storage_live(@7)
             storage_live(@8)
             @8 := copy (i@2)
+            storage_live(@10)
             @10 := &a@1
+            storage_live(@11)
             @11 := @ArrayIndexShared<'_, u32, const N : usize>(move (@10), copy (@8))
             @7 := copy (*(@11))
             s@3 := copy (s@3) + move (@7)
