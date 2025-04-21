@@ -82,10 +82,15 @@ impl<'a> IndexVisitor<'a> {
             .into_ty()
         };
 
-        // Push the statement:
-        //`tmp0 = &{mut}p`
+        // Push the statements:
+        // `storage_live tmp0`
+        // `tmp0 = &{mut}p`
         let input_var = {
             let input_var = self.fresh_var(None, input_ty);
+
+            let live_kind = RawStatement::StorageLive(input_var.local_id());
+            self.statements.push(Statement::new(self.span, live_kind));
+
             let kind = RawStatement::Assign(
                 input_var.clone(),
                 Rvalue::Ref(subplace.clone(), BorrowKind::mutable(mut_access)),
@@ -111,8 +116,12 @@ impl<'a> IndexVisitor<'a> {
             _ => unreachable!(),
         };
         if from_end {
+            // `storage_live(len_var)`
+            // `len_var = len(p)`
             let usize_ty = TyKind::Literal(LiteralTy::Integer(IntegerTy::Usize)).into_ty();
             let len_var = self.fresh_var(None, usize_ty.clone());
+            let live_kind = RawStatement::StorageLive(len_var.local_id());
+            self.statements.push(Statement::new(self.span, live_kind));
             let kind = RawStatement::Assign(
                 len_var.clone(),
                 Rvalue::Len(
@@ -122,13 +131,20 @@ impl<'a> IndexVisitor<'a> {
                 ),
             );
             self.statements.push(Statement::new(self.span, kind));
-            // `index_var = len(p) - last_arg`
+
+            // `storage_live(index_var)`
+            // `index_var = len_var - last_arg`
+            // `storage_dead(len_var)`
             let index_var = self.fresh_var(None, usize_ty);
+            let live_kind = RawStatement::StorageLive(index_var.local_id());
+            self.statements.push(Statement::new(self.span, live_kind));
             let kind = RawStatement::Assign(
                 index_var.clone(),
-                Rvalue::BinaryOp(BinOp::Sub, Operand::Copy(len_var), last_arg),
+                Rvalue::BinaryOp(BinOp::Sub, Operand::Copy(len_var.clone()), last_arg),
             );
             self.statements.push(Statement::new(self.span, kind));
+            let dead_kind = RawStatement::StorageDead(len_var.local_id());
+            self.statements.push(Statement::new(self.span, dead_kind));
             args.push(Operand::Copy(index_var));
         } else {
             args.push(last_arg);
@@ -138,6 +154,8 @@ impl<'a> IndexVisitor<'a> {
         // `tmp1 = {Array,Slice}{Mut,Shared}{Index,SubSlice}(move tmp0, <other args>)`
         let output_var = {
             let output_var = self.fresh_var(None, output_ty);
+            let live_kind = RawStatement::StorageLive(output_var.local_id());
+            self.statements.push(Statement::new(self.span, live_kind));
             let index_call = Call {
                 func: indexing_function,
                 args,
