@@ -29,18 +29,13 @@ let int_of_json (ctx : 'ctx) (js : json) : (int, string) result =
 
 let char_of_json (ctx : 'ctx) (js : json) : (Uchar.t, string) result =
   match js with
-  | `String c -> (
+  | `String c ->
       if String.length c > 4 then
         Error ("char_of_json: stricly more than four bytes in: " ^ show js)
       else
         (* FIXME: OCaml 4.14.0 adds String.get_utf_8_uchar, which would have been perfect here.
            We're on OCaml 4.13 for now, so we do our poor man's version of it. *)
-        let char_i =
-          String.fold_right (fun c acc -> (acc lsl 8) + Char.code c) c 0
-        in
-        try Ok (Uchar.of_int char_i)
-        with Invalid_argument _ ->
-          Error "char_of_json: invalid unicode character")
+        Ok (Uchar.get_utf_8_uchar (String.to_bytes c) 0)
   | _ -> Error ("char_of_json: not a char: " ^ show js)
 
 let rec of_json_list (a_of_json : 'ctx -> json -> ('a, string) result)
