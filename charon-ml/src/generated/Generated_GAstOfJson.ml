@@ -1522,7 +1522,7 @@ and literal_of_json (ctx : of_json_ctx) (js : json) : (literal, string) result =
         let* bool_ = bool_of_json ctx bool_ in
         Ok (VBool bool_)
     | `Assoc [ ("Char", char_) ] ->
-        let* char_ = string_of_json ctx char_ in
+        let* char_ = char_of_json ctx char_ in
         Ok (VChar char_)
     | `Assoc [ ("ByteStr", byte_str) ] ->
         let* byte_str = list_of_json int_of_json ctx byte_str in
