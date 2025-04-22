@@ -172,7 +172,8 @@ impl<'a> GenerateCtx<'a> {
 fn type_to_ocaml_call(ctx: &GenerateCtx, ty: &Ty) -> String {
     match ty.kind() {
         TyKind::Literal(LiteralTy::Bool) => "bool_of_json".to_string(),
-        TyKind::Literal(LiteralTy::Char) => "char_of_json".to_string(),
+        // We need to store Rust chars (4 bytes) in OCaml strings, as OCaml chars are only 1 byte.
+        TyKind::Literal(LiteralTy::Char) => "string_of_json".to_string(),
         TyKind::Literal(LiteralTy::Integer(_)) => "int_of_json".to_string(),
         TyKind::Literal(LiteralTy::Float(_)) => "float_of_json".to_string(),
         TyKind::Adt(adt_kind, generics) => {
@@ -216,7 +217,7 @@ fn type_to_ocaml_call(ctx: &GenerateCtx, ty: &Ty) -> String {
 fn type_to_ocaml_name(ctx: &GenerateCtx, ty: &Ty) -> String {
     match ty.kind() {
         TyKind::Literal(LiteralTy::Bool) => "bool".to_string(),
-        TyKind::Literal(LiteralTy::Char) => "char".to_string(),
+        TyKind::Literal(LiteralTy::Char) => "string".to_string(),
         TyKind::Literal(LiteralTy::Integer(_)) => "int".to_string(),
         TyKind::Literal(LiteralTy::Float(_)) => "float_of_json".to_string(),
         TyKind::Adt(adt_kind, generics) => {

@@ -32,7 +32,7 @@ and literal =
   | VScalar of scalar_value
   | VFloat of float_value
   | VBool of bool
-  | VChar of char
+  | VChar of string
   | VByteStr of int list
   | VStr of string
 
