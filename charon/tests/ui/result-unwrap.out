@@ -54,9 +54,9 @@ where
     let @5: &'_ (E); // anonymous local
 
     storage_live(e@2)
-    storage_live(@5)
-    storage_live(@4)
     storage_live(@3)
+    storage_live(@4)
+    storage_live(@5)
     match self@1 {
         0 => {
         },
@@ -117,8 +117,8 @@ pub fn core::fmt::num::{impl core::fmt::Debug for u32}#86::fmt<'_0, '_1, '_2>(@1
     let @7: u32; // anonymous local
     let @8: u32; // anonymous local
 
-    storage_live(@8)
     storage_live(@7)
+    storage_live(@8)
     storage_live(@3)
     storage_live(@4)
     @4 := copy (((*(f@2)).options).flags)

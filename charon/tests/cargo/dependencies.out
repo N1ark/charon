@@ -104,9 +104,9 @@ fn test_cargo_dependencies::main()
     let @20: &'_ (u32); // anonymous local
     let @21: core::option::Option<core::fmt::Arguments<'_>>[core::marker::Sized<core::fmt::Arguments<'_>>]; // anonymous local
 
+    storage_live(kind@15)
     storage_live(@16)
     storage_live(@17)
-    storage_live(kind@15)
     storage_live(@18)
     storage_live(@19)
     storage_live(@20)

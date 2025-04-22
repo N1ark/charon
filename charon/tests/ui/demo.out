@@ -168,8 +168,8 @@ where
     let @9: u32; // anonymous local
     let @10: u32; // anonymous local
 
-    storage_live(@8)
     storage_live(@7)
+    storage_live(@8)
     storage_live(@9)
     storage_live(@10)
     match *(l@1) {
@@ -234,11 +234,11 @@ where
     let @14: u32; // anonymous local
     let @15: u32; // anonymous local
 
-    storage_live(@14)
-    storage_live(@13)
-    storage_live(@15)
     storage_live(@11)
     storage_live(@12)
+    storage_live(@13)
+    storage_live(@14)
+    storage_live(@15)
     storage_live(@3)
     storage_live(@4)
     match *(l@1) {
@@ -311,12 +311,12 @@ where
     let @9: &'_ mut (test_crate::CList<T>[@TraitClause0]); // anonymous local
     let @10: (); // anonymous local
 
-    storage_live(@6)
-    storage_live(tl@5)
     storage_live(x@4)
+    storage_live(tl@5)
+    storage_live(@6)
     storage_live(@7)
-    storage_live(@9)
     storage_live(@8)
+    storage_live(@9)
     storage_live(@10)
     storage_live(@3)
     loop {

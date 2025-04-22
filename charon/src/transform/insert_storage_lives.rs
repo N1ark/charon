@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use std::ops::ControlFlow::{self, Continue};
 
 use derive_generic_visitor::Visitor;
+use itertools::Itertools;
 
 use crate::ast::*;
 use crate::transform::TransformCtx;
@@ -72,12 +73,16 @@ impl TransformPass for Transform {
                 Body::Structured(body) => {
                     let first_span = body.body.statements.first().unwrap().span;
                     let new_statements =
-                        storage_visitor.unmentioned_locals.into_iter().map(|local| {
-                            llbc_ast::Statement::new(
-                                first_span,
-                                llbc_ast::RawStatement::StorageLive(local),
-                            )
-                        });
+                        storage_visitor
+                            .unmentioned_locals
+                            .iter()
+                            .sorted()
+                            .map(|local| {
+                                llbc_ast::Statement::new(
+                                    first_span,
+                                    llbc_ast::RawStatement::StorageLive(*local),
+                                )
+                            });
                     body.body.statements.splice(0..0, new_statements);
                 }
                 Body::Unstructured(body) => {
@@ -88,12 +93,16 @@ impl TransformPass for Transform {
                         first_block.terminator.span
                     };
                     let new_statements =
-                        storage_visitor.unmentioned_locals.into_iter().map(|local| {
-                            ullbc_ast::Statement::new(
-                                first_span,
-                                ullbc_ast::RawStatement::StorageLive(local),
-                            )
-                        });
+                        storage_visitor
+                            .unmentioned_locals
+                            .iter()
+                            .sorted()
+                            .map(|local| {
+                                ullbc_ast::Statement::new(
+                                    first_span,
+                                    ullbc_ast::RawStatement::StorageLive(*local),
+                                )
+                            });
                     first_block.statements.splice(0..0, new_statements);
                 }
             }

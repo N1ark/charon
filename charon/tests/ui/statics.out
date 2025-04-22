@@ -22,9 +22,9 @@ fn test_crate::constant()
     let @7: usize; // anonymous local
     let @8: usize; // anonymous local
 
-    storage_live(@8)
     storage_live(@6)
     storage_live(@7)
+    storage_live(@8)
     storage_live(_val@1)
     @6 := test_crate::constant::CONST
     _val@1 := move (@6)
@@ -130,10 +130,10 @@ fn test_crate::mut_static()
     let @15: *mut usize; // anonymous local
 
     storage_live(@11)
-    storage_live(@15)
-    storage_live(@14)
     storage_live(@12)
     storage_live(@13)
+    storage_live(@14)
+    storage_live(@15)
     storage_live(_val@1)
     storage_live(@2)
     @11 := &raw mut test_crate::mut_static::MUT_STATIC
