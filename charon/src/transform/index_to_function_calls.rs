@@ -86,7 +86,6 @@ impl<'a> IndexVisitor<'a> {
         };
 
         // Push the statements:
-        // `storage_live tmp0`
         // `tmp0 = &{mut}p`
         let input_var = {
             let input_var = self.fresh_var(None, input_ty);
