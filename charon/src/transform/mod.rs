@@ -146,7 +146,7 @@ pub static SHARED_FINALIZING_PASSES: &[Pass] = &[
     // # Micro-pass: remove the locals which are never used.
     NonBody(&remove_unused_locals::Transform),
     // Insert storage lives for locals that are always allocated at the beginning of the function.
-    UnstructuredBody(&insert_storage_lives::Transform),
+    NonBody(&insert_storage_lives::Transform),
     // # Micro-pass: remove the useless `StatementKind::Nop`s.
     NonBody(&remove_nops::Transform),
     // Monomorphize the functions and types.

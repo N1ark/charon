@@ -11,6 +11,7 @@ pub fn test_crate::incr<'_0>(@1: &'_0 mut (Slice<u32>))
     let @6: &'_ (Slice<u32>); // anonymous local
     let @7: &'_ (u32); // anonymous local
 
+    storage_live(@3)
     storage_live(@2)
     @2 := const (0 : usize)
     storage_live(@6)

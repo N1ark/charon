@@ -118,6 +118,9 @@ fn test_crate::slice_pat3()
     let @19: &'_ (Slice<i32>); // anonymous local
     let @20: &'_ (i32); // anonymous local
 
+    storage_live(@9)
+    storage_live(@10)
+    storage_live(@8)
     storage_live(slice@1)
     storage_live(@2)
     storage_live(@3)
