@@ -435,7 +435,7 @@ let match_literal (pl : literal) (l : Values.literal) : bool =
   match (pl, l) with
   | LInt pv, VScalar v -> pv = v.value
   | LBool pv, VBool v -> pv = v
-  | LChar pv, VChar v -> String.make 1 pv = v
+  | LChar pv, VChar v -> Uchar.of_char pv = v
   | _ -> false
 
 let rec match_name_with_generics (ctx : 'fun_body ctx) (c : match_config)
@@ -910,7 +910,7 @@ let literal_to_pattern (_c : to_pat_config) (lit : Values.literal) : literal =
   match lit with
   | VScalar sv -> LInt sv.value
   | VBool v -> LBool v
-  | VChar v when String.length v = 1 -> LChar v.[0]
+  | VChar v when Uchar.is_char v -> LChar (Uchar.to_char v)
   | VChar _ ->
       raise (Failure "Can't convert non-ASCII character literal to pattern")
   | VFloat _ | VStr _ | VByteStr _ ->
