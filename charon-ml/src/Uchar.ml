@@ -1,5 +1,9 @@
 include Stdlib.Uchar
 
+(* FIXME: Taken from https://github.com/ocaml/ocaml/blob/trunk/stdlib/bytes.ml
+   We're stuck in OCaml 4.13, but these become available from 4.14. Once we get a new OCaml
+   version, remove all this and directly use the methods provided by Bytes/Str/Uchar. *)
+
 let dec_invalid n = (n lsl 24) lor 0xFFFD
 let[@inline] dec_ret n u = ((8 lor n) lsl n) lor u
 let[@inline] not_in_x80_to_xBF b = b lsr 6 <> 0b10
