@@ -133,16 +133,8 @@ let get_utf_8_uchar b i =
 
 let get_utf_8_uchar b i = of_int @@ get_utf_8_uchar b i
 
-let to_string =
-  let rec aux acc = function
-    | 0 -> acc
-    | n ->
-        let byte = Char.chr @@ (n land 0xFF) in
-        let n = n lsr 8 in
-        let bytes = Bytes.extend acc 1 0 in
-        Bytes.set bytes 0 byte;
-        aux bytes n
-  in
-  fun c -> String.of_bytes (aux Bytes.empty (to_int c))
+let pp fmt u =
+  if is_char u then Format.fprintf fmt "'%c'" (to_char u)
+  else Format.fprintf fmt "'\\x%04i'" (to_int u)
 
-let pp fmt u = Format.fprintf fmt "%s" (to_string u)
+let to_string u = Format.asprintf "%a" pp u
