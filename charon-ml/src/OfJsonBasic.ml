@@ -33,9 +33,10 @@ let char_of_json (ctx : 'ctx) (js : json) : (Uchar.t, string) result =
       if String.length c > 4 then
         Error ("char_of_json: stricly more than four bytes in: " ^ show js)
       else
-        (* FIXME: OCaml 4.14.0 adds String.get_utf_8_uchar, which would have been perfect here.
-           We're on OCaml 4.13 for now, so we do our poor man's version of it. *)
-        Ok (Uchar.get_utf_8_uchar (String.to_bytes c) 0)
+        let uchar = String.get_utf_8_uchar c 0 in
+        if Uchar.utf_decode_is_valid uchar then
+          Ok (Uchar.utf_decode_uchar uchar)
+        else Error ("char_of_json: invalid UTF-8 character: " ^ show js)
   | _ -> Error ("char_of_json: not a char: " ^ show js)
 
 let rec of_json_list (a_of_json : 'ctx -> json -> ('a, string) result)
