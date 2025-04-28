@@ -1469,6 +1469,14 @@ impl<C: AstFormatter> FmtWithCtx<C> for Ty {
                 format!("{}::{name}", trait_ref.fmt_with_ctx(ctx),)
             }
             TyKind::DynTrait(pred) => format!("dyn ({})", pred.with_ctx(ctx)),
+            TyKind::Closure(fun_id, tys) => {
+                let mut params = Vec::new();
+                for x in tys {
+                    params.push(x.fmt_with_ctx(ctx));
+                }
+                let params = params.join(", ");
+                format!("state {}({})", ctx.format_object(*fun_id), params)
+            }
             TyKind::Arrow(io) => {
                 // Update the bound regions
                 let ctx = &ctx.push_bound_regions(&io.regions);

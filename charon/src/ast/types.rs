@@ -698,6 +698,11 @@ pub enum TyKind {
     /// arrow types can only contain generic lifetime parameters
     /// (no generic types), no predicates, etc.
     Arrow(RegionBinder<(Vec<Ty>, Ty)>),
+    /// Closure type, associated with a function declaration. Contains the types of the
+    /// closure's state -- this is eventually removed in a micro-pass, and replaced with a
+    /// struct containing the state.
+    #[charon::opaque]
+    Closure(FunDeclId, Vec<Ty>),
     /// A type that could not be computed or was incorrect.
     #[drive(skip)]
     Error(String),

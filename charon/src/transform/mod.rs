@@ -5,6 +5,7 @@ pub mod duplicate_return;
 pub mod expand_associated_types;
 pub mod filter_invisible_trait_impls;
 pub mod filter_unreachable_blocks;
+pub mod fix_closures;
 pub mod graphs;
 pub mod hide_marker_traits;
 pub mod index_intermediate_assigns;
@@ -90,6 +91,8 @@ pub static ULLBC_PASSES: &[Pass] = &[
     // closure itself. This is not consistent with the closure signature,
     // which ignores this first variable. This micro-pass updates this.
     UnstructuredBody(&update_closure_signatures::Transform),
+    // # Micro-pass: fix the closures to be tupled structs that implement `Fn` traits.
+    UnstructuredBody(&fix_closures::Transform),
     // # Micro-pass: remove the dynamic checks we couldn't remove in [`remove_dynamic_checks`].
     // **WARNING**: this pass uses the fact that the dynamic checks
     // introduced by Rustc use a special "assert" construct. Because of

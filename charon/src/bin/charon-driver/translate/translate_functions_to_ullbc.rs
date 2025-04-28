@@ -197,13 +197,20 @@ impl ItemTransCtx<'_, '_> {
                     .try_collect()?;
                 // Add the state of the closure as first parameter.
                 let state_ty = {
-                    // Group the state types into a tuple
-                    let state_ty =
-                        TyKind::Adt(TypeId::Tuple, GenericArgs::new_for_builtin(state.clone()))
-                            .into_ty();
+                    // Make the closure type (this will be converted to a struct in a micro-pass)
+                    let tys = args
+                        .upvar_tys
+                        .iter()
+                        .map(|ty| self.translate_ty(span, ty))
+                        .try_collect()?;
+
+                    let Some(AnyTransId::Fun(fid)) = self.item_id else {
+                        unreachable!("Closure is not a function")
+                    };
+                    let closure_ty = TyKind::Closure(fid, tys).into_ty();
                     // Depending on the kind of the closure, add a reference
                     match &kind {
-                        ClosureKind::FnOnce => state_ty,
+                        ClosureKind::FnOnce => closure_ty,
                         ClosureKind::Fn | ClosureKind::FnMut => {
                             let rid = self
                                 .innermost_generics_mut()
@@ -215,7 +222,7 @@ impl ItemTransCtx<'_, '_> {
                             } else {
                                 RefKind::Mut
                             };
-                            TyKind::Ref(r, state_ty, mutability).into_ty()
+                            TyKind::Ref(r, closure_ty, mutability).into_ty()
                         }
                     }
                 };

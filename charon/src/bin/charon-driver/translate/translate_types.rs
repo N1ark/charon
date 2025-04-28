@@ -281,13 +281,17 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 trace!("PlaceHolder");
                 raise_error!(self, span, "Unsupported type: placeholder")
             }
-            hax::TyKind::Arrow(box sig)
-            | hax::TyKind::Closure(
-                _,
-                hax::ClosureArgs {
-                    untupled_sig: sig, ..
-                },
-            ) => {
+            hax::TyKind::Closure(id, hax::ClosureArgs { upvar_tys, .. }) => {
+                trace!("Closure");
+                trace!("fun id: {:?}", id);
+                let fid = self.register_fun_decl_id(span, id);
+                let tys = upvar_tys
+                    .iter()
+                    .map(|ty| self.translate_ty(span, ty))
+                    .try_collect()?;
+                TyKind::Closure(fid, tys)
+            }
+            hax::TyKind::Arrow(box sig) => {
                 trace!("Arrow");
                 trace!("bound vars: {:?}", sig.bound_vars);
                 let sig = self.translate_region_binder(span, sig, |ctx, sig| {
