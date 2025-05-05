@@ -180,64 +180,49 @@ impl ItemTransCtx<'_, '_> {
             hax::Safety::Safe => false,
         };
 
-        let closure_info = match &def.kind {
-            hax::FullDefKind::Closure { args, .. } => {
-                let kind = match args.kind {
-                    hax::ClosureKind::Fn => ClosureKind::Fn,
-                    hax::ClosureKind::FnMut => ClosureKind::FnMut,
-                    hax::ClosureKind::FnOnce => ClosureKind::FnOnce,
-                };
+        if let hax::FullDefKind::Closure { args, .. } = &def.kind {
+            assert_eq!(inputs.len(), 1);
+            let tuple_arg = inputs.pop().unwrap();
 
-                assert_eq!(inputs.len(), 1);
-                let tuple_arg = inputs.pop().unwrap();
-
-                let state: Vector<TypeVarId, Ty> = args
-                    .upvar_tys
-                    .iter()
-                    .map(|ty| self.translate_ty(span, &ty))
-                    .try_collect()?;
-                // Add the state of the closure as first parameter.
-                let state_ty = {
-                    // Group the state types into a tuple
-                    let state_ty =
-                        TyKind::Adt(TypeId::Tuple, GenericArgs::new_for_builtin(state.clone()))
-                            .into_ty();
-                    // Depending on the kind of the closure, add a reference
-                    match &kind {
-                        ClosureKind::FnOnce => state_ty,
-                        ClosureKind::Fn | ClosureKind::FnMut => {
-                            let rid = self
-                                .innermost_generics_mut()
-                                .regions
-                                .push_with(|index| RegionVar { index, name: None });
-                            let r = Region::Var(DeBruijnVar::new_at_zero(rid));
-                            let mutability = if kind == ClosureKind::Fn {
-                                RefKind::Shared
-                            } else {
-                                RefKind::Mut
-                            };
-                            TyKind::Ref(r, state_ty, mutability).into_ty()
-                        }
+            let state_ty = {
+                let state_ty_id = self.register_type_decl_id(span, &def.def_id);
+                // FIXME: @N1ark wrong generic args
+                let state_ty = TyKind::Adt(
+                    TypeId::Adt(state_ty_id),
+                    GenericArgs::empty(GenericsSource::Builtin),
+                )
+                .into_ty();
+                // Depending on the kind of the closure, add a reference
+                match args.kind {
+                    hax::ClosureKind::FnOnce => state_ty,
+                    hax::ClosureKind::Fn | hax::ClosureKind::FnMut => {
+                        let rid = self
+                            .innermost_generics_mut()
+                            .regions
+                            .push_with(|index| RegionVar { index, name: None });
+                        let r = Region::Var(DeBruijnVar::new_at_zero(rid));
+                        let mutability = if args.kind == hax::ClosureKind::Fn {
+                            RefKind::Shared
+                        } else {
+                            RefKind::Mut
+                        };
+                        TyKind::Ref(r, state_ty, mutability).into_ty()
                     }
-                };
-                inputs.push(state_ty);
+                }
+            };
+            inputs.push(state_ty);
 
-                // Unpack the tupled arguments to match the body locals.
-                let TyKind::Adt(TypeId::Tuple, tuple_args) = tuple_arg.kind() else {
-                    raise_error!(self, span, "Closure argument is not a tuple")
-                };
-                inputs.extend(tuple_args.types.iter().cloned());
-
-                Some(ClosureInfo { kind, state })
-            }
-            _ => None,
-        };
+            // Unpack the tupled arguments to match the body locals.
+            let TyKind::Adt(TypeId::Tuple, tuple_args) = tuple_arg.kind() else {
+                raise_error!(self, span, "Closure argument is not a tuple")
+            };
+            inputs.extend(tuple_args.types.iter().cloned());
+        }
 
         Ok(FunSig {
             generics: self.the_only_binder().params.clone(),
             is_unsafe,
             is_closure: matches!(&def.kind, hax::FullDefKind::Closure { .. }),
-            closure_info,
             inputs,
             output,
         })
