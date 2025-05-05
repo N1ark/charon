@@ -96,15 +96,8 @@ impl ProjectionElem {
                     Adt(TypeId::Builtin(BuiltinTy::Box), args) => {
                         args.types.get(TypeVarId::new(0)).unwrap().clone()
                     }
-                    Adt(..)
-                    | TypeVar(_)
-                    | Literal(_)
-                    | Never
-                    | TraitType(..)
-                    | DynTrait(_)
-                    | Arrow(..)
-                    | Closure { .. }
-                    | Error(..) => {
+                    Adt(..) | TypeVar(_) | Literal(_) | Never | TraitType(..) | DynTrait(_)
+                    | Arrow(..) | Error(..) => {
                         // Type error
                         return Err(());
                     }
@@ -152,7 +145,6 @@ impl ProjectionElem {
                         .get(TypeVarId::from(usize::from(*field_id)))
                         .ok_or(())?
                         .clone(),
-                    ClosureState => return Err(()),
                 }
             }
             Index { .. } | Subslice { .. } => ty.as_array_or_slice().ok_or(())?.clone(),

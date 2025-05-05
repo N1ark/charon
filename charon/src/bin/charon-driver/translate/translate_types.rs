@@ -296,44 +296,18 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 })?;
                 TyKind::Arrow(sig)
             }
-            hax::TyKind::Closure(
-                def_id,
-                hax::ClosureArgs {
-                    untupled_sig: sig,
-                    parent_args,
-                    parent_trait_refs,
-                    upvar_tys,
-                    ..
-                },
-            ) => {
-                let signature = self.translate_region_binder(span, sig, |ctx, sig| {
-                    let inputs = sig
-                        .inputs
-                        .iter()
-                        .map(|x| ctx.translate_ty(span, x))
-                        .try_collect()?;
-                    let output = ctx.translate_ty(span, &sig.output)?;
-                    Ok((inputs, output))
-                })?;
-                let fun_id = self.register_fun_decl_id(span, def_id);
-                let upvar_tys = upvar_tys
-                    .iter()
-                    .map(|ty| self.translate_ty(span, ty))
-                    .try_collect()?;
-                let parent_args = self.translate_generic_args(
+            hax::TyKind::Closure(def_id, args) => {
+                let adt_id = self.register_type_decl_id(span, def_id);
+                let generic_args = self.translate_generic_args(
                     span,
-                    &parent_args,
-                    &parent_trait_refs,
+                    &args.parent_args,
+                    &args.parent_trait_refs,
                     None,
                     // We don't know the item these generics apply to.
                     GenericsSource::Builtin,
                 )?;
-                TyKind::Closure {
-                    fun_id,
-                    signature,
-                    parent_args,
-                    upvar_tys,
-                }
+
+                TyKind::Adt(TypeId::Adt(adt_id), generic_args)
             }
             hax::TyKind::Error => {
                 trace!("Error");
@@ -592,15 +566,36 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             })
             .try_collect()?;
 
-        let fun_id = self.register_fun_decl_id(span, full_def.def_id());
+        let fun_id = self.register_fun_decl_id(span, &full_def.def_id);
+        let signature = self.translate_region_binder(span, &args.untupled_sig, |ctx, sig| {
+            let inputs = sig
+                .inputs
+                .iter()
+                .map(|x| ctx.translate_ty(span, x))
+                .try_collect()?;
+            let output = ctx.translate_ty(span, &sig.output)?;
+            Ok((inputs, output))
+        })?;
+        let upvar_tys = args
+            .upvar_tys
+            .iter()
+            .map(|ty| self.translate_ty(span, ty))
+            .try_collect()?;
         let kind = match args.kind {
             hax::ClosureKind::Fn => ClosureKind::Fn,
             hax::ClosureKind::FnMut => ClosureKind::FnMut,
             hax::ClosureKind::FnOnce => ClosureKind::FnOnce,
         };
-        let closure_info = ClosureInfo { kind, fun_id };
 
-        Ok(TypeDeclKind::Struct(fields, Some(closure_info)))
+        Ok(TypeDeclKind::Struct(
+            fields,
+            Some(ClosureInfo {
+                kind,
+                fun_id: fun_id.clone(),
+                signature,
+                upvar_tys,
+            }),
+        ))
     }
 
     fn translate_discriminant(

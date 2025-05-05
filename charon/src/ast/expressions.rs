@@ -101,10 +101,6 @@ pub enum FieldProjKind {
     /// If we project from a tuple, the projection kind gives the arity of the tuple.
     #[drive(skip)]
     Tuple(usize),
-    /// Access to a field in a closure state.
-    /// We eliminate this in a micro-pass ([crate::update_closure_signatures]).
-    #[charon::opaque]
-    ClosureState,
 }
 
 #[derive(

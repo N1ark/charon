@@ -657,20 +657,6 @@ pub enum TyKind {
     /// Note: this is incorrectly named: this can refer to any valid `TypeDecl` including extern
     /// types.
     Adt(TypeId, GenericArgs),
-    /// A closure type, which is essentially a struct with builtin impls. Currently we don't
-    /// translate the struct itself, only the function item that contains the closure's code.
-    Closure {
-        /// The FunDecl item containing the code of the closure. That function takes the closure
-        /// state as its first argument.
-        fun_id: FunDeclId,
-        /// Generics that apply to the parent of this closure.
-        /// Warning: hax may not handle nexted closure correctly yet.
-        parent_args: GenericArgs,
-        /// The types of the variables captured by this closure.
-        upvar_tys: Vec<Ty>,
-        /// The signature of the function that this closure represents.
-        signature: RegionBinder<(Vec<Ty>, Ty)>,
-    },
     #[charon::rename("TVar")]
     TypeVar(TypeDbVar),
     Literal(LiteralTy),
@@ -772,9 +758,15 @@ pub enum ClosureKind {
 /// We mostly use it in micro-passes like [crate::update_closure_signature].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Drive, DriveMut)]
 pub struct ClosureInfo {
+    // FIXME: @N1ark maybe add the IDs for the trait impls / clean this up
     pub kind: ClosureKind,
+    /// The FunDecl item containing the code of the closure. That function takes the closure
+    /// state as its first argument.
     pub fun_id: FunDeclId,
-    // FIXME: @N1ark maybe add the IDs for the trait impls
+    /// The types of the variables captured by this closure.
+    pub upvar_tys: Vec<Ty>,
+    /// The signature of the function that this closure represents.
+    pub signature: RegionBinder<(Vec<Ty>, Ty)>,
 }
 
 /// A function signature.

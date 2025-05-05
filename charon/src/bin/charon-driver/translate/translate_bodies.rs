@@ -278,7 +278,16 @@ impl BodyTransCtx<'_, '_, '_> {
                             }
                             ClosureState(index) => {
                                 let field_id = translate_field_id(*index);
-                                ProjectionElem::Field(FieldProjKind::ClosureState, field_id)
+                                let Some((TypeId::Adt(adt_id), _)) = subplace.ty.as_adt() else {
+                                    unreachable!(
+                                        "Subplace of ClosureState must be a closure, got {:?}",
+                                        subplace.ty
+                                    )
+                                };
+                                ProjectionElem::Field(
+                                    FieldProjKind::Adt(adt_id.clone(), None),
+                                    field_id,
+                                )
                             }
                         };
                         subplace.project(proj_elem, ty)
@@ -661,21 +670,19 @@ impl BodyTransCtx<'_, '_, '_> {
                             closure_args.tupled_sig
                         );
 
-                        let fun_id = self.register_fun_decl_id(span, def_id);
+                        let type_id = self.register_type_decl_id(span, def_id);
+                        let type_id = TypeId::Adt(type_id);
 
-                        // Retrieve the late-bound variables.
-                        let binder = closure_args.tupled_sig.as_ref().rebind(());
                         // Translate the substitution
                         let generics = self.translate_generic_args(
                             span,
                             &closure_args.parent_args,
                             &closure_args.parent_trait_refs,
-                            Some(binder),
-                            GenericsSource::item(fun_id),
+                            None,
+                            type_id.generics_target(),
                         )?;
 
-                        let akind = AggregateKind::Closure(fun_id, generics);
-
+                        let akind = AggregateKind::Adt(type_id, None, None, generics);
                         Ok(Rvalue::Aggregate(akind, operands_t))
                     }
                     hax::AggregateKind::RawPtr(ty, is_mut) => {

@@ -747,9 +747,6 @@ impl<C: AstFormatter> FmtWithCtx<C> for Place {
                         FieldProjKind::Tuple(_) => {
                             format!("({sub}).{field_id}")
                         }
-                        FieldProjKind::ClosureState => {
-                            format!("({sub}).@closure_state_field_{field_id}")
-                        }
                     },
                     ProjectionElem::Index {
                         offset,
@@ -1450,7 +1447,6 @@ impl<C: AstFormatter> FmtWithCtx<C> for Ty {
                     format!("{adt_ident}{generics}")
                 }
             }
-            TyKind::Closure { fun_id, .. } => ctx.format_object(*fun_id),
             TyKind::TypeVar(id) => ctx.format_object(*id),
             TyKind::Literal(kind) => kind.to_string(),
             TyKind::Never => "!".to_string(),
