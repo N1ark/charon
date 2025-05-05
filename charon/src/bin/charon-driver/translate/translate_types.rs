@@ -8,6 +8,7 @@ use charon_lib::ids::Vector;
 use core::convert::*;
 use hax::Visibility;
 use hax_frontend_exporter as hax;
+use itertools::Itertools;
 
 /// Small helper: we ignore some region names (when they are equal to "'_")
 fn check_region_name(s: String) -> Option<String> {
@@ -556,12 +557,50 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
 
         // Register the type
         let type_def_kind: TypeDeclKind = match adt.adt_kind {
-            AdtKind::Struct => TypeDeclKind::Struct(variants[0].fields.clone()),
+            AdtKind::Struct => TypeDeclKind::Struct(variants[0].fields.clone(), None),
             AdtKind::Enum => TypeDeclKind::Enum(variants),
             AdtKind::Union => TypeDeclKind::Union(variants[0].fields.clone()),
         };
 
         Ok(type_def_kind)
+    }
+
+    fn translate_closure_ty(
+        &mut self,
+        _trans_id: TypeDeclId,
+        span: Span,
+        args: &hax::ClosureArgs,
+        full_def: &hax::FullDef,
+    ) -> Result<TypeDeclKind, Error> {
+        // FIXME: @N1ark this is wrong
+        let fields: Vector<FieldId, Field> = args
+            .upvar_tys
+            .iter()
+            .map(|ty| {
+                let ty = self.translate_ty(span, ty)?;
+                Ok(Field {
+                    span,
+                    attr_info: AttrInfo {
+                        attributes: vec![],
+                        inline: None,
+                        rename: None,
+                        public: true,
+                    },
+                    name: None,
+                    ty: ty.clone(),
+                })
+            })
+            .try_collect()?;
+
+        let fun_id = self.register_fun_decl_id(span, full_def.def_id());
+        let kind = match args.kind {
+            hax::ClosureKind::Fn => ClosureKind::Fn,
+            hax::ClosureKind::FnMut => ClosureKind::FnMut,
+            hax::ClosureKind::FnOnce => ClosureKind::FnOnce,
+        };
+        let closure_info = ClosureInfo { kind, fun_id };
+
+        Ok(TypeDeclKind::Struct(fields, Some(closure_info)))
     }
 
     fn translate_discriminant(
@@ -828,6 +867,9 @@ impl ItemTransCtx<'_, '_> {
             | hax::FullDefKind::Enum { def, .. }
             | hax::FullDefKind::Union { def, .. } => {
                 self.translate_adt_def(trans_id, span, &item_meta, def)
+            }
+            hax::FullDefKind::Closure { args, .. } => {
+                self.translate_closure_ty(trans_id, span, &args, &def)
             }
             _ => panic!("Unexpected item when translating types: {def:?}"),
         };
