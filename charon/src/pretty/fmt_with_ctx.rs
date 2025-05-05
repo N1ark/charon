@@ -1450,6 +1450,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for Ty {
                     format!("{adt_ident}{generics}")
                 }
             }
+            TyKind::Closure { fun_id, .. } => ctx.format_object(*fun_id),
             TyKind::TypeVar(id) => ctx.format_object(*id),
             TyKind::Literal(kind) => kind.to_string(),
             TyKind::Never => "!".to_string(),
@@ -1469,14 +1470,6 @@ impl<C: AstFormatter> FmtWithCtx<C> for Ty {
                 format!("{}::{name}", trait_ref.fmt_with_ctx(ctx),)
             }
             TyKind::DynTrait(pred) => format!("dyn ({})", pred.with_ctx(ctx)),
-            TyKind::Closure(fun_id, tys) => {
-                let mut params = Vec::new();
-                for x in tys {
-                    params.push(x.fmt_with_ctx(ctx));
-                }
-                let params = params.join(", ");
-                format!("state {}({})", ctx.format_object(*fun_id), params)
-            }
             TyKind::Arrow(io) => {
                 // Update the bound regions
                 let ctx = &ctx.push_bound_regions(&io.regions);
@@ -1627,6 +1620,9 @@ impl std::fmt::Display for BinOp {
             BinOp::Add => write!(f, "+"),
             BinOp::Sub => write!(f, "-"),
             BinOp::Mul => write!(f, "*"),
+            BinOp::WrappingAdd => write!(f, "wrapping.+"),
+            BinOp::WrappingSub => write!(f, "wrapping.-"),
+            BinOp::WrappingMul => write!(f, "wrapping.*"),
             BinOp::CheckedAdd => write!(f, "checked.+"),
             BinOp::CheckedSub => write!(f, "checked.-"),
             BinOp::CheckedMul => write!(f, "checked.*"),

@@ -281,16 +281,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 trace!("PlaceHolder");
                 raise_error!(self, span, "Unsupported type: placeholder")
             }
-            hax::TyKind::Closure(id, hax::ClosureArgs { upvar_tys, .. }) => {
-                trace!("Closure");
-                trace!("fun id: {:?}", id);
-                let fid = self.register_fun_decl_id(span, id);
-                let tys = upvar_tys
-                    .iter()
-                    .map(|ty| self.translate_ty(span, ty))
-                    .try_collect()?;
-                TyKind::Closure(fid, tys)
-            }
             hax::TyKind::Arrow(box sig) => {
                 trace!("Arrow");
                 trace!("bound vars: {:?}", sig.bound_vars);
@@ -304,6 +294,45 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     Ok((inputs, output))
                 })?;
                 TyKind::Arrow(sig)
+            }
+            hax::TyKind::Closure(
+                def_id,
+                hax::ClosureArgs {
+                    untupled_sig: sig,
+                    parent_args,
+                    parent_trait_refs,
+                    upvar_tys,
+                    ..
+                },
+            ) => {
+                let signature = self.translate_region_binder(span, sig, |ctx, sig| {
+                    let inputs = sig
+                        .inputs
+                        .iter()
+                        .map(|x| ctx.translate_ty(span, x))
+                        .try_collect()?;
+                    let output = ctx.translate_ty(span, &sig.output)?;
+                    Ok((inputs, output))
+                })?;
+                let fun_id = self.register_fun_decl_id(span, def_id);
+                let upvar_tys = upvar_tys
+                    .iter()
+                    .map(|ty| self.translate_ty(span, ty))
+                    .try_collect()?;
+                let parent_args = self.translate_generic_args(
+                    span,
+                    &parent_args,
+                    &parent_trait_refs,
+                    None,
+                    // We don't know the item these generics apply to.
+                    GenericsSource::Builtin,
+                )?;
+                TyKind::Closure {
+                    fun_id,
+                    signature,
+                    parent_args,
+                    upvar_tys,
+                }
             }
             hax::TyKind::Error => {
                 trace!("Error");
@@ -592,6 +621,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             | FullDefKind::AssocConst { .. }
             | FullDefKind::AnonConst { .. }
             | FullDefKind::InlineConst { .. }
+            | FullDefKind::PromotedConst { .. }
             | FullDefKind::Closure { .. }
             | FullDefKind::Ctor { .. }
             | FullDefKind::Variant { .. } => {
@@ -643,6 +673,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 | FullDefKind::AssocConst { .. }
                 | FullDefKind::AnonConst { .. }
                 | FullDefKind::InlineConst { .. }
+                | FullDefKind::PromotedConst { .. }
                 | FullDefKind::Static { .. } => PredicateOrigin::WhereClauseOnFn,
                 FullDefKind::TraitImpl { .. } | FullDefKind::InherentImpl { .. } => {
                     PredicateOrigin::WhereClauseOnImpl

@@ -102,7 +102,7 @@ impl<'ctx> ClosureVisitor<'ctx> {
 impl<'ctx> VisitAstMut for ClosureVisitor<'ctx> {
     fn visit_ty(&mut self, ty: &mut Ty) -> ControlFlow<Self::Break> {
         ty.with_kind_mut(|ty_kind| match ty_kind {
-            TyKind::Closure(fun_id, _) => {
+            TyKind::Closure { fun_id, .. } => {
                 if let Some(adt_id) = self.subst.get(fun_id) {
                     *ty_kind = TyKind::Adt(
                         TypeId::Adt(*adt_id),

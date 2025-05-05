@@ -48,13 +48,13 @@ pub fn test_crate::map(@1: Array<i32, 256 : usize>) -> Array<i32, 256 : usize>
     let @0: Array<i32, 256 : usize>; // return
     let x@1: Array<i32, 256 : usize>; // arg #1
     let @2: Array<i32, 256 : usize>; // anonymous local
-    let @3: fn(i32) -> i32; // anonymous local
+    let @3: test_crate::map::closure; // anonymous local
 
     storage_live(@2)
     @2 := copy (x@1)
     storage_live(@3)
     @3 := {test_crate::map::closure} {}
-    @0 := core::array::{Array<T, const N : usize>}#23::map<i32, fn(i32) -> i32, i32, 256 : usize>[core::marker::Sized<i32>, core::marker::Sized<fn(i32) -> i32>, core::marker::Sized<i32>, core::ops::function::FnMut<fn(i32) -> i32, (i32)>](move (@2), move (@3))
+    @0 := core::array::{Array<T, const N : usize>}#23::map<i32, test_crate::map::closure, i32, 256 : usize>[core::marker::Sized<i32>, core::marker::Sized<test_crate::map::closure>, core::marker::Sized<i32>, core::ops::function::FnMut<test_crate::map::closure, (i32)>](move (@2), move (@3))
     storage_dead(@3)
     storage_dead(@2)
     return
@@ -332,7 +332,7 @@ fn test_crate::select<'_0, '_1>(@1: &'_0 (Slice<u8>), @2: &'_1 (Slice<u8>))
     storage_live(@24)
     storage_live(@3)
     storage_live(@4)
-    @4 := const (false)
+    @4 := const (true)
     if move (@4) {
         storage_live(@5)
         storage_live(@6)

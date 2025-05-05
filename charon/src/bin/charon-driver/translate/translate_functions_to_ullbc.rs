@@ -138,6 +138,7 @@ impl ItemTransCtx<'_, '_> {
             | hax::FullDefKind::AssocConst { ty, .. }
             | hax::FullDefKind::AnonConst { ty, .. }
             | hax::FullDefKind::InlineConst { ty, .. }
+            | hax::FullDefKind::PromotedConst { ty, .. }
             | hax::FullDefKind::Static { ty, .. } => {
                 let sig = hax::TyFnSig {
                     inputs: vec![],
@@ -197,20 +198,13 @@ impl ItemTransCtx<'_, '_> {
                     .try_collect()?;
                 // Add the state of the closure as first parameter.
                 let state_ty = {
-                    // Make the closure type (this will be converted to a struct in a micro-pass)
-                    let tys = args
-                        .upvar_tys
-                        .iter()
-                        .map(|ty| self.translate_ty(span, ty))
-                        .try_collect()?;
-
-                    let Some(AnyTransId::Fun(fid)) = self.item_id else {
-                        unreachable!("Closure is not a function")
-                    };
-                    let closure_ty = TyKind::Closure(fid, tys).into_ty();
+                    // Group the state types into a tuple
+                    let state_ty =
+                        TyKind::Adt(TypeId::Tuple, GenericArgs::new_for_builtin(state.clone()))
+                            .into_ty();
                     // Depending on the kind of the closure, add a reference
                     match &kind {
-                        ClosureKind::FnOnce => closure_ty,
+                        ClosureKind::FnOnce => state_ty,
                         ClosureKind::Fn | ClosureKind::FnMut => {
                             let rid = self
                                 .innermost_generics_mut()
@@ -222,7 +216,7 @@ impl ItemTransCtx<'_, '_> {
                             } else {
                                 RefKind::Mut
                             };
-                            TyKind::Ref(r, closure_ty, mutability).into_ty()
+                            TyKind::Ref(r, state_ty, mutability).into_ty()
                         }
                     }
                 };
@@ -404,6 +398,7 @@ impl ItemTransCtx<'_, '_> {
                 | hax::FullDefKind::AssocConst { .. }
                 | hax::FullDefKind::AnonConst { .. }
                 | hax::FullDefKind::InlineConst { .. }
+                | hax::FullDefKind::PromotedConst { .. }
                 | hax::FullDefKind::Static { .. }
         );
         let is_global_initializer =
@@ -484,6 +479,7 @@ impl ItemTransCtx<'_, '_> {
             | hax::FullDefKind::AssocConst { ty, .. }
             | hax::FullDefKind::AnonConst { ty, .. }
             | hax::FullDefKind::InlineConst { ty, .. }
+            | hax::FullDefKind::PromotedConst { ty, .. }
             | hax::FullDefKind::Static { ty, .. } => ty,
             _ => panic!("Unexpected def for constant: {def:?}"),
         };
@@ -494,9 +490,9 @@ impl ItemTransCtx<'_, '_> {
             hax::FullDefKind::Const { .. } | hax::FullDefKind::AssocConst { .. } => {
                 GlobalKind::NamedConst
             }
-            hax::FullDefKind::AnonConst { .. } | hax::FullDefKind::InlineConst { .. } => {
-                GlobalKind::AnonConst
-            }
+            hax::FullDefKind::AnonConst { .. }
+            | hax::FullDefKind::InlineConst { .. }
+            | hax::FullDefKind::PromotedConst { .. } => GlobalKind::AnonConst,
             _ => panic!("Unexpected def for constant: {def:?}"),
         };
 
