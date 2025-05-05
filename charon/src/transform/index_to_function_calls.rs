@@ -34,9 +34,28 @@ impl<'a> IndexVisitor<'a> {
 
     fn transform_place(&mut self, mut_access: bool, place: &mut Place) {
         use ProjectionElem::*;
-        let Some((subplace, pe @ (Index { .. } | Subslice { .. }))) = place.as_projection() else {
-            return;
+
+        let new_place = match place.as_projection() {
+            Some((subplace, pe @ (Index { .. } | Subslice { .. }))) => {
+                Some(self.transform_index(mut_access, subplace, pe))
+            }
+            // Some((subplace, BoxMetadata)) => {
+            //     Some(self.transform_boxmetadata(mut_access, &place.ty, subplace))
+            // }
+            _ => None,
         };
+        if let Some(new_place) = new_place {
+            *place = new_place
+        }
+    }
+
+    fn transform_index(
+        &mut self,
+        mut_access: bool,
+        subplace: &Place,
+        pe: &ProjectionElem,
+    ) -> Place {
+        use ProjectionElem::*;
         let TyKind::Adt(TypeId::Builtin(builtin_ty), generics) = subplace.ty().kind() else {
             unreachable!()
         };
@@ -160,8 +179,16 @@ impl<'a> IndexVisitor<'a> {
             output_var
         };
 
-        // Update the place.
-        *place = output_var.project(ProjectionElem::Deref, output_inner_ty);
+        // Return the new place.
+        output_var.project(ProjectionElem::Deref, output_inner_ty)
+    }
+
+    fn transform_boxmetadata(&mut self, mut_access: bool, ty: &Ty, subplace: &Place) -> Place {
+        panic!("Ty: {:?}", ty);
+        let Some(box_ty) = subplace.ty().as_box() else {
+            unreachable!()
+        };
+        subplace.clone()
     }
 
     /// Calls `self.visit_inner()` with `mutability` pushed on the stack.

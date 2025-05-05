@@ -267,9 +267,16 @@ impl BodyTransCtx<'_, '_, '_> {
                                         assert!(generics.types.elem_count() == 1);
                                         assert!(generics.const_generics.is_empty());
                                         assert!(variant_id.is_none());
-                                        assert!(field_id == FieldId::ZERO);
 
-                                        ProjectionElem::Deref
+                                        match field_id.index() {
+                                            0 => ProjectionElem::Deref,
+                                            1 => ProjectionElem::BoxMetadata,
+                                            _ => raise_error!(
+                                                self,
+                                                span,
+                                                "Unexpected box projection"
+                                            ),
+                                        }
                                     }
                                     _ => {
                                         raise_error!(self, span, "Unexpected field projection");

@@ -156,6 +156,7 @@ impl ProjectionElem {
                 }
             }
             Index { .. } | Subslice { .. } => ty.as_array_or_slice().ok_or(())?.clone(),
+            BoxMetadata => panic!("BoxMetadata should be removed in a micro-pass"),
         })
     }
 }

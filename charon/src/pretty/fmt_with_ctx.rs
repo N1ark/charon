@@ -781,6 +781,9 @@ impl<C: AstFormatter> FmtWithCtx<C> for Place {
                         from.fmt_with_ctx(ctx),
                         to.fmt_with_ctx(ctx)
                     ),
+                    ProjectionElem::BoxMetadata => {
+                        format!("boxmetadata({sub})")
+                    }
                 }
             }
         }

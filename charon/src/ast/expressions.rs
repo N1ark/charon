@@ -80,6 +80,10 @@ pub enum ProjectionElem {
         #[drive(skip)]
         from_end: bool,
     },
+    /// Take the metadata of a Box<T>.
+    /// We **eliminate** this variant in a micro-pass.
+    #[charon::opaque]
+    BoxMetadata,
 }
 
 #[derive(
