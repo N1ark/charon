@@ -635,7 +635,7 @@ fn source_text() -> anyhow::Result<()> {
             panic!()
         }
         mod bar {
-            fn baz( x : usize )  ->() { 
+            fn baz( x : usize )  ->() {
             let _ = x;
                 } fn quux () {}
         }
