@@ -566,7 +566,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             })
             .try_collect()?;
 
-        let fun_id = self.register_fun_decl_id(span, &full_def.def_id);
         let signature = self.translate_region_binder(span, &args.untupled_sig, |ctx, sig| {
             let inputs = sig
                 .inputs
