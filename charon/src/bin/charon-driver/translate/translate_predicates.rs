@@ -320,20 +320,41 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
 
                 match closure_kind {
                     Some(closure_kind) => {
-                        let def_id = &builtin_trait.hax_skip_binder_ref().def_id;
-                        // FIXME: @N1ark this is wrong i fear
-                        let generics = &builtin_trait.hax_skip_binder_ref().generic_args;
-                        let impl_id =
-                            self.register_closure_trait_impl_id(span, &def_id, &closure_kind);
-                        let generics = self.translate_generic_args(
+                        let binder = self.translate_region_binder(
                             span,
-                            generics,
-                            impl_exprs,
-                            None,
-                            GenericsSource::item(impl_id),
+                            &impl_source.r#trait,
+                            |ctx, tref| {
+                                let Some(hax::GenericArg::Type(closure_ty)) =
+                                    tref.generic_args.first()
+                                else {
+                                    unreachable!("Expected closure type");
+                                };
+                                let hax::TyKind::Closure(closure_id, closure_args) =
+                                    closure_ty.kind()
+                                else {
+                                    unreachable!("Expected closure type");
+                                };
+
+                                let impl_id = ctx.register_closure_trait_impl_id(
+                                    span,
+                                    &closure_id,
+                                    &closure_kind,
+                                );
+
+                                let parent_args = ctx.translate_generic_args(
+                                    span,
+                                    &closure_args.parent_args,
+                                    impl_exprs,
+                                    None,
+                                    GenericsSource::item(impl_id),
+                                )?;
+
+                                Ok((impl_id, parent_args))
+                            },
                         )?;
+                        let (impl_id, parent_args) = binder.erase();
                         TraitRef {
-                            kind: TraitRefKind::TraitImpl(impl_id, generics),
+                            kind: TraitRefKind::TraitImpl(impl_id, parent_args),
                             trait_decl_ref,
                         }
                     }
