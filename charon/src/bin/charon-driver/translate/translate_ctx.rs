@@ -34,6 +34,8 @@ pub enum TransItemSource {
     TraitImpl(hax::DefId),
     Fun(hax::DefId),
     Type(hax::DefId),
+    ClosureTraitImpl(hax::DefId, hax::ClosureKind),
+    ClosureFun(hax::DefId, hax::ClosureKind),
 }
 
 impl TransItemSource {
@@ -43,7 +45,9 @@ impl TransItemSource {
             | TransItemSource::TraitDecl(id)
             | TransItemSource::TraitImpl(id)
             | TransItemSource::Fun(id)
-            | TransItemSource::Type(id) => id,
+            | TransItemSource::Type(id)
+            | TransItemSource::ClosureTraitImpl(id, _)
+            | TransItemSource::ClosureFun(id, _) => id,
         }
     }
 }
@@ -722,13 +726,13 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
                     TransItemSource::TraitDecl(_) => {
                         AnyTransId::TraitDecl(self.translated.trait_decls.reserve_slot())
                     }
-                    TransItemSource::TraitImpl(_) => {
+                    TransItemSource::TraitImpl(_) | TransItemSource::ClosureTraitImpl(_, _) => {
                         AnyTransId::TraitImpl(self.translated.trait_impls.reserve_slot())
                     }
                     TransItemSource::Global(_) => {
                         AnyTransId::Global(self.translated.global_decls.reserve_slot())
                     }
-                    TransItemSource::Fun(_) => {
+                    TransItemSource::Fun(_) | TransItemSource::ClosureFun(_, _) => {
                         AnyTransId::Fun(self.translated.fun_decls.reserve_slot())
                     }
                 };
@@ -811,6 +815,21 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
 
         *self
             .register_and_enqueue_id(src, TransItemSource::TraitImpl(id.clone()))
+            .as_trait_impl()
+            .unwrap()
+    }
+
+    pub(crate) fn register_closure_trait_impl_id(
+        &mut self,
+        src: &Option<DepSource>,
+        id: &hax::DefId,
+        kind: &hax::ClosureKind,
+    ) -> TraitImplId {
+        *self
+            .register_and_enqueue_id(
+                src,
+                TransItemSource::ClosureTraitImpl(id.clone(), kind.clone()),
+            )
             .as_trait_impl()
             .unwrap()
     }
@@ -912,18 +931,24 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         self.t_ctx.register_global_decl_id(&src, id)
     }
 
-    /// Returns an [Option] because we may ignore some builtin or auto traits
-    /// like [core::marker::Sized] or [core::marker::Sync].
     pub(crate) fn register_trait_decl_id(&mut self, span: Span, id: &hax::DefId) -> TraitDeclId {
         let src = self.make_dep_source(span);
         self.t_ctx.register_trait_decl_id(&src, id)
     }
 
-    /// Returns an [Option] because we may ignore some builtin or auto traits
-    /// like [core::marker::Sized] or [core::marker::Sync].
     pub(crate) fn register_trait_impl_id(&mut self, span: Span, id: &hax::DefId) -> TraitImplId {
         let src = self.make_dep_source(span);
         self.t_ctx.register_trait_impl_id(&src, id)
+    }
+
+    pub(crate) fn register_closure_trait_impl_id(
+        &mut self,
+        span: Span,
+        id: &hax::DefId,
+        kind: &hax::ClosureKind,
+    ) -> TraitImplId {
+        let src = self.make_dep_source(span);
+        self.t_ctx.register_closure_trait_impl_id(&src, id, kind)
     }
 
     /// Get the only binding level. Panics if there are other binding levels.

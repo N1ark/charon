@@ -369,4 +369,22 @@ impl ItemTransCtx<'_, '_> {
             methods,
         })
     }
+
+    #[tracing::instrument(skip(self, item_meta))]
+    pub fn translate_closure_trait_impl(
+        mut self,
+        def_id: TraitImplId,
+        item_meta: ItemMeta,
+        def: &hax::FullDef,
+        kind: &hax::ClosureKind,
+    ) -> Result<TraitImpl, Error> {
+        trace!("About to translate closure trait impl:\n{:?}", def.def_id);
+        trace!("Trait impl id:\n{:?}", def_id);
+
+        let span = item_meta.span;
+
+        self.translate_def_generics(span, def)?;
+
+        todo!()
+    }
 }

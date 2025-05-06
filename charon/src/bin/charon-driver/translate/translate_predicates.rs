@@ -297,31 +297,73 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 trait_decl_ref,
             },
             ImplExprAtom::Builtin {
-                impl_exprs, types, ..
+                impl_exprs,
+                types,
+                r#trait: builtin_trait,
             } => {
-                let parent_trait_refs = self.translate_trait_impl_exprs(span, &impl_exprs)?;
-                let types = types
-                    .iter()
-                    .map(|(def_id, ty)| {
-                        let item_def = self.hax_def(def_id)?;
-                        let ty = self.translate_ty(span, ty)?;
-                        let hax::FullDefKind::AssocTy {
-                            associated_item, ..
-                        } = item_def.kind()
-                        else {
-                            unreachable!()
-                        };
-                        let name = TraitItemName(associated_item.name.clone());
-                        Ok((name, ty))
+                use hax_frontend_exporter::DefPathItem;
+                let closure_kind = builtin_trait
+                    .hax_skip_binder_ref()
+                    .def_id
+                    .path
+                    .last()
+                    .and_then(|f| match &f.data {
+                        DefPathItem::TypeNs(name) => name.as_ref(),
+                        _ => None,
                     })
-                    .try_collect()?;
-                TraitRef {
-                    kind: TraitRefKind::BuiltinOrAuto {
-                        trait_decl_ref: trait_decl_ref.clone(),
-                        parent_trait_refs,
-                        types,
-                    },
-                    trait_decl_ref,
+                    .and_then(|s| match s.as_str() {
+                        "FnOnce" => Some(hax::ClosureKind::FnOnce),
+                        "FnMut" => Some(hax::ClosureKind::FnMut),
+                        "Fn" => Some(hax::ClosureKind::Fn),
+                        _ => None,
+                    });
+
+                match closure_kind {
+                    Some(closure_kind) => {
+                        let def_id = &builtin_trait.hax_skip_binder_ref().def_id;
+                        // FIXME: @N1ark this is wrong i fear
+                        let generics = &builtin_trait.hax_skip_binder_ref().generic_args;
+                        let impl_id =
+                            self.register_closure_trait_impl_id(span, &def_id, &closure_kind);
+                        let generics = self.translate_generic_args(
+                            span,
+                            generics,
+                            impl_exprs,
+                            None,
+                            GenericsSource::item(impl_id),
+                        )?;
+                        TraitRef {
+                            kind: TraitRefKind::TraitImpl(impl_id, generics),
+                            trait_decl_ref,
+                        }
+                    }
+                    None => {
+                        let parent_trait_refs =
+                            self.translate_trait_impl_exprs(span, &impl_exprs)?;
+                        let types = types
+                            .iter()
+                            .map(|(def_id, ty)| {
+                                let item_def = self.hax_def(def_id)?;
+                                let ty = self.translate_ty(span, ty)?;
+                                let hax::FullDefKind::AssocTy {
+                                    associated_item, ..
+                                } = item_def.kind()
+                                else {
+                                    unreachable!()
+                                };
+                                let name = TraitItemName(associated_item.name.clone());
+                                Ok((name, ty))
+                            })
+                            .try_collect()?;
+                        TraitRef {
+                            kind: TraitRefKind::BuiltinOrAuto {
+                                trait_decl_ref: trait_decl_ref.clone(),
+                                parent_trait_refs,
+                                types,
+                            },
+                            trait_decl_ref,
+                        }
+                    }
                 }
             }
             ImplExprAtom::Error(msg) => {
