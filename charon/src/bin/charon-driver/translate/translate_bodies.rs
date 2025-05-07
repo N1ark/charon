@@ -684,7 +684,7 @@ impl BodyTransCtx<'_, '_, '_> {
                             type_id.generics_target(),
                         )?;
 
-                        let akind = AggregateKind::Adt(type_id, None, None, generics);
+                        let akind = AggregateKind::Adt(type_id, None, None, generics.into());
                         Ok(Rvalue::Aggregate(akind, operands_t))
                     }
                     hax::AggregateKind::RawPtr(ty, is_mut) => {

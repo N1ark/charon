@@ -357,7 +357,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                         )?;
                         let (impl_id, parent_args) = binder.erase();
                         TraitRef {
-                            kind: TraitRefKind::TraitImpl(impl_id, parent_args),
+                            kind: TraitRefKind::TraitImpl(impl_id, parent_args.into()),
                             trait_decl_ref,
                         }
                     }

@@ -42,6 +42,7 @@ use charon_lib::ast::*;
 use charon_lib::common::*;
 use charon_lib::formatter::{Formatter, IntoFormatter};
 use charon_lib::ids::Vector;
+use charon_lib::ullbc_ast::*;
 use hax_frontend_exporter as hax;
 use itertools::Itertools;
 
@@ -107,6 +108,7 @@ impl ItemTransCtx<'_, '_> {
         def: &hax::FullDef,
         item_meta: &ItemMeta,
         args: &hax::ClosureArgs,
+        target_kind: &hax::ClosureKind,
     ) -> Result<FunSig, Error> {
         let span = item_meta.span;
 
@@ -144,41 +146,32 @@ impl ItemTransCtx<'_, '_> {
         };
 
         assert_eq!(inputs.len(), 1);
-        let tuple_arg = inputs.pop().unwrap();
 
-        let state_ty = {
-            let state_ty_id = self.register_type_decl_id(span, &def.def_id);
-            // FIXME: @N1ark wrong generic args
-            let state_ty = TyKind::Adt(
-                TypeId::Adt(state_ty_id),
-                GenericArgs::empty(GenericsSource::Builtin),
-            )
-            .into_ty();
-            // Depending on the kind of the closure, add a reference
-            match args.kind {
-                hax::ClosureKind::FnOnce => state_ty,
-                hax::ClosureKind::Fn | hax::ClosureKind::FnMut => {
-                    let rid = self
-                        .innermost_generics_mut()
-                        .regions
-                        .push_with(|index| RegionVar { index, name: None });
-                    let r = Region::Var(DeBruijnVar::new_at_zero(rid));
-                    let mutability = if args.kind == hax::ClosureKind::Fn {
-                        RefKind::Shared
-                    } else {
-                        RefKind::Mut
-                    };
-                    TyKind::Ref(r, state_ty, mutability).into_ty()
-                }
+        let state_ty_id = self.register_type_decl_id(span, &def.def_id);
+        // FIXME: @N1ark wrong generic args
+        let state_ty = TyKind::Adt(
+            TypeId::Adt(state_ty_id),
+            GenericArgs::empty(GenericsSource::Builtin),
+        )
+        .into_ty();
+        // Depending on the kind of the closure generated, add a reference
+        let state_ty = match target_kind {
+            hax::ClosureKind::FnOnce => state_ty,
+            hax::ClosureKind::Fn | hax::ClosureKind::FnMut => {
+                let rid = self
+                    .innermost_generics_mut()
+                    .regions
+                    .push_with(|index| RegionVar { index, name: None });
+                let r = Region::Var(DeBruijnVar::new_at_zero(rid));
+                let mutability = if args.kind == hax::ClosureKind::Fn {
+                    RefKind::Shared
+                } else {
+                    RefKind::Mut
+                };
+                TyKind::Ref(r, state_ty, mutability).into_ty()
             }
         };
-        inputs.push(state_ty);
-
-        // Unpack the tupled arguments to match the body locals.
-        let TyKind::Adt(TypeId::Tuple, tuple_args) = tuple_arg.kind() else {
-            raise_error!(self, span, "Closure argument is not a tuple")
-        };
-        inputs.extend(tuple_args.types.iter().cloned());
+        inputs.splice(0..0, vec![state_ty]);
 
         Ok(FunSig {
             generics: self.the_only_binder().params.clone(),
@@ -207,13 +200,36 @@ impl ItemTransCtx<'_, '_> {
 
         // Translate the function signature
         trace!("Translating closure signature");
-        let signature = self.translate_closure_signature(def, &item_meta, args)?;
+        let signature = self.translate_closure_signature(def, &item_meta, args, target_kind)?;
 
         let kind = self.get_item_kind(span, def)?;
 
         let body_id = if item_meta.opacity.with_private_contents().is_opaque() {
             Err(Opaque)
         } else {
+            let mk_stt = |content| Statement {
+                content,
+                comments_before: vec![],
+                span,
+            };
+            let mk_body = |locals, statements| -> Result<Body, Opaque> {
+                let block = BlockData {
+                    statements,
+                    terminator: Terminator {
+                        content: RawTerminator::Return,
+                        comments_before: vec![],
+                        span,
+                    },
+                };
+                let body: ExprBody = GExprBody {
+                    span,
+                    locals,
+                    comments: vec![],
+                    body: vec![block].into(),
+                };
+                Ok(Body::Unstructured(body))
+            };
+
             use hax::ClosureKind::*;
             match (target_kind, &args.kind) {
                 (Fn, Fn) | (FnMut, FnMut) | (FnOnce, FnOnce) => {
@@ -225,10 +241,107 @@ impl ItemTransCtx<'_, '_> {
                         Err(_) => Err(Opaque),
                     }
                     // FIXME: @N1ark here we need to unstructure the arguments (provided in a
-                    // N-tuple) into a list of N locals at the very start
+                    // N-tuple) into a list of N locals at the very start. To do this, we must:
+                    // 1. Add a local at index 2 for the tupled arguments (shifting everything..?)
+                    // 2. Add N assignements of the form `locals[N+3] := move args.N`
                 }
-                (_, _) => {
-                    todo!()
+                (FnMut, Fn) => {
+                    // Target translation:
+                    //
+                    // fn call_mut(state: &mut Self, args: Args) -> Output {
+                    //   self.call(state, args)
+                    // }
+                    // // FIXME: @N1ark do we want to make the call a trait impl call, rather than
+                    // a simple fun call? My intuition is that we may as well take the simple
+                    // option of making it a fun call, since a pass will simplify it away anyways.
+
+                    let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
+
+                    let mut locals = Locals {
+                        arg_count: 3,
+                        locals: Vector::new(),
+                    };
+                    let output = locals.new_var(None, signature.output.clone());
+                    let state =
+                        locals.new_var(Some("state".to_string()), signature.inputs[0].clone());
+                    let args =
+                        locals.new_var(Some("args".to_string()), signature.inputs[1].clone());
+                    let call = mk_stt(RawStatement::Call(Call {
+                        func: FnOperand::Regular(FnPtr {
+                            func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
+                            generics: GenericArgs {
+                                const_generics: Vector::new(),
+                                regions: vec![Region::Erased].into(),
+                                trait_refs: Vector::new(),
+                                types: Vector::new(),
+                                target: GenericsSource::item(fun_id),
+                            }
+                            .into(),
+                        }),
+                        args: vec![Operand::Move(state), Operand::Move(args)],
+                        dest: output,
+                    }));
+                    mk_body(locals, vec![call])
+                }
+                (FnOnce, Fn) | (FnOnce, FnMut) => {
+                    // Target translation:
+                    //
+                    // fn call_once(state: Self, args: Args) -> Output {
+                    //   let temp_ref = &[mut] state;
+                    //   let ret = self.call[_mut](temp, args);
+                    //   drop state;
+                    //   return ret;
+                    // }
+                    //
+                    let (refkind, borrowkind) = if args.kind == FnMut {
+                        (RefKind::Mut, BorrowKind::Mut)
+                    } else {
+                        (RefKind::Shared, BorrowKind::Shared)
+                    };
+
+                    // FIXME: @N1ark do we want to make the call a trait impl call, rather than
+                    // a simple fun call? My intuition is that we may as well take the simple
+                    // option of making it a fun call, since a pass will simplify it away anyways.
+                    let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
+
+                    let ref_ty =
+                        TyKind::Ref(Region::Erased, signature.inputs[0].clone(), refkind).into_ty();
+
+                    let mut locals = Locals {
+                        arg_count: 4,
+                        locals: Vector::new(),
+                    };
+                    let output = locals.new_var(None, signature.output.clone());
+                    let state =
+                        locals.new_var(Some("state".to_string()), signature.inputs[0].clone());
+                    let args =
+                        locals.new_var(Some("args".to_string()), signature.inputs[1].clone());
+                    let state_ref = locals.new_var(Some("temp_ref".to_string()), ref_ty.clone());
+                    let mk_ref = mk_stt(RawStatement::Assign(
+                        state_ref.clone(),
+                        Rvalue::Ref(state.clone(), borrowkind),
+                    ));
+                    let call = mk_stt(RawStatement::Call(Call {
+                        func: FnOperand::Regular(FnPtr {
+                            func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
+                            generics: GenericArgs {
+                                const_generics: Vector::new(),
+                                regions: vec![Region::Erased].into(),
+                                trait_refs: Vector::new(),
+                                types: Vector::new(),
+                                target: GenericsSource::item(fun_id),
+                            }
+                            .into(),
+                        }),
+                        args: vec![Operand::Move(state_ref), Operand::Move(args)],
+                        dest: output.clone(),
+                    }));
+                    let drop = mk_stt(RawStatement::Drop(state));
+                    mk_body(locals, vec![mk_ref, call, drop])
+                }
+
+                (Fn, FnOnce) | (Fn, FnMut) | (FnMut, FnOnce) => {
+                    panic!("Can't make a closure body for a more restrictive kind")
                 }
             }
         };
@@ -268,7 +381,7 @@ impl ItemTransCtx<'_, '_> {
         };
         let fn_trait = self.register_trait_decl_id(span, &fn_trait);
 
-        let call_fn = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
+        let call_fn = self.register_closure_fun_decl_id(span, &def.def_id, target_kind);
         let call_fn_name = match target_kind {
             hax::ClosureKind::FnOnce => "call_once".to_string(),
             hax::ClosureKind::FnMut => "call_mut".to_string(),
@@ -302,7 +415,7 @@ impl ItemTransCtx<'_, '_> {
             FunDeclRef {
                 id: call_fn,
                 // TODO: @N1ark this is wrong -- we need to concat the args of the impl and of the method
-                generics: fn_ref_args,
+                generics: fn_ref_args.into(),
             },
         );
 
@@ -351,7 +464,7 @@ impl ItemTransCtx<'_, '_> {
             };
             let tdeclref = TraitDeclRef {
                 trait_id,
-                generics: generics.clone(),
+                generics: generics.clone().into(),
             };
             TraitRef {
                 kind: TraitRefKind::BuiltinOrAuto {
@@ -399,13 +512,15 @@ impl ItemTransCtx<'_, '_> {
                         parent_impl,
                         parent_args
                             .clone()
-                            .with_target(GenericsSource::item(parent_impl)),
+                            .with_target(GenericsSource::item(parent_impl))
+                            .into(),
                     ),
                     trait_decl_ref: RegionBinder::empty(TraitDeclRef {
                         trait_id: parent_decl,
                         generics: fn_trait_arguments
                             .clone()
-                            .with_target(GenericsSource::item(parent_decl)),
+                            .with_target(GenericsSource::item(parent_decl))
+                            .into(),
                     }),
                 };
                 let trait_refs = vec![
@@ -422,7 +537,7 @@ impl ItemTransCtx<'_, '_> {
             item_meta,
             impl_trait: TraitDeclRef {
                 trait_id: fn_trait,
-                generics: fn_trait_arguments,
+                generics: fn_trait_arguments.into(),
             },
             generics: self.into_generics(),
             parent_trait_refs,

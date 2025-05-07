@@ -55,9 +55,19 @@ impl TransItemSource {
 impl TransItemSource {
     /// Value with which we order values.
     fn sort_key(&self) -> impl Ord {
+        let kind_to_id = |k: &hax::ClosureKind| match k {
+            hax::ClosureKind::Fn => 1,
+            hax::ClosureKind::FnMut => 2,
+            hax::ClosureKind::FnOnce => 3,
+        };
         let (variant_index, _) = self.variant_index_arity();
         let def_id = self.as_def_id();
-        (def_id.index, variant_index)
+        match self {
+            Self::ClosureTraitImpl(_, k) | Self::ClosureFun(_, k) => {
+                (def_id.index, variant_index, kind_to_id(k))
+            }
+            _ => (def_id.index, variant_index, 0u8),
+        }
     }
 }
 
@@ -448,7 +458,7 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
         let mut name = name.unwrap();
 
         match src {
-            TransItemSource::ClosureTraitImpl(id, kind) => {
+            TransItemSource::ClosureTraitImpl(id, kind) | TransItemSource::ClosureFun(id, kind) => {
                 let _ = name.name.pop();
                 let impl_id = self.register_closure_trait_impl_id(&None, id, kind);
                 name.name.push(PathElem::Impl(
@@ -456,24 +466,15 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
                     Disambiguator::ZERO,
                 ));
 
-                self.cached_names.insert(def_id.clone(), name.clone());
-            }
-            TransItemSource::ClosureFun(id, kind) => {
-                let _ = name.name.pop();
-                let impl_id = self.register_closure_trait_impl_id(&None, id, kind);
-                name.name.push(PathElem::Impl(
-                    ImplElem::Trait(impl_id),
-                    Disambiguator::ZERO,
-                ));
-                let fn_name = match kind {
-                    hax::ClosureKind::FnOnce => "call_once",
-                    hax::ClosureKind::FnMut => "call_mut",
-                    hax::ClosureKind::Fn => "call",
-                };
-                name.name
-                    .push(PathElem::Ident(fn_name.to_string(), Disambiguator::ZERO));
-
-                self.cached_names.insert(def_id.clone(), name.clone());
+                if matches!(src, TransItemSource::ClosureFun(_, _)) {
+                    let fn_name = match kind {
+                        hax::ClosureKind::FnOnce => "call_once",
+                        hax::ClosureKind::FnMut => "call_mut",
+                        hax::ClosureKind::Fn => "call",
+                    };
+                    name.name
+                        .push(PathElem::Ident(fn_name.to_string(), Disambiguator::ZERO));
+                }
             }
             _ => {}
         }
