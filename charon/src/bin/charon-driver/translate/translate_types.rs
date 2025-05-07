@@ -544,7 +544,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         _trans_id: TypeDeclId,
         span: Span,
         args: &hax::ClosureArgs,
-        full_def: &hax::FullDef,
     ) -> Result<TypeDeclKind, Error> {
         // FIXME: @N1ark this is wrong
         let fields: Vector<FieldId, Field> = args
@@ -580,7 +579,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             .iter()
             .map(|ty| self.translate_ty(span, ty))
             .try_collect()?;
-        let fun_id = self.register_fun_decl_id(span, full_def.def_id());
         let kind = match args.kind {
             hax::ClosureKind::Fn => ClosureKind::Fn,
             hax::ClosureKind::FnMut => ClosureKind::FnMut,
@@ -591,7 +589,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             fields,
             Some(ClosureInfo {
                 kind,
-                fun_id: fun_id.clone(),
                 signature,
                 upvar_tys,
             }),
@@ -864,7 +861,7 @@ impl ItemTransCtx<'_, '_> {
                 self.translate_adt_def(trans_id, span, &item_meta, def)
             }
             hax::FullDefKind::Closure { args, .. } => {
-                self.translate_closure_ty(trans_id, span, &args, &def)
+                self.translate_closure_ty(trans_id, span, &args)
             }
             _ => panic!("Unexpected item when translating types: {def:?}"),
         };

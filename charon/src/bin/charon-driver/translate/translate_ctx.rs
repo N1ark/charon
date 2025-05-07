@@ -834,6 +834,18 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
             .unwrap()
     }
 
+    pub(crate) fn register_closure_fun_decl_id(
+        &mut self,
+        src: &Option<DepSource>,
+        id: &hax::DefId,
+        kind: &hax::ClosureKind,
+    ) -> FunDeclId {
+        *self
+            .register_and_enqueue_id(src, TransItemSource::ClosureFun(id.clone(), kind.clone()))
+            .as_fun()
+            .unwrap()
+    }
+
     pub(crate) fn register_global_decl_id(
         &mut self,
         src: &Option<DepSource>,
@@ -949,6 +961,16 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     ) -> TraitImplId {
         let src = self.make_dep_source(span);
         self.t_ctx.register_closure_trait_impl_id(&src, id, kind)
+    }
+
+    pub(crate) fn register_closure_fun_decl_id(
+        &mut self,
+        span: Span,
+        id: &hax::DefId,
+        kind: &hax::ClosureKind,
+    ) -> FunDeclId {
+        let src = self.make_dep_source(span);
+        self.t_ctx.register_closure_fun_decl_id(&src, id, kind)
     }
 
     /// Get the only binding level. Panics if there are other binding levels.

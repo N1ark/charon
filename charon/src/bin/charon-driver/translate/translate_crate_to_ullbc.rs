@@ -197,8 +197,12 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
                     bt_ctx.translate_closure_trait_impl(id, item_meta, &def, kind)?;
                 self.translated.trait_impls.set_slot(id, closure_trait_impl);
             }
-            TransItemSource::ClosureFun(_, _) => {
-                todo!("Translate closure function")
+            TransItemSource::ClosureFun(_, kind) => {
+                let Some(AnyTransId::Fun(id)) = trans_id else {
+                    unreachable!()
+                };
+                let fun_decl = bt_ctx.translate_closure_fun(id, item_meta, &def, kind)?;
+                self.translated.fun_decls.set_slot(id, fun_decl);
             }
         }
         Ok(())

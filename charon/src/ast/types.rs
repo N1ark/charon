@@ -760,9 +760,6 @@ pub enum ClosureKind {
 pub struct ClosureInfo {
     // FIXME: @N1ark maybe add the IDs for the trait impls / clean this up
     pub kind: ClosureKind,
-    /// The FunDecl item containing the code of the closure. That function takes the closure
-    /// state as its first argument.
-    pub fun_id: FunDeclId,
     /// The types of the variables captured by this closure.
     pub upvar_tys: Vec<Ty>,
     /// The signature of the function that this closure represents.

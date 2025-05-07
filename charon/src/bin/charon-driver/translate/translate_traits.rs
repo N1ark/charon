@@ -376,15 +376,110 @@ impl ItemTransCtx<'_, '_> {
         def_id: TraitImplId,
         item_meta: ItemMeta,
         def: &hax::FullDef,
-        kind: &hax::ClosureKind,
+        target_kind: &hax::ClosureKind,
     ) -> Result<TraitImpl, Error> {
         trace!("About to translate closure trait impl:\n{:?}", def.def_id);
         trace!("Trait impl id:\n{:?}", def_id);
 
         let span = item_meta.span;
-
         self.translate_def_generics(span, def)?;
 
-        todo!()
+        let hax::FullDefKind::Closure { args, .. } = &def.kind else {
+            unreachable!()
+        };
+
+        let Some(fn_trait) = (match target_kind {
+            hax::ClosureKind::FnOnce => self.t_ctx.tcx.lang_items().fn_once_trait(),
+            hax::ClosureKind::FnMut => self.t_ctx.tcx.lang_items().fn_mut_trait(),
+            hax::ClosureKind::Fn => self.t_ctx.tcx.lang_items().fn_trait(),
+        }) else {
+            unreachable!()
+        };
+        // FIXME: @N1ark no cloning here !!
+        let state = self.t_ctx.hax_state.clone();
+        let fn_trait_id = self.t_ctx.catch_sinto(&state, span, &fn_trait)?;
+        let fn_trait = self.register_trait_decl_id(span, &fn_trait_id);
+
+        let call_fn = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
+        let call_fn_name = match target_kind {
+            hax::ClosureKind::FnOnce => "call_once".to_string(),
+            hax::ClosureKind::FnMut => "call_mut".to_string(),
+            hax::ClosureKind::Fn => "call".to_string(),
+        };
+        let call_fn_binder = Binder::new(
+            BinderKind::InherentImplBlock,
+            GenericParams::empty(),
+            FunDeclRef {
+                id: call_fn,
+                generics: GenericArgs::empty(GenericsSource::Method(
+                    fn_trait,
+                    TraitItemName(call_fn_name.clone()),
+                )),
+            },
+        );
+
+        let parent_args = self.translate_generic_args(
+            span,
+            &args.parent_args,
+            &args.parent_trait_refs,
+            None,
+            // We don't know the item these generics apply to.
+            GenericsSource::Builtin,
+        )?;
+
+        let types = match target_kind {
+            hax::ClosureKind::FnOnce => {
+                let sig_binder =
+                    self.translate_region_binder(span, &args.tupled_sig, |ctx, fnsig| {
+                        let inputs: Vec<Ty> = fnsig
+                            .inputs
+                            .iter()
+                            .map(|ty| ctx.translate_ty(span, ty))
+                            .try_collect()?;
+                        let output = ctx.translate_ty(span, &fnsig.output)?;
+                        Ok((inputs, output))
+                    })?;
+                let (_, output) = sig_binder.erase();
+                vec![(TraitItemName("Output".into()), output)]
+            }
+            hax::ClosureKind::FnMut | hax::ClosureKind::Fn => vec![],
+        };
+
+        let parent_trait_refs = match target_kind {
+            hax::ClosureKind::FnOnce => Vector::new(),
+            hax::ClosureKind::FnMut | hax::ClosureKind::Fn => {
+                let parent_kind = if *target_kind == hax::ClosureKind::FnMut {
+                    hax::ClosureKind::FnOnce
+                } else {
+                    hax::ClosureKind::FnMut
+                };
+                let parent_impl =
+                    self.register_closure_trait_impl_id(span, def.def_id(), &parent_kind);
+                // TODO: @N1ark this is wrong I think
+                let trait_ref = TraitRef {
+                    kind: TraitRefKind::TraitImpl(parent_impl, parent_args.clone()),
+                    trait_decl_ref: RegionBinder::empty(TraitDeclRef {
+                        trait_id: fn_trait,
+                        generics: parent_args.clone(),
+                    }),
+                };
+                vec![trait_ref].into()
+            }
+        };
+
+        Ok(ast::TraitImpl {
+            def_id,
+            item_meta,
+            impl_trait: TraitDeclRef {
+                trait_id: fn_trait,
+                generics: parent_args,
+            },
+            generics: self.into_generics(),
+            parent_trait_refs,
+            type_clauses: vec![],
+            consts: vec![],
+            types,
+            methods: vec![(TraitItemName(call_fn_name), call_fn_binder)],
+        })
     }
 }
