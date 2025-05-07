@@ -539,62 +539,6 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         Ok(type_def_kind)
     }
 
-    fn translate_closure_ty(
-        &mut self,
-        _trans_id: TypeDeclId,
-        span: Span,
-        args: &hax::ClosureArgs,
-    ) -> Result<TypeDeclKind, Error> {
-        // FIXME: @N1ark this is wrong
-        let fields: Vector<FieldId, Field> = args
-            .upvar_tys
-            .iter()
-            .map(|ty| {
-                let ty = self.translate_ty(span, ty)?;
-                Ok(Field {
-                    span,
-                    attr_info: AttrInfo {
-                        attributes: vec![],
-                        inline: None,
-                        rename: None,
-                        public: true,
-                    },
-                    name: None,
-                    ty: ty.clone(),
-                })
-            })
-            .try_collect()?;
-
-        let signature = self.translate_region_binder(span, &args.untupled_sig, |ctx, sig| {
-            let inputs = sig
-                .inputs
-                .iter()
-                .map(|x| ctx.translate_ty(span, x))
-                .try_collect()?;
-            let output = ctx.translate_ty(span, &sig.output)?;
-            Ok((inputs, output))
-        })?;
-        let upvar_tys = args
-            .upvar_tys
-            .iter()
-            .map(|ty| self.translate_ty(span, ty))
-            .try_collect()?;
-        let kind = match args.kind {
-            hax::ClosureKind::Fn => ClosureKind::Fn,
-            hax::ClosureKind::FnMut => ClosureKind::FnMut,
-            hax::ClosureKind::FnOnce => ClosureKind::FnOnce,
-        };
-
-        Ok(TypeDeclKind::Struct(
-            fields,
-            Some(ClosureInfo {
-                kind,
-                signature,
-                upvar_tys,
-            }),
-        ))
-    }
-
     fn translate_discriminant(
         &mut self,
         def_span: Span,
