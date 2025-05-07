@@ -331,7 +331,7 @@ impl ItemTransCtx<'_, '_> {
         let closure_state_id = self.register_type_decl_id(span, def.def_id());
         let closure_state = TyKind::Adt(
             TypeId::Adt(closure_state_id),
-            GenericArgs::empty(GenericsSource::Item(AnyTransId::Type(closure_state_id))),
+            GenericArgs::empty(GenericsSource::item(closure_state_id)),
         )
         .into_ty();
 
@@ -347,7 +347,7 @@ impl ItemTransCtx<'_, '_> {
                 const_generics: Vector::new(),
                 trait_refs: Vector::new(),
                 types: vec![ty].into(),
-                target: GenericsSource::Item(AnyTransId::TraitDecl(trait_id)),
+                target: GenericsSource::item(trait_id),
             };
             let tdeclref = TraitDeclRef {
                 trait_id,
@@ -391,7 +391,7 @@ impl ItemTransCtx<'_, '_> {
                 let parent_decl = match parent_kind {
                     hax::ClosureKind::FnOnce => self.get_lang_item(rustc_hir::LangItem::FnOnce),
                     hax::ClosureKind::FnMut => self.get_lang_item(rustc_hir::LangItem::FnMut),
-                    _ => unreachable!(),
+                    hax::ClosureKind::Fn => unreachable!(),
                 };
                 let parent_decl = self.register_trait_decl_id(span, &parent_decl);
                 let parent_trait_ref = TraitRef {

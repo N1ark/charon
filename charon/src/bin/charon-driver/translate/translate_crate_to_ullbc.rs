@@ -44,7 +44,8 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
                     return; // Error has already been emitted
                 };
                 let opacity = self.opacity_for_name(&name);
-                let item_meta = self.translate_item_meta(&def, name, opacity);
+                let trans_src = TransItemSource::TraitImpl(def.def_id.clone());
+                let item_meta = self.translate_item_meta(&def, &trans_src, name, opacity);
                 let _ = self.register_module(item_meta, &def);
             }
 
@@ -138,8 +139,7 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
         trans_id: Option<AnyTransId>,
     ) -> Result<(), Error> {
         // Translate the meta information
-        let def_id = item_src.as_def_id();
-        let name = self.hax_def_id_to_name(def_id)?;
+        let name = self.hax_trans_src_to_name(item_src)?;
         if let Some(trans_id) = trans_id {
             self.translated.item_names.insert(trans_id, name.clone());
         }
@@ -148,11 +148,11 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
             // Don't even start translating the item. In particular don't call `hax_def` on it.
             return Ok(());
         }
-        let def = self.hax_def(def_id)?;
-        let item_meta = self.translate_item_meta(&def, name, opacity);
+        let def = self.hax_def(item_src.as_def_id())?;
+        let item_meta = self.translate_item_meta(&def, item_src, name, opacity);
 
         // Initialize the body translation context
-        let bt_ctx = ItemTransCtx::new(def_id.clone(), trans_id, self);
+        let bt_ctx = ItemTransCtx::new(def.def_id.clone(), trans_id, self);
         match item_src {
             TransItemSource::Type(_) => {
                 let Some(AnyTransId::Type(id)) = trans_id else {

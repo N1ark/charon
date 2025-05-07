@@ -104,7 +104,7 @@ pub struct TranslateCtx<'tcx> {
     /// Cache the names to compute them only once each.
     pub cached_names: HashMap<hax::DefId, Name>,
     /// Cache the `ItemMeta`s to compute them only once each.
-    pub cached_item_metas: HashMap<hax::DefId, ItemMeta>,
+    pub cached_item_metas: HashMap<TransItemSource, ItemMeta>,
 }
 
 /// A level of binding for type-level variables. Each item has a top-level binding level
@@ -435,6 +435,52 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
         Ok(name)
     }
 
+    /// Retrieve the name for a [TransItemSource] -- notably here we modify the name for
+    /// closure trait impls and closure fun decls to give them different names, since e.g.
+    /// a Fn closure will otherwise generate 6 items with the same name: an ADT, 3 impls and
+    /// 3 funs
+    pub fn hax_trans_src_to_name(&mut self, src: &TransItemSource) -> Result<Name, Error> {
+        let def_id = src.as_def_id();
+        let name = self.hax_def_id_to_name(def_id);
+        if name.is_err() {
+            return name;
+        }
+        let mut name = name.unwrap();
+
+        match src {
+            TransItemSource::ClosureTraitImpl(id, kind) => {
+                let _ = name.name.pop();
+                let impl_id = self.register_closure_trait_impl_id(&None, id, kind);
+                name.name.push(PathElem::Impl(
+                    ImplElem::Trait(impl_id),
+                    Disambiguator::ZERO,
+                ));
+
+                self.cached_names.insert(def_id.clone(), name.clone());
+            }
+            TransItemSource::ClosureFun(id, kind) => {
+                let _ = name.name.pop();
+                let impl_id = self.register_closure_trait_impl_id(&None, id, kind);
+                name.name.push(PathElem::Impl(
+                    ImplElem::Trait(impl_id),
+                    Disambiguator::ZERO,
+                ));
+                let fn_name = match kind {
+                    hax::ClosureKind::FnOnce => "call_once",
+                    hax::ClosureKind::FnMut => "call_mut",
+                    hax::ClosureKind::Fn => "call",
+                };
+                name.name
+                    .push(PathElem::Ident(fn_name.to_string(), Disambiguator::ZERO));
+
+                self.cached_names.insert(def_id.clone(), name.clone());
+            }
+            _ => {}
+        }
+
+        Ok(name)
+    }
+
     /// Translates `T` into `U` using `hax`'s `SInto` trait, catching any hax panics.
     pub fn catch_sinto<S, T, U>(&mut self, s: &S, span: Span, x: &T) -> Result<U, Error>
     where
@@ -488,10 +534,11 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
     pub(crate) fn translate_item_meta(
         &mut self,
         def: &hax::FullDef,
+        item_src: &TransItemSource,
         name: Name,
         name_opacity: ItemOpacity,
     ) -> ItemMeta {
-        if let Some(item_meta) = self.cached_item_metas.get(&def.def_id) {
+        if let Some(item_meta) = self.cached_item_metas.get(&item_src) {
             return item_meta.clone();
         }
         let span = def.source_span.as_ref().unwrap_or(&def.span);
@@ -522,7 +569,7 @@ impl<'tcx, 'ctx> TranslateCtx<'tcx> {
             lang_item,
         };
         self.cached_item_metas
-            .insert(def.def_id.clone(), item_meta.clone());
+            .insert(item_src.clone(), item_meta.clone());
         item_meta
     }
 
