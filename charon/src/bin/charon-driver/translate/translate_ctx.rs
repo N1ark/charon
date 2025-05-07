@@ -5,8 +5,8 @@ use charon_lib::common::hash_by_addr::HashByAddr;
 use charon_lib::formatter::{FmtCtx, IntoFormatter};
 use charon_lib::ids::Vector;
 use charon_lib::options::TranslateOptions;
-use hax_frontend_exporter::SInto;
 use hax_frontend_exporter::{self as hax, DefPathItem};
+use hax_frontend_exporter::{DefId, SInto};
 use itertools::Itertools;
 use macros::VariantIndexArity;
 use rustc_middle::ty::TyCtxt;
@@ -1182,6 +1182,15 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             src_id: self.item_id?,
             span: self.def_id.is_local.then_some(span),
         })
+    }
+
+    pub(crate) fn get_lang_item(&self, item: rustc_hir::LangItem) -> DefId {
+        self.t_ctx
+            .tcx
+            .lang_items()
+            .get(item)
+            .unwrap()
+            .sinto(&self.t_ctx.hax_state)
     }
 }
 

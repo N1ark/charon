@@ -517,6 +517,8 @@ impl ItemTransCtx<'_, '_> {
                         Ok(Err(Opaque)) => Err(Opaque),
                         Err(_) => Err(Opaque),
                     }
+                    // FIXME: @N1ark here we need to unstructure the arguments (provided in a
+                    // N-tuple) into a list of N locals at the very start
                 }
                 (_, _) => {
                     todo!()

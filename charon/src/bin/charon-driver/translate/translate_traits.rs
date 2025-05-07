@@ -388,17 +388,12 @@ impl ItemTransCtx<'_, '_> {
             unreachable!()
         };
 
-        let Some(fn_trait) = (match target_kind {
-            hax::ClosureKind::FnOnce => self.t_ctx.tcx.lang_items().fn_once_trait(),
-            hax::ClosureKind::FnMut => self.t_ctx.tcx.lang_items().fn_mut_trait(),
-            hax::ClosureKind::Fn => self.t_ctx.tcx.lang_items().fn_trait(),
-        }) else {
-            unreachable!()
+        let fn_trait = match target_kind {
+            hax::ClosureKind::FnOnce => self.get_lang_item(rustc_hir::LangItem::FnOnce),
+            hax::ClosureKind::FnMut => self.get_lang_item(rustc_hir::LangItem::FnMut),
+            hax::ClosureKind::Fn => self.get_lang_item(rustc_hir::LangItem::Fn),
         };
-        // FIXME: @N1ark no cloning here !!
-        let state = self.t_ctx.hax_state.clone();
-        let fn_trait_id = self.t_ctx.catch_sinto(&state, span, &fn_trait)?;
-        let fn_trait = self.register_trait_decl_id(span, &fn_trait_id);
+        let fn_trait = self.register_trait_decl_id(span, &fn_trait);
 
         let call_fn = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
         let call_fn_name = match target_kind {
@@ -407,9 +402,18 @@ impl ItemTransCtx<'_, '_> {
             hax::ClosureKind::Fn => "call".to_string(),
         };
         let call_fn_name = TraitItemName(call_fn_name);
+        let mut call_fn_params = GenericParams::empty();
+        match target_kind {
+            hax::ClosureKind::FnOnce => {}
+            hax::ClosureKind::FnMut | hax::ClosureKind::Fn => {
+                call_fn_params
+                    .regions
+                    .push_with(|index| RegionVar { index, name: None });
+            }
+        };
         let call_fn_binder = Binder::new(
             BinderKind::TraitMethod(fn_trait, call_fn_name.clone()), //fix
-            GenericParams::empty(), // should be exactly 1 lifetime for fnmut/fn
+            call_fn_params,
             FunDeclRef {
                 id: call_fn,
                 generics: GenericArgs::empty(GenericsSource::Method(
@@ -462,14 +466,11 @@ impl ItemTransCtx<'_, '_> {
                     },
                 );
 
-                // FIXME: @N1ark this is horrible !!!
-                let sized_trait = self.t_ctx.tcx.lang_items().sized_trait().unwrap();
-                let sized_trait_id = self.t_ctx.catch_sinto(&state, span, &sized_trait)?;
-                let sized_trait = self.register_trait_decl_id(span, &sized_trait_id);
+                let sized_trait = self.get_lang_item(rustc_hir::LangItem::Sized);
+                let sized_trait = self.register_trait_decl_id(span, &sized_trait);
 
-                let tuple_trait = self.t_ctx.tcx.lang_items().tuple_trait().unwrap();
-                let tuple_trait_id = self.t_ctx.catch_sinto(&state, span, &tuple_trait)?;
-                let tuple_trait = self.register_trait_decl_id(span, &tuple_trait_id);
+                let tuple_trait = self.get_lang_item(rustc_hir::LangItem::Tuple);
+                let tuple_trait = self.register_trait_decl_id(span, &tuple_trait);
 
                 let mk_tref = |trait_id, ty| {
                     let generics = GenericArgs {
