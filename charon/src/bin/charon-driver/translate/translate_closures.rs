@@ -1,4 +1,39 @@
-//! TODO: write doc
+//! In MIR, closures are special cased, and have their own type; calling a closure then uses
+//! builtins, requiring consumers to special case them.
+//! Here we convert closures to a struct containing the closure's state (upvars), along with
+//! matching trait impls and fun decls (e.g. a Fn closure will have a trait impl for Fn, FnMut
+//! and FnOnce, along with 3 matching functions for call, call_mut and call_once).
+//!
+//! For example, given the following Rust code:
+//! ```rust
+//! pub fn test_closure_capture(x: u32, y: u32) -> u32 {
+//!   let f = &|z| x + y + z;
+//!   (f)(0)
+//! }
+//! ```
+//!
+//! We generate the equivalent desugared code:
+//! ```rust
+//! struct {test_closure_capture::closure#0} (
+//!     u32,
+//!     u32,
+//! )
+//!
+//! impl Fn<(u32,)> for {test_closure_capture::closure#0} {
+//!     type Output = u32;
+//!     fn call(&self, arg: (u32,)) -> u32 {
+//!         self.0 + self.1 + arg.0
+//!     }
+//! }
+//!
+//! impl FnMut<(u32,)> for {test_closure_capture::closure#0} { ... }
+//! impl FnOnce<(u32,)> for {test_closure_capture::closure#0} { ... }
+//!
+//! pub fn test_closure_capture(x: u32, y: u32) -> u32 {
+//!     let state = {test_closure_capture::closure#0} ( x, y );
+//!     state.call((0,))
+//! }
+//! ```
 
 use crate::translate::translate_bodies::BodyTransCtx;
 
