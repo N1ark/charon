@@ -344,7 +344,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                                 let parent_args = ctx.translate_generic_args(
                                     span,
                                     &closure_args.parent_args,
-                                    impl_exprs,
+                                    &Vec::new(),
                                     None,
                                     GenericsSource::item(impl_id),
                                 )?;

@@ -121,7 +121,7 @@ pub enum TraitRefKind {
     SelfId,
 
     /// A trait implementation that is computed by the compiler, such as for built-in traits
-    /// `Sized` or `FnMut`. This morally points to an invisible `impl` block; as such it contains
+    /// `Sized`. This morally points to an invisible `impl` block; as such it contains
     /// the information we may need from one.
     BuiltinOrAuto {
         trait_decl_ref: PolyTraitDeclRef,

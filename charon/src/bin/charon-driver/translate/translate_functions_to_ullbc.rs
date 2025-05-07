@@ -514,10 +514,7 @@ impl ItemTransCtx<'_, '_> {
                     let mut bt_ctx = BodyTransCtx::new(&mut self);
                     match bt_ctx.translate_body(item_meta.span, def) {
                         Ok(Ok(body)) => Ok(body),
-                        // Opaque declaration
                         Ok(Err(Opaque)) => Err(Opaque),
-                        // Translation error.
-                        // FIXME: handle error cases more explicitly.
                         Err(_) => Err(Opaque),
                     }
                 }

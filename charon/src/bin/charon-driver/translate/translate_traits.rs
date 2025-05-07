@@ -406,19 +406,20 @@ impl ItemTransCtx<'_, '_> {
             hax::ClosureKind::FnMut => "call_mut".to_string(),
             hax::ClosureKind::Fn => "call".to_string(),
         };
+        let call_fn_name = TraitItemName(call_fn_name);
         let call_fn_binder = Binder::new(
-            BinderKind::InherentImplBlock,
-            GenericParams::empty(),
+            BinderKind::TraitMethod(fn_trait, call_fn_name.clone()), //fix
+            GenericParams::empty(), // should be exactly 1 lifetime for fnmut/fn
             FunDeclRef {
                 id: call_fn,
                 generics: GenericArgs::empty(GenericsSource::Method(
                     fn_trait,
-                    TraitItemName(call_fn_name.clone()),
+                    call_fn_name.clone(),
                 )),
             },
         );
 
-        let parent_args = self.translate_generic_args(
+        let mut parent_args = self.translate_generic_args(
             span,
             &args.parent_args,
             &args.parent_trait_refs,
@@ -427,7 +428,7 @@ impl ItemTransCtx<'_, '_> {
             GenericsSource::Builtin,
         )?;
 
-        let types = match target_kind {
+        let (parent_trait_refs, types) = match target_kind {
             hax::ClosureKind::FnOnce => {
                 let sig_binder =
                     self.translate_region_binder(span, &args.tupled_sig, |ctx, fnsig| {
@@ -436,17 +437,70 @@ impl ItemTransCtx<'_, '_> {
                             .iter()
                             .map(|ty| ctx.translate_ty(span, ty))
                             .try_collect()?;
+                        let inputs = Ty::mk_tuple(inputs);
                         let output = ctx.translate_ty(span, &fnsig.output)?;
                         Ok((inputs, output))
                     })?;
-                let (_, output) = sig_binder.erase();
-                vec![(TraitItemName("Output".into()), output)]
-            }
-            hax::ClosureKind::FnMut | hax::ClosureKind::Fn => vec![],
-        };
+                let (inputs, output) = sig_binder.erase();
+                let types = vec![(TraitItemName("Output".into()), output.clone())];
 
-        let parent_trait_refs = match target_kind {
-            hax::ClosureKind::FnOnce => Vector::new(),
+                let closure_state_id = self.register_type_decl_id(span, def.def_id());
+                let closure_state = TyKind::Adt(
+                    TypeId::Adt(closure_state_id),
+                    GenericArgs::empty(GenericsSource::Item(AnyTransId::Type(closure_state_id))),
+                )
+                .into_ty();
+
+                parent_args = parent_args.concat(
+                    GenericsSource::Item(AnyTransId::TraitDecl(fn_trait)),
+                    &GenericArgs {
+                        regions: Vector::new(),
+                        types: vec![closure_state, inputs.clone()].into(),
+                        const_generics: Vector::new(),
+                        trait_refs: Vector::new(),
+                        target: GenericsSource::Item(AnyTransId::TraitDecl(fn_trait)),
+                    },
+                );
+
+                // FIXME: @N1ark this is horrible !!!
+                let sized_trait = self.t_ctx.tcx.lang_items().sized_trait().unwrap();
+                let sized_trait_id = self.t_ctx.catch_sinto(&state, span, &sized_trait)?;
+                let sized_trait = self.register_trait_decl_id(span, &sized_trait_id);
+
+                let tuple_trait = self.t_ctx.tcx.lang_items().tuple_trait().unwrap();
+                let tuple_trait_id = self.t_ctx.catch_sinto(&state, span, &tuple_trait)?;
+                let tuple_trait = self.register_trait_decl_id(span, &tuple_trait_id);
+
+                let mk_tref = |trait_id, ty| {
+                    let generics = GenericArgs {
+                        regions: Vector::new(),
+                        const_generics: Vector::new(),
+                        trait_refs: Vector::new(),
+                        types: vec![ty].into(),
+                        target: GenericsSource::Item(AnyTransId::TraitDecl(trait_id)),
+                    };
+                    let tdeclref = TraitDeclRef {
+                        trait_id,
+                        generics: generics.clone(),
+                    };
+                    TraitRef {
+                        kind: TraitRefKind::BuiltinOrAuto {
+                            trait_decl_ref: RegionBinder::empty(tdeclref.clone()),
+                            parent_trait_refs: Vector::new(),
+                            types: vec![],
+                        },
+                        trait_decl_ref: RegionBinder::empty(tdeclref),
+                    }
+                };
+
+                let trait_refs = vec![
+                    mk_tref(sized_trait, inputs.clone()),
+                    mk_tref(tuple_trait, inputs),
+                    mk_tref(sized_trait, output),
+                ];
+
+                (trait_refs.into(), types)
+            }
             hax::ClosureKind::FnMut | hax::ClosureKind::Fn => {
                 let parent_kind = if *target_kind == hax::ClosureKind::FnMut {
                     hax::ClosureKind::FnOnce
@@ -463,7 +517,7 @@ impl ItemTransCtx<'_, '_> {
                         generics: parent_args.clone(),
                     }),
                 };
-                vec![trait_ref].into()
+                (vec![trait_ref].into(), vec![])
             }
         };
 
@@ -479,7 +533,7 @@ impl ItemTransCtx<'_, '_> {
             type_clauses: vec![],
             consts: vec![],
             types,
-            methods: vec![(TraitItemName(call_fn_name), call_fn_binder)],
+            methods: vec![(call_fn_name, call_fn_binder)],
         })
     }
 }
