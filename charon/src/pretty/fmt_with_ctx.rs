@@ -957,14 +957,6 @@ impl<C: AstFormatter> FmtWithCtx<C> for Rvalue {
                     AggregateKind::Array(..) => {
                         format!("[{}]", ops_s.join(", "))
                     }
-                    AggregateKind::Closure(fn_id, generics) => {
-                        format!(
-                            "{{{}{}}} {{{}}}",
-                            ctx.format_object(*fn_id),
-                            generics.fmt_with_ctx(ctx),
-                            ops_s.join(", ")
-                        )
-                    }
                     AggregateKind::RawPtr(_, rmut) => {
                         let mutability = match rmut {
                             RefKind::Shared => "const",

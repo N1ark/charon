@@ -680,11 +680,14 @@ impl BodyTransCtx<'_, '_, '_> {
                             span,
                             &closure_args.parent_args,
                             &closure_args.parent_trait_refs,
-                            None,
+                            Some(hax::Binder {
+                                value: (),
+                                bound_vars: closure_args.tupled_sig.bound_vars.clone(),
+                            }),
                             type_id.generics_target(),
                         )?;
 
-                        let akind = AggregateKind::Adt(type_id, None, None, generics.into());
+                        let akind = AggregateKind::Adt(type_id, None, None, Box::new(generics));
                         Ok(Rvalue::Aggregate(akind, operands_t))
                     }
                     hax::AggregateKind::RawPtr(ty, is_mut) => {

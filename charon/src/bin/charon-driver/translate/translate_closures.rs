@@ -498,7 +498,6 @@ impl ItemTransCtx<'_, '_> {
             Ok((inputs, output))
         })?;
         let (inputs, output) = sig_binder.erase();
-        let types = vec![(TraitItemName("Output".into()), output.clone())];
 
         let closure_state_id = self.register_type_decl_id(span, def.def_id());
         let closure_state = TyKind::Adt(
@@ -550,8 +549,9 @@ impl ItemTransCtx<'_, '_> {
                 let trait_refs = vec![
                     mk_tref(sized_trait, inputs.clone()),
                     mk_tref(tuple_trait, inputs),
-                    mk_tref(sized_trait, output),
+                    mk_tref(sized_trait, output.clone()),
                 ];
+                let types = vec![(TraitItemName("Output".into()), output)];
                 (trait_refs.into(), types)
             }
             hax::ClosureKind::FnMut | hax::ClosureKind::Fn => {
