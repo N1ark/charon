@@ -321,72 +321,76 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                         _ => None,
                     });
 
-                match closure_kind {
-                    Some(closure_kind) => {
-                        let binder = self.translate_region_binder(
-                            span,
-                            &impl_source.r#trait,
-                            |ctx, tref| {
-                                let Some(hax::GenericArg::Type(closure_ty)) =
-                                    tref.generic_args.first()
-                                else {
-                                    unreachable!("Expected closure type");
-                                };
-                                let hax::TyKind::Closure(closure_id, closure_args) =
-                                    closure_ty.kind()
-                                else {
-                                    unreachable!("Expected closure type");
-                                };
-
-                                let impl_id = ctx.register_closure_trait_impl_id(
-                                    span,
-                                    &closure_id,
-                                    &closure_kind,
-                                );
-
-                                let parent_args = ctx.translate_generic_args(
-                                    span,
-                                    &closure_args.parent_args,
-                                    &Vec::new(),
-                                    None,
-                                    GenericsSource::item(impl_id),
-                                )?;
-
-                                Ok((impl_id, parent_args))
-                            },
-                        )?;
-                        let (impl_id, parent_args) = binder.erase();
-                        TraitRef {
-                            kind: TraitRefKind::TraitImpl(impl_id, parent_args.into()),
-                            trait_decl_ref,
-                        }
+                let is_closure = closure_kind.as_ref().is_some_and(|_| {
+                    if let Some(hax::GenericArg::Type(closure_ty)) = impl_source
+                        .r#trait
+                        .hax_skip_binder_ref()
+                        .generic_args
+                        .first()
+                    {
+                        matches!(closure_ty.kind(), hax::TyKind::Closure(..))
+                    } else {
+                        false
                     }
-                    None => {
-                        let parent_trait_refs =
-                            self.translate_trait_impl_exprs(span, &impl_exprs)?;
-                        let types = types
-                            .iter()
-                            .map(|(def_id, ty)| {
-                                let item_def = self.hax_def(def_id)?;
-                                let ty = self.translate_ty(span, ty)?;
-                                let hax::FullDefKind::AssocTy {
-                                    associated_item, ..
-                                } = item_def.kind()
-                                else {
-                                    unreachable!()
-                                };
-                                let name = TraitItemName(associated_item.name.clone());
-                                Ok((name, ty))
-                            })
-                            .try_collect()?;
-                        TraitRef {
-                            kind: TraitRefKind::BuiltinOrAuto {
-                                trait_decl_ref: trait_decl_ref.clone(),
-                                parent_trait_refs,
-                                types,
-                            },
-                            trait_decl_ref,
-                        }
+                });
+
+                if is_closure {
+                    let binder =
+                        self.translate_region_binder(span, &impl_source.r#trait, |ctx, tref| {
+                            let Some(hax::GenericArg::Type(closure_ty)) = tref.generic_args.first()
+                            else {
+                                unreachable!();
+                            };
+                            let hax::TyKind::Closure(closure_id, closure_args) = closure_ty.kind()
+                            else {
+                                unreachable!();
+                            };
+
+                            let impl_id = ctx.register_closure_trait_impl_id(
+                                span,
+                                &closure_id,
+                                &closure_kind.unwrap(),
+                            );
+
+                            let parent_args = ctx.translate_generic_args(
+                                span,
+                                &closure_args.parent_args,
+                                &Vec::new(),
+                                None,
+                                GenericsSource::item(impl_id),
+                            )?;
+
+                            Ok((impl_id, parent_args))
+                        })?;
+                    let (impl_id, parent_args) = binder.erase();
+                    TraitRef {
+                        kind: TraitRefKind::TraitImpl(impl_id, parent_args.into()),
+                        trait_decl_ref,
+                    }
+                } else {
+                    let parent_trait_refs = self.translate_trait_impl_exprs(span, &impl_exprs)?;
+                    let types = types
+                        .iter()
+                        .map(|(def_id, ty)| {
+                            let item_def = self.hax_def(def_id)?;
+                            let ty = self.translate_ty(span, ty)?;
+                            let hax::FullDefKind::AssocTy {
+                                associated_item, ..
+                            } = item_def.kind()
+                            else {
+                                unreachable!()
+                            };
+                            let name = TraitItemName(associated_item.name.clone());
+                            Ok((name, ty))
+                        })
+                        .try_collect()?;
+                    TraitRef {
+                        kind: TraitRefKind::BuiltinOrAuto {
+                            trait_decl_ref: trait_decl_ref.clone(),
+                            parent_trait_refs,
+                            types,
+                        },
+                        trait_decl_ref,
                     }
                 }
             }
