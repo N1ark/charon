@@ -207,6 +207,7 @@ impl ItemTransCtx<'_, '_> {
         let body_id = if item_meta.opacity.with_private_contents().is_opaque() {
             Err(Opaque)
         } else {
+            // Utils to make constructing the body nicer
             let mk_stt = |content| Statement {
                 content,
                 comments_before: vec![],
@@ -236,14 +237,76 @@ impl ItemTransCtx<'_, '_> {
                     // Translate the function's body normally
                     let mut bt_ctx = BodyTransCtx::new(&mut self);
                     match bt_ctx.translate_body(item_meta.span, def) {
-                        Ok(Ok(body)) => Ok(body),
+                        Ok(Ok(body)) => {
+                            // The body is translated as if the locals are:
+                            // ret value, state, arg-1, ..., arg-N, rest...
+                            // However, there is only one argument with the tupled closure
+                            // arguments; we must thus shift all locals with index >=2 by 1,
+                            // and add a new local for the tupled arg, giving us:
+                            // ret value, state, args, arg-1, ..., arg-N, rest...
+                            // We then add N statements of the form `locals[N+3] := move locals[2].N`,
+                            // to destructure the arguments.
+                            let Body::Unstructured(GExprBody {
+                                span,
+                                mut locals,
+                                comments,
+                                mut body,
+                            }) = body
+                            else {
+                                unreachable!()
+                            };
+
+                            body.dyn_visit_mut(|local: &mut LocalId| {
+                                let idx = local.index();
+                                if idx >= 2 {
+                                    *local = LocalId::from_usize(idx + 1)
+                                }
+                            });
+
+                            let closure_arg_count = locals.arg_count - 1;
+                            locals.arg_count = 2;
+                            let mut old_locals = Vector::new();
+                            std::mem::swap(&mut old_locals, &mut locals.locals);
+                            locals.locals.push(old_locals.remove(0.into()).unwrap()); // ret
+                            locals.locals.push(old_locals.remove(1.into()).unwrap()); // state
+                            let tupled_args = locals.new_var(
+                                Some("tupled_args".to_string()),
+                                signature.inputs[1].clone(),
+                            );
+                            locals.locals.extend(old_locals.into_iter().map(|mut l| {
+                                l.index = LocalId::from_usize(l.index.index() + 1);
+                                l
+                            }));
+
+                            let untupled_args = signature.inputs[1].as_tuple().unwrap();
+                            let new_stts = (0..closure_arg_count).into_iter().map(|idx| {
+                                mk_stt(RawStatement::Assign(
+                                    locals.place_for_var(LocalId::from_usize(idx + 3)),
+                                    Rvalue::Use(Operand::Move(Place {
+                                        kind: PlaceKind::Projection(
+                                            tupled_args.clone().into(),
+                                            ProjectionElem::Field(
+                                                FieldProjKind::Tuple(closure_arg_count),
+                                                FieldId::from_usize(idx),
+                                            ),
+                                        ),
+                                        ty: untupled_args[TypeVarId::from_usize(idx)].clone(),
+                                    })),
+                                ))
+                            });
+                            let fst_block = &mut body.get_mut(BlockId::ZERO).unwrap().statements;
+                            fst_block.splice(0..0, new_stts);
+
+                            Ok(Body::Unstructured(GExprBody {
+                                span,
+                                locals,
+                                comments,
+                                body,
+                            }))
+                        }
                         Ok(Err(Opaque)) => Err(Opaque),
                         Err(_) => Err(Opaque),
                     }
-                    // FIXME: @N1ark here we need to unstructure the arguments (provided in a
-                    // N-tuple) into a list of N locals at the very start. To do this, we must:
-                    // 1. Add a local at index 2 for the tupled arguments (shifting everything..?)
-                    // 2. Add N assignements of the form `locals[N+3] := move args.N`
                 }
                 (FnMut, Fn) => {
                     // Target translation:
@@ -251,7 +314,8 @@ impl ItemTransCtx<'_, '_> {
                     // fn call_mut(state: &mut Self, args: Args) -> Output {
                     //   self.call(state, args)
                     // }
-                    // // FIXME: @N1ark do we want to make the call a trait impl call, rather than
+                    //
+                    // FIXME: @N1ark do we want to make the call a trait impl call, rather than
                     // a simple fun call? My intuition is that we may as well take the simple
                     // option of making it a fun call, since a pass will simplify it away anyways.
 
