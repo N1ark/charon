@@ -53,7 +53,6 @@ impl ItemTransCtx<'_, '_> {
         span: Span,
         args: &hax::ClosureArgs,
     ) -> Result<TypeDeclKind, Error> {
-        // FIXME: @N1ark this is wrong
         let fields: Vector<FieldId, Field> = args
             .upvar_tys
             .iter()
@@ -68,7 +67,7 @@ impl ItemTransCtx<'_, '_> {
                         public: true,
                     },
                     name: None,
-                    ty: ty.clone(),
+                    ty,
                 })
             })
             .try_collect()?;
@@ -138,11 +137,18 @@ impl ItemTransCtx<'_, '_> {
 
         assert_eq!(inputs.len(), 1);
 
+        let parent_args = self.translate_generic_args(
+            span,
+            &args.parent_args,
+            &args.parent_trait_refs,
+            None,
+            GenericsSource::Builtin,
+        )?;
         let state_ty_id = self.register_type_decl_id(span, &def.def_id);
         // FIXME: @N1ark wrong generic args
         let state_ty = TyKind::Adt(
             TypeId::Adt(state_ty_id),
-            GenericArgs::empty(GenericsSource::Builtin),
+            parent_args.with_target(GenericsSource::item(state_ty_id)),
         )
         .into_ty();
         // Depending on the kind of the closure generated, add a reference
@@ -220,6 +226,39 @@ impl ItemTransCtx<'_, '_> {
                     body: vec![block].into(),
                 };
                 Ok(Body::Unstructured(body))
+            };
+            let mut mk_call = |dst, arg1, arg2| -> Result<Statement, Error> {
+                // FIXME: @N1ark do we want to make the call a trait impl call, rather than
+                // a simple fun call? My intuition is that we may as well take the simple
+                // option of making it a fun call, since a pass will simplify it away anyways.
+
+                let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
+
+                let parent_args = self.translate_generic_args(
+                    span,
+                    &args.parent_args,
+                    &args.parent_trait_refs,
+                    None,
+                    GenericsSource::Builtin,
+                )?;
+
+                Ok(mk_stt(RawStatement::Call(Call {
+                    func: FnOperand::Regular(FnPtr {
+                        func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
+                        generics: Box::new(parent_args.concat(
+                            GenericsSource::item(fun_id),
+                            &GenericArgs {
+                                const_generics: Vector::new(),
+                                regions: vec![Region::Erased].into(),
+                                trait_refs: Vector::new(),
+                                types: Vector::new(),
+                                target: GenericsSource::item(fun_id),
+                            },
+                        )),
+                    }),
+                    args: vec![Operand::Move(arg1), Operand::Move(arg2)],
+                    dest: dst,
+                })))
             };
 
             use hax::ClosureKind::*;
@@ -306,11 +345,6 @@ impl ItemTransCtx<'_, '_> {
                     //   self.call(state, args)
                     // }
                     //
-                    // FIXME: @N1ark do we want to make the call a trait impl call, rather than
-                    // a simple fun call? My intuition is that we may as well take the simple
-                    // option of making it a fun call, since a pass will simplify it away anyways.
-
-                    let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
 
                     let mut locals = Locals {
                         arg_count: 3,
@@ -321,21 +355,7 @@ impl ItemTransCtx<'_, '_> {
                         locals.new_var(Some("state".to_string()), signature.inputs[0].clone());
                     let args =
                         locals.new_var(Some("args".to_string()), signature.inputs[1].clone());
-                    let call = mk_stt(RawStatement::Call(Call {
-                        func: FnOperand::Regular(FnPtr {
-                            func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
-                            generics: GenericArgs {
-                                const_generics: Vector::new(),
-                                regions: vec![Region::Erased].into(),
-                                trait_refs: Vector::new(),
-                                types: Vector::new(),
-                                target: GenericsSource::item(fun_id),
-                            }
-                            .into(),
-                        }),
-                        args: vec![Operand::Move(state), Operand::Move(args)],
-                        dest: output,
-                    }));
+                    let call = mk_call(output, state, args)?;
                     mk_body(locals, vec![call])
                 }
                 (FnOnce, Fn) | (FnOnce, FnMut) => {
@@ -348,16 +368,15 @@ impl ItemTransCtx<'_, '_> {
                     //   return ret;
                     // }
                     //
+                    // FIXME: @N1ark do we want to make the call a trait impl call, rather than
+                    // a simple fun call? My intuition is that we may as well take the simple
+                    // option of making it a fun call, since a pass will simplify it away anyways.
+
                     let (refkind, borrowkind) = if args.kind == FnMut {
                         (RefKind::Mut, BorrowKind::Mut)
                     } else {
                         (RefKind::Shared, BorrowKind::Shared)
                     };
-
-                    // FIXME: @N1ark do we want to make the call a trait impl call, rather than
-                    // a simple fun call? My intuition is that we may as well take the simple
-                    // option of making it a fun call, since a pass will simplify it away anyways.
-                    let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
 
                     let ref_ty =
                         TyKind::Ref(Region::Erased, signature.inputs[0].clone(), refkind).into_ty();
@@ -371,26 +390,12 @@ impl ItemTransCtx<'_, '_> {
                         locals.new_var(Some("state".to_string()), signature.inputs[0].clone());
                     let args =
                         locals.new_var(Some("args".to_string()), signature.inputs[1].clone());
-                    let state_ref = locals.new_var(Some("temp_ref".to_string()), ref_ty.clone());
+                    let state_ref = locals.new_var(Some("temp_ref".to_string()), ref_ty);
                     let mk_ref = mk_stt(RawStatement::Assign(
                         state_ref.clone(),
                         Rvalue::Ref(state.clone(), borrowkind),
                     ));
-                    let call = mk_stt(RawStatement::Call(Call {
-                        func: FnOperand::Regular(FnPtr {
-                            func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
-                            generics: GenericArgs {
-                                const_generics: Vector::new(),
-                                regions: vec![Region::Erased].into(),
-                                trait_refs: Vector::new(),
-                                types: Vector::new(),
-                                target: GenericsSource::item(fun_id),
-                            }
-                            .into(),
-                        }),
-                        args: vec![Operand::Move(state_ref), Operand::Move(args)],
-                        dest: output.clone(),
-                    }));
+                    let call = mk_call(output, state_ref, args)?;
                     let drop = mk_stt(RawStatement::Drop(state));
                     mk_body(locals, vec![mk_ref, call, drop])
                 }
@@ -452,16 +457,15 @@ impl ItemTransCtx<'_, '_> {
                     .push_with(|index| RegionVar { index, name: None });
             }
         };
+        let fn_ref_args_target = GenericsSource::Method(fn_trait, call_fn_name.clone());
         let fn_ref_args = match target_kind {
-            hax::ClosureKind::FnOnce => {
-                GenericArgs::empty(GenericsSource::Method(fn_trait, call_fn_name.clone()))
-            }
+            hax::ClosureKind::FnOnce => GenericArgs::empty(fn_ref_args_target),
             hax::ClosureKind::FnMut | hax::ClosureKind::Fn => GenericArgs {
                 regions: vec![Region::Erased].into(),
                 types: Vector::new(),
                 const_generics: Vector::new(),
                 trait_refs: Vector::new(),
-                target: GenericsSource::item(call_fn),
+                target: fn_ref_args_target,
             },
         };
         let call_fn_binder = Binder::new(
@@ -470,7 +474,7 @@ impl ItemTransCtx<'_, '_> {
             FunDeclRef {
                 id: call_fn,
                 // TODO: @N1ark this is wrong -- we need to concat the args of the impl and of the method
-                generics: fn_ref_args.into(),
+                generics: Box::new(fn_ref_args),
             },
         );
 
@@ -499,7 +503,9 @@ impl ItemTransCtx<'_, '_> {
         let closure_state_id = self.register_type_decl_id(span, def.def_id());
         let closure_state = TyKind::Adt(
             TypeId::Adt(closure_state_id),
-            GenericArgs::empty(GenericsSource::item(closure_state_id)),
+            parent_args
+                .clone()
+                .with_target(GenericsSource::item(closure_state_id)),
         )
         .into_ty();
 
