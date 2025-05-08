@@ -87,9 +87,6 @@ pub static ULLBC_PASSES: &[Pass] = &[
     // # Micro-pass: desugar the constants to other values/operands as much
     // as possible.
     UnstructuredBody(&simplify_constants::Transform),
-    // # Micro-pass: replace some unops/binops and the array aggregates with
-    // function calls (introduces: ArrayToSlice, etc.)
-    UnstructuredBody(&ops_to_function_calls::Transform),
     // # Micro-pass: make sure the block ids used in the ULLBC are consecutive
     UnstructuredBody(&update_block_indices::Transform),
     // # Micro-pass: reconstruct the asserts
@@ -105,10 +102,6 @@ pub static ULLBC_PASSES: &[Pass] = &[
     // # Micro-pass: introduce intermediate assignments in preparation of the
     // [`index_to_function_calls`] pass.
     UnstructuredBody(&index_intermediate_assigns::Transform),
-    // # Micro-pass: replace the arrays/slices index operations with function
-    // calls.
-    // (introduces: ArrayIndexShared, ArrayIndexMut, etc.)
-    UnstructuredBody(&index_to_function_calls::Transform),
     // # Micro-pass: add the missing assignments to the return value.
     // When the function return type is unit, the generated MIR doesn't
     // set the return value to `()`. This can be a concern: in the case
@@ -127,6 +120,13 @@ pub static ULLBC_PASSES: &[Pass] = &[
 pub static LLBC_PASSES: &[Pass] = &[
     // # Go from ULLBC to LLBC (Low-Level Borrow Calculus) by reconstructing the control flow.
     NonBody(&ullbc_to_llbc::Transform),
+    // # Micro-pass: replace some unops/binops and the array aggregates with
+    // function calls (introduces: ArrayToSlice, etc.)
+    StructuredBody(&ops_to_function_calls::Transform),
+    // # Micro-pass: replace the arrays/slices index operations with function
+    // calls.
+    // (introduces: ArrayIndexShared, ArrayIndexMut, etc.)
+    StructuredBody(&index_to_function_calls::Transform),
     // # Micro-pass: Remove the discriminant reads (merge them with the switches)
     StructuredBody(&remove_read_discriminant::Transform),
     // Cleanup the cfg.
