@@ -82,11 +82,6 @@ impl ItemTransCtx<'_, '_> {
             let output = ctx.translate_ty(span, &sig.output)?;
             Ok((inputs, output))
         })?;
-        let upvar_tys = args
-            .upvar_tys
-            .iter()
-            .map(|ty| self.translate_ty(span, ty))
-            .try_collect()?;
         let kind = match args.kind {
             hax::ClosureKind::Fn => ClosureKind::Fn,
             hax::ClosureKind::FnMut => ClosureKind::FnMut,
@@ -95,11 +90,7 @@ impl ItemTransCtx<'_, '_> {
 
         Ok(TypeDeclKind::Struct(
             fields,
-            Some(ClosureInfo {
-                kind,
-                signature,
-                upvar_tys,
-            }),
+            Some(ClosureInfo { kind, signature }),
         ))
     }
 

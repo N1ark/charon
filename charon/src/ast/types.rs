@@ -757,13 +757,9 @@ pub enum ClosureKind {
 }
 
 /// Additional information for closures.
-/// We mostly use it in micro-passes like [crate::update_closure_signature].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Drive, DriveMut)]
 pub struct ClosureInfo {
-    // FIXME: @N1ark maybe add the IDs for the trait impls / clean this up
     pub kind: ClosureKind,
-    /// The types of the variables captured by this closure.
-    pub upvar_tys: Vec<Ty>,
     /// The signature of the function that this closure represents.
     pub signature: RegionBinder<(Vec<Ty>, Ty)>,
 }
