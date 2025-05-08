@@ -245,9 +245,4 @@ let rvalue_to_string (env : 'a fmt_env) (rv : rvalue) : string =
               in
               variant_name ^ " " ^ fields
           | TBuiltin _ -> raise (Failure "Unreachable"))
-      | AggregatedArray (_ty, _cg) -> "[" ^ String.concat ", " ops ^ "]"
-      | AggregatedClosure (fid, generics) ->
-          "{"
-          ^ fun_decl_id_to_string env fid
-          ^ generic_args_to_string env generics
-          ^ "}" ^ " {" ^ String.concat ", " ops ^ "}")
+      | AggregatedArray (_ty, _cg) -> "[" ^ String.concat ", " ops ^ "]")

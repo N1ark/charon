@@ -397,10 +397,6 @@ and aggregate_kind =
           with aggregates, and it is a primitive type. In particular, it makes
           sense to treat it differently because it has a variable number of fields.
        *)
-  | AggregatedClosure of fun_decl_id * generic_args
-      (** Aggregated values for closures group the function id together with its
-          state.
-       *)
 
 and local_id = (LocalId.id[@visitors.opaque])
 [@@deriving

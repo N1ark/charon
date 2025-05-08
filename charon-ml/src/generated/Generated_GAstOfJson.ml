@@ -343,10 +343,6 @@ and aggregate_kind_of_json (ctx : of_json_ctx) (js : json) :
         let* x_0 = ty_of_json ctx x_0 in
         let* x_1 = const_generic_of_json ctx x_1 in
         Ok (AggregatedArray (x_0, x_1))
-    | `Assoc [ ("Closure", `List [ x_0; x_1 ]) ] ->
-        let* x_0 = fun_decl_id_of_json ctx x_0 in
-        let* x_1 = box_of_json generic_args_of_json ctx x_1 in
-        Ok (AggregatedClosure (x_0, x_1))
     | _ -> Error "")
 
 and local_of_json (ctx : of_json_ctx) (js : json) : (local, string) result =
