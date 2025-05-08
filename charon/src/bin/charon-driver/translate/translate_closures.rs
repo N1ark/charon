@@ -210,24 +210,26 @@ impl ItemTransCtx<'_, '_> {
                 comments_before: vec![],
                 span,
             };
-            let mk_body = |locals, statements| -> Result<Body, Opaque> {
-                let block = BlockData {
+            let mk_block = |statements, terminator| -> BlockData {
+                BlockData {
                     statements,
                     terminator: Terminator {
-                        content: RawTerminator::Return,
+                        content: terminator,
                         comments_before: vec![],
                         span,
                     },
-                };
+                }
+            };
+            let mk_body = |locals, blocks: Vec<BlockData>| -> Result<Body, Opaque> {
                 let body: ExprBody = GExprBody {
                     span,
                     locals,
                     comments: vec![],
-                    body: vec![block].into(),
+                    body: blocks.into(),
                 };
                 Ok(Body::Unstructured(body))
             };
-            let mut mk_call = |dst, arg1, arg2| -> Result<Statement, Error> {
+            let mut mk_call = |dst, arg1, arg2, target| -> Result<RawTerminator, Error> {
                 // FIXME: @N1ark do we want to make the call a trait impl call, rather than
                 // a simple fun call? My intuition is that we may as well take the simple
                 // option of making it a fun call, since a pass will simplify it away anyways.
@@ -242,23 +244,26 @@ impl ItemTransCtx<'_, '_> {
                     GenericsSource::Builtin,
                 )?;
 
-                Ok(mk_stt(RawStatement::Call(Call {
-                    func: FnOperand::Regular(FnPtr {
-                        func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
-                        generics: Box::new(parent_args.concat(
-                            GenericsSource::item(fun_id),
-                            &GenericArgs {
-                                const_generics: Vector::new(),
-                                regions: vec![Region::Erased].into(),
-                                trait_refs: Vector::new(),
-                                types: Vector::new(),
-                                target: GenericsSource::item(fun_id),
-                            },
-                        )),
-                    }),
-                    args: vec![Operand::Move(arg1), Operand::Move(arg2)],
-                    dest: dst,
-                })))
+                Ok(RawTerminator::Call {
+                    target,
+                    call: Call {
+                        func: FnOperand::Regular(FnPtr {
+                            func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
+                            generics: Box::new(parent_args.concat(
+                                GenericsSource::item(fun_id),
+                                &GenericArgs {
+                                    const_generics: Vector::new(),
+                                    regions: vec![Region::Erased].into(),
+                                    trait_refs: Vector::new(),
+                                    types: Vector::new(),
+                                    target: GenericsSource::item(fun_id),
+                                },
+                            )),
+                        }),
+                        args: vec![Operand::Move(arg1), Operand::Move(arg2)],
+                        dest: dst,
+                    },
+                })
             };
 
             use hax::ClosureKind::*;
@@ -289,7 +294,7 @@ impl ItemTransCtx<'_, '_> {
                             body.dyn_visit_mut(|local: &mut LocalId| {
                                 let idx = local.index();
                                 if idx >= 2 {
-                                    *local = LocalId::from_usize(idx + 1)
+                                    *local = LocalId::new(idx + 1)
                                 }
                             });
 
@@ -304,23 +309,23 @@ impl ItemTransCtx<'_, '_> {
                                 signature.inputs[1].clone(),
                             );
                             locals.locals.extend(old_locals.into_iter().map(|mut l| {
-                                l.index = LocalId::from_usize(l.index.index() + 1);
+                                l.index = LocalId::new(l.index.index() + 1);
                                 l
                             }));
 
                             let untupled_args = signature.inputs[1].as_tuple().unwrap();
                             let new_stts = (0..closure_arg_count).into_iter().map(|idx| {
                                 mk_stt(RawStatement::Assign(
-                                    locals.place_for_var(LocalId::from_usize(idx + 3)),
+                                    locals.place_for_var(LocalId::new(idx + 3)),
                                     Rvalue::Use(Operand::Move(Place {
                                         kind: PlaceKind::Projection(
                                             tupled_args.clone().into(),
                                             ProjectionElem::Field(
                                                 FieldProjKind::Tuple(closure_arg_count),
-                                                FieldId::from_usize(idx),
+                                                FieldId::new(idx),
                                             ),
                                         ),
-                                        ty: untupled_args[TypeVarId::from_usize(idx)].clone(),
+                                        ty: untupled_args[TypeVarId::new(idx)].clone(),
                                     })),
                                 ))
                             });
@@ -355,8 +360,10 @@ impl ItemTransCtx<'_, '_> {
                         locals.new_var(Some("state".to_string()), signature.inputs[0].clone());
                     let args =
                         locals.new_var(Some("args".to_string()), signature.inputs[1].clone());
-                    let call = mk_call(output, state, args)?;
-                    mk_body(locals, vec![call])
+                    let call = mk_call(output, state, args, BlockId::new(1))?;
+                    let main_block = mk_block(vec![], call);
+                    let ret_block = mk_block(vec![], RawTerminator::Return);
+                    mk_body(locals, vec![main_block, ret_block])
                 }
                 (FnOnce, Fn) | (FnOnce, FnMut) => {
                     // Target translation:
@@ -395,9 +402,12 @@ impl ItemTransCtx<'_, '_> {
                         state_ref.clone(),
                         Rvalue::Ref(state.clone(), borrowkind),
                     ));
-                    let call = mk_call(output, state_ref, args)?;
+                    let call = mk_call(output, state_ref, args, BlockId::new(1))?;
+                    let main_block = mk_block(vec![mk_ref], call);
+
                     let drop = mk_stt(RawStatement::Drop(state));
-                    mk_body(locals, vec![mk_ref, call, drop])
+                    let ret_block = mk_block(vec![drop], RawTerminator::Return);
+                    mk_body(locals, vec![main_block, ret_block])
                 }
 
                 (Fn, FnOnce) | (Fn, FnMut) | (FnMut, FnOnce) => {

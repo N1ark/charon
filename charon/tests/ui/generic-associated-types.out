@@ -73,9 +73,8 @@ error: Found inconsistent generics after translation:
          charon_lib::ast::expressions::FnPtr
          charon_lib::ast::gast::FnOperand
          charon_lib::ast::gast::Call
-         charon_lib::ast::ullbc_ast::RawStatement
-         charon_lib::ast::ullbc_ast::Statement
-         alloc::vec::Vec<charon_lib::ast::ullbc_ast::Statement>
+         charon_lib::ast::ullbc_ast::RawTerminator
+         charon_lib::ast::ullbc_ast::Terminator
          charon_lib::ast::ullbc_ast::BlockData
          charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>
          charon_lib::ast::gast::GExprBody<charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>>
@@ -84,10 +83,16 @@ error: Found inconsistent generics after translation:
          charon_lib::ast::gast::FunDecl
        Binding stack (depth 1):
          0: 
-  --> tests/ui/generic-associated-types.rs:38:5
+  --> tests/ui/generic-associated-types.rs:34:1
    |
-38 |     for_each(iter, |item| sum += *item);
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+34 | / pub fn main() {
+35 | |     let x = 42;
+36 | |     let iter = Some(&42);
+37 | |     let mut sum = 0;
+38 | |     for_each(iter, |item| sum += *item);
+39 | |     assert_eq!(sum, 42);
+40 | | }
+   | |_^
 
 error: Found inconsistent generics after translation:
        Mismatched regions:
@@ -318,9 +323,8 @@ error: Found inconsistent generics after translation:
          charon_lib::ast::expressions::FnPtr
          charon_lib::ast::gast::FnOperand
          charon_lib::ast::gast::Call
-         charon_lib::ast::ullbc_ast::RawStatement
-         charon_lib::ast::ullbc_ast::Statement
-         alloc::vec::Vec<charon_lib::ast::ullbc_ast::Statement>
+         charon_lib::ast::ullbc_ast::RawTerminator
+         charon_lib::ast::ullbc_ast::Terminator
          charon_lib::ast::ullbc_ast::BlockData
          charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>
          charon_lib::ast::gast::GExprBody<charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>>
@@ -348,9 +352,8 @@ error: Found inconsistent generics after translation:
          charon_lib::ast::expressions::Operand
          alloc::vec::Vec<charon_lib::ast::expressions::Operand>
          charon_lib::ast::gast::Call
-         charon_lib::ast::ullbc_ast::RawStatement
-         charon_lib::ast::ullbc_ast::Statement
-         alloc::vec::Vec<charon_lib::ast::ullbc_ast::Statement>
+         charon_lib::ast::ullbc_ast::RawTerminator
+         charon_lib::ast::ullbc_ast::Terminator
          charon_lib::ast::ullbc_ast::BlockData
          charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>
          charon_lib::ast::gast::GExprBody<charon_lib::ids::vector::Vector<charon_lib::ast::ullbc_ast::BlockId, charon_lib::ast::ullbc_ast::BlockData>>
