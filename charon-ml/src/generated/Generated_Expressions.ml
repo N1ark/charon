@@ -39,7 +39,7 @@ and projection_elem =
           We should never have projections to fields of symbolic variants (they
           should have been expanded before through a match).
        *)
-  | Index of operand * bool
+  | ProjIndex of operand * bool
       (** MIR imposes that the argument to an index projection be a local variable, meaning
           that even constant indices into arrays are let-bound as separate variables.
           We **eliminate** this variant in a micro-pass for LLBC.

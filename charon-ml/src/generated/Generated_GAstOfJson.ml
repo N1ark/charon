@@ -64,7 +64,7 @@ and projection_elem_of_json (ctx : of_json_ctx) (js : json) :
         [ ("Index", `Assoc [ ("offset", offset); ("from_end", from_end) ]) ] ->
         let* offset = box_of_json operand_of_json ctx offset in
         let* from_end = bool_of_json ctx from_end in
-        Ok (Index (offset, from_end))
+        Ok (ProjIndex (offset, from_end))
     | `Assoc
         [
           ( "Subslice",

@@ -64,6 +64,7 @@ pub enum ProjectionElem {
     /// MIR imposes that the argument to an index projection be a local variable, meaning
     /// that even constant indices into arrays are let-bound as separate variables.
     /// We **eliminate** this variant in a micro-pass for LLBC.
+    #[charon::rename("ProjIndex")]
     Index {
         offset: Box<Operand>,
         #[drive(skip)]
