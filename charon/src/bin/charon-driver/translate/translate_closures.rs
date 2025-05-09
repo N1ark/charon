@@ -352,7 +352,7 @@ impl ItemTransCtx<'_, '_> {
                     //
 
                     let mut locals = Locals {
-                        arg_count: 3,
+                        arg_count: 2,
                         locals: Vector::new(),
                     };
                     let output = locals.new_var(None, signature.output.clone());
@@ -389,7 +389,7 @@ impl ItemTransCtx<'_, '_> {
                         TyKind::Ref(Region::Erased, signature.inputs[0].clone(), refkind).into_ty();
 
                     let mut locals = Locals {
-                        arg_count: 4,
+                        arg_count: 2,
                         locals: Vector::new(),
                     };
                     let output = locals.new_var(None, signature.output.clone());
