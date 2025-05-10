@@ -257,4 +257,11 @@ and rvalue_to_string (env : 'a fmt_env) (rv : rvalue) : string =
               in
               variant_name ^ " " ^ fields
           | TBuiltin _ -> raise (Failure "Unreachable"))
-      | AggregatedArray (_ty, _cg) -> "[" ^ String.concat ", " ops ^ "]")
+      | AggregatedArray (_ty, _cg) -> "[" ^ String.concat ", " ops ^ "]"
+      | AggregatedRawPtr (_, refk) ->
+          let refk =
+            match refk with
+            | RMut -> "*mut"
+            | RShared -> "*const"
+          in
+          refk ^ " (" ^ String.concat ", " ops ^ ")")
