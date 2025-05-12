@@ -326,6 +326,20 @@ impl BodyTransCtx<'_, '_, '_> {
                         )
                     }
                     &hax::ProjectionElem::Subslice { from, to, from_end } => {
+                        // Rust doesn't update the projection's type to have the correct length;
+                        // if `x` has type `[u32; 4]` and one does `x[1..3]`, the type of the
+                        // projection will be `[u32; 4]`, and not `[u32; 2]` -- we fix this here,
+                        // by using a slice instead.
+                        // This means consumers of Charon must provide the length of the slice
+                        // in the pointer's metadata when this projection is applied.
+                        let Some(elem_ty) = ty.as_array_or_slice() else {
+                            unreachable!("Unexpected type in Subslice projection")
+                        };
+                        let ty = TyKind::Adt(
+                            TypeId::Builtin(BuiltinTy::Slice),
+                            GenericArgs::new_for_builtin(vec![elem_ty.clone()].into()),
+                        )
+                        .into_ty();
                         let from = Operand::Const(Box::new(ScalarValue::Usize(from).to_constant()));
                         let to = Operand::Const(Box::new(ScalarValue::Usize(to).to_constant()));
                         subplace.project(
