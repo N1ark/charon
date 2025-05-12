@@ -471,7 +471,6 @@ impl TransformPass for Transform {
                             };
                             let fun = ctx.translated.fun_decls.get(*fun_id).unwrap();
                             let mut fun_sub = fun.clone().substitute(gargs);
-                            // fun_sub.signature.generics = GenericParams::empty();
 
                             let fun_id_sub = ctx.translated.fun_decls.push_with(|id| {
                                 fun_sub.def_id = id;
@@ -530,6 +529,11 @@ impl TransformPass for Transform {
                 if id != &new_mono {
                     trace!(" - From {:?}", ctx.translated.get_item(id.clone()));
                     trace!(" - To {:?}", ctx.translated.get_item(new_mono.clone()));
+                    if let Some(item) = ctx.translated.get_item(new_mono) {
+                        ctx.translated
+                            .item_names
+                            .insert(new_mono, item.item_meta().name.clone());
+                    }
                 }
                 *mono = OptionHint::Some(new_mono);
                 data.worklist.push(new_mono);
