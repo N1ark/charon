@@ -690,14 +690,9 @@ impl BodyTransCtx<'_, '_, '_> {
                         let type_id = TypeId::Adt(type_id);
 
                         // Translate the substitution
-                        let generics = self.translate_generic_args(
+                        let generics = self.translate_closure_generic_args(
                             span,
-                            &closure_args.parent_args,
-                            &closure_args.parent_trait_refs,
-                            Some(hax::Binder {
-                                value: (),
-                                bound_vars: closure_args.tupled_sig.bound_vars.clone(),
-                            }),
+                            closure_args,
                             type_id.generics_target(),
                         )?;
 

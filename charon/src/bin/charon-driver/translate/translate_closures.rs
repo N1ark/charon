@@ -47,6 +47,36 @@ use hax_frontend_exporter as hax;
 use itertools::Itertools;
 
 impl ItemTransCtx<'_, '_> {
+    pub fn translate_closure_generic_args(
+        &mut self,
+        span: Span,
+        args: &hax::ClosureArgs,
+        source: GenericsSource,
+    ) -> Result<GenericArgs, Error> {
+        self.translate_generic_args(
+            span,
+            &args.parent_args,
+            &args.parent_trait_refs,
+            Some(hax::Binder {
+                value: (),
+                bound_vars: args.tupled_sig.bound_vars.clone(),
+            }),
+            source,
+        )
+    }
+
+    pub fn get_closure_state_ty(
+        &mut self,
+        span: Span,
+        def: &hax::DefId,
+        args: &hax::ClosureArgs,
+    ) -> Result<Ty, Error> {
+        let state_id = self.register_type_decl_id(span, def);
+        let gen_args =
+            self.translate_closure_generic_args(span, args, GenericsSource::item(state_id))?;
+        Ok(TyKind::Adt(TypeId::Adt(state_id), gen_args).into_ty())
+    }
+
     pub fn translate_closure_ty(
         &mut self,
         _trans_id: TypeDeclId,
@@ -137,20 +167,8 @@ impl ItemTransCtx<'_, '_> {
 
         assert_eq!(inputs.len(), 1);
 
-        let parent_args = self.translate_generic_args(
-            span,
-            &args.parent_args,
-            &args.parent_trait_refs,
-            None,
-            GenericsSource::Builtin,
-        )?;
-        let state_ty_id = self.register_type_decl_id(span, &def.def_id);
-        // FIXME: @N1ark wrong generic args
-        let state_ty = TyKind::Adt(
-            TypeId::Adt(state_ty_id),
-            parent_args.with_target(GenericsSource::item(state_ty_id)),
-        )
-        .into_ty();
+        let state_ty = self.get_closure_state_ty(span, def.def_id(), args)?;
+
         // Depending on the kind of the closure generated, add a reference
         let state_ty = match target_kind {
             hax::ClosureKind::FnOnce => state_ty,
@@ -236,13 +254,8 @@ impl ItemTransCtx<'_, '_> {
 
                 let fun_id = self.register_closure_fun_decl_id(span, &def.def_id, &args.kind);
 
-                let parent_args = self.translate_generic_args(
-                    span,
-                    &args.parent_args,
-                    &args.parent_trait_refs,
-                    None,
-                    GenericsSource::Builtin,
-                )?;
+                let parent_args =
+                    self.translate_closure_generic_args(span, args, GenericsSource::Builtin)?;
 
                 Ok(RawTerminator::Call {
                     target,
@@ -488,15 +501,6 @@ impl ItemTransCtx<'_, '_> {
             },
         );
 
-        let parent_args = self.translate_generic_args(
-            span,
-            &args.parent_args,
-            &args.parent_trait_refs,
-            None,
-            // We don't know the item these generics apply to.
-            GenericsSource::Builtin,
-        )?;
-
         let sig_binder = self.translate_region_binder(span, &args.tupled_sig, |ctx, fnsig| {
             let inputs: Vec<Ty> = fnsig
                 .inputs
@@ -509,14 +513,7 @@ impl ItemTransCtx<'_, '_> {
         })?;
         let (inputs, output) = sig_binder.erase();
 
-        let closure_state_id = self.register_type_decl_id(span, def.def_id());
-        let closure_state = TyKind::Adt(
-            TypeId::Adt(closure_state_id),
-            parent_args
-                .clone()
-                .with_target(GenericsSource::item(closure_state_id)),
-        )
-        .into_ty();
+        let state_ty = self.get_closure_state_ty(span, def.def_id(), args)?;
 
         let sized_trait = self.get_lang_item(rustc_hir::LangItem::Sized);
         let sized_trait = self.register_trait_decl_id(span, &sized_trait);
@@ -548,7 +545,7 @@ impl ItemTransCtx<'_, '_> {
 
         let fn_trait_arguments = GenericArgs {
             regions: Vector::new(),
-            types: vec![closure_state.clone(), inputs.clone()].into(),
+            types: vec![state_ty.clone(), inputs.clone()].into(),
             const_generics: Vector::new(),
             trait_refs: Vector::new(),
             target: GenericsSource::item(fn_trait),
@@ -577,15 +574,14 @@ impl ItemTransCtx<'_, '_> {
                     hax::ClosureKind::FnMut => self.get_lang_item(rustc_hir::LangItem::FnMut),
                     hax::ClosureKind::Fn => unreachable!(),
                 };
+                let parent_args = self.translate_closure_generic_args(
+                    span,
+                    args,
+                    GenericsSource::item(parent_impl),
+                )?;
                 let parent_decl = self.register_trait_decl_id(span, &parent_decl);
                 let parent_trait_ref = TraitRef {
-                    kind: TraitRefKind::TraitImpl(
-                        parent_impl,
-                        parent_args
-                            .clone()
-                            .with_target(GenericsSource::item(parent_impl))
-                            .into(),
-                    ),
+                    kind: TraitRefKind::TraitImpl(parent_impl, Box::new(parent_args)),
                     trait_decl_ref: RegionBinder::empty(TraitDeclRef {
                         trait_id: parent_decl,
                         generics: fn_trait_arguments
@@ -603,6 +599,8 @@ impl ItemTransCtx<'_, '_> {
             }
         };
 
+        let self_generics = self.into_generics();
+
         Ok(TraitImpl {
             def_id,
             item_meta,
@@ -610,7 +608,7 @@ impl ItemTransCtx<'_, '_> {
                 trait_id: fn_trait,
                 generics: fn_trait_arguments.into(),
             },
-            generics: self.into_generics(),
+            generics: self_generics,
             parent_trait_refs,
             type_clauses: vec![],
             consts: vec![],

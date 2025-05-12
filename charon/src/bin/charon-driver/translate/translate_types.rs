@@ -298,15 +298,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             }
             hax::TyKind::Closure(def_id, args) => {
                 let adt_id = self.register_type_decl_id(span, def_id);
-                let generic_args = self.translate_generic_args(
-                    span,
-                    &args.parent_args,
-                    &args.parent_trait_refs,
-                    None,
-                    // We don't know the item these generics apply to.
-                    GenericsSource::Builtin,
-                )?;
-
+                let generic_args =
+                    self.translate_closure_generic_args(span, args, GenericsSource::Builtin)?;
                 TyKind::Adt(TypeId::Adt(adt_id), generic_args)
             }
             hax::TyKind::Error => {

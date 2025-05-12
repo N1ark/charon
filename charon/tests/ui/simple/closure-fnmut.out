@@ -81,8 +81,9 @@ fn test_crate::main::{impl core::ops::function::FnOnce<((u8))> for test_crate::m
     let @0: u8; // return
     let state@1: test_crate::main::closure; // arg #1
     let args@2: (u8); // arg #2
-    let temp_ref@3: &'_ mut (test_crate::main::closure); // arg #3
+    let temp_ref@3: &'_ mut (test_crate::main::closure); // local
 
+    storage_live(temp_ref@3)
     temp_ref@3 := &mut state@1
     @0 := test_crate::main::{impl core::ops::function::FnMut<((u8))> for test_crate::main::closure}::call_mut<'_>(move (temp_ref@3), move (args@2))
     drop state@1

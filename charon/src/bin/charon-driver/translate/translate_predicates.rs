@@ -352,11 +352,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                                 &closure_kind.unwrap(),
                             );
 
-                            let parent_args = ctx.translate_generic_args(
+                            let parent_args = ctx.translate_closure_generic_args(
                                 span,
-                                &closure_args.parent_args,
-                                &closure_args.parent_trait_refs,
-                                None,
+                                closure_args,
                                 GenericsSource::item(impl_id),
                             )?;
 

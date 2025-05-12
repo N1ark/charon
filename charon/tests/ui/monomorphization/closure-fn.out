@@ -106,8 +106,9 @@ fn test_crate::main::{impl core::ops::function::FnOnce<((u8, u8))> for test_crat
     let @0: u8; // return
     let state@1: test_crate::main::closure; // arg #1
     let args@2: (u8, u8); // arg #2
-    let temp_ref@3: &'_ (test_crate::main::closure); // arg #3
+    let temp_ref@3: &'_ (test_crate::main::closure); // local
 
+    storage_live(temp_ref@3)
     temp_ref@3 := &state@1
     @0 := test_crate::main::{impl core::ops::function::Fn<((u8, u8))> for test_crate::main::closure}::call<'_>(move (temp_ref@3), move (args@2))
     drop state@1
@@ -228,7 +229,7 @@ fn test_crate::main()
     storage_live(@11)
     @11 := &f@3
     @10 := &*(@11)
-    @9 := @Fun12<'_, test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::Fn<((u8, u8))> for test_crate::main::closure}](move (@10))
+    @9 := @Fun10<'_, test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::Fn<((u8, u8))> for test_crate::main::closure}](move (@10))
     storage_dead(@10)
     storage_dead(@11)
     storage_dead(@9)
@@ -237,14 +238,14 @@ fn test_crate::main()
     storage_live(@14)
     @14 := &mut f@3
     @13 := &two-phase-mut *(@14)
-    @12 := @Fun11<'_, test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::FnMut<((u8, u8))> for test_crate::main::closure}](move (@13))
+    @12 := @Fun12<'_, test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::FnMut<((u8, u8))> for test_crate::main::closure}](move (@13))
     storage_dead(@13)
     storage_dead(@14)
     storage_dead(@12)
     storage_live(@15)
     storage_live(@16)
     @16 := copy (f@3)
-    @15 := @Fun10<test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::FnOnce<((u8, u8))> for test_crate::main::closure}](move (@16))
+    @15 := @Fun11<test_crate::main::closure>[core::marker::Sized<test_crate::main::closure>, test_crate::main::{impl core::ops::function::FnOnce<((u8, u8))> for test_crate::main::closure}](move (@16))
     storage_dead(@16)
     storage_dead(@15)
     @0 := ()
