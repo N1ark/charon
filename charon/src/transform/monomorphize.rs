@@ -52,18 +52,29 @@ impl PassData {
 
 impl TranslatedCrate {
     // FIXME(Nadrieril): implement type&tref normalization and use that instead
-    fn find_trait_impl_and_gargs(self: &Self, kind: &TraitRefKind) -> (&TraitImpl, GenericArgs) {
+    fn find_trait_impl_and_gargs(
+        self: &Self,
+        kind: &TraitRefKind,
+    ) -> Option<(&TraitImpl, GenericArgs)> {
         match kind {
             TraitRefKind::TraitImpl(impl_id, gargs) => {
                 let trait_impl = self.trait_impls.get(*impl_id).unwrap();
-                (trait_impl, (**gargs).clone())
+                Some((trait_impl, (**gargs).clone()))
             }
             TraitRefKind::ParentClause(p, _, clause) => {
-                let (trait_impl, _) = self.find_trait_impl_and_gargs(p);
-                let t_ref = trait_impl.parent_trait_refs.get(*clause).unwrap();
-                self.find_trait_impl_and_gargs(&t_ref.kind)
+                if let Some((trait_impl, _)) = self.find_trait_impl_and_gargs(p) {
+                    let t_ref = trait_impl.parent_trait_refs.get(*clause).unwrap();
+                    self.find_trait_impl_and_gargs(&t_ref.kind)
+                } else {
+                    None
+                }
             }
-            _ => panic!("Unexpected trait reference kind"),
+            TraitRefKind::Dyn(..)
+            | TraitRefKind::SelfId
+            | TraitRefKind::BuiltinOrAuto { .. }
+            | TraitRefKind::Clause(..)
+            | TraitRefKind::ItemClause(..)
+            | TraitRefKind::Unknown(..) => None,
         }
     }
 }
@@ -131,7 +142,11 @@ impl VisitAst for UsageVisitor<'_> {
                 self.found_use_fn(&id, &fn_ptr.generics)
             }
             FunIdOrTraitMethodRef::Trait(t_ref, name, id) => {
-                let (trait_impl, impl_gargs) = self.krate.find_trait_impl_and_gargs(&t_ref.kind);
+                let Some((trait_impl, impl_gargs)) =
+                    self.krate.find_trait_impl_and_gargs(&t_ref.kind)
+                else {
+                    return;
+                };
                 let (_, bound_fn) = trait_impl.methods().find(|(n, _)| n == name).unwrap();
                 let fn_ref: Binder<Binder<FunDeclRef>> = Binder::new(
                     BinderKind::Other,
@@ -169,30 +184,33 @@ impl SubstVisitor<'_> {
         trace!("Mono: Subst use: {:?} / {:?}", id, gargs);
         let key = (AnyTransId::Type(*id), gargs.clone());
         let subst = self.data.items.get(&key);
-        let Some(OptionHint::Some(AnyTransId::Type(subst_id))) = subst else {
-            panic!("Substitution missing for {:?}", key);
+        if let Some(OptionHint::Some(AnyTransId::Type(subst_id))) = subst {
+            *id = *subst_id;
+        } else {
+            warn!("Substitution missing for {:?}", key);
         };
-        *id = *subst_id;
         // *gargs = GenericArgs::empty(GenericsSource::Builtin);
     }
     fn subst_use_fun(&mut self, id: &mut FunDeclId, gargs: &mut GenericArgs) {
         trace!("Mono: Subst use: {:?} / {:?}", id, gargs);
         let key = (AnyTransId::Fun(*id), gargs.clone());
         let subst = self.data.items.get(&key);
-        let Some(OptionHint::Some(AnyTransId::Fun(subst_id))) = subst else {
-            panic!("Substitution missing for {:?}", key);
+        if let Some(OptionHint::Some(AnyTransId::Fun(subst_id))) = subst {
+            *id = *subst_id;
+        } else {
+            warn!("Substitution missing for {:?}", key);
         };
-        *id = *subst_id;
         // *gargs = GenericArgs::empty(GenericsSource::Builtin);
     }
     fn subst_use_glob(&mut self, id: &mut GlobalDeclId, gargs: &mut GenericArgs) {
         trace!("Mono: Subst use: {:?} / {:?}", id, gargs);
         let key = (AnyTransId::Global(*id), gargs.clone());
         let subst = self.data.items.get(&key);
-        let Some(OptionHint::Some(AnyTransId::Global(subst_id))) = subst else {
-            panic!("Substitution missing for {:?}", key);
+        if let Some(OptionHint::Some(AnyTransId::Global(subst_id))) = subst {
+            *id = *subst_id;
+        } else {
+            warn!("Substitution missing for {:?}", key);
         };
-        *id = *subst_id;
         // *gargs = GenericArgs::empty(GenericsSource::Builtin);
     }
 }
@@ -551,6 +569,34 @@ impl TransformPass for Transform {
                 AnyTransItemMut::TraitDecl(t) => subst_uses(&data, t),
             };
         }
+
+        // Extra: substitute Trait types
+        let mut trait_substs: HashMap<Ty, Ty> = HashMap::new();
+        ctx.translated.dyn_visit(|ty: &Ty| match ty.kind() {
+            TyKind::TraitType(tref, name) => {
+                let Some((trait_impl, gargs)) =
+                    ctx.translated.find_trait_impl_and_gargs(&tref.kind)
+                else {
+                    return;
+                };
+                let Some((_, real_ty)) = trait_impl.types.iter().find(|(n, _)| n == name) else {
+                    return;
+                };
+                let ty_ref: Binder<Ty> = Binder::new(
+                    BinderKind::Other,
+                    trait_impl.generics.clone(),
+                    real_ty.clone(),
+                );
+                let ty_subst = ty_ref.apply(&gargs);
+                trait_substs.insert(real_ty.clone(), ty_subst);
+            }
+            _ => {}
+        });
+        ctx.translated.dyn_visit_mut(|ty: &mut Ty| {
+            if let Some(new_ty) = trait_substs.get(ty) {
+                *ty = new_ty.clone();
+            }
+        });
 
         // Now, remove all polymorphic items from the translation context, as all their
         // uses have been monomorphized and substituted
