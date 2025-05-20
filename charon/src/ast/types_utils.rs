@@ -4,12 +4,12 @@ use crate::formatter::FmtCtx;
 use crate::ids::Vector;
 use crate::pretty::FmtWithCtx;
 use derive_generic_visitor::*;
+use index_vec::Idx;
 use std::collections::HashSet;
 use std::convert::Infallible;
 use std::fmt::Debug;
 use std::iter::Iterator;
 use std::mem;
-use std::ops::Index;
 
 impl TraitClause {
     /// Constructs the trait ref that refers to this clause.
@@ -745,18 +745,18 @@ impl<'a> SubstVisitor<'a> {
     /// assign to the type/region/const generic/trait ref that was this variable.
     fn process_var<Id, T>(&self, var: &mut DeBruijnVar<Id>) -> Option<T>
     where
-        Id: Copy,
-        GenericArgs: Index<Id, Output = T>,
+        Id: Copy + Idx,
+        GenericArgs: HasVectorOf<Id, Output = T>,
         T: Clone + TyVisitable,
     {
         use std::cmp::Ordering::*;
         match var {
             DeBruijnVar::Bound(dbid, varid) => match (*dbid).cmp(&self.binder_depth) {
-                Equal => Some(
-                    self.generics[*varid]
-                        .clone()
-                        .move_under_binders(self.binder_depth),
-                ),
+                Equal => self
+                    .generics
+                    .get_vector()
+                    .get(*varid)
+                    .map(|x| x.clone().move_under_binders(self.binder_depth)),
                 Greater => {
                     // This is bound outside the binder we're substituting for.
                     *dbid = dbid.decr();
