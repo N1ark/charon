@@ -1,13 +1,11 @@
 //@ charon-args=--monomorphize
 // Ensures monomorphization handles globals with generics
 
-struct Foo<T> {
-    value: T,
+fn mul<const LEN: usize>(v: usize) -> usize {
+    v * LEN
 }
 
-static FooInt: Foo<i32> = Foo { value: 0i32 };
-static FooBool: Foo<bool> = Foo { value: false };
-
-fn main() {
-    let _b = FooBool.value;
+fn foo() {
+    let _ = mul::<10>(5);
+    let _ = mul::<5>(10);
 }

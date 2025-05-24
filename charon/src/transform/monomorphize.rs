@@ -540,8 +540,11 @@ impl TransformPass for Transform {
                     new_mono
                 );
                 if id != &new_mono {
-                    trace!(" - From {:?}", ctx.translated.get_item(id.clone()));
-                    trace!(" - To {:?}", ctx.translated.get_item(new_mono.clone()));
+                    trace!(
+                        " - From {:?}\n - To {:?}\n",
+                        ctx.translated.get_item(id.clone()),
+                        ctx.translated.get_item(new_mono.clone())
+                    );
                 }
                 *mono = OptionHint::Some(new_mono);
                 data.worklist.push(new_mono);
