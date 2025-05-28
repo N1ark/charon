@@ -66,14 +66,18 @@ impl BlockData {
                 vec![*target]
             }
             RawTerminator::Switch { targets, .. } => targets.get_targets(),
-            RawTerminator::Call { call: _, target } => vec![*target],
-            RawTerminator::Abort(..) | RawTerminator::Return => {
+            RawTerminator::Call {
+                call: _,
+                target,
+                on_unwind,
+            } => vec![*target, *on_unwind],
+            RawTerminator::Abort(..) | RawTerminator::Return | RawTerminator::UnwindResume => {
                 vec![]
             }
         }
     }
 
-    /// See [body_transform_operands]
+    /// TODO: Write new documentation
     pub fn transform_operands<F: FnMut(&Span, &mut Vec<Statement>, &mut Operand)>(
         &mut self,
         mut f: F,

@@ -26,7 +26,7 @@ doc:
 
 .PHONY: clean-generated
 clean-generated:
-	rm -f tests/**/*.llbc
+	find tests -name '*.llbc' -delete
 
 .PHONY: clean
 clean: clean-generated
