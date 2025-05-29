@@ -1359,7 +1359,7 @@ module NameMatcherMap = struct
      better (there would be less backtracking in find_opt) and
      the implementation would be simpler. *)
   type 'a t =
-    | Node of 'a option * (pattern * 'a t) list
+    | Node of 'a option * (pattern_elem * 'a t) list
         (** Nodes are branchings. We do not even attempt to order the branches
             to minimize the number of comparisons - we could do this in later
             updates.
@@ -1373,15 +1373,20 @@ module NameMatcherMap = struct
 
   let rec replace (np : pattern) (nv : 'a) (m : 'a t) : 'a t * 'a option =
     let (Node (node_v, children)) = m in
-    (* If the path is empty: stop there *)
-    if np = [] then (Node (Some nv, children), node_v)
-      (* Otherwise: explore the children *)
-    else
-      let children, replaced = replace_in_children np nv children in
-      (Node (node_v, children), replaced)
+    match np with
+    | [ last ] ->
+        (* If the path has one element left, add it *)
+        (Node (node_v, (last, Node (Some nv, [])) :: children), None)
+    | path :: rest ->
+        (* Otherwise: explore the children *)
+        let children, replaced = replace_in_children path rest nv [] children in
+        (Node (node_v, children), replaced)
+    | [] -> failwith "Can't replace on an empty pattern!"
 
-  and replace_in_children (np : pattern) (nv : 'a)
-      (children : (pattern * 'a t) list) : (pattern * 'a t) list * 'a option =
+  and replace_in_children (pat : pattern_elem) (rest : pattern) (nv : 'a)
+      (visited : (pattern_elem * 'a t) list)
+      (children : (pattern_elem * 'a t) list) :
+      (pattern_elem * 'a t) list * 'a option =
     let c = { equiv = true } in
     (* The patterns used in the children should have been selected
        such that their common prefixes are pairwise empty.
@@ -1393,42 +1398,22 @@ module NameMatcherMap = struct
     | [] ->
         (* We reached the end without finding a pattern which has a non-empty
            prefix with the current children patterns: we simply insert a new child. *)
-        ([ (np, Node (Some nv, [])) ], None)
-    | (child_pat, child_tree) :: children_tl ->
-        (* Check if there is a common prefix *)
-        let pre, np_end, child_pat_end = pattern_common_prefix c np child_pat in
-        if pre = [] then
-          (* Empty prefix: continue *)
-          let children_tl, replaced = replace_in_children np nv children_tl in
-          ((child_pat, child_tree) :: children_tl, replaced)
+        let children =
+          List.fold_left
+            (fun node pat -> [ (pat, Node (None, node)) ])
+            [ (pat, Node (Some nv, [])) ]
+            rest
+        in
+        (children @ visited, None)
+    | ((child_pat, child_tree) as child) :: children_tl ->
+        (* Check the patterns are compatible *)
+        if not (pattern_elem_convertible c pat child_pat) then
+          (* Doesn't match: continue *)
+          replace_in_children pat rest nv children_tl (child :: visited)
         else
-          (* Non-empty prefix: insert here *)
-          let (nchild, replaced) : (pattern * 'a t) * 'a option =
-            match child_pat_end with
-            | [] ->
-                (* The child path is a prefix of the current path: insert
-                   in the child *)
-                let child_tree, replaced = replace np_end nv child_tree in
-                ((child_pat, child_tree), replaced)
-            | _ ->
-                (* The child path is not a prefix of the current path:
-                   insert a branching.
-                   Check if the current path is a prefix of the child path *)
-                if np_end = [] then
-                  (* Prefix *)
-                  ((pre, Node (Some nv, [ (child_pat_end, child_tree) ])), None)
-                else
-                  (* Not a prefix *)
-                  ( ( pre,
-                      Node
-                        ( None,
-                          [
-                            (child_pat_end, child_tree);
-                            (np_end, Node (Some nv, []));
-                          ] ) ),
-                    None )
-          in
-          (nchild :: children_tl, replaced)
+          (* Found a match: insert inside *)
+          let child_tree', replaced = replace rest nv child_tree in
+          ((child_pat, child_tree') :: children_tl, replaced)
 
   let add (np : pattern) (nv : 'a) (m : 'a t) : 'a t =
     let nm, replaced = replace np nv m in
@@ -1438,16 +1423,16 @@ module NameMatcherMap = struct
     nm
 
   let match_name_with_generics_prefix (ctx : 'fun_body ctx) (c : match_config)
-      (p : pattern) (n : T.name) (g : T.generic_args) :
+      (p : pattern_elem) (n : T.name) (g : T.generic_args) :
       (T.name * T.generic_args) option =
-    if List.length p = List.length n then
-      if match_name_with_generics ctx c p n g then
-        Some ([], TypesUtils.empty_generic_args)
-      else None
-    else if List.length p < List.length n then
-      let npre, nend = Collections.List.split_at n (List.length p) in
-      if match_name ctx c p npre then Some (nend, g) else None
-    else None
+    match n with
+    | [] -> None
+    | [ last ] ->
+        if match_name_with_generics ctx c [ p ] n g then
+          Some ([], TypesUtils.empty_generic_args)
+        else None
+    | npre :: nend ->
+        if match_name ctx c [ p ] [ npre ] then Some (nend, g) else None
 
   let rec find_with_generics_opt (ctx : 'fun_body ctx) (c : match_config)
       (name : Types.name) (g : Types.generic_args) (m : 'a t) : 'a option =
@@ -1462,7 +1447,7 @@ module NameMatcherMap = struct
 
   and find_with_generics_in_children_opt (ctx : 'fun_body ctx)
       (c : match_config) (name : Types.name) (g : Types.generic_args)
-      (children : (pattern * 'a t) list) : 'a option =
+      (children : (pattern_elem * 'a t) list) : 'a option =
     match children with
     | [] -> None
     | (child_pat, child_tree) :: children -> (
@@ -1507,7 +1492,7 @@ module NameMatcherMap = struct
       (v_to_string : 'a -> string) (child_pat, child) : string =
     let c : print_config = { tgt = TkPattern } in
     current_indent
-    ^ pattern_to_string c child_pat
+    ^ pattern_elem_to_string c child_pat
     ^ " ->\n"
     ^ to_string_aux (current_indent ^ indent) indent v_to_string child
 
