@@ -1376,7 +1376,24 @@ module NameMatcherMap = struct
     match np with
     | [ last ] ->
         (* If the path has one element left, add it *)
-        (Node (node_v, (last, Node (Some nv, [])) :: children), None)
+        let distinct, overlaps =
+          List.partition
+            (fun (p, v) -> pattern_elem_convertible { equiv = true } last p)
+            children
+        in
+        let replaced =
+          match overlaps with
+          | [] -> None
+          | [ (_, Node (replaced, _)) ] -> replaced
+          | _ :: _ ->
+              let strs =
+                List.map
+                  (fun (p, _) -> Format.asprintf "%a" pp_pattern_elem p)
+                  overlaps
+              in
+              failwith ("More than one overlap?" ^ String.concat ", " strs)
+        in
+        (Node (node_v, (last, Node (Some nv, [])) :: distinct), replaced)
     | path :: rest ->
         (* Otherwise: explore the children *)
         let children, replaced = replace_in_children path rest nv [] children in
@@ -1409,7 +1426,7 @@ module NameMatcherMap = struct
         (* Check the patterns are compatible *)
         if not (pattern_elem_convertible c pat child_pat) then
           (* Doesn't match: continue *)
-          replace_in_children pat rest nv children_tl (child :: visited)
+          replace_in_children pat rest nv (child :: visited) children_tl
         else
           (* Found a match: insert inside *)
           let child_tree', replaced = replace rest nv child_tree in
