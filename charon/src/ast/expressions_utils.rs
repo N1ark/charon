@@ -139,7 +139,7 @@ impl ProjectionElem {
                         let (type_id, generics) = ty.as_adt().ok_or(())?;
                         assert!(TypeId::Adt(*type_decl_id) == type_id);
                         use TypeDeclKind::*;
-                        match &type_decl.kind {
+                        match &type_decl.type_kind {
                             Struct(fields) | Union(fields) => {
                                 if variant_id.is_some() {
                                     return Err(());

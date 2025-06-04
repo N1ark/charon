@@ -222,8 +222,11 @@ impl ItemTransCtx<'_, '_> {
         // Translate generics and predicates
         self.translate_def_generics(span, def)?;
 
+        // Get the kind of the type decl -- is it a closure?
+        let kind = self.get_item_kind(span, def)?;
+
         // Translate type body
-        let kind = match &def.kind {
+        let type_kind = match &def.kind {
             _ if item_meta.opacity.is_opaque() => Ok(TypeDeclKind::Opaque),
             hax::FullDefKind::OpaqueTy | hax::FullDefKind::ForeignTy => Ok(TypeDeclKind::Opaque),
             hax::FullDefKind::TyAlias { ty, .. } => {
@@ -244,7 +247,7 @@ impl ItemTransCtx<'_, '_> {
             _ => panic!("Unexpected item when translating types: {def:?}"),
         };
 
-        let kind = match kind {
+        let type_kind = match type_kind {
             Ok(kind) => kind,
             Err(err) => TypeDeclKind::Error(err.msg),
         };
@@ -254,6 +257,7 @@ impl ItemTransCtx<'_, '_> {
             item_meta,
             generics: self.into_generics(),
             kind,
+            type_kind,
             layout,
         };
 

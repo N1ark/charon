@@ -352,7 +352,7 @@ fn type_decl_to_json_deserializer(ctx: &GenerateCtx, decl: &TypeDecl) -> String 
         format!("_ {return_ty}")
     };
 
-    let branches = match &decl.kind {
+    let branches = match &decl.type_kind {
         _ if let Some(def) = ctx.manual_json_impls.get(&decl.def_id) => def.clone(),
         TypeDeclKind::Struct(fields) if fields.is_empty() => {
             build_branch(ctx, "`Null", fields, "()")
@@ -632,7 +632,7 @@ fn type_decl_to_ocaml_decl(ctx: &GenerateCtx, decl: &TypeDecl, co_rec: bool) -> 
     } else {
         ""
     };
-    let body = match &decl.kind {
+    let body = match &decl.type_kind {
         _ if let Some(def) = ctx.manual_type_impls.get(&decl.def_id) => def.clone(),
         TypeDeclKind::Alias(ty) => {
             let ty = type_to_ocaml_name(ctx, ty);

@@ -53,7 +53,7 @@ impl Transform {
                     assert!(dest.is_local());
 
                     // Lookup the type of the scrutinee
-                    let tkind = ctx.translated.type_decls.get(*adt_id).map(|x| &x.kind);
+                    let tkind = ctx.translated.type_decls.get(*adt_id).map(|x| &x.type_kind);
                     let Some(TypeDeclKind::Enum(variants)) = tkind else {
                         match tkind {
                             // This can happen if the type was declared as invisible or opaque.
@@ -165,7 +165,7 @@ impl Transform {
                         && let ty = &fn_ptr.generics.types[0]
                         && let TyKind::Adt(TypeId::Adt(type_id), _) = *ty.kind()
                         && let Some(TypeDeclKind::Enum(variants)) =
-                            ctx.translated.type_decls.get(type_id).map(|x| &x.kind)
+                            ctx.translated.type_decls.get(type_id).map(|x| &x.type_kind)
                         // passing it a reference.
                         && let Operand::Move(p) = &call.args[0]
                         && let TyKind::Ref(_, sub_ty, _) = p.ty().kind() =>

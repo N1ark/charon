@@ -362,7 +362,7 @@ let type_decl_get_instantiated_variants_fields_types (def : type_decl)
     (generics : generic_args) : (VariantId.id option * ty list) list =
   let subst = make_subst_from_generics def.generics generics in
   let (variants_fields : (VariantId.id option * field list) list) =
-    match def.kind with
+    match def.type_kind with
     | Enum variants ->
         List.mapi (fun i v -> (Some (VariantId.of_int i), v.fields)) variants
     | Struct fields | Union fields -> [ (None, fields) ]

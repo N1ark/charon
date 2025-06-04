@@ -375,7 +375,7 @@ fn discriminants() -> anyhow::Result<()> {
         "#,
     )?;
     fn get_enum_discriminants(ty: &TypeDecl) -> Vec<ScalarValue> {
-        ty.kind
+        ty.type_kind
             .as_enum()
             .unwrap()
             .iter()
@@ -526,11 +526,11 @@ fn rename_attribute() -> anyhow::Result<()> {
     );
 
     assert_eq!(
-        crate_data.type_decls[1].kind.as_enum().unwrap()[0].renamed_name(),
+        crate_data.type_decls[1].type_kind.as_enum().unwrap()[0].renamed_name(),
         "Variant1"
     );
     assert_eq!(
-        crate_data.type_decls[1].kind.as_enum().unwrap()[1].renamed_name(),
+        crate_data.type_decls[1].type_kind.as_enum().unwrap()[1].renamed_name(),
         "SimpleSecondVariant_"
     );
 
@@ -562,7 +562,7 @@ fn rename_attribute() -> anyhow::Result<()> {
     );
 
     assert_eq!(
-        crate_data.type_decls[2].kind.as_struct().unwrap()[0]
+        crate_data.type_decls[2].type_kind.as_struct().unwrap()[0]
             .attr_info
             .rename
             .as_deref(),

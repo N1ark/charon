@@ -1737,7 +1737,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for TypeDbVar {
 
 impl<C: AstFormatter> FmtWithCtx<C> for TypeDecl {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let keyword = match &self.kind {
+        let keyword = match &self.type_kind {
             TypeDeclKind::Struct(..) => "struct",
             TypeDeclKind::Union(..) => "union",
             TypeDeclKind::Enum(..) => "enum",
@@ -1756,7 +1756,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for TypeDecl {
         } else {
             "\n".to_string()
         };
-        match &self.kind {
+        match &self.type_kind {
             TypeDeclKind::Struct(fields) => {
                 write!(f, "{nl_or_space}{{")?;
                 if !fields.is_empty() {

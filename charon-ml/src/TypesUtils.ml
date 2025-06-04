@@ -23,7 +23,7 @@ let as_ident (e : path_elem) : string =
   | _ -> raise (Failure "Unexpected")
 
 let type_decl_is_opaque (d : type_decl) : bool =
-  match d.kind with
+  match d.type_kind with
   | Opaque -> true
   | _ -> false
 
@@ -33,7 +33,7 @@ let type_decl_is_opaque (d : type_decl) : bool =
  *)
 let type_decl_get_fields (def : type_decl)
     (opt_variant_id : VariantId.id option) : field list =
-  match (def.kind, opt_variant_id) with
+  match (def.type_kind, opt_variant_id) with
   | Enum variants, Some variant_id -> (VariantId.nth variants variant_id).fields
   | Struct fields, None -> fields
   | Union fields, None -> fields
@@ -55,7 +55,7 @@ let type_decl_get_fields (def : type_decl)
            ("Can't get the list of fields of this adt:\n" ^ show_type_decl def))
 
 let type_decl_is_enum (def : type_decl) : bool =
-  match def.kind with
+  match def.type_kind with
   | Enum _ -> true
   | _ -> false
 

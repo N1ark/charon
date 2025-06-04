@@ -458,7 +458,7 @@ let type_decl_to_string (env : 'a fmt_env) (def : type_decl) : string =
   let params =
     if params <> [] then "<" ^ String.concat ", " params ^ ">" else ""
   in
-  match def.kind with
+  match def.type_kind with
   | Struct fields ->
       if fields <> [] then
         let fields =
@@ -493,7 +493,7 @@ let adt_variant_to_string (env : 'a fmt_env) (def_id : TypeDeclId.id)
       ^ "::"
       ^ variant_id_to_pretty_string variant_id
   | Some def -> begin
-      match def.kind with
+      match def.type_kind with
       | Enum variants ->
           let variant = VariantId.nth variants variant_id in
           name_to_string env def.item_meta.name ^ "::" ^ variant.variant_name
@@ -504,7 +504,7 @@ let adt_field_names (env : 'a fmt_env) (def_id : TypeDeclId.id)
     (opt_variant_id : VariantId.id option) : string list option =
   match TypeDeclId.Map.find_opt def_id env.crate.type_decls with
   | None -> None
-  | Some { kind = Opaque; _ } -> None
+  | Some { type_kind = Opaque; _ } -> None
   | Some def ->
       let fields = type_decl_get_fields def opt_variant_id in
       (* There are two cases: either all the fields have names, or none
@@ -522,7 +522,7 @@ let adt_field_to_string (env : 'a fmt_env) (def_id : TypeDeclId.id)
     string option =
   match TypeDeclId.Map.find_opt def_id env.crate.type_decls with
   | None -> None
-  | Some { kind = Opaque; _ } -> None
+  | Some { type_kind = Opaque; _ } -> None
   | Some def ->
       let fields = type_decl_get_fields def opt_variant_id in
       let field = FieldId.nth fields field_id in

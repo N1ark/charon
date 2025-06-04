@@ -58,7 +58,7 @@ pub trait AstFormatter: Sized {
     ) -> fmt::Result {
         let variant = if let Some(translated) = self.get_crate()
             && let Some(def) = translated.type_decls.get(type_id)
-            && let Some(variants) = def.kind.as_enum()
+            && let Some(variants) = def.type_kind.as_enum()
         {
             &variants.get(variant_id).unwrap().name
         } else {
@@ -77,7 +77,7 @@ pub trait AstFormatter: Sized {
         let field_name = if let Some(translated) = self.get_crate()
             && let Some(def) = translated.type_decls.get(type_id)
         {
-            match (&def.kind, opt_variant_id) {
+            match (&def.type_kind, opt_variant_id) {
                 (TypeDeclKind::Enum(variants), Some(variant_id)) => {
                     variants[variant_id].fields[field_id].name.as_ref()
                 }
