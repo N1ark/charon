@@ -246,6 +246,10 @@ and ty_to_string (env : 'a fmt_env) (ty : ty) : string =
         "(" ^ String.concat ", " (List.map (ty_to_string env) inputs) ^ ") -> "
       in
       inputs ^ ty_to_string env output
+  | TFnDef (id, generics) ->
+      let params = generic_args_to_string env generics in
+      let fn = fun_decl_id_to_string env id in
+      fn ^ params
   | TDynTrait _ -> "dyn (TODO)"
   | TError msg -> "type_error (\"" ^ msg ^ "\")"
 
