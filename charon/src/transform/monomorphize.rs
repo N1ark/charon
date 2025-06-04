@@ -124,9 +124,6 @@ impl VisitAst for UsageVisitor<'_> {
             TyKind::Adt(TypeId::Adt(id), gargs) => {
                 self.found_use_ty(id, gargs);
             }
-            TyKind::FnDef(id, gargs) => {
-                self.found_use_fn(id, gargs);
-            }
             _ => {}
         }
     }
@@ -233,9 +230,6 @@ impl VisitAstMut for SubstVisitor<'_> {
         match kind {
             TyKind::Adt(TypeId::Adt(id), gargs) => {
                 self.subst_use_ty(id, gargs);
-            }
-            TyKind::FnDef(id, gargs) => {
-                self.subst_use_fun(id, gargs);
             }
             _ => {}
         }
