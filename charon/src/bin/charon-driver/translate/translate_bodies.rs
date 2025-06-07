@@ -426,13 +426,13 @@ impl BodyTransCtx<'_, '_, '_> {
                 };
                 Ok(Rvalue::Len(place, ty, cg))
             }
-            hax::Rvalue::Cast(cast_kind, operand, tgt_ty) => {
+            hax::Rvalue::Cast(cast_kind, hax_operand, tgt_ty) => {
                 trace!("Rvalue::Cast: {:?}", rvalue);
                 // Translate the target type
                 let tgt_ty = self.translate_ty(span, tgt_ty)?;
 
                 // Translate the operand
-                let (operand, src_ty) = self.translate_operand_with_type(span, operand)?;
+                let (operand, src_ty) = self.translate_operand_with_type(span, hax_operand)?;
 
                 match cast_kind {
                     hax::CastKind::IntToInt
@@ -457,8 +457,39 @@ impl BodyTransCtx<'_, '_, '_> {
                         operand,
                     )),
                     hax::CastKind::PointerCoercion(
-                        hax::PointerCoercion::ClosureFnPointer(_)
-                        | hax::PointerCoercion::UnsafeFnPointer
+                        hax::PointerCoercion::ClosureFnPointer(_),
+                        ..,
+                    ) => {
+                        // we model casts of closures to function pointers by generating a new
+                        // function item without the closure's state, that calls the actual closure.
+                        let op_ty = match hax_operand {
+                            hax::Operand::Move(p) | hax::Operand::Copy(p) => p.ty.kind(),
+                            hax::Operand::Constant(c) => c.ty.kind(),
+                        };
+                        let hax::TyKind::Closure(id, _) = op_ty else {
+                            unreachable!("Non-closure type in PointerCoercion::ClosureFnPointer");
+                        };
+                        let fn_id = self.register_closure_as_fun_decl_id(span, id);
+                        let (_, generics) = src_ty.as_adt().unwrap();
+                        let src_ty = TyKind::FnDef(RegionBinder::empty(FunDeclRef {
+                            id: fn_id,
+                            generics: Box::new(generics.clone()),
+                        }))
+                        .into_ty();
+                        let operand = Operand::Const(Box::new(ConstantExpr {
+                            value: RawConstantExpr::FnPtr(FnPtr {
+                                func: Box::new(FunIdOrTraitMethodRef::Fun(FunId::Regular(fn_id))),
+                                generics: Box::new(generics.clone()),
+                            }),
+                            ty: src_ty.clone(),
+                        }));
+                        Ok(Rvalue::UnaryOp(
+                            UnOp::Cast(CastKind::FnPtr(src_ty, tgt_ty)),
+                            operand,
+                        ))
+                    }
+                    hax::CastKind::PointerCoercion(
+                        hax::PointerCoercion::UnsafeFnPointer
                         | hax::PointerCoercion::ReifyFnPointer,
                         ..,
                     ) => Ok(Rvalue::UnaryOp(
