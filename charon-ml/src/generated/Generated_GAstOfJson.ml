@@ -1707,6 +1707,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
           ("print_llbc", print_llbc);
           ("no_merge_goto_chains", no_merge_goto_chains);
           ("no_ops_to_function_calls", no_ops_to_function_calls);
+          ("raw_boxes", raw_boxes);
           ("preset", preset);
         ] ->
         let* ullbc = bool_of_json ctx ullbc in
@@ -1749,6 +1750,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
         let* no_ops_to_function_calls =
           bool_of_json ctx no_ops_to_function_calls
         in
+        let* raw_boxes = bool_of_json ctx raw_boxes in
         let* preset = option_of_json preset_of_json ctx preset in
         Ok
           ({
@@ -1786,6 +1788,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
              print_llbc;
              no_merge_goto_chains;
              no_ops_to_function_calls;
+             raw_boxes;
              preset;
            }
             : cli_options)

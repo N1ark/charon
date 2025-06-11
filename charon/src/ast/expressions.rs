@@ -479,7 +479,7 @@ pub enum RawConstantExpr {
     ///
     /// We eliminate this case in a micro-pass.
     #[charon::opaque]
-    MutPtr(Box<ConstantExpr>),
+    ConstPtr(RefKind, Box<ConstantExpr>),
     /// A const generic var
     Var(ConstGenericDbVar),
     /// Function pointer
