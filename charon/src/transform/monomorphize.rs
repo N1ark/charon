@@ -98,6 +98,9 @@ impl UsageVisitor<'_> {
     fn found_use_global_decl_ref(&mut self, id: &GlobalDeclId, gargs: &GenericArgs) {
         self.found_use(&AnyTransId::Global(*id), gargs, OptionHint::None);
     }
+    fn found_use_trait_impl(&mut self, id: &TraitImplId, gargs: &GenericArgs) {
+        self.found_use(&AnyTransId::TraitImpl(*id), gargs, OptionHint::None);
+    }
     fn found_use_fn_hinted(
         &mut self,
         id: &FunDeclId,
@@ -144,6 +147,7 @@ impl VisitAst for UsageVisitor<'_> {
                 else {
                     return;
                 };
+                self.found_use_trait_impl(&trait_impl.def_id, &impl_gargs);
                 let (_, bound_fn) = trait_impl.methods().find(|(n, _)| n == name).unwrap();
                 let fn_ref: Binder<Binder<FunDeclRef>> = Binder::new(
                     BinderKind::Other,
@@ -166,6 +170,15 @@ impl VisitAst for UsageVisitor<'_> {
 
     fn enter_global_decl_ref(&mut self, glob: &GlobalDeclRef) {
         self.found_use_global_decl_ref(&glob.id, &glob.generics);
+    }
+
+    fn enter_trait_ref(&mut self, tref: &TraitRef) {
+        match &tref.kind {
+            TraitRefKind::TraitImpl(id, gargs) => {
+                self.found_use_trait_impl(&id, &gargs);
+            }
+            _ => {}
+        }
     }
 }
 
@@ -210,6 +223,9 @@ impl SubstVisitor<'_> {
     fn subst_use_glob(&mut self, id: &mut GlobalDeclId, gargs: &mut GenericArgs) {
         self.subst_use(id, gargs, AnyTransId::as_global);
     }
+    fn subst_use_trait_impl(&mut self, id: &mut TraitImplId, gargs: &mut GenericArgs) {
+        self.subst_use(id, gargs, AnyTransId::as_trait_impl);
+    }
 }
 
 impl VisitAstMut for SubstVisitor<'_> {
@@ -246,6 +262,13 @@ impl VisitAstMut for SubstVisitor<'_> {
                 self.subst_use_fun(fun_id, &mut fn_ptr.generics)
             }
             FunIdOrTraitMethodRef::Trait(t_ref, _, fun_id) => {
+                match &mut t_ref.kind {
+                    TraitRefKind::TraitImpl(impl_id, args) => {
+                        self.subst_use_trait_impl(impl_id, args)
+                    }
+                    _ => {}
+                };
+
                 let mut gargs_key = fn_ptr.generics.clone().concat(
                     GenericsSource::Builtin,
                     &t_ref.trait_decl_ref.skip_binder.generics,
@@ -273,6 +296,15 @@ impl VisitAstMut for SubstVisitor<'_> {
 
     fn enter_global_decl_ref(&mut self, glob: &mut GlobalDeclRef) {
         self.subst_use_glob(&mut glob.id, &mut glob.generics);
+    }
+
+    fn enter_trait_ref(&mut self, tref: &mut TraitRef) {
+        match &mut tref.kind {
+            TraitRefKind::TraitImpl(id, gargs) => {
+                self.subst_use_trait_impl(id, gargs);
+            }
+            _ => {}
+        }
     }
 }
 
@@ -330,20 +362,16 @@ fn subst_uses<T: AstVisitable + Debug>(data: &PassData, item: &mut T) {
     let _ = item.drive_mut(&mut visitor);
 }
 
-// fn check_missing_indices(krate: &TranslatedCrate) {
-//     let mut visitor = MissingIndexChecker {
-//         krate,
-//         current_item: None,
-//     };
-//     for item in krate.all_items() {
-//         visitor.current_item = Some(item);
-//         item.drive(&mut visitor);
-//     }
-// }
-
-// fn path_for_generics(gargs: &GenericArgs) -> PathElem {
-//     PathElem::Ident(gargs.to_string(), Disambiguator::ZERO)
-// }
+fn check_missing_indices(krate: &TranslatedCrate) {
+    let mut visitor = MissingIndexChecker {
+        krate,
+        current_item: None,
+    };
+    for item in krate.all_items() {
+        visitor.current_item = Some(item);
+        let _ = item.drive(&mut visitor);
+    }
+}
 
 impl GenericArgs {
     fn is_empty_ignoring_regions(&self) -> bool {
@@ -533,6 +561,49 @@ impl TransformPass for Transform {
 
                             AnyTransId::Global(g_id_sub)
                         }
+                        AnyTransId::TraitImpl(impl_id) => {
+                            let timpl = ctx.translated.trait_impls.get(*impl_id).unwrap();
+                            let mut timpl_sub = timpl.clone().substitute(gargs);
+                            timpl_sub.generics = GenericParams::empty();
+                            timpl_sub
+                                .item_meta
+                                .name
+                                .name
+                                .push(PathElem::Monomorphized(gargs.clone().into()));
+
+                            for (_, binder) in timpl_sub.methods.iter_mut() {
+                                let id = binder.skip_binder.id;
+                                let fun = ctx.translated.fun_decls.get(id).unwrap();
+                                let mut fun_sub = fun.clone().substitute(gargs);
+                                fun_sub.signature.generics = GenericParams::empty();
+                                fun_sub
+                                    .item_meta
+                                    .name
+                                    .name
+                                    .push(PathElem::Monomorphized(gargs.clone().into()));
+
+                                let fun_id_sub = ctx.translated.fun_decls.push_with(|id| {
+                                    binder.skip_binder = FunDeclRef {
+                                        id,
+                                        generics: Box::new(GenericArgs::empty(
+                                            GenericsSource::item(id),
+                                        )),
+                                    };
+                                    fun_sub.def_id = id;
+                                    fun_sub
+                                });
+                                data.worklist.push(AnyTransId::Fun(fun_id_sub));
+                            }
+
+                            let timpl_id_sub = ctx.translated.trait_impls.push_with(|id| {
+                                timpl_sub.def_id = id;
+                                timpl_sub
+                            });
+
+                            data.worklist.push(AnyTransId::TraitImpl(timpl_id_sub));
+
+                            AnyTransId::TraitImpl(timpl_id_sub)
+                        }
                         _ => todo!("Unhandled monomorphization target ID {:?}", id),
                     }
                 };
@@ -570,20 +641,22 @@ impl TransformPass for Transform {
 
         // Now, remove all polymorphic items from the translation context, as all their
         // uses have been monomorphized and substituted
-        ctx.translated
-            .fun_decls
-            .retain(|f| data.visited.contains(&AnyTransId::Fun(f.def_id)));
-        ctx.translated
-            .type_decls
-            .retain(|t| data.visited.contains(&AnyTransId::Type(t.def_id)));
-        ctx.translated
-            .global_decls
-            .retain(|g| data.visited.contains(&AnyTransId::Global(g.def_id)));
-        // ctx.translated.trait_impls.retain(|t| t.generics.is_empty());
+        // ctx.translated
+        //     .fun_decls
+        //     .retain(|f| data.visited.contains(&AnyTransId::Fun(f.def_id)));
+        // ctx.translated
+        //     .type_decls
+        //     .retain(|t| data.visited.contains(&AnyTransId::Type(t.def_id)));
+        // ctx.translated
+        //     .global_decls
+        //     .retain(|g| data.visited.contains(&AnyTransId::Global(g.def_id)));
+        // ctx.translated
+        //     .trait_impls
+        //     .retain(|i| data.visited.contains(&AnyTransId::TraitImpl(i.def_id)));
 
         // TODO: Currently we don't update all TraitImpls/TraitDecls with the monomorphized versions
         //       and removing the polymorphic ones, so this fails.
         // Finally, ensure we didn't leave any IDs un-replaced
-        // check_missing_indices(&ctx.translated);
+        check_missing_indices(&ctx.translated);
     }
 }
