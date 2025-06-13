@@ -391,7 +391,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         trait_refs: &[hax::ImplExpr],
     ) -> Result<RegionBinder<MaybeBuiltinFunDeclRef>, Error> {
         let fun_id = self.translate_fun_id(span, def_id)?;
-        let fun_def = self.t_ctx.hax_def(def_id)?;
+        let fun_def = self.hax_def(def_id)?;
         let late_bound = match fun_def.kind() {
             hax::FullDefKind::Fn { sig, .. } | hax::FullDefKind::AssocFn { sig, .. } => {
                 Some(sig.as_ref().rebind(()))
@@ -414,7 +414,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         substs: &[hax::GenericArg],
         trait_refs: &[hax::ImplExpr],
     ) -> Result<RegionBinder<TraitMethodRef>, Error> {
-        let method_def = self.t_ctx.hax_def(method_def_id)?;
+        let method_def = self.hax_def(method_def_id)?;
         let method_decl_id = self.register_fun_decl_id(span, method_def_id);
         let trait_ref = self.translate_trait_impl_expr(span, trait_ref)?;
         let name = self.t_ctx.translate_trait_item_name(method_def_id)?;
