@@ -805,11 +805,12 @@ and closure_kind = Fn | FnMut | FnOnce
 (** Additional information for closures. *)
 and closure_info = {
   kind : closure_kind;
-  fun_id : fun_decl_id;
-      (** The function id of the closure's original kind. For instance, a [Fn] closure will have a
-        function for its [FnOnce], [FnMut] and [Fn] traits, but here we would only specify the
-        id of the [Fn] function.
-     *)
+  fn_once_impl : trait_impl_ref region_binder;
+      (** The [FnOnce] implementation of this closure -- always exists. *)
+  fn_mut_impl : trait_impl_ref region_binder option;
+      (** The [FnMut] implementation of this closure, if any. *)
+  fn_impl : trait_impl_ref region_binder option;
+      (** The [Fn] implementation of this closure, if any. *)
   signature : (ty list * ty) region_binder;
       (** The signature of the function that this closure represents. *)
 }

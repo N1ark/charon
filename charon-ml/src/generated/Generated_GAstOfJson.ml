@@ -1582,15 +1582,36 @@ and closure_info_of_json (ctx : of_json_ctx) (js : json) :
     (closure_info, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
-    | `Assoc [ ("kind", kind); ("fun_id", fun_id); ("signature", signature) ] ->
+    | `Assoc
+        [
+          ("kind", kind);
+          ("fn_once_impl", fn_once_impl);
+          ("fn_mut_impl", fn_mut_impl);
+          ("fn_impl", fn_impl);
+          ("signature", signature);
+        ] ->
         let* kind = closure_kind_of_json ctx kind in
-        let* fun_id = fun_decl_id_of_json ctx fun_id in
+        let* fn_once_impl =
+          region_binder_of_json trait_impl_ref_of_json ctx fn_once_impl
+        in
+        let* fn_mut_impl =
+          option_of_json
+            (region_binder_of_json trait_impl_ref_of_json)
+            ctx fn_mut_impl
+        in
+        let* fn_impl =
+          option_of_json
+            (region_binder_of_json trait_impl_ref_of_json)
+            ctx fn_impl
+        in
         let* signature =
           region_binder_of_json
             (pair_of_json (list_of_json ty_of_json) ty_of_json)
             ctx signature
         in
-        Ok ({ kind; fun_id; signature } : closure_info)
+        Ok
+          ({ kind; fn_once_impl; fn_mut_impl; fn_impl; signature }
+            : closure_info)
     | _ -> Error "")
 
 and fun_sig_of_json (ctx : of_json_ctx) (js : json) : (fun_sig, string) result =
