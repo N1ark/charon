@@ -715,8 +715,8 @@ impl ItemTransCtx<'_, '_> {
         })
     }
 
-    /// Given an item that is a closure, generate the `call_once`/`call_mut`/`call` method
-    /// (depending on `target_kind`).
+    /// Given an item that is a non-capturing closure, generate the equivalent function,
+    /// by removing the state from the parameters and untupling the arguments.
     #[tracing::instrument(skip(self, item_meta))]
     pub fn translate_closure_as_fn(
         mut self,
@@ -725,14 +725,14 @@ impl ItemTransCtx<'_, '_> {
         def: &hax::FullDef,
     ) -> Result<FunDecl, Error> {
         let span = item_meta.span;
-        let hax::FullDefKind::Closure { args, .. } = &def.kind else {
+        let hax::FullDefKind::Closure { args: closure, .. } = &def.kind else {
             unreachable!()
         };
 
         trace!("About to translate closure as fn:\n{:?}", def.def_id);
 
         assert!(
-            args.upvar_tys.is_empty(),
+            closure.upvar_tys.is_empty(),
             "Only stateless closures can be translated as functions"
         );
 
@@ -740,20 +740,28 @@ impl ItemTransCtx<'_, '_> {
         // Add the lifetime generics coming from the higher-kindedness of the signature.
         assert!(self.innermost_binder_mut().bound_region_vars.is_empty(),);
         self.innermost_binder_mut()
-            .push_params_from_binder(args.tupled_sig.rebind(()))?;
+            .push_params_from_binder(closure.tupled_sig.rebind(()))?;
 
         // Translate the function signature
         let mut signature =
-            self.translate_closure_method_sig(def, span, args, ClosureKind::FnOnce)?;
+            self.translate_closure_method_sig(def, span, closure, ClosureKind::FnOnce)?;
         let state_ty = signature.inputs.remove(0);
+        let args_tuple_ty = signature.inputs.remove(0);
+        signature.inputs = args_tuple_ty
+            .as_tuple()
+            .unwrap()
+            .iter()
+            .map(Ty::clone)
+            .collect();
 
         let body = if item_meta.opacity.with_private_contents().is_opaque() {
             Err(Opaque)
         } else {
             // Target translation:
             //
-            // fn call_fn(args: Args) -> Output {
+            // fn call_fn(arg0: Args[0], ..., argN: Args[N]) -> Output {
             //   let closure: Closure = {};
+            //   let args = (arg0, ..., argN);
             //   closure.call(args)
             // }
             let mk_stt = |content| Statement::new(span, content);
@@ -766,22 +774,41 @@ impl ItemTransCtx<'_, '_> {
             let fun_id =
                 self.register_closure_method_decl_id(span, def.def_id(), ClosureKind::FnOnce);
             let impl_ref =
-                self.translate_closure_impl_ref(span, def.def_id(), args, ClosureKind::FnOnce)?;
+                self.translate_closure_impl_ref(span, def.def_id(), closure, ClosureKind::FnOnce)?;
             let fn_op = FnOperand::Regular(FnPtr {
                 func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
                 generics: Box::new(impl_ref.generics.with_target(GenericsSource::item(fun_id))),
             });
 
             let mut locals = Locals {
-                arg_count: 1,
+                arg_count: signature.inputs.len(),
                 locals: Vector::new(),
             };
             let mut statements = vec![];
             let mut blocks = Vector::default();
 
             let output = locals.new_var(None, signature.output.clone());
-            let args = locals.new_var(Some("args".to_string()), signature.inputs[0].clone());
+            let args: Vec<Place> = signature
+                .inputs
+                .iter()
+                .enumerate()
+                .map(|(i, ty)| locals.new_var(Some(format!("arg{}", i + 1)), ty.clone()))
+                .collect();
+            let args_tupled = locals.new_var(Some("args".to_string()), args_tuple_ty);
             let state = locals.new_var(Some("state".to_string()), state_ty.clone());
+
+            statements.push(mk_stt(RawStatement::Assign(
+                args_tupled.clone(),
+                Rvalue::Aggregate(
+                    AggregateKind::Adt(
+                        TypeId::Tuple,
+                        None,
+                        None,
+                        Box::new(GenericArgs::empty(GenericsSource::Builtin)),
+                    ),
+                    args.into_iter().map(Operand::Move).collect(),
+                ),
+            )));
 
             let (state_adt, state_args) = state_ty.as_adt().unwrap();
             statements.push(mk_stt(RawStatement::Assign(
@@ -799,7 +826,7 @@ impl ItemTransCtx<'_, '_> {
                 target: ret_block,
                 call: Call {
                     func: fn_op,
-                    args: vec![Operand::Move(state), Operand::Move(args)],
+                    args: vec![Operand::Move(state), Operand::Move(args_tupled)],
                     dest: output,
                 },
                 on_unwind: unwind_block,

@@ -51,13 +51,15 @@ fn {impl FnOnce<()> for closure}::call_once(@1: closure, @2: ())
 }
 
 // Full name: test_crate::main::closure::as_fn
-fn as_fn(@1: ())
+fn as_fn()
 {
     let @0: (); // return
-    let args@1: (); // arg #1
+    let args@1: (); // local
     let state@2: closure; // local
 
+    storage_live(args@1)
     storage_live(state@2)
+    args@1 := ()
     state@2 := closure {  }
     @0 := {impl FnOnce<()> for closure}::call_once(move (state@2), move (args@1))
     @0 := ()
@@ -76,7 +78,7 @@ fn main()
     storage_live(f@1)
     storage_live(@2)
     @2 := closure {  }
-    f@1 := cast<as_fn, fn()>(move (@2))
+    f@1 := cast<as_fn, fn()>(const (as_fn))
     storage_dead(@2)
     storage_live(@3)
     storage_live(@4)
