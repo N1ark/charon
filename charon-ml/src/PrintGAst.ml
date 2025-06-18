@@ -180,7 +180,7 @@ let trait_decl_to_string (env : 'a fmt_env) (indent : string)
       List.map
         (fun (name, (f : fun_decl_ref binder)) ->
           indent1 ^ "fn " ^ name ^ " : "
-          ^ fun_decl_id_to_string env f.binder_value.fun_id
+          ^ fun_decl_id_to_string env f.binder_value.id
           ^ "\n")
         def.methods
     in
@@ -235,7 +235,7 @@ let trait_impl_to_string (env : 'a fmt_env) (indent : string)
     in
     let env_method (name, (f : fun_decl_ref binder)) =
       indent1 ^ "fn " ^ name ^ " : "
-      ^ fun_decl_id_to_string env f.binder_value.fun_id
+      ^ fun_decl_id_to_string env f.binder_value.id
       ^ "\n"
     in
     let methods = List.map env_method def.methods in
