@@ -756,7 +756,7 @@ impl ItemTransCtx<'_, '_> {
                 self.translate_closure_impl_ref(span, def.def_id(), closure, ClosureKind::FnOnce)?;
             let fn_op = FnOperand::Regular(FnPtr {
                 func: FunIdOrTraitMethodRef::Fun(FunId::Regular(fun_id.clone())).into(),
-                generics: Box::new(impl_ref.generics.with_target(GenericsSource::item(fun_id))),
+                generics: impl_ref.generics.clone(),
             });
 
             let mut locals = Locals {
@@ -773,29 +773,21 @@ impl ItemTransCtx<'_, '_> {
                 .enumerate()
                 .map(|(i, ty)| locals.new_var(Some(format!("arg{}", i + 1)), ty.clone()))
                 .collect();
-            let args_tupled = locals.new_var(Some("args".to_string()), args_tuple_ty);
+            let args_tupled = locals.new_var(Some("args".to_string()), args_tuple_ty.clone());
             let state = locals.new_var(Some("state".to_string()), state_ty.clone());
 
             statements.push(mk_stt(RawStatement::Assign(
                 args_tupled.clone(),
                 Rvalue::Aggregate(
-                    AggregateKind::Adt(
-                        TypeId::Tuple,
-                        None,
-                        None,
-                        Box::new(GenericArgs::empty(GenericsSource::Builtin)),
-                    ),
+                    AggregateKind::Adt(args_tuple_ty.as_adt().unwrap().clone(), None, None),
                     args.into_iter().map(Operand::Move).collect(),
                 ),
             )));
 
-            let (state_adt, state_args) = state_ty.as_adt().unwrap();
+            let state_ty_adt = state_ty.as_adt().unwrap();
             statements.push(mk_stt(RawStatement::Assign(
                 state.clone(),
-                Rvalue::Aggregate(
-                    AggregateKind::Adt(state_adt, None, None, Box::new(state_args.clone())),
-                    vec![],
-                ),
+                Rvalue::Aggregate(AggregateKind::Adt(state_ty_adt.clone(), None, None), vec![]),
             )));
 
             let start_block = blocks.reserve_slot();

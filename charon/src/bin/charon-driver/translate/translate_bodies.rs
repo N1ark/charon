@@ -471,20 +471,26 @@ impl BodyTransCtx<'_, '_, '_> {
                             hax::Operand::Move(p) | hax::Operand::Copy(p) => p.ty.kind(),
                             hax::Operand::Constant(c) => c.ty.kind(),
                         };
-                        let hax::TyKind::Closure(id, _) = op_ty else {
+                        let hax::TyKind::Closure(id, closure) = op_ty else {
                             unreachable!("Non-closure type in PointerCoercion::ClosureFnPointer");
                         };
-                        let fn_id = self.register_closure_as_fun_decl_id(span, id);
-                        let (_, generics) = src_ty.as_adt().unwrap();
-                        let src_ty = TyKind::FnDef(RegionBinder::empty(FunDeclRef {
-                            id: fn_id,
-                            generics: Box::new(generics.clone()),
-                        }))
-                        .into_ty();
+                        let id = self.register_closure_as_fun_decl_id(span, id);
+
+                        let TypeDeclRef { generics, .. } = src_ty.as_adt().unwrap();
+                        let mut generics = generics.clone();
+                        generics
+                            .regions
+                            .extend(closure.tupled_sig.bound_vars.iter().map(|_| Region::Erased));
+                        let binder = RegionBinder::empty(FunDeclRef {
+                            id,
+                            generics: generics.clone(),
+                        });
+
+                        let src_ty = TyKind::FnDef(binder).into_ty();
                         let operand = Operand::Const(Box::new(ConstantExpr {
                             value: RawConstantExpr::FnPtr(FnPtr {
-                                func: Box::new(FunIdOrTraitMethodRef::Fun(FunId::Regular(fn_id))),
-                                generics: Box::new(generics.clone()),
+                                func: Box::new(FunIdOrTraitMethodRef::Fun(FunId::Regular(id))),
+                                generics: generics,
                             }),
                             ty: src_ty.clone(),
                         }));
