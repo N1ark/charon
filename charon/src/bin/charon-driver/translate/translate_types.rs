@@ -231,12 +231,12 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             hax::TyKind::FnDef { item, .. } => {
                 let fnref: RegionBinder<FnPtr> = self.translate_fn_ptr(span, item)?;
                 let fnref = fnref.map(|fref| FunDeclRef {
-                    id: *fref
-                        .func
-                        .as_fun()
-                        .expect("can't reference method as a function pointer")
-                        .as_regular()
-                        .expect("can't reference builtin function as a function pointer"),
+                    id: (match *fref.func {
+                        FunIdOrTraitMethodRef::Fun(fun) => *fun
+                            .as_regular()
+                            .expect("can't reference builtin function as a function pointer"),
+                        FunIdOrTraitMethodRef::Trait(_, _, fun) => fun,
+                    }),
                     generics: fref.generics,
                 });
                 TyKind::FnDef(fnref)
