@@ -76,6 +76,16 @@ pub struct Error {
     pub msg: String,
 }
 
+extern crate rustc_smir;
+impl From<rustc_smir::stable_mir::Error> for Error {
+    fn from(err: rustc_smir::stable_mir::Error) -> Self {
+        Error {
+            span: Span::dummy(),
+            msg: err.to_string(),
+        }
+    }
+}
+
 impl Error {
     pub(crate) fn render(&self, krate: &TranslatedCrate, level: Level) -> String {
         use annotate_snippets::*;
