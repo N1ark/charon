@@ -23,6 +23,7 @@
 #![feature(iterator_try_collect)]
 #![feature(trait_alias)]
 #![feature(register_tool)]
+#![feature(rustc_private)]
 // For when we use charon on itself :3
 #![register_tool(charon)]
 
