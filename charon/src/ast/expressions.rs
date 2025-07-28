@@ -393,9 +393,7 @@ pub struct BuiltinIndexOp {
 /// Reference to a function declaration or builtin function.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Drive, DriveMut)]
 pub struct MaybeBuiltinFunDeclRef {
-    #[charon::rename("fun_decl_id")]
     pub id: FunId,
-    #[charon::rename("fun_decl_generics")]
     pub generics: BoxedArgs,
 }
 
@@ -478,6 +476,7 @@ impl From<FunDeclRef> for FnPtr {
 /// reading the constant `a.b` is translated to `{ _1 = const a; _2 = (_1.0) }`.
 #[derive(
     Debug,
+    Hash,
     PartialEq,
     Eq,
     Clone,
@@ -492,7 +491,6 @@ impl From<FunDeclRef> for FnPtr {
 #[charon::variants_prefix("C")]
 pub enum RawConstantExpr {
     Literal(Literal),
-    ///
     /// In most situations:
     /// Enumeration with one variant with no fields, structure with
     /// no fields, unit (encoded as a 0-tuple).
@@ -560,7 +558,7 @@ pub enum RawConstantExpr {
     Opaque(String),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Drive, DriveMut)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Serialize, Deserialize, Drive, DriveMut)]
 pub struct ConstantExpr {
     pub value: RawConstantExpr,
     pub ty: Ty,

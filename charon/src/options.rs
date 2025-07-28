@@ -24,7 +24,7 @@ pub const CHARON_ARGS: &str = "CHARON_ARGS";
 // Note that because we need to transmit the options to the charon driver,
 // we store them in a file before calling this driver (hence the `Serialize`,
 // `Deserialize` options).
-#[derive(Debug, Default, Clone, clap::Args, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, clap::Args, PartialEq, Eq, Serialize, Deserialize)]
 #[clap(name = "Charon")]
 #[charon::rename("cli_options")]
 pub struct CliOpts {
@@ -85,7 +85,7 @@ pub struct CliOpts {
     /// translated as normal. To only translate a particular call graph, use `--start-from`. This
     /// uses a different mechanism than `--monomorphize-conservative` which should be a lot more
     /// complete, but doesn't currently support `dyn Trait`.
-    #[clap(long)]
+    #[clap(long, visible_alias = "mono")]
     #[serde(default)]
     pub monomorphize: bool,
     /// Monomorphize the code, replacing generics with their concrete types. This is less complete
@@ -286,6 +286,7 @@ pub enum Preset {
     OldDefaults,
     Aeneas,
     Eurydice,
+    Soteria,
     Tests,
 }
 
@@ -310,6 +311,13 @@ impl CliOpts {
                 Preset::Eurydice => {
                     self.hide_allocator = true;
                     self.remove_associated_types.push("*".to_owned());
+                }
+                Preset::Soteria => {
+                    self.extract_opaque_bodies = true;
+                    self.monomorphize = true;
+                    self.raw_boxes = true;
+                    self.mir = Some(MirLevel::Elaborated);
+                    self.ullbc = true;
                 }
                 Preset::Tests => {
                     self.hide_allocator = !self.raw_boxes;
