@@ -163,6 +163,19 @@ fn transform_constant_expr(
 
             Operand::Move(var)
         }
+        ConstantExprKind::Union(field, value) => {
+            let value = transform_constant_expr(span, value, new_var);
+
+            // Build an `Aggregate` rvalue.
+            let rval = {
+                let tref = val.ty.kind().as_adt().unwrap();
+                let aggregate_kind = AggregateKind::Adt(tref.clone(), None, Some(field));
+                Rvalue::Aggregate(aggregate_kind, vec![value])
+            };
+            let var = new_var(rval, val.ty);
+
+            Operand::Move(var)
+        }
         ConstantExprKind::Array(fields) => {
             let fields = fields
                 .into_iter()
