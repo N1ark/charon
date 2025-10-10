@@ -373,6 +373,7 @@ and unsizing_metadata =
   | MetaLength of const_generic
   | MetaVTablePtr of trait_ref
   | MetaMonoVTablePtr of global_decl_ref
+  | MetaMonoVTableReindex of int option
   | MetaUnknown
 [@@deriving
   show,

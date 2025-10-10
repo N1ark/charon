@@ -284,6 +284,10 @@ impl<C: AstFormatter> FmtWithCtx<C> for CastKind {
                     UnsizingMetadata::MonoVTablePtr(global) => {
                         write!(f, ", {}", global.with_ctx(ctx))?
                     }
+                    UnsizingMetadata::MonoVTableReindex(None) => write!(f, ", reindex(same)")?,
+                    UnsizingMetadata::MonoVTableReindex(Some(idx)) => {
+                        write!(f, ", reindex({idx})")?
+                    }
                     UnsizingMetadata::Unknown => {}
                 }
                 write!(f, ">")

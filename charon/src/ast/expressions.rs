@@ -223,6 +223,8 @@ pub enum UnsizingMetadata {
     Length(ConstGeneric),
     VTablePtr(TraitRef),
     MonoVTablePtr(GlobalDeclRef),
+    #[drive(skip)]
+    MonoVTableReindex(Option<usize>),
     Unknown,
 }
 

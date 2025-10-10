@@ -2084,6 +2084,11 @@ and unsizing_metadata_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("MonoVTablePtr", mono_v_table_ptr) ] ->
         let* mono_v_table_ptr = global_decl_ref_of_json ctx mono_v_table_ptr in
         Ok (MetaMonoVTablePtr mono_v_table_ptr)
+    | `Assoc [ ("MonoVTableReindex", mono_v_table_reindex) ] ->
+        let* mono_v_table_reindex =
+          option_of_json int_of_json ctx mono_v_table_reindex
+        in
+        Ok (MetaMonoVTableReindex mono_v_table_reindex)
     | `String "Unknown" -> Ok MetaUnknown
     | _ -> Error "")
 
