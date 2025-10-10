@@ -365,6 +365,10 @@ pub enum FnOperand {
     Regular(FnPtr),
     /// Use of a function pointer stored in a local variable
     Move(Place),
+    /// Use of a function pointer stored in a VTable, at a given index.
+    /// Represents the trait method, along with the index of the method in the vtable.
+    #[drive(skip)]
+    VTableMethod(FnPtr, usize),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Drive, DriveMut)]

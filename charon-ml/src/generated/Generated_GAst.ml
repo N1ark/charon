@@ -50,6 +50,10 @@ and fn_operand =
       (** Regular case: call to a top-level function, trait method, etc. *)
   | FnOpMove of place
       (** Use of a function pointer stored in a local variable *)
+  | FnOpVTableMethod of fn_ptr * int
+      (** Use of a function pointer stored in a VTable, at a given index.
+          Represents the trait method, along with the index of the method in the
+          vtable. *)
 
 (** A function signature. *)
 and fun_sig = {

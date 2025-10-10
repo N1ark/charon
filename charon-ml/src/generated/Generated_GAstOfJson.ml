@@ -740,6 +740,10 @@ and fn_operand_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("Move", move) ] ->
         let* move = place_of_json ctx move in
         Ok (FnOpMove move)
+    | `Assoc [ ("VTableMethod", `List [ x_0; x_1 ]) ] ->
+        let* x_0 = fn_ptr_of_json ctx x_0 in
+        let* x_1 = int_of_json ctx x_1 in
+        Ok (FnOpVTableMethod (x_0, x_1))
     | _ -> Error "")
 
 and fn_ptr_of_json (ctx : of_json_ctx) (js : json) : (fn_ptr, string) result =

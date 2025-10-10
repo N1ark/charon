@@ -425,6 +425,9 @@ impl<C: AstFormatter> FmtWithCtx<C> for FnOperand {
         match self {
             FnOperand::Regular(func) => write!(f, "{}", func.with_ctx(ctx)),
             FnOperand::Move(p) => write!(f, "(move {})", p.with_ctx(ctx)),
+            FnOperand::VTableMethod(func, idx) => {
+                write!(f, "(dyn[{}] {})", idx, func.with_ctx(ctx))
+            }
         }
     }
 }
