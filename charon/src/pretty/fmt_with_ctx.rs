@@ -281,6 +281,9 @@ impl<C: AstFormatter> FmtWithCtx<C> for CastKind {
                 match meta {
                     UnsizingMetadata::Length(len) => write!(f, ", {}", len.with_ctx(ctx))?,
                     UnsizingMetadata::VTablePtr(tref) => write!(f, ", {}", tref.with_ctx(ctx))?,
+                    UnsizingMetadata::MonoVTablePtr(global) => {
+                        write!(f, ", {}", global.with_ctx(ctx))?
+                    }
                     UnsizingMetadata::Unknown => {}
                 }
                 write!(f, ">")

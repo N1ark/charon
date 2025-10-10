@@ -222,6 +222,7 @@ pub enum CastKind {
 pub enum UnsizingMetadata {
     Length(ConstGeneric),
     VTablePtr(TraitRef),
+    MonoVTablePtr(GlobalDeclRef),
     Unknown,
 }
 

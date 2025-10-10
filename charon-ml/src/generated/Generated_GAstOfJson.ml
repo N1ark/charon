@@ -2081,6 +2081,9 @@ and unsizing_metadata_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("VTablePtr", v_table_ptr) ] ->
         let* v_table_ptr = trait_ref_of_json ctx v_table_ptr in
         Ok (MetaVTablePtr v_table_ptr)
+    | `Assoc [ ("MonoVTablePtr", mono_v_table_ptr) ] ->
+        let* mono_v_table_ptr = global_decl_ref_of_json ctx mono_v_table_ptr in
+        Ok (MetaMonoVTablePtr mono_v_table_ptr)
     | `String "Unknown" -> Ok MetaUnknown
     | _ -> Error "")
 
