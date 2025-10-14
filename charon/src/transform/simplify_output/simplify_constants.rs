@@ -34,7 +34,7 @@ fn transform_constant_expr(
         | ConstantExprKind::Var(_)
         | ConstantExprKind::RawMemory(..)
         | ConstantExprKind::TraitConst(..)
-        | ConstantExprKind::FnPtr(..)
+        | ConstantExprKind::FnDef(..)
         | ConstantExprKind::Opaque(_) => {
             // Nothing to do
             // TODO: for trait const: might come from a top-level impl, so we might
@@ -196,6 +196,21 @@ fn transform_constant_expr(
             let var = new_var(rval, val.ty);
 
             Operand::Move(var)
+        }
+        ConstantExprKind::FnPtr(fptr, sig) => {
+            let from_ty = TyKind::FnDef(sig.clone().map(|_| fptr.clone())).into_ty();
+            let to_ty = TyKind::FnPtr(sig).into_ty();
+
+            Operand::Move(new_var(
+                Rvalue::UnaryOp(
+                    UnOp::Cast(CastKind::FnPtr(from_ty.clone(), to_ty.clone())),
+                    Operand::Const(Box::new(ConstantExpr {
+                        kind: ConstantExprKind::FnDef(fptr),
+                        ty: from_ty.clone(),
+                    })),
+                ),
+                to_ty,
+            ))
         }
     }
 }

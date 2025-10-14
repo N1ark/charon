@@ -41,7 +41,7 @@ fn dynify<T: TyVisitable>(mut x: T, new_self: Option<Ty>, for_method: bool) -> T
                         .into_ty()
                 } else {
                     self.new_self.clone().expect(
-                        "Found unexpected `Self` 
+                        "Found unexpected `Self`
                         type when constructing vtable",
                     )
                 })
@@ -572,7 +572,7 @@ impl ItemTransCtx<'_, '_> {
                 let shim_ref = self
                     .translate_fn_ptr(span, &item_ref, TransItemSourceKind::VTableMethod)?
                     .erase();
-                ConstantExprKind::FnPtr(shim_ref)
+                ConstantExprKind::FnDef(shim_ref)
             }
             hax::ImplAssocItemValue::DefaultedFn { .. } => ConstantExprKind::Opaque(
                 "shim for default methods \
