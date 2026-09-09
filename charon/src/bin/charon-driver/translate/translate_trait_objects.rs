@@ -854,12 +854,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let orginal_binding = self.binding_levels.pop();
             let assoc_fun_def = self.hax_def(&item_ref)?;
             self.translate_item_generics(span, &assoc_fun_def, &TransItemSourceKind::VTableMethod)?;
-            let vtable_sig = match assoc_fun_def.kind() {
-                hax::FullDefKind::AssocFn {
-                    vtable_sig: Some(vtable_sig),
-                    ..
-                } => vtable_sig.clone(),
-                _ => unreachable!("MONO: only assoc fun is supported"),
+            let Some(vtable_sig) = assoc_fun_def.vtable_sig(self.hax_state()) else {
+                unreachable!("MONO: only vtable-safe assoc fun is supported")
             };
 
             let signature = self.translate_fun_sig(span, &vtable_sig.value)?;
@@ -1189,7 +1185,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         span: Span,
         target_receiver: &Ty,
         shim_signature: &FunSig,
-        impl_func_def: &hax::FullDef,
+        impl_func_def: &hax::FullDef<'tcx>,
     ) -> Result<Body, Error> {
         let mut builder = BodyBuilder::new(span, shim_signature.inputs.len());
 
@@ -1345,15 +1341,13 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         mut self,
         fun_id: FunDeclId,
         item_meta: ItemMeta,
-        impl_func_def: &hax::FullDef,
+        impl_func_def: &hax::FullDef<'tcx>,
     ) -> Result<FunDecl, Error> {
         let span = item_meta.span;
 
-        let hax::FullDefKind::AssocFn {
-            vtable_sig: Some(vtable_sig),
-            sig: target_signature,
-            ..
-        } = impl_func_def.kind()
+        let vtable_sig = impl_func_def.vtable_sig(self.hax_state());
+        let (Some(vtable_sig), hax::FullDefKind::AssocFn { sig: target_signature, .. }) =
+            (vtable_sig, impl_func_def.kind())
         else {
             raise_error!(
                 self,
