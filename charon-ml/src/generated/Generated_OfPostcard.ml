@@ -2700,14 +2700,13 @@ and offset_guarantee_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
   combine_error_msgs st __FUNCTION__
     (let* __tag = int_of_postcard ctx st in
      match __tag with
-     | 0 -> Ok AtOffsetZero
-     | 1 ->
+     | 0 ->
          let* _0 = size_expr_of_postcard ctx st in
          Ok (AtOffset _0)
-     | 2 ->
+     | 1 ->
          let* _0 = size_expr_of_postcard ctx st in
          Ok (GuaranteedAlignment _0)
-     | 3 ->
+     | 2 ->
          let* _0 = field_predecessor_of_postcard ctx st in
          Ok (ReprCField _0)
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))

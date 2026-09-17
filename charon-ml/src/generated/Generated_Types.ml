@@ -1285,9 +1285,6 @@ and offset_expr = {
 
 (** Guaranteed facts about a field offset. *)
 and offset_guarantee =
-  | AtOffsetZero
-      (** Guaranteed to be at offset zero. This applies for [repr(transparent)]
-          and in some [repr(C)] cases. *)
   | AtOffset of size_expr  (** Guaranteed to be exactly at the given offset. *)
   | GuaranteedAlignment of size_expr
       (** Guaranteed only to be aligned to the given expression. *)

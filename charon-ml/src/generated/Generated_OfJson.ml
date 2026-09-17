@@ -3191,7 +3191,6 @@ and offset_guarantee_of_json (ctx : of_json_ctx) (js : json) :
     (offset_guarantee, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
-    | `String "AtOffsetZero" -> Ok AtOffsetZero
     | `Assoc [ ("AtOffset", _0) ] ->
         let* _0 = size_expr_of_json ctx _0 in
         Ok (AtOffset _0)
