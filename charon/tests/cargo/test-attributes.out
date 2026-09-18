@@ -73,14 +73,6 @@ pub fn from_str<'a>(_1: &'static str) -> Arguments<'a>
 #[diagnostic_item("Send")]
 pub trait Send<Self>
 
-// Full name: core::marker::Destruct
-#[lang_item(Destruct)]
-pub trait Destruct<Self>
-{
-    fn drop_glue<'_0_1>;
-    non-dyn-compatible
-}
-
 // Full name: core::marker::Tuple
 #[fundamental]
 #[lang_item(Tuple)]
@@ -357,19 +349,6 @@ fn foo()
     return
 }
 
-struct test_attributes::tests::test_ignore::{closure} {}
-
-// Full name: test_attributes::tests::test_ignore::{closure}::{impl Destruct for test_attributes::tests::test_ignore::{closure}}::drop_glue
-unsafe fn {impl Destruct for test_attributes::tests::test_ignore::{closure}}::drop_glue<'_0>(_1: &'_0 mut test_attributes::tests::test_ignore::{closure})
-{
-    let _0: (); // return
-    let _1: &'1 mut test_attributes::tests::test_ignore::{closure}; // arg #1
-
-    storage_live(_0)
-    _0 = ()
-    return
-}
-
 #[ignore]
 #[rustc_test_entrypoint_marker]
 fn test_attributes::tests::test_ignore#1()
@@ -381,6 +360,8 @@ fn test_attributes::tests::test_ignore#1()
     _0 = ()
     return
 }
+
+struct test_attributes::tests::test_ignore::{closure} {}
 
 // Full name: test_attributes::tests::test_ignore::{impl Fn<()> for test_attributes::tests::test_ignore::{closure}}::call
 fn {impl Fn<()> for test_attributes::tests::test_ignore::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_ignore::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
@@ -428,10 +409,6 @@ fn {impl FnOnce<()> for test_attributes::tests::test_ignore::{closure}}::call_on
     storage_live(_3)
     _3 = &mut _1
     _0 = {impl FnMut<()> for test_attributes::tests::test_ignore::{closure}}::call_mut<'2>(move _3, move _2)
-    ↳⚡ drop[{impl Destruct for test_attributes::tests::test_ignore::{closure}}::drop_glue<'3>] _1
-        ↳⚡ unwind_terminate
-        unwind_continue
-    drop[{impl Destruct for test_attributes::tests::test_ignore::{closure}}::drop_glue<'4>] _1
     ↳⚡ unwind_continue
     return
 }
@@ -505,19 +482,6 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
 
 pub const test_attributes::tests::test_ignore: TestDescAndFn = test_attributes::tests::test_ignore()
 
-struct test_attributes::tests::test_should_panic::{closure} {}
-
-// Full name: test_attributes::tests::test_should_panic::{closure}::{impl Destruct for test_attributes::tests::test_should_panic::{closure}}::drop_glue
-unsafe fn {impl Destruct for test_attributes::tests::test_should_panic::{closure}}::drop_glue<'_0>(_1: &'_0 mut test_attributes::tests::test_should_panic::{closure})
-{
-    let _0: (); // return
-    let _1: &'1 mut test_attributes::tests::test_should_panic::{closure}; // arg #1
-
-    storage_live(_0)
-    _0 = ()
-    return
-}
-
 #[should_panic]
 #[rustc_test_entrypoint_marker]
 fn test_attributes::tests::test_should_panic#1()
@@ -532,6 +496,8 @@ fn test_attributes::tests::test_should_panic#1()
     ↳⚡ unwind_continue
     panic(core::panicking::panic_fmt)
 }
+
+struct test_attributes::tests::test_should_panic::{closure} {}
 
 // Full name: test_attributes::tests::test_should_panic::{impl Fn<()> for test_attributes::tests::test_should_panic::{closure}}::call
 fn {impl Fn<()> for test_attributes::tests::test_should_panic::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_should_panic::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
@@ -579,10 +545,6 @@ fn {impl FnOnce<()> for test_attributes::tests::test_should_panic::{closure}}::c
     storage_live(_3)
     _3 = &mut _1
     _0 = {impl FnMut<()> for test_attributes::tests::test_should_panic::{closure}}::call_mut<'2>(move _3, move _2)
-    ↳⚡ drop[{impl Destruct for test_attributes::tests::test_should_panic::{closure}}::drop_glue<'3>] _1
-        ↳⚡ unwind_terminate
-        unwind_continue
-    drop[{impl Destruct for test_attributes::tests::test_should_panic::{closure}}::drop_glue<'4>] _1
     ↳⚡ unwind_continue
     return
 }
@@ -656,19 +618,6 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
 
 pub const test_attributes::tests::test_should_panic: TestDescAndFn = test_attributes::tests::test_should_panic()
 
-struct test_attributes::tests::test_foo::{closure} {}
-
-// Full name: test_attributes::tests::test_foo::{closure}::{impl Destruct for test_attributes::tests::test_foo::{closure}}::drop_glue
-unsafe fn {impl Destruct for test_attributes::tests::test_foo::{closure}}::drop_glue<'_0>(_1: &'_0 mut test_attributes::tests::test_foo::{closure})
-{
-    let _0: (); // return
-    let _1: &'1 mut test_attributes::tests::test_foo::{closure}; // arg #1
-
-    storage_live(_0)
-    _0 = ()
-    return
-}
-
 #[rustc_test_entrypoint_marker]
 fn test_attributes::tests::test_foo#1()
 {
@@ -684,6 +633,8 @@ fn test_attributes::tests::test_foo#1()
     _0 = ()
     return
 }
+
+struct test_attributes::tests::test_foo::{closure} {}
 
 // Full name: test_attributes::tests::test_foo::{impl Fn<()> for test_attributes::tests::test_foo::{closure}}::call
 fn {impl Fn<()> for test_attributes::tests::test_foo::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_foo::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
@@ -731,10 +682,6 @@ fn {impl FnOnce<()> for test_attributes::tests::test_foo::{closure}}::call_once(
     storage_live(_3)
     _3 = &mut _1
     _0 = {impl FnMut<()> for test_attributes::tests::test_foo::{closure}}::call_mut<'2>(move _3, move _2)
-    ↳⚡ drop[{impl Destruct for test_attributes::tests::test_foo::{closure}}::drop_glue<'3>] _1
-        ↳⚡ unwind_terminate
-        unwind_continue
-    drop[{impl Destruct for test_attributes::tests::test_foo::{closure}}::drop_glue<'4>] _1
     ↳⚡ unwind_continue
     return
 }
@@ -902,12 +849,6 @@ impl Fn<()> for test_attributes::tests::test_foo::{closure} {
     vtable: {impl Fn<()> for test_attributes::tests::test_foo::{closure}}::{vtable}
 }
 
-// Full name: test_attributes::tests::test_foo::{closure}::{impl Destruct for test_attributes::tests::test_foo::{closure}}
-impl Destruct for test_attributes::tests::test_foo::{closure} {
-    fn drop_glue<'_0_1> = {impl Destruct for test_attributes::tests::test_foo::{closure}}::drop_glue<'_0_1>
-    non-dyn-compatible
-}
-
 // Full name: test_attributes::tests::test_should_panic::{impl FnOnce<()> for test_attributes::tests::test_should_panic::{closure}}
 impl FnOnce<()> for test_attributes::tests::test_should_panic::{closure} {
     proof ImpliedClause0: (test_attributes::tests::test_should_panic::{closure}: MetaSized) = {built_in impl MetaSized for test_attributes::tests::test_should_panic::{closure}}
@@ -939,12 +880,6 @@ impl Fn<()> for test_attributes::tests::test_should_panic::{closure} {
     vtable: {impl Fn<()> for test_attributes::tests::test_should_panic::{closure}}::{vtable}
 }
 
-// Full name: test_attributes::tests::test_should_panic::{closure}::{impl Destruct for test_attributes::tests::test_should_panic::{closure}}
-impl Destruct for test_attributes::tests::test_should_panic::{closure} {
-    fn drop_glue<'_0_1> = {impl Destruct for test_attributes::tests::test_should_panic::{closure}}::drop_glue<'_0_1>
-    non-dyn-compatible
-}
-
 // Full name: test_attributes::tests::test_ignore::{impl FnOnce<()> for test_attributes::tests::test_ignore::{closure}}
 impl FnOnce<()> for test_attributes::tests::test_ignore::{closure} {
     proof ImpliedClause0: (test_attributes::tests::test_ignore::{closure}: MetaSized) = {built_in impl MetaSized for test_attributes::tests::test_ignore::{closure}}
@@ -974,12 +909,6 @@ impl Fn<()> for test_attributes::tests::test_ignore::{closure} {
     proof ImpliedClause3: ((): Tuple) = {built_in impl Tuple for ()}
     fn call<'_0_1> = {impl Fn<()> for test_attributes::tests::test_ignore::{closure}}::call<'_0_1>
     vtable: {impl Fn<()> for test_attributes::tests::test_ignore::{closure}}::{vtable}
-}
-
-// Full name: test_attributes::tests::test_ignore::{closure}::{impl Destruct for test_attributes::tests::test_ignore::{closure}}
-impl Destruct for test_attributes::tests::test_ignore::{closure} {
-    fn drop_glue<'_0_1> = {impl Destruct for test_attributes::tests::test_ignore::{closure}}::drop_glue<'_0_1>
-    non-dyn-compatible
 }
 
 

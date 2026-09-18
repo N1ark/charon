@@ -529,7 +529,21 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
                         | ty::Closure(..)
                         | ty::Coroutine(..)
                         | ty::CoroutineClosure(..)
-                        | ty::CoroutineWitness(..) => Either::Left(DestructData::Glue { ty }),
+                        | ty::CoroutineWitness(..) => {
+                            // These types only have drop glue if they (transitively) contain
+                            // something that needs dropping. When they don't, generating the glue
+                            // is pure waste: the `drop_glue` body would be a no-op, and merely
+                            // asking for it pulls in a `Destruct` impl (and transitively the glue
+                            // of every field type) for types that are never dropped in any
+                            // meaningful way. `needs_drop` is conservative (it answers `true`
+                            // whenever it can't tell, e.g. because of generic parameters), so this
+                            // only skips glue that is provably trivial.
+                            if ty.needs_drop(tcx, self.typing_env) {
+                                Either::Left(DestructData::Glue { ty })
+                            } else {
+                                Either::Left(DestructData::Noop)
+                            }
+                        }
                         // Every `dyn` has a `drop_in_place` in its vtable, ergo we pretend that every
                         // `dyn` has `Destruct` in its list of traits.
                         ty::Dynamic(..) => {

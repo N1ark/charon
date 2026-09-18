@@ -800,6 +800,14 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         // Construct the `call_*` method reference.
         let trait_decl_id = timpl.impl_trait.id;
         let trait_method_id = self.translate_trait_method_id(trait_decl_id, &vimpl.methods[0])?;
+        if self.monomorphize() {
+            // In monomorphic mode we don't store methods on the impl, and calls to `Fn*` methods
+            // are translated as direct calls to the closure body (see
+            // `translate_callable_method_fn_ptr`). Building the method reference below would
+            // register *and enqueue* a `call*` method that we then throw away, so we'd translate
+            // one dead function per closure impl.
+            return Ok(timpl);
+        }
         let call_fn_binder = {
             let kind = TransItemSourceKind::CallableMethod(target_kind);
             let bound_method_ref: RegionBinder<DeclRef<ItemId>> = self
@@ -820,9 +828,6 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 fn_decl_ref,
             )
         };
-        if self.monomorphize() {
-            return Ok(timpl);
-        }
         timpl
             .methods
             .set_slot_extend(trait_method_id, call_fn_binder);
