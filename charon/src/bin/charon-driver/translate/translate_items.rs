@@ -1436,14 +1436,6 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             TransImplSource::ImplicitDestruct => TraitImplSource::Destruct,
             _ => unreachable!("not a virtual impl source: {impl_kind:?}"),
         };
-        let trait_def = self.hax_def(&vimpl.trait_pred.trait_ref)?;
-        let hax::FullDefKind::Trait {
-            items: trait_items, ..
-        } = trait_def.kind()
-        else {
-            panic!()
-        };
-
         let implemented_trait = self.translate_trait_predicate(span, &vimpl.trait_pred)?;
         let implied_trait_refs = self.translate_trait_proofs(span, &vimpl.implied_trait_proofs)?;
         let vtable = self.translate_vtable_instance_ref_no_enqueue(
@@ -1456,6 +1448,17 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let mut types: IndexMap<AssocTypeId, _> = IndexMap::new();
         // Monomorphic traits have no associated types.
         if !self.monomorphize() {
+            // We only need the trait's associated-item list, which doesn't depend on the
+            // instantiation, so use the polymorphic definition: hax caches one of those per trait,
+            // whereas it rebuilds an instantiated one (with all of the trait's predicates and
+            // provided methods) for every distinct set of generic args.
+            let trait_def = self.poly_hax_def(&vimpl.trait_pred.trait_ref.def_id)?;
+            let hax::FullDefKind::Trait {
+                items: trait_items, ..
+            } = trait_def.kind()
+            else {
+                panic!()
+            };
             let type_items = trait_items
                 .iter()
                 .filter(|assoc| matches!(assoc.kind, hax::AssocKind::Type { .. }));
