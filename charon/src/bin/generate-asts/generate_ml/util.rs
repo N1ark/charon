@@ -199,3 +199,58 @@ impl<'a> GenerateCtx<'a> {
         data.iter().map(|name| self.id_from_name(name)).collect()
     }
 }
+
+/// How a type is (de)serialized, with the details of its rust declaration normalized away.
+///
+/// All the generators must agree on this classification, otherwise the types they emit and the
+/// deserializers they emit disagree; hence we compute it once here.
+pub enum TypeShape<'a> {
+    /// An empty struct. Carries no data.
+    Unit,
+    /// One of our strongly-typed indices (`struct FooId { _raw: usize }`). Carries the name of the
+    /// type, which is also the name of the module that defines the id type.
+    Index(&'a str),
+    /// A wrapper that is serialized exactly like the type it wraps: a one-field tuple struct, a
+    /// `#[serde(transparent)]` struct, or a type alias.
+    Transparent(&'a Ty),
+    /// A struct whose fields are all positional; serialized as a sequence.
+    Tuple(&'a IndexVec<FieldId, Field>),
+    /// A struct with named fields.
+    Record(&'a IndexVec<FieldId, Field>),
+    /// An enum.
+    Enum(&'a IndexVec<VariantId, Variant>),
+}
+
+/// See [`TypeShape`].
+pub fn type_shape(decl: &TypeDecl) -> TypeShape<'_> {
+    match &decl.kind {
+        TypeDeclKind::Struct(fields) if fields.is_empty() => TypeShape::Unit,
+        TypeDeclKind::Struct(fields) if fields.len() == 1 && fields[0].name == "_raw" => {
+            TypeShape::Index(decl.item_meta.name.short_str().unwrap())
+        }
+        TypeDeclKind::Struct(fields)
+            if fields.len() == 1
+                && (fields[0].is_positional
+                    || decl
+                        .item_meta
+                        .attr_info
+                        .attributes
+                        .iter()
+                        .any(|a| a.is_transparent())) =>
+        {
+            TypeShape::Transparent(&fields[0].ty)
+        }
+        TypeDeclKind::Alias(ty) => TypeShape::Transparent(ty),
+        TypeDeclKind::Struct(fields) if fields.iter().all(|field| field.is_positional) => {
+            TypeShape::Tuple(fields)
+        }
+        TypeDeclKind::Struct(fields) => TypeShape::Record(fields),
+        TypeDeclKind::Enum(variants) => TypeShape::Enum(variants),
+        TypeDeclKind::Union(..) | TypeDeclKind::Opaque | TypeDeclKind::Error(_) => {
+            panic!(
+                "cannot generate code for `{}`",
+                decl.item_meta.name.short_str().unwrap_or("<unnamed>")
+            )
+        }
+    }
+}

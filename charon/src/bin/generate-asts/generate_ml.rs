@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 use self::to_ocaml_ty::DeriveVisitors;
 
+mod deserialize;
 mod of_json;
 mod of_postcard;
 mod to_ocaml_ty;
@@ -111,8 +112,8 @@ impl GenerateCodeFor {
                 .collect::<Vec<_>>();
             ctx.current_ids = names.iter().copied().collect();
             let generated = match kind {
-                GenerationKind::OfJson => ctx.type_decls_to_json(tys),
-                GenerationKind::OfPostcard => ctx.type_decls_to_postcard(tys),
+                GenerationKind::OfJson => of_json::generate(ctx, tys),
+                GenerationKind::OfPostcard => of_postcard::generate(ctx, tys),
                 GenerationKind::TypeDecl(visitors) => ctx.type_decls_to_ocaml(visitors, tys),
             };
             let placeholder = format!("(* __REPLACE{i}__ *)");

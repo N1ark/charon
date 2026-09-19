@@ -1,11 +1,34 @@
-use std::collections::HashMap;
-
 use charon_lib::ast::*;
 use indoc::indoc;
 use itertools::Itertools;
 
 use super::GenerateCtx;
+use super::deserialize::{Deserializer, Format};
 use super::util::*;
+
+pub static FORMAT: Format = Format {
+    suffix: "of_json",
+    ctx_ty: "of_json_ctx",
+    input: "js",
+    input_ty: "json",
+    value: "json",
+    scalar_fn,
+    manual_impls: MANUAL_IMPLS,
+};
+
+fn scalar_fn(scalar: ScalarTy) -> &'static str {
+    match scalar {
+        ScalarTy::Bool => "bool_of_json",
+        ScalarTy::Char => "char_of_json",
+        // Even though OCaml ints are only 63 bits, only scalars with their 128 bits should be able
+        // to become too large.
+        ScalarTy::Integer(IntegerTy::Signed(IntTy::I128) | IntegerTy::Unsigned(UIntTy::U128)) => {
+            "big_int_of_json"
+        }
+        ScalarTy::Integer(_) => "int_of_json",
+        ScalarTy::Float(_) => "float_of_json",
+    }
+}
 
 const MANUAL_IMPLS: &[(&str, &str)] = &[
     // Hand-written because we interpret it as a list.
@@ -105,297 +128,136 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
     ),
 ];
 
-impl<'a> GenerateCtx<'a> {
-    fn build_function(&self, decl: &TypeDecl, branches: &str) -> String {
-        let ty = TyKind::Adt(TypeDeclRef {
-            id: decl.def_id,
-            generics: decl.generics.identity_args().into(),
-            builtin: decl.src.as_builtin().cloned(),
+/// Reads each field from the sub-json value that the pattern bound it to.
+fn convert_vars<'b>(
+    ds: &Deserializer<'_, '_>,
+    fields: impl IntoIterator<Item = &'b Field>,
+) -> String {
+    fields
+        .into_iter()
+        .filter(|f| !f.is_opaque())
+        .map(|f| {
+            let name = make_ocaml_ident(&f.name);
+            let rename = make_ocaml_ident(f.renamed_name());
+            ds.bind(&rename, &f.ty, &name)
         })
-        .into_ty();
-        let (ty_name, _) = self.type_to_ocaml_ident_raw(decl);
-        let ty = self.type_to_ocaml_name(&ty);
-        let signature = if decl.generics.types.is_empty() {
-            format!("{ty_name}_of_json (ctx : of_json_ctx) (js : json) : ({ty}, string) result =")
-        } else {
-            let types = &decl.generics.types;
-            let gen_vars_space = types
-                .iter()
-                .enumerate()
-                .map(|(i, _)| format!("'a{i}"))
-                .join(" ");
+        .join("\n")
+}
 
-            let mut args = Vec::new();
-            let mut ty_args = Vec::new();
-            for (i, _) in types.iter().enumerate() {
-                args.push(format!("arg{i}_of_json"));
-                ty_args.push(format!("(of_json_ctx -> json -> ('a{i}, string) result)"));
-            }
-            args.push("ctx".to_string());
-            ty_args.push("of_json_ctx".to_string());
-            args.push("js".to_string());
-            ty_args.push("json".to_string());
+fn build_branch<'b>(
+    ds: &Deserializer<'_, '_>,
+    pat: &str,
+    fields: impl IntoIterator<Item = &'b Field>,
+    construct: &str,
+) -> String {
+    let convert = convert_vars(ds, fields);
+    format!("| {pat} -> {convert} Ok ({construct})")
+}
 
-            let ty_args = ty_args.into_iter().join(" -> ");
-            let args = args.into_iter().join(" ");
-            let fun_ty = format!("{gen_vars_space}. {ty_args} -> ({ty}, string) result");
-            format!("{ty_name}_of_json : {fun_ty} = fun {args} ->")
-        };
-        format!(
-            r#"
-        and {signature}
-          combine_error_msgs js __FUNCTION__
-            (match js with{branches} | _ -> Error "")
-        "#
-        )
+/// A json deserializer is a match on the shape of the json value.
+fn branches(ds: &Deserializer<'_, '_>, decl: &TypeDecl) -> String {
+    if let Some(def) = ds.manual_impl(decl) {
+        return format!("| json -> {def}");
     }
-
-    /// Converts a type to the appropriate `*_of_json` call. In case of generics, this combines several
-    /// functions, e.g. `list_of_json bool_of_json`.
-    fn type_to_ocaml_call(&self, ty: &Ty) -> String {
-        match ty.kind() {
-            TyKind::Scalar(ScalarTy::Bool) => "bool_of_json".to_string(),
-            TyKind::Scalar(ScalarTy::Char) => "char_of_json".to_string(),
-            TyKind::Scalar(ScalarTy::Integer(IntegerTy::Signed(int_ty))) => match int_ty {
-                // Even though OCaml ints are only 63 bits, only scalars with their 128 bits should be able to become too large
-                IntTy::I128 => "big_int_of_json".to_string(),
-                _ => "int_of_json".to_string(),
-            },
-            TyKind::Scalar(ScalarTy::Integer(IntegerTy::Unsigned(uint_ty))) => match uint_ty {
-                // Even though OCaml ints are only 63 bits, only scalars with their 128 bits should be able to become too large
-                UIntTy::U128 => "big_int_of_json".to_string(),
-                _ => "int_of_json".to_string(),
-            },
-            TyKind::Scalar(ScalarTy::Float(_)) => "float_of_json".to_string(),
-            TyKind::Adt(tref) => {
-                let mut expr = Vec::new();
-                for ty in &tref.generics.types {
-                    expr.push(self.type_to_ocaml_call(ty))
-                }
-                let mut wrap_in_map = false;
-                match tref.as_builtin() {
-                    None => {
-                        let mut first = if let Some(tdecl) = self.crate_data.type_decls.get(tref.id)
-                        {
-                            let (name, module) = self.type_to_ocaml_ident_raw(tdecl);
-                            match module {
-                                Some((_, short)) if !self.current_ids.contains(&tref.id) => {
-                                    format!("{short}.{name}")
-                                }
-                                _ => name,
-                            }
-                        } else {
-                            format!("missing_type_{}", tref.id)
-                        };
-                        if first == "vec" {
-                            first = "list".to_string();
-                        }
-                        if first == "ustr" {
-                            first = "string".to_string();
-                        }
-                        if first == "index_map" {
-                            // That's the `indexmap::IndexMap` case. Pass something dummy for the
-                            // `RandomState` parameter.
-                            expr[2] = "int_of_json".to_string();
-                        }
-
-                        if first == "indexed_map" {
-                            wrap_in_map = true;
-                            first = "opt_indexed_map".to_string();
-                        }
-
-                        expr.insert(0, first + "_of_json");
-                    }
-                    Some(BuiltinAdt::Box) => expr.insert(0, "box_of_json".to_owned()),
-                    Some(BuiltinAdt::Tuple) => {
-                        let name = match tref.generics.types.len() {
-                            2 => "pair_of_json".to_string(),
-                            3 => "triple_of_json".to_string(),
-                            len => format!("tuple_{len}_of_json"),
-                        };
-                        expr.insert(0, name);
-                    }
-                    _ => unimplemented!("{ty:?}"),
-                }
-                let mut expr = expr.into_iter().map(|f| format!("({f})")).join(" ");
-                if wrap_in_map {
-                    let index_name = self.type_to_rust_name(&tref.generics.types[0]).unwrap();
-                    expr = format!(
-                        "(fun ctx json -> Result.map {index_name}.map_of_indexed_list ({expr} ctx json))"
-                    );
-                }
-                expr
-            }
-            TyKind::TypeVar(DeBruijnVar::Free(id)) => format!("arg{id}_of_json"),
-            _ => unimplemented!("{ty:?}"),
+    match type_shape(decl) {
+        TypeShape::Unit => build_branch(ds, "`Null", &[], "()"),
+        TypeShape::Index(name) => format!("| x -> {name}.id_of_json ctx x"),
+        TypeShape::Transparent(ty) => {
+            let call = ds.call(ty);
+            format!("| x -> {call} ctx x")
         }
-    }
-
-    fn convert_vars<'b>(&self, fields: impl IntoIterator<Item = &'b Field>) -> String {
-        fields
-            .into_iter()
-            .filter(|f| !f.is_opaque())
-            .map(|f| {
-                let name = make_ocaml_ident(&f.name);
-                let rename = make_ocaml_ident(f.renamed_name());
-                let convert = self.type_to_ocaml_call(&f.ty);
-                format!("let* {rename} = {convert} ctx {name} in")
-            })
-            .join("\n")
-    }
-
-    fn build_branch<'b>(
-        &self,
-        pat: &str,
-        fields: impl IntoIterator<Item = &'b Field>,
-        construct: &str,
-    ) -> String {
-        let convert = self.convert_vars(fields);
-        format!("| {pat} -> {convert} Ok ({construct})")
-    }
-
-    fn type_decl_to_json_deserializer(
-        &self,
-        manual_impls: &HashMap<TypeDeclId, String>,
-        decl: &TypeDecl,
-    ) -> String {
-        let return_ty = self.type_to_ocaml_ident(decl);
-        let return_ty = if decl.generics.types.is_empty() {
-            return_ty
-        } else {
-            format!("_ {return_ty}")
-        };
-
-        let branches = match &decl.kind {
-            _ if let Some(def) = manual_impls.get(&decl.def_id) => {
-                format!("| json -> {def}")
-            }
-            TypeDeclKind::Struct(fields) if fields.is_empty() => {
-                self.build_branch("`Null", fields, "()")
-            }
-            TypeDeclKind::Struct(fields) if fields.len() == 1 && fields[0].name == "_raw" => {
-                // These are the special strongly-typed integers.
-                let short_name = decl.item_meta.name.short_str().unwrap();
-                format!("| x -> {short_name}.id_of_json ctx x")
-            }
-            TypeDeclKind::Struct(fields)
-                if fields.len() == 1
-                    && (fields[0].is_positional
-                        || decl
-                            .item_meta
-                            .attr_info
-                            .attributes
-                            .iter()
-                            .any(|a| a.is_transparent())) =>
-            {
-                let ty = &fields[0].ty;
-                let call = self.type_to_ocaml_call(ty);
-                format!("| x -> {call} ctx x")
-            }
-            TypeDeclKind::Alias(ty) => {
-                let call = self.type_to_ocaml_call(ty);
-                format!("| x -> {call} ctx x")
-            }
-            TypeDeclKind::Struct(fields) if fields.iter().all(|field| field.is_positional) => {
-                let pat: String = fields
-                    .iter()
-                    .map(|f| f.name.as_str())
-                    .map(make_ocaml_ident)
-                    .join(";");
-                let pat = format!("`List [ {pat} ]");
-                let construct = fields
-                    .iter()
-                    .map(Field::renamed_name)
-                    .map(make_ocaml_ident)
-                    .join(", ");
-                let construct = format!("( {construct} )");
-                self.build_branch(&pat, fields, &construct)
-            }
-            TypeDeclKind::Struct(fields) => {
-                let pat: String = fields
-                    .iter()
-                    .map(|f| {
-                        let name = &f.name;
-                        let var = if f.is_opaque() {
-                            "_"
-                        } else {
-                            &make_ocaml_ident(name)
-                        };
-                        format!("(\"{name}\", {var});")
-                    })
-                    .join("\n");
-                let pat = format!("`Assoc [ {pat} ]");
-                let construct = fields
-                    .iter()
-                    .filter(|f| !f.is_opaque())
-                    .map(Field::renamed_name)
-                    .map(make_ocaml_ident)
-                    .join("; ");
-                let construct = format!("({{ {construct} }} : {return_ty})");
-                self.build_branch(&pat, fields, &construct)
-            }
-            TypeDeclKind::Enum(variants) => {
-                variants
-                    .iter()
-                    .filter(|v| !v.is_opaque())
-                    .map(|variant| {
-                        let name = &variant.name;
-                        let rename = variant.renamed_name();
-                        if variant.fields.is_empty() {
-                            // Unit variant
-                            let pat = format!("`String \"{name}\"");
-                            self.build_branch(&pat, &variant.fields, rename)
-                        } else {
-                            let fields = &variant.fields;
-                            let inner_pat = if fields.iter().all(|field| field.is_positional) {
-                                // Tuple variant
-                                if fields.len() == 1 {
-                                    make_ocaml_ident(&fields[0].name)
-                                } else {
-                                    let pat = fields.iter().map(|f| f.name.as_str()).join("; ");
-                                    format!("`List [ {pat} ]")
-                                }
-                            } else {
-                                // Struct variant
-                                let pat = fields
-                                    .iter()
-                                    .map(|f| {
-                                        let name = &f.name;
-                                        let var = if f.is_opaque() {
-                                            "_"
-                                        } else {
-                                            &make_ocaml_ident(name)
-                                        };
-                                        format!("(\"{name}\", {var});")
-                                    })
-                                    .join(" ");
-                                format!("`Assoc [ {pat} ]")
-                            };
-                            let pat = format!("`Assoc [ (\"{name}\", {inner_pat}) ]");
-                            let construct_fields = fields
-                                .iter()
-                                .map(|f| f.name.as_str())
-                                .map(make_ocaml_ident)
-                                .join(", ");
-                            let construct = format!("{rename} ({construct_fields})");
-                            self.build_branch(&pat, fields, &construct)
-                        }
-                    })
-                    .join("\n")
-            }
-            TypeDeclKind::Union(..) => todo!(),
-            TypeDeclKind::Opaque => todo!(),
-            TypeDeclKind::Error(_) => todo!(),
-        };
-        self.build_function(decl, &branches)
-    }
-
-    pub fn type_decls_to_json(&mut self, tys: Vec<&TypeDecl>) -> String {
-        let manual_impls = self.names_to_type_id_map(MANUAL_IMPLS);
-        let fns = tys
+        TypeShape::Tuple(fields) => {
+            let pat: String = fields
+                .iter()
+                .map(|f| f.name.as_str())
+                .map(make_ocaml_ident)
+                .join(";");
+            let pat = format!("`List [ {pat} ]");
+            let construct = fields
+                .iter()
+                .map(Field::renamed_name)
+                .map(make_ocaml_ident)
+                .join(", ");
+            let construct = format!("( {construct} )");
+            build_branch(ds, &pat, fields, &construct)
+        }
+        TypeShape::Record(fields) => {
+            let pat: String = fields
+                .iter()
+                .map(|f| {
+                    let name = &f.name;
+                    let var = if f.is_opaque() {
+                        "_"
+                    } else {
+                        &make_ocaml_ident(name)
+                    };
+                    format!("(\"{name}\", {var});")
+                })
+                .join("\n");
+            let pat = format!("`Assoc [ {pat} ]");
+            let construct = fields
+                .iter()
+                .filter(|f| !f.is_opaque())
+                .map(Field::renamed_name)
+                .map(make_ocaml_ident)
+                .join("; ");
+            let return_ty = ds.return_ty(decl);
+            let construct = format!("({{ {construct} }} : {return_ty})");
+            build_branch(ds, &pat, fields, &construct)
+        }
+        TypeShape::Enum(variants) => variants
             .iter()
-            .map(|ty| self.type_decl_to_json_deserializer(&manual_impls, ty))
-            .format("\n");
-        format!("let rec ___ = ()\n{fns}")
+            .filter(|v| !v.is_opaque())
+            .map(|variant| {
+                let name = &variant.name;
+                let rename = variant.renamed_name();
+                if variant.fields.is_empty() {
+                    // Unit variant
+                    let pat = format!("`String \"{name}\"");
+                    build_branch(ds, &pat, &variant.fields, rename)
+                } else {
+                    let fields = &variant.fields;
+                    let inner_pat = if fields.iter().all(|field| field.is_positional) {
+                        // Tuple variant
+                        if fields.len() == 1 {
+                            make_ocaml_ident(&fields[0].name)
+                        } else {
+                            let pat = fields.iter().map(|f| f.name.as_str()).join("; ");
+                            format!("`List [ {pat} ]")
+                        }
+                    } else {
+                        // Struct variant
+                        let pat = fields
+                            .iter()
+                            .map(|f| {
+                                let name = &f.name;
+                                let var = if f.is_opaque() {
+                                    "_"
+                                } else {
+                                    &make_ocaml_ident(name)
+                                };
+                                format!("(\"{name}\", {var});")
+                            })
+                            .join(" ");
+                        format!("`Assoc [ {pat} ]")
+                    };
+                    let pat = format!("`Assoc [ (\"{name}\", {inner_pat}) ]");
+                    let construct_fields = fields
+                        .iter()
+                        .map(|f| f.name.as_str())
+                        .map(make_ocaml_ident)
+                        .join(", ");
+                    let construct = format!("{rename} ({construct_fields})");
+                    build_branch(ds, &pat, fields, &construct)
+                }
+            })
+            .join("\n"),
     }
+}
+
+pub fn generate(ctx: &GenerateCtx<'_>, tys: Vec<&TypeDecl>) -> String {
+    Deserializer::new(ctx, &FORMAT).generate(tys, |ds, decl| {
+        let branches = branches(ds, decl);
+        format!("match js with{branches} | _ -> Error \"\"")
+    })
 }

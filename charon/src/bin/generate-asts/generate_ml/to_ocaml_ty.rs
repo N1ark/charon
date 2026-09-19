@@ -1,4 +1,5 @@
 use super::GenerateCtx;
+use super::util::*;
 use charon_lib::ast::*;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -166,42 +167,28 @@ impl<'a> GenerateCtx<'a> {
         } else {
             ""
         };
-        let body = match &decl.kind {
-            _ if let Some(def) = manual_impls.get(&decl.def_id) => def.clone(),
-            TypeDeclKind::Alias(ty) => {
+        if let Some(def) = manual_impls.get(&decl.def_id) {
+            return self.build_type(decl, co_rec, def);
+        }
+        let body = match type_shape(decl) {
+            TypeShape::Unit => "unit".to_string(),
+            TypeShape::Index(short_name) => {
+                // These are the special strongly-typed integers.
+                format!("{short_name}.id [@visitors.opaque]")
+            }
+            TypeShape::Transparent(ty) => {
                 let ty = self.type_to_ocaml_name(ty);
                 format!("{ty} {opaque}")
             }
-            TypeDeclKind::Struct(fields) if fields.is_empty() => "unit".to_string(),
-            TypeDeclKind::Struct(fields) if fields.len() == 1 && fields[0].name == "_raw" => {
-                // These are the special strongly-typed integers.
-                let short_name = decl.item_meta.name.short_str().unwrap();
-                format!("{short_name}.id [@visitors.opaque]")
-            }
-            TypeDeclKind::Struct(fields)
-                if fields.len() == 1
-                    && (fields[0].is_positional
-                        || decl
-                            .item_meta
-                            .attr_info
-                            .attributes
-                            .iter()
-                            .any(|a| a.is_transparent())) =>
-            {
-                let ty = self.type_to_ocaml_name(&fields[0].ty);
-                format!("{ty} {opaque}")
-            }
-            TypeDeclKind::Struct(fields) if fields.iter().all(|field| field.is_positional) => {
-                fields
-                    .iter()
-                    .filter(|f| !f.is_opaque())
-                    .map(|f| {
-                        let ty = self.type_to_ocaml_name(&f.ty);
-                        format!("{ty} {opaque}")
-                    })
-                    .join("*")
-            }
-            TypeDeclKind::Struct(fields) => {
+            TypeShape::Tuple(fields) => fields
+                .iter()
+                .filter(|f| !f.is_opaque())
+                .map(|f| {
+                    let ty = self.type_to_ocaml_name(&f.ty);
+                    format!("{ty} {opaque}")
+                })
+                .join("*"),
+            TypeShape::Record(fields) => {
                 let fields = fields
                     .iter()
                     .filter(|f| !f.is_opaque())
@@ -215,7 +202,7 @@ impl<'a> GenerateCtx<'a> {
                     .join(";");
                 format!("{{ {fields} }}")
             }
-            TypeDeclKind::Enum(variants) => {
+            TypeShape::Enum(variants) => {
                 variants
                     .iter()
                     .filter(|v| !v.is_opaque())
@@ -262,9 +249,6 @@ impl<'a> GenerateCtx<'a> {
                     })
                     .join("")
             }
-            TypeDeclKind::Union(..) => todo!(),
-            TypeDeclKind::Opaque => todo!(),
-            TypeDeclKind::Error(_) => todo!(),
         };
         self.build_type(decl, co_rec, &body)
     }
