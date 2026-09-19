@@ -1,9 +1,8 @@
 use charon_lib::ast::*;
 use convert_case::{Case, Casing};
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
 
-use super::GenerateCtx;
+use crate::codegen::GenerateCtx;
 
 pub fn make_ocaml_ident(name: &str) -> String {
     let leading_underscores = name.len() - name.trim_start_matches('_').len();
@@ -33,52 +32,6 @@ pub fn make_ocaml_ident(name: &str) -> String {
 }
 
 impl<'a> GenerateCtx<'a> {
-    pub fn id_from_name(&self, name: &str) -> TypeDeclId {
-        self.name_to_type
-            .get(name)
-            .unwrap_or_else(|| panic!("Name not found: `{name}`"))
-            .def_id
-    }
-
-    /// List the (recursive) children of this type.
-    pub fn children_of(&self, name: &str) -> HashSet<TypeDeclId> {
-        let start_id = self.id_from_name(name);
-        self.children_of_inner(vec![start_id], |_| true)
-    }
-
-    /// List the (recursive) children of these types.
-    pub fn children_of_many(&self, names: &[&str]) -> HashSet<TypeDeclId> {
-        self.children_of_inner(
-            names.iter().map(|name| self.id_from_name(name)).collect(),
-            |_| true,
-        )
-    }
-
-    pub fn children_of_inner(
-        &self,
-        ty: Vec<TypeDeclId>,
-        explore: impl Fn(TypeDeclId) -> bool,
-    ) -> HashSet<TypeDeclId> {
-        let mut children = HashSet::new();
-        let mut stack = ty.to_vec();
-        while let Some(id) = stack.pop() {
-            if !children.contains(&id)
-                && explore(id)
-                && self
-                    .crate_data
-                    .type_decls
-                    .get(id)
-                    .is_some_and(|decl| decl.item_meta.is_local)
-            {
-                children.insert(id);
-                if let Some(contained) = self.type_tree.get(&id) {
-                    stack.extend(contained);
-                }
-            }
-        }
-        children
-    }
-
     /// Returns the OCaml identifier corresponding to this type,
     /// and the generated module name + short module name associated to it if
     /// they exist.
@@ -101,12 +54,6 @@ impl<'a> GenerateCtx<'a> {
             }
             _ => name,
         }
-    }
-
-    /// For a type that refers to an ADT, return the name of that ADT.
-    pub fn type_to_rust_name(&self, ty: &Ty) -> Option<&str> {
-        let index_ty = ty.as_adt()?.id;
-        self.crate_data.item_name(index_ty).short_str()
     }
 
     /// Converts a type to the appropriate ocaml name. In case of generics, this provides appropriate
@@ -186,71 +133,6 @@ impl<'a> GenerateCtx<'a> {
             }
             TyKind::TypeVar(DeBruijnVar::Free(id) | DeBruijnVar::Bound(_, id)) => format!("'a{id}"),
             _ => unimplemented!("{ty:?}"),
-        }
-    }
-
-    pub fn names_to_type_id_map(&self, data: &[(&str, &str)]) -> HashMap<TypeDeclId, String> {
-        data.iter()
-            .map(|(name, def)| (self.id_from_name(name), def.to_string()))
-            .collect()
-    }
-
-    pub fn names_to_type_id_set(&self, data: &[&str]) -> HashSet<TypeDeclId> {
-        data.iter().map(|name| self.id_from_name(name)).collect()
-    }
-}
-
-/// How a type is (de)serialized, with the details of its rust declaration normalized away.
-///
-/// All the generators must agree on this classification, otherwise the types they emit and the
-/// deserializers they emit disagree; hence we compute it once here.
-pub enum TypeShape<'a> {
-    /// An empty struct. Carries no data.
-    Unit,
-    /// One of our strongly-typed indices (`struct FooId { _raw: usize }`). Carries the name of the
-    /// type, which is also the name of the module that defines the id type.
-    Index(&'a str),
-    /// A wrapper that is serialized exactly like the type it wraps: a one-field tuple struct, a
-    /// `#[serde(transparent)]` struct, or a type alias.
-    Transparent(&'a Ty),
-    /// A struct whose fields are all positional; serialized as a sequence.
-    Tuple(&'a IndexVec<FieldId, Field>),
-    /// A struct with named fields.
-    Record(&'a IndexVec<FieldId, Field>),
-    /// An enum.
-    Enum(&'a IndexVec<VariantId, Variant>),
-}
-
-/// See [`TypeShape`].
-pub fn type_shape(decl: &TypeDecl) -> TypeShape<'_> {
-    match &decl.kind {
-        TypeDeclKind::Struct(fields) if fields.is_empty() => TypeShape::Unit,
-        TypeDeclKind::Struct(fields) if fields.len() == 1 && fields[0].name == "_raw" => {
-            TypeShape::Index(decl.item_meta.name.short_str().unwrap())
-        }
-        TypeDeclKind::Struct(fields)
-            if fields.len() == 1
-                && (fields[0].is_positional
-                    || decl
-                        .item_meta
-                        .attr_info
-                        .attributes
-                        .iter()
-                        .any(|a| a.is_transparent())) =>
-        {
-            TypeShape::Transparent(&fields[0].ty)
-        }
-        TypeDeclKind::Alias(ty) => TypeShape::Transparent(ty),
-        TypeDeclKind::Struct(fields) if fields.iter().all(|field| field.is_positional) => {
-            TypeShape::Tuple(fields)
-        }
-        TypeDeclKind::Struct(fields) => TypeShape::Record(fields),
-        TypeDeclKind::Enum(variants) => TypeShape::Enum(variants),
-        TypeDeclKind::Union(..) | TypeDeclKind::Opaque | TypeDeclKind::Error(_) => {
-            panic!(
-                "cannot generate code for `{}`",
-                decl.item_meta.name.short_str().unwrap_or("<unnamed>")
-            )
         }
     }
 }

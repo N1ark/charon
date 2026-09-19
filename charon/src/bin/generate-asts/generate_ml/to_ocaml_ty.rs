@@ -1,5 +1,4 @@
-use super::GenerateCtx;
-use super::util::*;
+use crate::codegen::*;
 use charon_lib::ast::*;
 use itertools::Itertools;
 use std::collections::HashMap;

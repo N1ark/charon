@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use charon_lib::ast::*;
 use itertools::Itertools;
 
-use super::GenerateCtx;
+use crate::codegen::GenerateCtx;
 
 /// A serialization format we generate OCaml deserializers for.
 pub struct Format {

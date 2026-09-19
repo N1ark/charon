@@ -6,6 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod codegen;
 mod generate_ml;
 mod generate_rust;
 
@@ -85,11 +86,8 @@ fn main() -> Result<()> {
     } else {
         dir.join("../../../../charon-ml/src/generated")
     };
-    generate_ml::generate(
-        &crate_data,
-        dir.join("generate_ml/templates"),
-        ml_output_dir,
-    )?;
+    let mut ctx = codegen::GenerateCtx::new(&crate_data);
+    generate_ml::generate(&mut ctx, dir.join("generate_ml/templates"), ml_output_dir)?;
     generate_rust::generate(&crate_data, &rustc_datatypes)?;
     Ok(())
 }

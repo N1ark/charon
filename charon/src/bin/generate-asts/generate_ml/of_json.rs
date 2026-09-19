@@ -2,9 +2,9 @@ use charon_lib::ast::*;
 use indoc::indoc;
 use itertools::Itertools;
 
-use super::GenerateCtx;
 use super::deserialize::{Deserializer, Format};
 use super::util::*;
+use crate::codegen::*;
 
 pub static FORMAT: Format = Format {
     suffix: "of_json",
