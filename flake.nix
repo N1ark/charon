@@ -207,6 +207,8 @@
 
         charon-ml = pkgs.callPackage ./nix/charon-ml.nix { inherit charon ocamlPackages; };
 
+        charon-py = pkgs.callPackage ./nix/charon-py.nix { inherit charon; };
+
 
         # Check rust files are correctly formatted.
         charon-check-fmt = charon.passthru.check-fmt;
@@ -218,6 +220,8 @@
         charon-ml-check-fmt = charon-ml.charon-ml-check-fmt;
         # Run ocaml tests
         charon-ml-tests = charon-ml.charon-ml-tests;
+        # Run python tests
+        charon-py-tests = charon-py.charon-py-tests;
 
         # Runs charon on the whole rustc ui test suite.
         rustc-tests = pkgs.callPackage ./nix/rustc-tests.nix { inherit charon rustToolchain; };
@@ -359,7 +363,7 @@
         };
         checks = {
           default = charon-ml-tests;
-          inherit charon-ml-tests charon-check-fmt charon-check-no-rustc
+          inherit charon-ml-tests charon-py-tests charon-check-fmt charon-check-no-rustc
             charon-ml-check-fmt check-generated-asts check-generated-py
             test-charon-via-nix charon-check-clippy;
         };
