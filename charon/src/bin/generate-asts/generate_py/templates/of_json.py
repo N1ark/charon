@@ -29,10 +29,10 @@ class OfJsonCtx:
     """
 
     files: dict[int, File] = field(default_factory=dict)
-    ty_dedup: dict[int, Ty] = field(default_factory=dict)
-    trait_ref_dedup: dict[int, TraitRef] = field(default_factory=dict)
+    ty_kind_dedup: dict[int, TyKind] = field(default_factory=dict)
+    trait_ref_contents_dedup: dict[int, TraitRefContents] = field(default_factory=dict)
     constant_expr_dedup: dict[int, ConstantExpr] = field(default_factory=dict)
-    exact_size_expr_dedup: dict[int, ExactSizeExpr] = field(default_factory=dict)
+    exact_size_expr_kind_dedup: dict[int, ExactSizeExprKind] = field(default_factory=dict)
     span_dedup: dict[int, Span] = field(default_factory=dict)
 
 

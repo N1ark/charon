@@ -43,23 +43,6 @@ fn scalar_fn(scalar: ScalarTy) -> &'static str {
 
 const MANUAL_IMPLS: &[(&str, &str)] = &[
     (
-        "charon_lib::ids::index_vec::IndexVec",
-        "return list_of_postcard(arg1_of_postcard)(ctx, st)",
-    ),
-    (
-        "charon_lib::ids::index_map::IndexMap",
-        indoc!(
-            r#"
-            __entries = list_of_postcard(option_of_postcard(arg1_of_postcard))(ctx, st)
-            return [__entry for __entry in __entries if __entry is not None]
-            "#
-        ),
-    ),
-    (
-        "indexmap::map::IndexMap",
-        "return list_of_postcard(key_value_pair_of_postcard(arg0_of_postcard, arg1_of_postcard))(ctx, st)",
-    ),
-    (
         "FileId",
         indoc!(
             r#"
@@ -88,18 +71,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             "#
         ),
     ),
-    (
-        "HashConsed",
-        "raise DeserializeError(\"use `dedup_val_of_postcard` instead\")",
-    ),
-    (
-        "Ty",
-        "return dedup_val_of_postcard(ctx.ty_dedup, ty_kind_of_postcard, ctx, st)",
-    ),
-    (
-        "TraitRef",
-        "return dedup_val_of_postcard(ctx.trait_ref_dedup, trait_ref_contents_of_postcard, ctx, st)",
-    ),
+    // Hand-written because its contents are a pair that we present as a record.
     (
         "ConstantExpr",
         indoc!(
@@ -108,17 +80,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
                 kind, ty = pair_of_postcard(constant_expr_kind_of_postcard, ty_of_postcard)(ctx, st)
                 return ConstantExpr(kind=kind, ty=ty)
 
-            return dedup_val_of_postcard(ctx.constant_expr_dedup, read_contents, ctx, st)
-            "#
-        ),
-    ),
-    (
-        "ExactSizeExpr",
-        indoc!(
-            r#"
-            return dedup_val_of_postcard(
-                ctx.exact_size_expr_dedup, exact_size_expr_kind_of_postcard, ctx, st
-            )
+            return dedup_val_of_postcard(ctx.constant_expr_dedup, read_contents)(ctx, st)
             "#
         ),
     ),
@@ -132,7 +94,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
                 generated_from_span = option_of_postcard(span_data_of_postcard)(ctx, st)
                 return Span(data=data, generated_from_span=generated_from_span)
 
-            return dedup_val_of_postcard(ctx.span_dedup, read_contents, ctx, st)
+            return dedup_val_of_postcard(ctx.span_dedup, read_contents)(ctx, st)
             "#
         ),
     ),

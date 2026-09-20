@@ -12,11 +12,23 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
-/// Types for which we don't want to generate a type at all.
+/// Types for which we don't want to generate a type declaration at all. Some of them still get a
+/// deserializer; the ones that don't are in [`SPELLED_OUT_AT_USE_SITE`].
 const DONT_GENERATE: &[&str] = &[
     "TraitTypeConstraintId",
     "charon_lib::ids::index_vec::IndexVec",
     "charon_lib::ids::index_map::IndexMap",
+];
+
+/// Types that every backend spells out where they are used rather than calling a deserializer for
+/// them: the containers, whose declarations say how they store their contents and not how serde
+/// writes them, and the hash-consing wrapper, which is read through the deduplication table of the
+/// type it wraps.
+const SPELLED_OUT_AT_USE_SITE: &[&str] = &[
+    "charon_lib::ids::index_vec::IndexVec",
+    "charon_lib::ids::index_map::IndexMap",
+    "indexmap::map::IndexMap",
+    "HashConsed",
 ];
 
 /// Types whose short name is not unique, along with the module they are declared in and a short
@@ -277,8 +289,9 @@ impl AstTypes {
             full_ast: HashSet::new(),
         };
         let mut all_types: HashSet<_> = ctx.children_of("TranslatedCrate");
-        all_types.insert(ctx.id_from_name("indexmap::map::IndexMap")); // Add this one foreign type
-        all_types.remove(&ctx.id_from_name("charon_lib::ids::index_map::IndexMap"));
+        for name in SPELLED_OUT_AT_USE_SITE {
+            all_types.remove(&ctx.id_from_name(name));
+        }
         let all_llbc_types: HashSet<_> =
             ctx.children_of_many(&["charon_lib::ast::bodies::structured::Block"]);
         let all_ullbc_types: HashSet<_> = ctx.children_of_many(&[

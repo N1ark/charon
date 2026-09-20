@@ -27,7 +27,10 @@ pub struct Format {
     pub value: &'static str,
     /// The name of the function that reads a scalar of the given type.
     pub scalar_fn: fn(ScalarTy) -> &'static str,
-    /// Types whose deserializer we write by hand, by charon name.
+    /// Types whose deserializer we write by hand, by charon name. Four things resist being derived
+    /// from a declaration: the two ends of the file table, since `File` registers itself in it and
+    /// `FileId` reads it; `ConstantExpr`, whose contents are a pair that we present as a record;
+    /// and `Span`, which the serializer deduplicates without a wrapper type to recognize it by.
     pub manual_impls: &'static [(&'static str, &'static str)],
 }
 
@@ -91,15 +94,42 @@ impl<'a, 'ctx> Deserializer<'a, 'ctx> {
                         if first == "ustr" {
                             first = "string".to_string();
                         }
+                        // `IndexVec` is serialized as a plain sequence: an element's index is
+                        // its position in it.
+                        if first == "index_vec" {
+                            first = "list".to_string();
+                            expr.remove(0);
+                        }
+
+                        // `indexmap::IndexMap` is serialized as a list of key/value pairs. Its
+                        // third parameter is the hasher, which never shows up in the output.
                         if first == "index_map" {
-                            // That's the `indexmap::IndexMap` case. Pass something dummy for the
-                            // `RandomState` parameter.
-                            expr[2] = self.fn_name("int");
+                            return format!(
+                                "({} ({} ({}) ({})))",
+                                self.fn_name("list"),
+                                self.fn_name("key_value_pair"),
+                                expr[0],
+                                expr[1]
+                            );
                         }
 
                         if first == "indexed_map" {
                             wrap_in_map = true;
                             first = "opt_indexed_map".to_string();
+                        }
+
+                        // Hash-consed values are deduplicated in the serialized output: the first
+                        // occurrence carries an id along with the contents, later ones only the
+                        // id. Ids are handed out per contents type, so each has its own table.
+                        if first == "hash_consed"
+                            && let Some(contents) = tref.generics.types[0]
+                                .as_adt()
+                                .filter(|inner| inner.builtin.is_none())
+                                .and_then(|inner| self.ctx.crate_data.type_decls.get(inner.id))
+                        {
+                            let table = self.ctx.type_to_ocaml_ident_raw(contents).0;
+                            let dedup = self.fn_name("dedup_val");
+                            return format!("({dedup} ctx.{table}_dedup_tbl ({}))", expr[0]);
                         }
 
                         expr.insert(0, self.fn_name(&first));

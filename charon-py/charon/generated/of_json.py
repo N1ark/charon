@@ -29,10 +29,10 @@ class OfJsonCtx:
     """
 
     files: dict[int, File] = field(default_factory=dict)
-    ty_dedup: dict[int, Ty] = field(default_factory=dict)
-    trait_ref_dedup: dict[int, TraitRef] = field(default_factory=dict)
+    ty_kind_dedup: dict[int, TyKind] = field(default_factory=dict)
+    trait_ref_contents_dedup: dict[int, TraitRefContents] = field(default_factory=dict)
     constant_expr_dedup: dict[int, ConstantExpr] = field(default_factory=dict)
-    exact_size_expr_dedup: dict[int, ExactSizeExpr] = field(default_factory=dict)
+    exact_size_expr_kind_dedup: dict[int, ExactSizeExprKind] = field(default_factory=dict)
     span_dedup: dict[int, Span] = field(default_factory=dict)
 
 
@@ -114,9 +114,9 @@ def assoc_item_id_of_json(ctx: OfJsonCtx, js: Json) -> AssocItemId:
 
 def assoc_item_names_of_json(ctx: OfJsonCtx, js: Json) -> AssocItemNames:
     __fields = expect_object(js)
-    types = index_vec_of_json(assoc_type_id_of_json, trait_item_name_of_json)(ctx, __fields["types"])
-    methods = index_vec_of_json(trait_method_id_of_json, trait_item_name_of_json)(ctx, __fields["methods"])
-    consts = index_vec_of_json(assoc_const_id_of_json, trait_item_name_of_json)(ctx, __fields["consts"])
+    types = list_of_json(trait_item_name_of_json)(ctx, __fields["types"])
+    methods = list_of_json(trait_item_name_of_json)(ctx, __fields["methods"])
+    consts = list_of_json(trait_item_name_of_json)(ctx, __fields["consts"])
     return AssocItemNames(types, methods, consts)
 
 def assoc_type_id_of_json(ctx: OfJsonCtx, js: Json) -> AssocTypeId:
@@ -337,13 +337,13 @@ def llbc_block_id_of_json(ctx: OfJsonCtx, js: Json) -> LlbcBlockId:
 def body_of_json(ctx: OfJsonCtx, js: Json) -> Body:
     __tag, __payload = split_variant(js)
     if __tag == "Unstructured":
-        _0 = gexpr_body_of_json(index_vec_of_json(ullbc_block_id_of_json, ullbc_block_of_json))(ctx, __payload)
+        _0 = gexpr_body_of_json(list_of_json(ullbc_block_of_json))(ctx, __payload)
         return BodyUnstructuredBody(_0)
     if __tag == "Structured":
         _0 = gexpr_body_of_json(llbc_block_of_json)(ctx, __payload)
         return BodyStructuredBody(_0)
     if __tag == "TargetDispatch":
-        _0 = index_map_of_json(string_of_json, fun_decl_ref_of_json, int_of_json)(ctx, __payload)
+        _0 = list_of_json(key_value_pair_of_json(string_of_json, fun_decl_ref_of_json))(ctx, __payload)
         return BodyTargetDispatchBody(_0)
     if __tag == "Extern":
         _0 = string_of_json(ctx, __payload)
@@ -686,7 +686,7 @@ def constant_expr_of_json(ctx: OfJsonCtx, js: Json) -> ConstantExpr:
         kind, ty = pair_of_json(constant_expr_kind_of_json, ty_of_json)(ctx, js)
         return ConstantExpr(kind=kind, ty=ty)
 
-    return dedup_val_of_json(ctx.constant_expr_dedup, read_contents, ctx, js)
+    return dedup_val_of_json(ctx.constant_expr_dedup, read_contents)(ctx, js)
 
 def constant_expr_kind_of_json(ctx: OfJsonCtx, js: Json) -> ConstantExprKind:
     __tag, __payload = split_variant(js)
@@ -878,7 +878,7 @@ def error_of_json(ctx: OfJsonCtx, js: Json) -> Error:
     return Error(span, msg)
 
 def exact_size_expr_of_json(ctx: OfJsonCtx, js: Json) -> ExactSizeExpr:
-    return dedup_val_of_json(ctx.exact_size_expr_dedup, exact_size_expr_kind_of_json, ctx, js)
+    return dedup_val_of_json(ctx.exact_size_expr_kind_dedup, exact_size_expr_kind_of_json)(ctx, js)
 
 def exact_size_expr_kind_of_json(ctx: OfJsonCtx, js: Json) -> ExactSizeExprKind:
     __tag, __payload = split_variant(js)
@@ -1087,21 +1087,21 @@ def gexpr_body_of_json(arg0_of_json: JsonDecoder[T0]) -> JsonDecoder[GexprBody[T
 
 def generic_args_of_json(ctx: OfJsonCtx, js: Json) -> GenericArgs:
     __fields = expect_object(js)
-    regions = index_vec_of_json(region_id_of_json, region_of_json)(ctx, __fields["regions"])
-    types = index_vec_of_json(type_var_id_of_json, ty_of_json)(ctx, __fields["types"])
-    const_generics = index_vec_of_json(const_generic_var_id_of_json, constant_expr_of_json)(ctx, __fields["const_generics"])
-    trait_refs = index_vec_of_json(trait_clause_id_of_json, trait_ref_of_json)(ctx, __fields["trait_refs"])
+    regions = list_of_json(region_of_json)(ctx, __fields["regions"])
+    types = list_of_json(ty_of_json)(ctx, __fields["types"])
+    const_generics = list_of_json(constant_expr_of_json)(ctx, __fields["const_generics"])
+    trait_refs = list_of_json(trait_ref_of_json)(ctx, __fields["trait_refs"])
     return GenericArgs(regions, types, const_generics, trait_refs)
 
 def generic_params_of_json(ctx: OfJsonCtx, js: Json) -> GenericParams:
     __fields = expect_object(js)
-    regions = index_vec_of_json(region_id_of_json, region_param_of_json)(ctx, __fields["regions"])
-    types = index_vec_of_json(type_var_id_of_json, type_param_of_json)(ctx, __fields["types"])
-    const_generics = index_vec_of_json(const_generic_var_id_of_json, const_generic_param_of_json)(ctx, __fields["const_generics"])
-    trait_clauses = index_vec_of_json(trait_clause_id_of_json, trait_param_of_json)(ctx, __fields["trait_clauses"])
+    regions = list_of_json(region_param_of_json)(ctx, __fields["regions"])
+    types = list_of_json(type_param_of_json)(ctx, __fields["types"])
+    const_generics = list_of_json(const_generic_param_of_json)(ctx, __fields["const_generics"])
+    trait_clauses = list_of_json(trait_param_of_json)(ctx, __fields["trait_clauses"])
     regions_outlive = list_of_json(region_binder_of_json(outlives_pred_of_json(region_of_json, region_of_json)))(ctx, __fields["regions_outlive"])
     types_outlive = list_of_json(region_binder_of_json(outlives_pred_of_json(ty_of_json, region_of_json)))(ctx, __fields["types_outlive"])
-    trait_type_constraints = index_vec_of_json(trait_type_constraint_id_of_json, region_binder_of_json(trait_type_constraint_of_json))(ctx, __fields["trait_type_constraints"])
+    trait_type_constraints = list_of_json(region_binder_of_json(trait_type_constraint_of_json))(ctx, __fields["trait_type_constraints"])
     return GenericParams(regions, types, const_generics, trait_clauses, regions_outlive, types_outlive, trait_type_constraints)
 
 def global_decl_of_json(ctx: OfJsonCtx, js: Json) -> GlobalDecl:
@@ -1158,11 +1158,6 @@ def global_source_of_json(ctx: OfJsonCtx, js: Json) -> GlobalSource:
         return GlobalSourceVTableInstanceGlobal(impl_ref)
     raise unknown_variant("GlobalSource", __tag)
 
-def hash_consed_of_json(arg0_of_json: JsonDecoder[T0]) -> JsonDecoder[HashConsed[T0]]:
-    def read(ctx: OfJsonCtx, js: Json) -> HashConsed[T0]:
-        raise DeserializeError("use `dedup_val_of_json` instead")
-    return read
-
 def rustc_ident_of_json(ctx: OfJsonCtx, js: Json) -> RustcIdent:
     __fields = expect_object(js)
     name = string_of_json(ctx, __fields["name"])
@@ -1178,16 +1173,6 @@ def impl_elem_of_json(ctx: OfJsonCtx, js: Json) -> ImplElem:
         _0 = trait_impl_id_of_json(ctx, __payload)
         return ImplElemTrait(_0)
     raise unknown_variant("ImplElem", __tag)
-
-def index_map_of_json(arg0_of_json: JsonDecoder[T0], arg1_of_json: JsonDecoder[T1], arg2_of_json: JsonDecoder[T2]) -> JsonDecoder[IndexMap[T0, T1, T2]]:
-    def read(ctx: OfJsonCtx, js: Json) -> IndexMap[T0, T1, T2]:
-        return list_of_json(key_value_pair_of_json(arg0_of_json, arg1_of_json))(ctx, js)
-    return read
-
-def index_vec_of_json(arg0_of_json: JsonDecoder[T0], arg1_of_json: JsonDecoder[T1]) -> JsonDecoder[IndexVec[T0, T1]]:
-    def read(ctx: OfJsonCtx, js: Json) -> IndexVec[T0, T1]:
-        return list_of_json(arg1_of_json)(ctx, js)
-    return read
 
 def inline_attr_of_json(ctx: OfJsonCtx, js: Json) -> InlineAttr:
     __tag, __payload = split_variant(js)
@@ -1747,7 +1732,7 @@ def layout_of_json(ctx: OfJsonCtx, js: Json) -> Layout:
     align = size_expr_of_json(ctx, __fields["align"])
     discriminator = option_of_json(discriminator_of_json)(ctx, __fields["discriminator"])
     uninhabited = bool_of_json(ctx, __fields["uninhabited"])
-    variant_layouts = index_vec_of_json(variant_id_of_json, option_of_json(variant_layout_of_json))(ctx, __fields["variant_layouts"])
+    variant_layouts = list_of_json(option_of_json(variant_layout_of_json))(ctx, __fields["variant_layouts"])
     repr = repr_options_of_json(ctx, __fields["repr"])
     return Layout(size, align, discriminator, uninhabited, variant_layouts, repr)
 
@@ -1781,7 +1766,7 @@ def local_id_of_json(ctx: OfJsonCtx, js: Json) -> LocalId:
 def locals_of_json(ctx: OfJsonCtx, js: Json) -> Locals:
     __fields = expect_object(js)
     arg_count = int_of_json(ctx, __fields["arg_count"])
-    locals = index_vec_of_json(local_id_of_json, local_of_json)(ctx, __fields["locals"])
+    locals = list_of_json(local_of_json)(ctx, __fields["locals"])
     return Locals(arg_count, locals)
 
 def maybe_assoc_item_id_of_json(ctx: OfJsonCtx, js: Json) -> MaybeAssocItemId:
@@ -2073,7 +2058,7 @@ def region_of_json(ctx: OfJsonCtx, js: Json) -> Region:
 def region_binder_of_json(arg0_of_json: JsonDecoder[T0]) -> JsonDecoder[RegionBinder[T0]]:
     def read(ctx: OfJsonCtx, js: Json) -> RegionBinder[T0]:
         __fields = expect_object(js)
-        binder_regions = index_vec_of_json(region_id_of_json, region_param_of_json)(ctx, __fields["regions"])
+        binder_regions = list_of_json(region_param_of_json)(ctx, __fields["regions"])
         binder_value = arg0_of_json(ctx, __fields["skip_binder"])
         return RegionBinder(binder_regions, binder_value)
     return read
@@ -2220,7 +2205,7 @@ def span_of_json(ctx: OfJsonCtx, js: Json) -> Span:
             ),
         )
 
-    return dedup_val_of_json(ctx.span_dedup, read_contents, ctx, js)
+    return dedup_val_of_json(ctx.span_dedup, read_contents)(ctx, js)
 
 def span_data_of_json(ctx: OfJsonCtx, js: Json) -> SpanData:
     __fields = expect_object(js)
@@ -2346,7 +2331,7 @@ def llbc_statement_kind_of_json(ctx: OfJsonCtx, js: Json) -> LlbcStatementKind:
     if __tag == "Switch":
         __fields = expect_object(__payload)
         data = switch_data_of_json(ctx, __fields["data"])
-        branches = index_vec_of_json(branch_id_of_json, llbc_block_of_json)(ctx, __fields["branches"])
+        branches = list_of_json(llbc_block_of_json)(ctx, __fields["branches"])
         return LlbcStatementKindSwitch(data, branches)
     if __tag == "Loop":
         _0 = llbc_block_of_json(ctx, __payload)
@@ -2378,7 +2363,7 @@ def target_info_of_json(ctx: OfJsonCtx, js: Json) -> TargetInfo:
     target_pointer_size = int_of_json(ctx, __fields["target_pointer_size"])
     is_little_endian = bool_of_json(ctx, __fields["is_little_endian"])
     c_enum_smallest_repr_ty = int_ty_of_json(ctx, __fields["c_enum_smallest_repr_ty"])
-    primitive_alignments = index_map_of_json(scalar_type_of_json, int_of_json, int_of_json)(ctx, __fields["primitive_alignments"])
+    primitive_alignments = list_of_json(key_value_pair_of_json(scalar_type_of_json, int_of_json))(ctx, __fields["primitive_alignments"])
     return TargetInfo(target_pointer_size, is_little_endian, c_enum_smallest_repr_ty, primitive_alignments)
 
 def terminator_of_json(ctx: OfJsonCtx, js: Json) -> Terminator:
@@ -2397,7 +2382,7 @@ def terminator_kind_of_json(ctx: OfJsonCtx, js: Json) -> TerminatorKind:
     if __tag == "Switch":
         __fields = expect_object(__payload)
         data = switch_data_of_json(ctx, __fields["data"])
-        branches = index_vec_of_json(branch_id_of_json, ullbc_block_id_of_json)(ctx, __fields["branches"])
+        branches = list_of_json(ullbc_block_id_of_json)(ctx, __fields["branches"])
         return TerminatorKindSwitch(data, branches)
     if __tag == "Call":
         __fields = expect_object(__payload)
@@ -2447,13 +2432,13 @@ def trait_assoc_ty_of_json(ctx: OfJsonCtx, js: Json) -> TraitAssocTy:
     name = trait_item_name_of_json(ctx, __fields["name"])
     attr_info = attr_info_of_json(ctx, __fields["attr_info"])
     default = option_of_json(trait_assoc_ty_impl_of_json)(ctx, __fields["default"])
-    implied_clauses = index_vec_of_json(trait_clause_id_of_json, trait_param_of_json)(ctx, __fields["implied_clauses"])
+    implied_clauses = list_of_json(trait_param_of_json)(ctx, __fields["implied_clauses"])
     return TraitAssocTy(name, attr_info, default, implied_clauses)
 
 def trait_assoc_ty_impl_of_json(ctx: OfJsonCtx, js: Json) -> TraitAssocTyImpl:
     __fields = expect_object(js)
     value = ty_of_json(ctx, __fields["value"])
-    implied_trait_refs = index_vec_of_json(trait_clause_id_of_json, trait_ref_of_json)(ctx, __fields["implied_trait_refs"])
+    implied_trait_refs = list_of_json(trait_ref_of_json)(ctx, __fields["implied_trait_refs"])
     return TraitAssocTyImpl(value, implied_trait_refs)
 
 def trait_clause_id_of_json(ctx: OfJsonCtx, js: Json) -> TraitClauseId:
@@ -2465,7 +2450,7 @@ def trait_decl_of_json(ctx: OfJsonCtx, js: Json) -> TraitDecl:
     item_meta = item_meta_of_json(ctx, __fields["item_meta"])
     src = trait_decl_source_of_json(ctx, __fields["src"])
     generics = generic_params_of_json(ctx, __fields["generics"])
-    implied_clauses = index_vec_of_json(trait_clause_id_of_json, trait_param_of_json)(ctx, __fields["implied_clauses"])
+    implied_clauses = list_of_json(trait_param_of_json)(ctx, __fields["implied_clauses"])
     consts = indexed_map_of_json(assoc_const_id_of_json, trait_assoc_const_of_json)(ctx, __fields["consts"])
     types = indexed_map_of_json(assoc_type_id_of_json, binder_of_json(trait_assoc_ty_of_json))(ctx, __fields["types"])
     methods = indexed_map_of_json(trait_method_id_of_json, binder_of_json(trait_method_of_json))(ctx, __fields["methods"])
@@ -2496,7 +2481,7 @@ def trait_impl_of_json(ctx: OfJsonCtx, js: Json) -> TraitImpl:
     src = trait_impl_source_of_json(ctx, __fields["src"])
     impl_trait = trait_decl_ref_of_json(ctx, __fields["impl_trait"])
     generics = generic_params_of_json(ctx, __fields["generics"])
-    implied_trait_refs = index_vec_of_json(trait_clause_id_of_json, trait_ref_of_json)(ctx, __fields["implied_trait_refs"])
+    implied_trait_refs = list_of_json(trait_ref_of_json)(ctx, __fields["implied_trait_refs"])
     consts = indexed_map_of_json(assoc_const_id_of_json, global_decl_ref_of_json)(ctx, __fields["consts"])
     types = indexed_map_of_json(assoc_type_id_of_json, binder_of_json(trait_assoc_ty_impl_of_json))(ctx, __fields["types"])
     methods = indexed_map_of_json(trait_method_id_of_json, binder_of_json(fun_decl_ref_of_json))(ctx, __fields["methods"])
@@ -2549,7 +2534,7 @@ def trait_param_of_json(ctx: OfJsonCtx, js: Json) -> TraitParam:
     return TraitParam(clause_id, span, origin, trait)
 
 def trait_ref_of_json(ctx: OfJsonCtx, js: Json) -> TraitRef:
-    return dedup_val_of_json(ctx.trait_ref_dedup, trait_ref_contents_of_json, ctx, js)
+    return dedup_val_of_json(ctx.trait_ref_contents_dedup, trait_ref_contents_of_json)(ctx, js)
 
 def trait_ref_contents_of_json(ctx: OfJsonCtx, js: Json) -> TraitRefContents:
     __fields = expect_object(js)
@@ -2581,7 +2566,7 @@ def trait_ref_kind_of_json(ctx: OfJsonCtx, js: Json) -> TraitRefKind:
     if __tag == "BuiltinOrAuto":
         __fields = expect_object(__payload)
         builtin_data = builtin_impl_data_of_json(ctx, __fields["builtin_data"])
-        parent_trait_refs = index_vec_of_json(trait_clause_id_of_json, trait_ref_of_json)(ctx, __fields["parent_trait_refs"])
+        parent_trait_refs = list_of_json(trait_ref_of_json)(ctx, __fields["parent_trait_refs"])
         types = indexed_map_of_json(assoc_type_id_of_json, trait_assoc_ty_impl_of_json)(ctx, __fields["types"])
         vtable = option_of_json(global_decl_ref_of_json)(ctx, __fields["vtable"])
         return TraitRefKindBuiltinOrAuto(builtin_data, parent_trait_refs, types, vtable)
@@ -2606,11 +2591,11 @@ def translated_crate_of_json(ctx: OfJsonCtx, js: Json) -> TranslatedCrate:
     __fields = expect_object(js)
     crate_name = string_of_json(ctx, __fields["crate_name"])
     options = cli_options_of_json(ctx, __fields["options"])
-    target_information = index_map_of_json(string_of_json, target_info_of_json, int_of_json)(ctx, __fields["target_information"])
-    files = index_vec_of_json(file_id_of_json, file_of_json)(ctx, __fields["files"])
-    item_names = index_map_of_json(item_id_of_json, name_of_json, int_of_json)(ctx, __fields["item_names"])
+    target_information = list_of_json(key_value_pair_of_json(string_of_json, target_info_of_json))(ctx, __fields["target_information"])
+    files = list_of_json(file_of_json)(ctx, __fields["files"])
+    item_names = list_of_json(key_value_pair_of_json(item_id_of_json, name_of_json))(ctx, __fields["item_names"])
     assoc_item_names = indexed_map_of_json(trait_decl_id_of_json, assoc_item_names_of_json)(ctx, __fields["assoc_item_names"])
-    short_names = index_map_of_json(item_id_of_json, name_of_json, int_of_json)(ctx, __fields["short_names"])
+    short_names = list_of_json(key_value_pair_of_json(item_id_of_json, name_of_json))(ctx, __fields["short_names"])
     type_decls = indexed_map_of_json(type_decl_id_of_json, type_decl_of_json)(ctx, __fields["type_decls"])
     fun_decls = indexed_map_of_json(fun_decl_id_of_json, fun_decl_of_json)(ctx, __fields["fun_decls"])
     global_decls = indexed_map_of_json(global_decl_id_of_json, global_decl_of_json)(ctx, __fields["global_decls"])
@@ -2620,7 +2605,7 @@ def translated_crate_of_json(ctx: OfJsonCtx, js: Json) -> TranslatedCrate:
     return TranslatedCrate(crate_name, options, target_information, files, item_names, assoc_item_names, short_names, type_decls, fun_decls, global_decls, trait_decls, trait_impls, ordered_decls)
 
 def ty_of_json(ctx: OfJsonCtx, js: Json) -> Ty:
-    return dedup_val_of_json(ctx.ty_dedup, ty_kind_of_json, ctx, js)
+    return dedup_val_of_json(ctx.ty_kind_dedup, ty_kind_of_json)(ctx, js)
 
 def ty_kind_of_json(ctx: OfJsonCtx, js: Json) -> TyKind:
     __tag, __payload = split_variant(js)
@@ -2692,7 +2677,7 @@ def type_decl_of_json(ctx: OfJsonCtx, js: Json) -> TypeDecl:
     generics = generic_params_of_json(ctx, __fields["generics"])
     src = type_source_of_json(ctx, __fields["src"])
     kind = type_decl_kind_of_json(ctx, __fields["kind"])
-    layout = index_map_of_json(string_of_json, layout_of_json, int_of_json)(ctx, __fields["layout"])
+    layout = list_of_json(key_value_pair_of_json(string_of_json, layout_of_json))(ctx, __fields["layout"])
     ptr_metadata = ptr_metadata_of_json(ctx, __fields["ptr_metadata"])
     return TypeDecl(def_id, item_meta, generics, src, kind, layout, ptr_metadata)
 
@@ -2702,13 +2687,13 @@ def type_decl_id_of_json(ctx: OfJsonCtx, js: Json) -> TypeDeclId:
 def type_decl_kind_of_json(ctx: OfJsonCtx, js: Json) -> TypeDeclKind:
     __tag, __payload = split_variant(js)
     if __tag == "Struct":
-        _0 = index_vec_of_json(field_id_of_json, field_of_json)(ctx, __payload)
+        _0 = list_of_json(field_of_json)(ctx, __payload)
         return TypeDeclKindStruct(_0)
     if __tag == "Enum":
-        _0 = index_vec_of_json(variant_id_of_json, variant_of_json)(ctx, __payload)
+        _0 = list_of_json(variant_of_json)(ctx, __payload)
         return TypeDeclKindEnum(_0)
     if __tag == "Union":
-        _0 = index_vec_of_json(field_id_of_json, field_of_json)(ctx, __payload)
+        _0 = list_of_json(field_of_json)(ctx, __payload)
         return TypeDeclKindUnion(_0)
     if __tag == "Opaque":
         return TypeDeclKindOpaque()
@@ -2759,8 +2744,8 @@ def type_source_of_json(ctx: OfJsonCtx, js: Json) -> TypeSource:
     if __tag == "VTable":
         __fields = expect_object(__payload)
         dyn_predicate = dyn_predicate_of_json(ctx, __fields["dyn_predicate"])
-        field_map = index_vec_of_json(field_id_of_json, v_table_field_of_json)(ctx, __fields["field_map"])
-        supertrait_map = index_vec_of_json(trait_clause_id_of_json, option_of_json(field_id_of_json))(ctx, __fields["supertrait_map"])
+        field_map = list_of_json(v_table_field_of_json)(ctx, __fields["field_map"])
+        supertrait_map = list_of_json(option_of_json(field_id_of_json))(ctx, __fields["supertrait_map"])
         return TypeSourceVTableType(dyn_predicate, field_map, supertrait_map)
     if __tag == "Builtin":
         _0 = builtin_adt_of_json(ctx, __payload)
@@ -2851,7 +2836,7 @@ def variant_of_json(ctx: OfJsonCtx, js: Json) -> Variant:
     span = span_of_json(ctx, __fields["span"])
     attr_info = attr_info_of_json(ctx, __fields["attr_info"])
     variant_name = string_of_json(ctx, __fields["name"])
-    fields = index_vec_of_json(field_id_of_json, field_of_json)(ctx, __fields["fields"])
+    fields = list_of_json(field_of_json)(ctx, __fields["fields"])
     discriminant = integer_value_of_json(ctx, __fields["discriminant"])
     return Variant(id, span, attr_info, variant_name, fields, discriminant)
 
@@ -2860,7 +2845,7 @@ def variant_id_of_json(ctx: OfJsonCtx, js: Json) -> VariantId:
 
 def variant_layout_of_json(ctx: OfJsonCtx, js: Json) -> VariantLayout:
     __fields = expect_object(js)
-    field_offsets = index_vec_of_json(field_id_of_json, offset_expr_of_json)(ctx, __fields["field_offsets"])
+    field_offsets = list_of_json(offset_expr_of_json)(ctx, __fields["field_offsets"])
     uninhabited = bool_of_json(ctx, __fields["uninhabited"])
     tagger = list_of_json(pair_of_json(int_of_json, integer_value_of_json))(ctx, __fields["tagger"])
     return VariantLayout(field_offsets, uninhabited, tagger)

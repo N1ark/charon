@@ -31,25 +31,6 @@ fn scalar_fn(scalar: ScalarTy) -> &'static str {
 
 const MANUAL_IMPLS: &[(&str, &str)] = &[
     // Hand-written because we interpret it as a list.
-    (
-        "charon_lib::ids::index_vec::IndexVec",
-        "return list_of_json(arg1_of_json)(ctx, js)",
-    ),
-    // Hand-written because we interpret it as a list.
-    (
-        "charon_lib::ids::index_map::IndexMap",
-        indoc!(
-            r#"
-            __entries = list_of_json(option_of_json(arg1_of_json))(ctx, js)
-            return [__entry for __entry in __entries if __entry is not None]
-            "#
-        ),
-    ),
-    // Hand-written because we turn it into a list of pairs.
-    (
-        "indexmap::map::IndexMap",
-        "return list_of_json(key_value_pair_of_json(arg0_of_json, arg1_of_json))(ctx, js)",
-    ),
     // Hand-written because we replace the `FileId` with the corresponding file.
     (
         "FileId",
@@ -79,18 +60,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             "#
         ),
     ),
-    (
-        "HashConsed",
-        "raise DeserializeError(\"use `dedup_val_of_json` instead\")",
-    ),
-    (
-        "Ty",
-        "return dedup_val_of_json(ctx.ty_dedup, ty_kind_of_json, ctx, js)",
-    ),
-    (
-        "TraitRef",
-        "return dedup_val_of_json(ctx.trait_ref_dedup, trait_ref_contents_of_json, ctx, js)",
-    ),
+    // Hand-written because its contents are a pair that we present as a record.
     (
         "ConstantExpr",
         indoc!(
@@ -99,13 +69,9 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
                 kind, ty = pair_of_json(constant_expr_kind_of_json, ty_of_json)(ctx, js)
                 return ConstantExpr(kind=kind, ty=ty)
 
-            return dedup_val_of_json(ctx.constant_expr_dedup, read_contents, ctx, js)
+            return dedup_val_of_json(ctx.constant_expr_dedup, read_contents)(ctx, js)
             "#
         ),
-    ),
-    (
-        "ExactSizeExpr",
-        "return dedup_val_of_json(ctx.exact_size_expr_dedup, exact_size_expr_kind_of_json, ctx, js)",
     ),
     // Hand-written because spans are deduplicated in the serialized output.
     (
@@ -121,7 +87,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
                     ),
                 )
 
-            return dedup_val_of_json(ctx.span_dedup, read_contents, ctx, js)
+            return dedup_val_of_json(ctx.span_dedup, read_contents)(ctx, js)
             "#
         ),
     ),

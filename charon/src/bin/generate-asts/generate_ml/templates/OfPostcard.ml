@@ -37,20 +37,20 @@ end)
 
 type of_postcard_ctx = {
   id_to_file_map : file FileTbl.t;
-  ty_dedup_tbl : ty DedupTbl.t;
-  tref_dedup_tbl : trait_ref DedupTbl.t;
+  ty_kind_dedup_tbl : ty_kind DedupTbl.t;
+  trait_ref_contents_dedup_tbl : trait_ref_contents DedupTbl.t;
   constant_expr_dedup_tbl : constant_expr DedupTbl.t;
-  exact_size_expr_dedup_tbl : exact_size_expr DedupTbl.t;
+  exact_size_expr_kind_dedup_tbl : exact_size_expr_kind DedupTbl.t;
   span_dedup_tbl : span DedupTbl.t;
 }
 
 let empty_of_postcard_ctx : of_postcard_ctx =
   {
     id_to_file_map = FileTbl.create 8;
-    ty_dedup_tbl = DedupTbl.create 2048;
-    tref_dedup_tbl = DedupTbl.create 1024;
+    ty_kind_dedup_tbl = DedupTbl.create 2048;
+    trait_ref_contents_dedup_tbl = DedupTbl.create 1024;
     constant_expr_dedup_tbl = DedupTbl.create 64;
-    exact_size_expr_dedup_tbl = DedupTbl.create 16;
+    exact_size_expr_kind_dedup_tbl = DedupTbl.create 16;
     span_dedup_tbl = DedupTbl.create 4096;
   }
 

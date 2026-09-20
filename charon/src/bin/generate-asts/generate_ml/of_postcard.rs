@@ -43,23 +43,6 @@ fn scalar_fn(scalar: ScalarTy) -> &'static str {
 
 const MANUAL_IMPLS: &[(&str, &str)] = &[
     (
-        "charon_lib::ids::index_vec::IndexVec",
-        "list_of_postcard arg1_of_postcard ctx st",
-    ),
-    (
-        "charon_lib::ids::index_map::IndexMap",
-        indoc!(
-            r#"
-            let* list = list_of_postcard (option_of_postcard arg1_of_postcard) ctx st in
-            Ok (List.filter_map (fun x -> x) list)
-            "#
-        ),
-    ),
-    (
-        "indexmap::map::IndexMap",
-        "list_of_postcard (key_value_pair_of_postcard arg0_of_postcard arg1_of_postcard) ctx st",
-    ),
-    (
         "FileId",
         indoc!(
             r#"
@@ -85,18 +68,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             "#
         ),
     ),
-    (
-        "HashConsed",
-        r#"Error "use `dedup_val_of_postcard` instead""#,
-    ),
-    (
-        "Ty",
-        "dedup_val_of_postcard ctx.ty_dedup_tbl ty_kind_of_postcard ctx st",
-    ),
-    (
-        "TraitRef",
-        "dedup_val_of_postcard ctx.tref_dedup_tbl trait_ref_contents_of_postcard ctx st",
-    ),
+    // Hand-written because its contents are a pair that we present as a record.
     (
         "ConstantExpr",
         indoc!(
@@ -109,10 +81,6 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
               ctx st
             "#
         ),
-    ),
-    (
-        "ExactSizeExpr",
-        "dedup_val_of_postcard ctx.exact_size_expr_dedup_tbl exact_size_expr_kind_of_postcard ctx st",
     ),
     // Hand-written because spans are deduplicated in the serialized output.
     (

@@ -23,10 +23,10 @@ class OfPostcardCtx:
     """See `charon.generated.of_json.OfJsonCtx`."""
 
     files: dict[int, File] = field(default_factory=dict)
-    ty_dedup: dict[int, Ty] = field(default_factory=dict)
-    trait_ref_dedup: dict[int, TraitRef] = field(default_factory=dict)
+    ty_kind_dedup: dict[int, TyKind] = field(default_factory=dict)
+    trait_ref_contents_dedup: dict[int, TraitRefContents] = field(default_factory=dict)
     constant_expr_dedup: dict[int, ConstantExpr] = field(default_factory=dict)
-    exact_size_expr_dedup: dict[int, ExactSizeExpr] = field(default_factory=dict)
+    exact_size_expr_kind_dedup: dict[int, ExactSizeExprKind] = field(default_factory=dict)
     span_dedup: dict[int, Span] = field(default_factory=dict)
 
 
@@ -103,9 +103,9 @@ def assoc_item_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> AssocIt
     raise unknown_variant("AssocItemId", __tag)
 
 def assoc_item_names_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> AssocItemNames:
-    types = index_vec_of_postcard(assoc_type_id_of_postcard, trait_item_name_of_postcard)(ctx, st)
-    methods = index_vec_of_postcard(trait_method_id_of_postcard, trait_item_name_of_postcard)(ctx, st)
-    consts = index_vec_of_postcard(assoc_const_id_of_postcard, trait_item_name_of_postcard)(ctx, st)
+    types = list_of_postcard(trait_item_name_of_postcard)(ctx, st)
+    methods = list_of_postcard(trait_item_name_of_postcard)(ctx, st)
+    consts = list_of_postcard(trait_item_name_of_postcard)(ctx, st)
     return AssocItemNames(types, methods, consts)
 
 def assoc_type_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> AssocTypeId:
@@ -312,13 +312,13 @@ def llbc_block_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> LlbcBlo
 def body_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Body:
     __tag = int_of_postcard(ctx, st)
     if __tag == 0:
-        _0 = gexpr_body_of_postcard(index_vec_of_postcard(ullbc_block_id_of_postcard, ullbc_block_of_postcard))(ctx, st)
+        _0 = gexpr_body_of_postcard(list_of_postcard(ullbc_block_of_postcard))(ctx, st)
         return BodyUnstructuredBody(_0)
     if __tag == 1:
         _0 = gexpr_body_of_postcard(llbc_block_of_postcard)(ctx, st)
         return BodyStructuredBody(_0)
     if __tag == 2:
-        _0 = index_map_of_postcard(string_of_postcard, fun_decl_ref_of_postcard, int_of_postcard)(ctx, st)
+        _0 = list_of_postcard(key_value_pair_of_postcard(string_of_postcard, fun_decl_ref_of_postcard))(ctx, st)
         return BodyTargetDispatchBody(_0)
     if __tag == 3:
         _0 = string_of_postcard(ctx, st)
@@ -644,7 +644,7 @@ def constant_expr_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Constan
         kind, ty = pair_of_postcard(constant_expr_kind_of_postcard, ty_of_postcard)(ctx, st)
         return ConstantExpr(kind=kind, ty=ty)
 
-    return dedup_val_of_postcard(ctx.constant_expr_dedup, read_contents, ctx, st)
+    return dedup_val_of_postcard(ctx.constant_expr_dedup, read_contents)(ctx, st)
 
 def constant_expr_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> ConstantExprKind:
     __tag = int_of_postcard(ctx, st)
@@ -825,9 +825,7 @@ def error_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Error:
     return Error(span, msg)
 
 def exact_size_expr_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> ExactSizeExpr:
-    return dedup_val_of_postcard(
-        ctx.exact_size_expr_dedup, exact_size_expr_kind_of_postcard, ctx, st
-    )
+    return dedup_val_of_postcard(ctx.exact_size_expr_kind_dedup, exact_size_expr_kind_of_postcard)(ctx, st)
 
 def exact_size_expr_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> ExactSizeExprKind:
     __tag = int_of_postcard(ctx, st)
@@ -1022,20 +1020,20 @@ def gexpr_body_of_postcard(arg0_of_postcard: PostcardDecoder[T0]) -> PostcardDec
     return read
 
 def generic_args_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> GenericArgs:
-    regions = index_vec_of_postcard(region_id_of_postcard, region_of_postcard)(ctx, st)
-    types = index_vec_of_postcard(type_var_id_of_postcard, ty_of_postcard)(ctx, st)
-    const_generics = index_vec_of_postcard(const_generic_var_id_of_postcard, constant_expr_of_postcard)(ctx, st)
-    trait_refs = index_vec_of_postcard(trait_clause_id_of_postcard, trait_ref_of_postcard)(ctx, st)
+    regions = list_of_postcard(region_of_postcard)(ctx, st)
+    types = list_of_postcard(ty_of_postcard)(ctx, st)
+    const_generics = list_of_postcard(constant_expr_of_postcard)(ctx, st)
+    trait_refs = list_of_postcard(trait_ref_of_postcard)(ctx, st)
     return GenericArgs(regions, types, const_generics, trait_refs)
 
 def generic_params_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> GenericParams:
-    regions = index_vec_of_postcard(region_id_of_postcard, region_param_of_postcard)(ctx, st)
-    types = index_vec_of_postcard(type_var_id_of_postcard, type_param_of_postcard)(ctx, st)
-    const_generics = index_vec_of_postcard(const_generic_var_id_of_postcard, const_generic_param_of_postcard)(ctx, st)
-    trait_clauses = index_vec_of_postcard(trait_clause_id_of_postcard, trait_param_of_postcard)(ctx, st)
+    regions = list_of_postcard(region_param_of_postcard)(ctx, st)
+    types = list_of_postcard(type_param_of_postcard)(ctx, st)
+    const_generics = list_of_postcard(const_generic_param_of_postcard)(ctx, st)
+    trait_clauses = list_of_postcard(trait_param_of_postcard)(ctx, st)
     regions_outlive = list_of_postcard(region_binder_of_postcard(outlives_pred_of_postcard(region_of_postcard, region_of_postcard)))(ctx, st)
     types_outlive = list_of_postcard(region_binder_of_postcard(outlives_pred_of_postcard(ty_of_postcard, region_of_postcard)))(ctx, st)
-    trait_type_constraints = index_vec_of_postcard(trait_type_constraint_id_of_postcard, region_binder_of_postcard(trait_type_constraint_of_postcard))(ctx, st)
+    trait_type_constraints = list_of_postcard(region_binder_of_postcard(trait_type_constraint_of_postcard))(ctx, st)
     return GenericParams(regions, types, const_generics, trait_clauses, regions_outlive, types_outlive, trait_type_constraints)
 
 def global_decl_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> GlobalDecl:
@@ -1087,11 +1085,6 @@ def global_source_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> GlobalS
         return GlobalSourceVTableInstanceGlobal(impl_ref)
     raise unknown_variant("GlobalSource", __tag)
 
-def hash_consed_of_postcard(arg0_of_postcard: PostcardDecoder[T0]) -> PostcardDecoder[HashConsed[T0]]:
-    def read(ctx: OfPostcardCtx, st: PostcardReader) -> HashConsed[T0]:
-        raise DeserializeError("use `dedup_val_of_postcard` instead")
-    return read
-
 def rustc_ident_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> RustcIdent:
     name = string_of_postcard(ctx, st)
     span = span_of_postcard(ctx, st)
@@ -1106,16 +1099,6 @@ def impl_elem_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> ImplElem:
         _0 = trait_impl_id_of_postcard(ctx, st)
         return ImplElemTrait(_0)
     raise unknown_variant("ImplElem", __tag)
-
-def index_map_of_postcard(arg0_of_postcard: PostcardDecoder[T0], arg1_of_postcard: PostcardDecoder[T1], arg2_of_postcard: PostcardDecoder[T2]) -> PostcardDecoder[IndexMap[T0, T1, T2]]:
-    def read(ctx: OfPostcardCtx, st: PostcardReader) -> IndexMap[T0, T1, T2]:
-        return list_of_postcard(key_value_pair_of_postcard(arg0_of_postcard, arg1_of_postcard))(ctx, st)
-    return read
-
-def index_vec_of_postcard(arg0_of_postcard: PostcardDecoder[T0], arg1_of_postcard: PostcardDecoder[T1]) -> PostcardDecoder[IndexVec[T0, T1]]:
-    def read(ctx: OfPostcardCtx, st: PostcardReader) -> IndexVec[T0, T1]:
-        return list_of_postcard(arg1_of_postcard)(ctx, st)
-    return read
 
 def inline_attr_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> InlineAttr:
     __tag = int_of_postcard(ctx, st)
@@ -1670,7 +1653,7 @@ def layout_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Layout:
     align = size_expr_of_postcard(ctx, st)
     discriminator = option_of_postcard(discriminator_of_postcard)(ctx, st)
     uninhabited = bool_of_postcard(ctx, st)
-    variant_layouts = index_vec_of_postcard(variant_id_of_postcard, option_of_postcard(variant_layout_of_postcard))(ctx, st)
+    variant_layouts = list_of_postcard(option_of_postcard(variant_layout_of_postcard))(ctx, st)
     repr = repr_options_of_postcard(ctx, st)
     return Layout(size, align, discriminator, uninhabited, variant_layouts, repr)
 
@@ -1701,7 +1684,7 @@ def local_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> LocalId:
 
 def locals_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Locals:
     arg_count = usize_of_postcard(ctx, st)
-    locals = index_vec_of_postcard(local_id_of_postcard, local_of_postcard)(ctx, st)
+    locals = list_of_postcard(local_of_postcard)(ctx, st)
     return Locals(arg_count, locals)
 
 def maybe_assoc_item_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> MaybeAssocItemId:
@@ -1979,7 +1962,7 @@ def region_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Region:
 
 def region_binder_of_postcard(arg0_of_postcard: PostcardDecoder[T0]) -> PostcardDecoder[RegionBinder[T0]]:
     def read(ctx: OfPostcardCtx, st: PostcardReader) -> RegionBinder[T0]:
-        binder_regions = index_vec_of_postcard(region_id_of_postcard, region_param_of_postcard)(ctx, st)
+        binder_regions = list_of_postcard(region_param_of_postcard)(ctx, st)
         binder_value = arg0_of_postcard(ctx, st)
         return RegionBinder(binder_regions, binder_value)
     return read
@@ -2109,7 +2092,7 @@ def span_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Span:
         generated_from_span = option_of_postcard(span_data_of_postcard)(ctx, st)
         return Span(data=data, generated_from_span=generated_from_span)
 
-    return dedup_val_of_postcard(ctx.span_dedup, read_contents, ctx, st)
+    return dedup_val_of_postcard(ctx.span_dedup, read_contents)(ctx, st)
 
 def span_data_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> SpanData:
     file = file_id_of_postcard(ctx, st)
@@ -2222,7 +2205,7 @@ def llbc_statement_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> L
         return LlbcStatementKindNop()
     if __tag == 16:
         data = switch_data_of_postcard(ctx, st)
-        branches = index_vec_of_postcard(branch_id_of_postcard, llbc_block_of_postcard)(ctx, st)
+        branches = list_of_postcard(llbc_block_of_postcard)(ctx, st)
         return LlbcStatementKindSwitch(data, branches)
     if __tag == 17:
         _0 = llbc_block_of_postcard(ctx, st)
@@ -2252,7 +2235,7 @@ def target_info_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TargetInf
     target_pointer_size = u64_of_postcard(ctx, st)
     is_little_endian = bool_of_postcard(ctx, st)
     c_enum_smallest_repr_ty = int_ty_of_postcard(ctx, st)
-    primitive_alignments = index_map_of_postcard(scalar_type_of_postcard, u64_of_postcard, int_of_postcard)(ctx, st)
+    primitive_alignments = list_of_postcard(key_value_pair_of_postcard(scalar_type_of_postcard, u64_of_postcard))(ctx, st)
     return TargetInfo(target_pointer_size, is_little_endian, c_enum_smallest_repr_ty, primitive_alignments)
 
 def terminator_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Terminator:
@@ -2268,7 +2251,7 @@ def terminator_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Termi
         return TerminatorKindGoto(target)
     if __tag == 1:
         data = switch_data_of_postcard(ctx, st)
-        branches = index_vec_of_postcard(branch_id_of_postcard, ullbc_block_id_of_postcard)(ctx, st)
+        branches = list_of_postcard(ullbc_block_id_of_postcard)(ctx, st)
         return TerminatorKindSwitch(data, branches)
     if __tag == 2:
         call = call_of_postcard(ctx, st)
@@ -2312,12 +2295,12 @@ def trait_assoc_ty_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitA
     name = trait_item_name_of_postcard(ctx, st)
     attr_info = attr_info_of_postcard(ctx, st)
     default = option_of_postcard(trait_assoc_ty_impl_of_postcard)(ctx, st)
-    implied_clauses = index_vec_of_postcard(trait_clause_id_of_postcard, trait_param_of_postcard)(ctx, st)
+    implied_clauses = list_of_postcard(trait_param_of_postcard)(ctx, st)
     return TraitAssocTy(name, attr_info, default, implied_clauses)
 
 def trait_assoc_ty_impl_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitAssocTyImpl:
     value = ty_of_postcard(ctx, st)
-    implied_trait_refs = index_vec_of_postcard(trait_clause_id_of_postcard, trait_ref_of_postcard)(ctx, st)
+    implied_trait_refs = list_of_postcard(trait_ref_of_postcard)(ctx, st)
     return TraitAssocTyImpl(value, implied_trait_refs)
 
 def trait_clause_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitClauseId:
@@ -2328,7 +2311,7 @@ def trait_decl_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitDecl:
     item_meta = item_meta_of_postcard(ctx, st)
     src = trait_decl_source_of_postcard(ctx, st)
     generics = generic_params_of_postcard(ctx, st)
-    implied_clauses = index_vec_of_postcard(trait_clause_id_of_postcard, trait_param_of_postcard)(ctx, st)
+    implied_clauses = list_of_postcard(trait_param_of_postcard)(ctx, st)
     consts = indexed_map_of_postcard(assoc_const_id_of_postcard, trait_assoc_const_of_postcard)(ctx, st)
     types = indexed_map_of_postcard(assoc_type_id_of_postcard, binder_of_postcard(trait_assoc_ty_of_postcard))(ctx, st)
     methods = indexed_map_of_postcard(trait_method_id_of_postcard, binder_of_postcard(trait_method_of_postcard))(ctx, st)
@@ -2357,7 +2340,7 @@ def trait_impl_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitImpl:
     src = trait_impl_source_of_postcard(ctx, st)
     impl_trait = trait_decl_ref_of_postcard(ctx, st)
     generics = generic_params_of_postcard(ctx, st)
-    implied_trait_refs = index_vec_of_postcard(trait_clause_id_of_postcard, trait_ref_of_postcard)(ctx, st)
+    implied_trait_refs = list_of_postcard(trait_ref_of_postcard)(ctx, st)
     consts = indexed_map_of_postcard(assoc_const_id_of_postcard, global_decl_ref_of_postcard)(ctx, st)
     types = indexed_map_of_postcard(assoc_type_id_of_postcard, binder_of_postcard(trait_assoc_ty_impl_of_postcard))(ctx, st)
     methods = indexed_map_of_postcard(trait_method_id_of_postcard, binder_of_postcard(fun_decl_ref_of_postcard))(ctx, st)
@@ -2406,7 +2389,7 @@ def trait_param_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitPara
     return TraitParam(clause_id, span, origin, trait)
 
 def trait_ref_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitRef:
-    return dedup_val_of_postcard(ctx.trait_ref_dedup, trait_ref_contents_of_postcard, ctx, st)
+    return dedup_val_of_postcard(ctx.trait_ref_contents_dedup, trait_ref_contents_of_postcard)(ctx, st)
 
 def trait_ref_contents_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitRefContents:
     kind = trait_ref_kind_of_postcard(ctx, st)
@@ -2434,7 +2417,7 @@ def trait_ref_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TraitR
         return TraitRefKindSelf()
     if __tag == 5:
         builtin_data = builtin_impl_data_of_postcard(ctx, st)
-        parent_trait_refs = index_vec_of_postcard(trait_clause_id_of_postcard, trait_ref_of_postcard)(ctx, st)
+        parent_trait_refs = list_of_postcard(trait_ref_of_postcard)(ctx, st)
         types = indexed_map_of_postcard(assoc_type_id_of_postcard, trait_assoc_ty_impl_of_postcard)(ctx, st)
         vtable = option_of_postcard(global_decl_ref_of_postcard)(ctx, st)
         return TraitRefKindBuiltinOrAuto(builtin_data, parent_trait_refs, types, vtable)
@@ -2457,11 +2440,11 @@ def trait_type_constraint_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader)
 def translated_crate_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TranslatedCrate:
     crate_name = string_of_postcard(ctx, st)
     options = cli_options_of_postcard(ctx, st)
-    target_information = index_map_of_postcard(string_of_postcard, target_info_of_postcard, int_of_postcard)(ctx, st)
-    files = index_vec_of_postcard(file_id_of_postcard, file_of_postcard)(ctx, st)
-    item_names = index_map_of_postcard(item_id_of_postcard, name_of_postcard, int_of_postcard)(ctx, st)
+    target_information = list_of_postcard(key_value_pair_of_postcard(string_of_postcard, target_info_of_postcard))(ctx, st)
+    files = list_of_postcard(file_of_postcard)(ctx, st)
+    item_names = list_of_postcard(key_value_pair_of_postcard(item_id_of_postcard, name_of_postcard))(ctx, st)
     assoc_item_names = indexed_map_of_postcard(trait_decl_id_of_postcard, assoc_item_names_of_postcard)(ctx, st)
-    short_names = index_map_of_postcard(item_id_of_postcard, name_of_postcard, int_of_postcard)(ctx, st)
+    short_names = list_of_postcard(key_value_pair_of_postcard(item_id_of_postcard, name_of_postcard))(ctx, st)
     type_decls = indexed_map_of_postcard(type_decl_id_of_postcard, type_decl_of_postcard)(ctx, st)
     fun_decls = indexed_map_of_postcard(fun_decl_id_of_postcard, fun_decl_of_postcard)(ctx, st)
     global_decls = indexed_map_of_postcard(global_decl_id_of_postcard, global_decl_of_postcard)(ctx, st)
@@ -2471,7 +2454,7 @@ def translated_crate_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Tran
     return TranslatedCrate(crate_name, options, target_information, files, item_names, assoc_item_names, short_names, type_decls, fun_decls, global_decls, trait_decls, trait_impls, ordered_decls)
 
 def ty_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Ty:
-    return dedup_val_of_postcard(ctx.ty_dedup, ty_kind_of_postcard, ctx, st)
+    return dedup_val_of_postcard(ctx.ty_kind_dedup, ty_kind_of_postcard)(ctx, st)
 
 def ty_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TyKind:
     __tag = int_of_postcard(ctx, st)
@@ -2536,7 +2519,7 @@ def type_decl_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TypeDecl:
     generics = generic_params_of_postcard(ctx, st)
     src = type_source_of_postcard(ctx, st)
     kind = type_decl_kind_of_postcard(ctx, st)
-    layout = index_map_of_postcard(string_of_postcard, layout_of_postcard, int_of_postcard)(ctx, st)
+    layout = list_of_postcard(key_value_pair_of_postcard(string_of_postcard, layout_of_postcard))(ctx, st)
     ptr_metadata = ptr_metadata_of_postcard(ctx, st)
     return TypeDecl(def_id, item_meta, generics, src, kind, layout, ptr_metadata)
 
@@ -2546,13 +2529,13 @@ def type_decl_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TypeDecl
 def type_decl_kind_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TypeDeclKind:
     __tag = int_of_postcard(ctx, st)
     if __tag == 0:
-        _0 = index_vec_of_postcard(field_id_of_postcard, field_of_postcard)(ctx, st)
+        _0 = list_of_postcard(field_of_postcard)(ctx, st)
         return TypeDeclKindStruct(_0)
     if __tag == 1:
-        _0 = index_vec_of_postcard(variant_id_of_postcard, variant_of_postcard)(ctx, st)
+        _0 = list_of_postcard(variant_of_postcard)(ctx, st)
         return TypeDeclKindEnum(_0)
     if __tag == 2:
-        _0 = index_vec_of_postcard(field_id_of_postcard, field_of_postcard)(ctx, st)
+        _0 = list_of_postcard(field_of_postcard)(ctx, st)
         return TypeDeclKindUnion(_0)
     if __tag == 3:
         return TypeDeclKindOpaque()
@@ -2598,8 +2581,8 @@ def type_source_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> TypeSourc
         return TypeSourceClosureType(info)
     if __tag == 2:
         dyn_predicate = dyn_predicate_of_postcard(ctx, st)
-        field_map = index_vec_of_postcard(field_id_of_postcard, v_table_field_of_postcard)(ctx, st)
-        supertrait_map = index_vec_of_postcard(trait_clause_id_of_postcard, option_of_postcard(field_id_of_postcard))(ctx, st)
+        field_map = list_of_postcard(v_table_field_of_postcard)(ctx, st)
+        supertrait_map = list_of_postcard(option_of_postcard(field_id_of_postcard))(ctx, st)
         return TypeSourceVTableType(dyn_predicate, field_map, supertrait_map)
     if __tag == 3:
         _0 = builtin_adt_of_postcard(ctx, st)
@@ -2688,7 +2671,7 @@ def variant_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> Variant:
     span = span_of_postcard(ctx, st)
     attr_info = attr_info_of_postcard(ctx, st)
     variant_name = string_of_postcard(ctx, st)
-    fields = index_vec_of_postcard(field_id_of_postcard, field_of_postcard)(ctx, st)
+    fields = list_of_postcard(field_of_postcard)(ctx, st)
     discriminant = integer_value_of_postcard(ctx, st)
     return Variant(id, span, attr_info, variant_name, fields, discriminant)
 
@@ -2696,7 +2679,7 @@ def variant_id_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> VariantId:
     return VariantId(int_of_postcard(ctx, st))
 
 def variant_layout_of_postcard(ctx: OfPostcardCtx, st: PostcardReader) -> VariantLayout:
-    field_offsets = index_vec_of_postcard(field_id_of_postcard, offset_expr_of_postcard)(ctx, st)
+    field_offsets = list_of_postcard(offset_expr_of_postcard)(ctx, st)
     uninhabited = bool_of_postcard(ctx, st)
     tagger = list_of_postcard(pair_of_postcard(u64_of_postcard, integer_value_of_postcard))(ctx, st)
     return VariantLayout(field_offsets, uninhabited, tagger)

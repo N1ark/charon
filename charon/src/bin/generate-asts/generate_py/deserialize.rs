@@ -23,7 +23,10 @@ pub struct Format {
     pub decoder_ty: &'static str,
     /// The name of the function that reads a scalar of the given type.
     pub scalar_fn: fn(ScalarTy) -> &'static str,
-    /// Types whose deserializer we write by hand, by charon name.
+    /// Types whose deserializer we write by hand, by charon name. Four things resist being derived
+    /// from a declaration: the two ends of the file table, since `File` registers itself in it and
+    /// `FileId` reads it; `ConstantExpr`, whose contents are a pair that we present as a record;
+    /// and `Span`, which the serializer deduplicates without a wrapper type to recognize it by.
     pub manual_impls: &'static [(&'static str, &'static str)],
 }
 
@@ -72,20 +75,45 @@ impl<'a, 'ctx> Deserializer<'a, 'ctx> {
                             return format!("missing_type_{}", tref.id);
                         };
                         match Container::from_name(self.ctx.type_rust_name(tdecl)) {
-                            // Hash-consing is invisible in python.
-                            Some(Container::Transparent) => return args.remove(0),
+                            // Hash-consed values are deduplicated in the serialized output: the
+                            // first occurrence carries an id along with the contents, later ones
+                            // only the id. Ids are handed out per contents type, so each has its
+                            // own table.
+                            Some(Container::Transparent) => {
+                                let contents = tref.generics.types[0]
+                                    .as_adt()
+                                    .filter(|inner| inner.builtin.is_none())
+                                    .and_then(|inner| self.ctx.crate_data.type_decls.get(inner.id));
+                                let Some(contents) = contents else {
+                                    return args.remove(0);
+                                };
+                                let table = self.ctx.type_to_py_fn(contents);
+                                let dedup = self.fn_name("dedup_val");
+                                return format!("{dedup}(ctx.{table}_dedup, {})", args[0]);
+                            }
                             Some(Container::Str) => {
                                 args.clear();
                                 self.fn_name("string")
                             }
                             Some(Container::Vec) => self.fn_name("list"),
+                            // `IndexVec` is serialized as a plain sequence: an element's index is
+                            // its position in it.
+                            Some(Container::IndexVec) => {
+                                args.remove(0);
+                                self.fn_name("list")
+                            }
                             // The key decoder is unused: keys are the positions in the list.
                             Some(Container::IndexedMap) => self.fn_name("indexed_map"),
+                            // `indexmap::IndexMap` is serialized as a list of key/value pairs. Its
+                            // third parameter is the hasher, which never shows up in the output.
                             Some(Container::KeyValueMap) => {
-                                // `indexmap::IndexMap` has a hasher parameter we never read; pass
-                                // something to keep the arity right.
-                                args[2] = self.fn_name("int");
-                                self.fn_name(&self.ctx.type_to_py_fn(tdecl))
+                                return format!(
+                                    "{}({}({}, {}))",
+                                    self.fn_name("list"),
+                                    self.fn_name("key_value_pair"),
+                                    args[0],
+                                    args[1]
+                                );
                             }
                             _ => self.fn_name(&self.ctx.type_to_py_fn(tdecl)),
                         }

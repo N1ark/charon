@@ -31,26 +31,6 @@ fn scalar_fn(scalar: ScalarTy) -> &'static str {
 }
 
 const MANUAL_IMPLS: &[(&str, &str)] = &[
-    // Hand-written because we interpret it as a list.
-    (
-        "charon_lib::ids::index_vec::IndexVec",
-        "list_of_json arg1_of_json ctx json",
-    ),
-    // Hand-written because we interpret it as a list.
-    (
-        "charon_lib::ids::index_map::IndexMap",
-        indoc!(
-            r#"
-            let* list = list_of_json (option_of_json arg1_of_json) ctx json in
-            Ok (List.filter_map (fun x -> x) list)
-            "#
-        ),
-    ),
-    // Hand-written because we turn it into a list of pairs.
-    (
-        "indexmap::map::IndexMap",
-        "list_of_json (key_value_pair_of_json arg0_of_json arg1_of_json) ctx json",
-    ),
     // Hand-written because we replace the `FileId` with the corresponding file name.
     (
         "FileId",
@@ -81,15 +61,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             "#
         ),
     ),
-    ("HashConsed", r#"Error "use `dedup_val_of_json` instead""#), // Not actually used
-    (
-        "Ty",
-        "dedup_val_of_json ctx.ty_dedup_tbl ty_kind_of_json ctx json",
-    ),
-    (
-        "TraitRef",
-        "dedup_val_of_json ctx.tref_dedup_tbl trait_ref_contents_of_json ctx json",
-    ),
+    // Hand-written because its contents are a pair that we present as a record.
     (
         "ConstantExpr",
         indoc!(
@@ -102,10 +74,6 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
               ctx json
             "#
         ),
-    ),
-    (
-        "ExactSizeExpr",
-        "dedup_val_of_json ctx.exact_size_expr_dedup_tbl exact_size_expr_kind_of_json ctx json",
     ),
     // Hand-written because spans are deduplicated in the serialized output.
     (

@@ -251,27 +251,31 @@ def indexed_map_of_postcard(
 
 
 def dedup_val_of_postcard(
-    table: dict[int, T], decode: PostcardDecoder[T], ctx: Any, st: PostcardReader
-) -> T:
+    table: dict[int, T], decode: PostcardDecoder[T]
+) -> PostcardDecoder[T]:
     """See `charon.json_basic.dedup_val_of_json`."""
-    tag = int_of_postcard(ctx, st)
-    if tag == 0:
-        key = int_of_postcard(ctx, st)
-        value = decode(ctx, st)
-        table[key] = value
-        return value
-    if tag == 1:
-        key = int_of_postcard(ctx, st)
-        try:
-            return table[key]
-        except KeyError:
-            raise DeserializeError(
-                "Deduplication key not found; there is a serialization mismatch "
-                "between rust and python"
-            ) from None
-    if tag == 2:
-        return decode(ctx, st)
-    raise DeserializeError(f"invalid deduplicated value representation: {tag}")
+
+    def read(ctx: Any, st: PostcardReader) -> T:
+        tag = int_of_postcard(ctx, st)
+        if tag == 0:
+            key = int_of_postcard(ctx, st)
+            value = decode(ctx, st)
+            table[key] = value
+            return value
+        if tag == 1:
+            key = int_of_postcard(ctx, st)
+            try:
+                return table[key]
+            except KeyError:
+                raise DeserializeError(
+                    "Deduplication key not found; there is a serialization mismatch "
+                    "between rust and python"
+                ) from None
+        if tag == 2:
+            return decode(ctx, st)
+        raise DeserializeError(f"invalid deduplicated value representation: {tag}")
+
+    return read
 
 
 def ensure_eof(st: PostcardReader) -> None:

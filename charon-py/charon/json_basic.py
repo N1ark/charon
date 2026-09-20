@@ -171,28 +171,31 @@ def indexed_map_of_json(key: JsonDecoder[Any], value: JsonDecoder[T]) -> JsonDec
     return read
 
 
-def dedup_val_of_json(
-    table: dict[int, T], decode: JsonDecoder[T], ctx: Any, js: Json
-) -> T:
+def dedup_val_of_json(table: dict[int, T], decode: JsonDecoder[T]) -> JsonDecoder[T]:
     """Read a value that may have been deduplicated in the serialized output.
 
     The first occurrence of such a value is serialized in full along with an id, and later
-    occurrences only mention that id.
+    occurrences only mention that id. The ids are handed out per contents type, so `table` holds
+    the values of one type only.
     """
-    tag, payload = split_variant(js)
-    if tag == "Untagged":
-        return decode(ctx, payload)
-    if tag == "Value":
-        items = expect_list(payload, 2)
-        value = decode(ctx, items[1])
-        table[int_of_json(ctx, items[0])] = value
-        return value
-    if tag == "Deduplicated":
-        try:
-            return table[int_of_json(ctx, payload)]
-        except KeyError:
-            raise DeserializeError(
-                "Deduplication key not found; there is a serialization mismatch "
-                "between rust and python"
-            ) from None
-    raise DeserializeError(f"invalid deduplicated value representation: {tag!r}")
+
+    def read(ctx: Any, js: Json) -> T:
+        tag, payload = split_variant(js)
+        if tag == "Untagged":
+            return decode(ctx, payload)
+        if tag == "Value":
+            items = expect_list(payload, 2)
+            value = decode(ctx, items[1])
+            table[int_of_json(ctx, items[0])] = value
+            return value
+        if tag == "Deduplicated":
+            try:
+                return table[int_of_json(ctx, payload)]
+            except KeyError:
+                raise DeserializeError(
+                    "Deduplication key not found; there is a serialization mismatch "
+                    "between rust and python"
+                ) from None
+        raise DeserializeError(f"invalid deduplicated value representation: {tag!r}")
+
+    return read
