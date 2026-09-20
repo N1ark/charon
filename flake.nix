@@ -207,6 +207,7 @@
 
         charon-ml = pkgs.callPackage ./nix/charon-ml.nix { inherit charon ocamlPackages; };
 
+
         # Check rust files are correctly formatted.
         charon-check-fmt = charon.passthru.check-fmt;
         # Check rust files are clippy-clean.
@@ -229,7 +230,7 @@
         # Check that the generated ocaml files match what is committed to the repo.
         check-generated-asts = pkgs.runCommand "check-generated-asts" { } ''
           mkdir generated
-          cp ${charon}/generated-asts/* generated
+          cp ${charon}/generated-asts/*.ml generated
           chmod u+w generated/*
           cp ${./charon-ml/.ocamlformat} .ocamlformat
           ${ocamlformat}/bin/ocamlformat --inplace --enable-outside-detected-project generated/*.ml
@@ -241,6 +242,24 @@
             echo "Ok: the regenerated ocaml files are the same as the checked out files"
           else
             echo "Error: the regenerated ocaml files differ from the checked out files"
+            diff -ru committed generated
+            exit 1
+          fi
+          touch $out
+        '';
+
+        # Check that the generated python files match what is committed to the repo.
+        check-generated-py = pkgs.runCommand "check-generated-py" { } ''
+          mkdir generated committed
+          cp ${charon}/generated-asts/*.py generated
+          for f in generated/*; do
+            cp ${./charon-py/charon/generated}/"$(basename "$f")" committed
+          done
+
+          if diff -rq committed generated; then
+            echo "Ok: the regenerated python files are the same as the checked out files"
+          else
+            echo "Error: the regenerated python files differ from the checked out files"
             diff -ru committed generated
             exit 1
           fi
@@ -341,8 +360,8 @@
         checks = {
           default = charon-ml-tests;
           inherit charon-ml-tests charon-check-fmt charon-check-no-rustc
-            charon-ml-check-fmt check-generated-asts test-charon-via-nix
-            charon-check-clippy;
+            charon-ml-check-fmt check-generated-asts check-generated-py
+            test-charon-via-nix charon-check-clippy;
         };
 
         # Export this function so that users of charon can use it in nix. This

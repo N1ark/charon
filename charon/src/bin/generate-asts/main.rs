@@ -8,6 +8,7 @@ use std::process::Command;
 
 mod codegen;
 mod generate_ml;
+mod generate_py;
 mod generate_rust;
 
 fn run_charon(charon_llbc: &Path, rustc_datatypes: &generate_rust::RustcDatatypes) -> Result<()> {
@@ -81,13 +82,18 @@ fn main() -> Result<()> {
     let mut crate_data = translate_charon_itself(&generated_dir, &rustc_datatypes)?;
     use_serialized_span(&mut crate_data)?;
 
-    let ml_output_dir = if std::env::var("IN_CI").as_deref() == Ok("1") {
-        generated_dir
+    // In CI we only check that generation succeeds, so we leave the checked-in files alone.
+    let (ml_output_dir, py_output_dir) = if std::env::var("IN_CI").as_deref() == Ok("1") {
+        (generated_dir.clone(), generated_dir)
     } else {
-        dir.join("../../../../charon-ml/src/generated")
+        (
+            dir.join("../../../../charon-ml/src/generated"),
+            dir.join("../../../../charon-py/charon/generated"),
+        )
     };
     let mut ctx = codegen::GenerateCtx::new(&crate_data);
     generate_ml::generate(&mut ctx, dir.join("generate_ml/templates"), ml_output_dir)?;
+    generate_py::generate(&mut ctx, dir.join("generate_py/templates"), py_output_dir)?;
     generate_rust::generate(&crate_data, &rustc_datatypes)?;
     Ok(())
 }

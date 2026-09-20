@@ -36,8 +36,8 @@ Run `charon` inside the crate of interest, much like you would call `cargo build
 a `crate_name.llbc` file.
 
 The `charon-lib` crate can read this file and let you manipulate its contents. Parse the file using
-`serde_json::from_reader::<charon_lib::export::CrateData>(file)`. OCaml bindings are also available
-in the `charon-ml` folder.
+`serde_json::from_reader::<charon_lib::export::CrateData>(file)`. OCaml and python bindings are also
+available, in the `charon-ml` and `charon-py` folders.
 
 For more detailed usage instructions, see the [documentation](./docs/usage.md).
 

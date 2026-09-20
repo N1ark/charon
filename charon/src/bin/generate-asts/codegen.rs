@@ -297,6 +297,17 @@ impl AstTypes {
         }
         this
     }
+
+    /// All the types of the AST, for backends that don't need them grouped.
+    pub fn all(&self) -> HashSet<TypeDeclId> {
+        self.gast
+            .iter()
+            .chain(&self.llbc)
+            .chain(&self.ullbc)
+            .chain(&self.full_ast)
+            .copied()
+            .collect()
+    }
 }
 
 /// Hands out the types whose declaration is still to be generated.

@@ -15,6 +15,13 @@ charon-ml/src/CharonVersion.ml: charon/Cargo.toml
 	printf 'let supported_charon_version = ' >> "$@"
 	grep '^version =' charon/Cargo.toml | head -1 | sed 's/^version = \(".*"\)/\1/' >> "$@"
 
+# Same, for charon-py.
+charon-py/charon/version.py: charon/Cargo.toml
+	echo '# This is an automatically generated file, generated from `charon/Cargo.toml`.' > "$@"
+	echo '# To re-generate this file, run `make` in the root directory.' >> "$@"
+	printf 'SUPPORTED_CHARON_VERSION = ' >> "$@"
+	grep '^version =' charon/Cargo.toml | head -1 | sed 's/^version = \(".*"\)/\1/' >> "$@"
+
 # Build the project in release mode, after formatting the code
 .PHONY: build
 build: build-charon-rust build-charon-ml

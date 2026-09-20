@@ -50,6 +50,7 @@ craneLib.buildPackage (
       # Export the generated files to later check if they match the committed files.
       mkdir -p $out/generated-asts
       cp src/bin/generate-asts/generated/*.ml $out/generated-asts
+      cp src/bin/generate-asts/generated/*.py $out/generated-asts
     '';
 
     passthru.check-fmt = craneLib.cargoFmt craneArgs;

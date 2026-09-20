@@ -83,11 +83,11 @@ Guidance for AI agents working on Charon.
   Well-motivated changes are however totally fine.
 - Always do a full `make test && make clippy` at the end of a change.
 
-## OCaml vs Rust
+## OCaml and python vs Rust
 
 Charon is a hybrid codebase. A typical feature is mostly on the Rust side. However when the AST
-changes, this must be propagated. Use `make generate-asts` to regenerate the generated OCaml files.
-`make test` at the root of the repo tests both the OCaml and Rust sides.
+changes, this must be propagated to the OCaml (`charon-ml`) and python (`charon-py`) bindings. Use
+`make generate-asts` to regenerate both. `make test` at the root of the repo tests all three sides.
 
 ## Versioning
 
