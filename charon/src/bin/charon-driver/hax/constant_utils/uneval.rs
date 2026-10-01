@@ -111,6 +111,31 @@ pub fn eval_ty_constant<'tcx, S: UnderOwnerState<'tcx>>(
     Some(ty::Const::new_value(tcx, val, ty))
 }
 
+/// Evaluate a constant (or one of its promoteds) to an allocation and read it back. Unlike
+/// valtrees, this keeps track of the allocations the value points to.
+pub fn eval_constant_to_alloc<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    def_id: rustc_span::def_id::DefId,
+    args: ty::GenericArgsRef<'tcx>,
+    promoted: Option<mir::Promoted>,
+) -> Option<ConstantExpr> {
+    use ty::TypeVisitableExt;
+    let tcx = s.base().tcx;
+    if args.has_non_region_param() {
+        return None;
+    }
+    let instance = ty::Instance::try_resolve(tcx, s.typing_env(), def_id, args).ok()??;
+    let cid = interpret::GlobalId { instance, promoted };
+    let alloc = tcx
+        .eval_to_allocation_raw(s.typing_env().as_query_input(cid))
+        .ok()?;
+    let val = mir::ConstValue::Indirect {
+        alloc_id: alloc.alloc_id,
+        offset: rustc_abi::Size::ZERO,
+    };
+    const_value_to_constant_expr(s, alloc.ty, val, tcx.def_span(def_id)).discard_err()
+}
+
 impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for ty::Const<'tcx> {
     #[tracing::instrument(level = "trace", skip(s))]
     fn sinto(&self, s: &S) -> ConstantExpr {
@@ -131,10 +156,13 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for ty::Const<'tcx> 
                     .kind
                     .opt_def_id()
                     .expect("AliasConstKind with no def id?");
-                if s.base().options.inline_anon_consts
-                    && is_anon_const(def, tcx)
-                    && let Some(val) = eval_ty_constant(s, ucv)
+                let inline = s.base().options.inline_anon_consts && is_anon_const(def, tcx);
+                if inline
+                    && s.base().options.anon_allocs_as_globals
+                    && let Some(val) = eval_constant_to_alloc(s, def, ucv.args, None)
                 {
+                    val
+                } else if inline && let Some(val) = eval_ty_constant(s, ucv) {
                     val.sinto(s)
                 } else {
                     use rustc_middle::query::QueryKey;

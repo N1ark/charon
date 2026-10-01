@@ -57,7 +57,12 @@ impl UllbcPass for Transform {
                     uses: 0,
                     derefs: 0,
                 };
-                Some((dest.as_local()?, info))
+                // The return local is implicitly used by `return`, so we can't remove its
+                // assignment. We leave arguments alone too.
+                let local = dest
+                    .as_local()
+                    .filter(|l| !body.locals.is_return_or_arg(*l))?;
+                Some((local, info))
             })
             .collect();
         if statics.is_empty() {

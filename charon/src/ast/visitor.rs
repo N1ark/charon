@@ -49,7 +49,7 @@ use derive_generic_visitor::*;
     skip_but_eq(
         (), String, PathBuf, bool, char, i128, u8, u32, u64, u128, usize, ustr::Ustr,
         crate::options::CliOpts,
-        Abi, BuiltinImplData, Byte, DeprecatedSince, DropKind, Error, FileName,
+        Abi, BuiltinImplData, DeprecatedSince, DropKind, Error, FileName,
         GlobalKind, ItemOpacity, LangItem, LifetimeMutability, OptimizeAttr, OverflowMode,
         ReprOptions, RuntimeChecks, Variance, FieldPredecessor,
         std::ops::RangeInclusive<IntegerValue>,
@@ -63,13 +63,13 @@ use derive_generic_visitor::*;
     ),
     // Types that we unconditionally explore.
     drive(
-        Assert, AttributeKind, BinderKind, BinOp, BorrowckStatement, BorrowKind, BuiltinAdt, BuiltinAssertKind,
+        Assert, AttributeKind, BinderKind, BinOp, BorrowckStatement, BorrowKind, BuiltinAdt, BuiltinAssertKind, Byte,
         Call, InlineAsm, AsmTemplatePiece, AsmOperand, CastKind, ClosureInfo, ClosureKind, ConstGenericParam, ConstGenericVarId, ConstProjectionElem,
         Deprecation, Disambiguator, DynPredicate, Field, FieldId, File, FloatTy, FloatValue,
         FnOperand, FnPtrKind, InlineAttr, IntegerTy, IntTy, UIntTy, ScalarTy,
         Ident, from_rustc::InlineAttr,
         llbc_ast::ExprBody, llbc_ast::StatementKind,
-        Loc, Locals, NullOp, Operand, PathElem, PlaceKind,
+        Loc, Locals, NullOp, Operand, PathElem, PlaceKind, Provenance,
         RawAttribute, RefKind, RegionId, RegionParam, IntegerValue, TraitItemName, TraitMethodId, AssocTypeId, AssocConstId, AssocItemId, MaybeAssocItemId,
         TranslatedCrate, TypeDeclKind, TypeParam, TypePattern, TypeVarId,
         ullbc_ast::BlockData, ullbc_ast::BlockId, ullbc_ast::ExprBody, ullbc_ast::StatementKind,

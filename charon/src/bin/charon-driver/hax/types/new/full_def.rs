@@ -1667,7 +1667,7 @@ impl<'tcx> FullDef<'tcx> {
         })
     }
 
-    /// Evaluate the value of a `Const` or `AssocConst` item.
+    /// Evaluate the value of a `Const` or `AssocConst` item, or of a promoted constant.
     pub fn const_value<S>(&self, s: &S) -> Option<ConstantExpr>
     where
         S: BaseState<'tcx>,
@@ -1678,8 +1678,16 @@ impl<'tcx> FullDef<'tcx> {
         }
         let s = &s.with_hax_owner(self.def_id());
         let tcx = s.base().tcx;
-        let def_id = self.def_id().as_real_def_id()?;
         let args = self.this().rustc_args(s);
+        // Prefer evaluating to an allocation, which keeps track of the allocations the value
+        // points to.
+        if s.base().options.anon_allocs_as_globals
+            && let DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, _) = &self.def_id().base
+            && let Some(val) = eval_constant_to_alloc(s, *def_id, args, self.def_id().promoted_id())
+        {
+            return Some(val);
+        }
+        let def_id = self.def_id().as_real_def_id()?;
         let kind =
             ty::AliasConstKind::new_from_def_id(tcx, def_id, ty::AliasConstInherentArgsKind::Impl);
         let uneval = ty::AliasConst::new(tcx, kind, args);
