@@ -37,14 +37,23 @@ pub enum ConstantExprKind {
     ///
     /// This is eliminated inside functions if `--raw-consts` is off.
     Array(Vec<ConstantExpr>),
-    /// A shared reference to a constant value.
+    /// A shared reference to a constant value, or to a place inside it.
     ///
     /// This is eliminated inside functions if `--raw-consts` is off.
-    Ref(ConstantExpr, Option<UnsizingMetadata>),
-    /// A pointer to a static.
+    Ref(
+        ConstantExpr,
+        Vec<ConstProjectionElem>,
+        Option<UnsizingMetadata>,
+    ),
+    /// A raw pointer to a constant value, or to a place inside it.
     ///
     /// This is eliminated inside functions if `--raw-consts` is off.
-    Ptr(RefKind, ConstantExpr, Option<UnsizingMetadata>),
+    Ptr(
+        RefKind,
+        ConstantExpr,
+        Vec<ConstProjectionElem>,
+        Option<UnsizingMetadata>,
+    ),
     /// `str` value.
     Str(String),
     /// Byte string value.
@@ -101,6 +110,59 @@ pub enum ConstantExprKind {
 
     /// A constant expression that Charon doesn't handle, along with the reason why.
     Opaque(String),
+}
+
+/// A projection inside the pointee of a `Ref`/`Ptr` constant. This is a constant version of
+/// [`ProjectionElem`].
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("CProj"))]
+pub enum ConstProjectionElem {
+    /// Project to the field of an ADT.
+    Field(Option<VariantId>, FieldId),
+    /// Project to the element of an array at the given index.
+    #[serde_state(stateless)]
+    Index(IntegerValue),
+    /// Project to the subarray `array[from..to]`.
+    #[serde_state(stateless)]
+    Subslice {
+        from: IntegerValue,
+        to: IntegerValue,
+    },
+    /// Like `ProjectionElem::Offset`: the place located this many bytes after the current place,
+    /// with the same type.
+    Offset(SizeExpr),
+}
+
+impl ConstProjectionElem {
+    /// The corresponding place projection. `Offset` has none, as its size must be computed
+    /// first.
+    pub fn to_projection_elem(&self) -> Option<ProjectionElem> {
+        let op = |n: IntegerValue| Box::new(Operand::Const(n.to_constant()));
+        Some(match *self {
+            ConstProjectionElem::Field(variant_id, field_id) => {
+                ProjectionElem::Field(variant_id, field_id)
+            }
+            ConstProjectionElem::Index(i) => ProjectionElem::Index {
+                offset: op(i),
+                from_end: false,
+            },
+            ConstProjectionElem::Subslice { from, to } => ProjectionElem::Subslice {
+                from: op(from),
+                to: op(to),
+                from_end: false,
+            },
+            ConstProjectionElem::Offset(_) => return None,
+        })
+    }
+
+    /// Compute the type obtained when applying this projection to a place of type `ty`.
+    pub fn project_type(&self, krate: &TranslatedCrate, ty: &Ty) -> Option<Ty> {
+        match self {
+            ConstProjectionElem::Offset(_) => Some(ty.clone()),
+            _ => self.to_projection_elem()?.project_type(krate, ty),
+        }
+    }
 }
 
 /// A scalar value.

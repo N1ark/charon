@@ -510,8 +510,8 @@ and pp_constant_expr (env : fmt_env) (fmt : Format.formatter)
         args
   | CFnDef fn_ptr -> pp_fn_ptr env fmt fn_ptr
   | CFnPtr fn_ptr -> Format.fprintf fmt "fnptr(%a)" (pp_fn_ptr env) fn_ptr
-  | CCast (value, ty) ->
-      Format.fprintf fmt "cast<%a>(%a)" (pp_ty env) ty (pp_constant_expr env)
+  | CCast (value, kind) ->
+      Format.fprintf fmt "%a(%a)" (pp_cast_kind env) kind (pp_constant_expr env)
         value
   | CSizeOf ty -> Format.fprintf fmt "size_of::<%a>()" (pp_ty env) ty
   | CAlignOf ty -> Format.fprintf fmt "align_of::<%a>()" (pp_ty env) ty
@@ -545,25 +545,90 @@ and pp_constant_expr (env : fmt_env) (fmt : Format.formatter)
       Format.fprintf fmt "[%a]" (pp_sep_list ", " (pp_constant_expr env)) fields
   | CGlobal gref -> pp_global_decl_ref env fmt gref
   | CPtrNoProvenance n -> Format.fprintf fmt "no-provenance %s" (Z.to_string n)
-  | CRef (c, meta) ->
-      Format.fprintf fmt "&%a" (pp_constant_expr env) c;
-      Option.iter
-        (fun meta ->
-          Format.fprintf fmt " with_metadata(%a)" (pp_unsizing_metadata env)
-            meta)
-        meta
-  | CPtr (ref_kind, c, meta) ->
-      let ref_kind =
-        match ref_kind with
-        | RShared -> "&raw const"
-        | RMut -> "&raw mut"
+  | CRef (c, projs, meta) | CPtr (_, c, projs, meta) ->
+      (match cv.kind with
+      | CPtr (RShared, _, _, _) -> pp_string fmt "&raw const "
+      | CPtr (RMut, _, _, _) -> pp_string fmt "&raw mut "
+      | _ -> pp_string fmt "&");
+      (* Format the place by successively wrapping it in the projections. We
+         track the type of the place to print field names. *)
+      let place, _ =
+        List.fold_left
+          (fun (sub, sub_ty) proj ->
+            match proj with
+            | CProjField (variant_id, field_id) ->
+                let field_ty =
+                  match sub_ty with
+                  | TAdt tref -> (
+                      match
+                        TypeDeclId.Map.find_opt tref.id env.crate.type_decls
+                      with
+                      | Some def ->
+                          FieldId.nth
+                            (Substitute.type_decl_get_instantiated_field_types
+                               def variant_id tref.generics)
+                            field_id
+                      | None -> TError "unknown type")
+                  | _ -> TError "unknown type"
+                in
+                ( pp_to_string (fun fmt ->
+                      pp_field_projection env sub sub_ty fmt variant_id field_id),
+                  field_ty )
+            | CProjIndex i ->
+                let elem_ty =
+                  match sub_ty with
+                  | TArray (ty, _, _) | TSlice (ty, _) -> ty
+                  | _ -> TError "unknown type"
+                in
+                (Format.asprintf "%s[%a]" sub pp_integer_value i, elem_ty)
+            (* We keep the array length as is, it doesn't matter for printing. *)
+            | CProjSubslice (from, to_) ->
+                ( Format.asprintf "%s[%a..%a]" sub pp_integer_value from
+                    pp_integer_value to_,
+                  sub_ty )
+            | CProjOffset n ->
+                ( Format.asprintf "%s.offset(%a)" sub (pp_size_expr env) n,
+                  sub_ty ))
+          (constant_expr_to_string env c, c.ty)
+          projs
       in
-      Format.fprintf fmt "%s %a" ref_kind (pp_constant_expr env) c;
+      pp_string fmt place;
       Option.iter
         (fun meta ->
           Format.fprintf fmt " with_metadata(%a)" (pp_unsizing_metadata env)
             meta)
         meta
+
+and pp_cast_kind (env : fmt_env) (fmt : Format.formatter) (cast : cast_kind) :
+    unit =
+  match cast with
+  | CastScalar (src, tgt) ->
+      Format.fprintf fmt "cast<%a, %a>" pp_scalar_type src pp_scalar_type tgt
+  | CastPtrExposeProvenance (src, tgt) ->
+      Format.fprintf fmt "cast_expose<%a, %a>" (pp_ty env) src pp_scalar_type
+        tgt
+  | CastPtrWithExposedProvenance (src, tgt) ->
+      Format.fprintf fmt "cast_with_exposed<%a, %a>" pp_scalar_type src
+        (pp_ty env) tgt
+  | CastFnPtr (src, tgt) | CastRawPtr (src, tgt) ->
+      Format.fprintf fmt "cast<%a, %a>" (pp_ty env) src (pp_ty env) tgt
+  | CastTransmute (src, tgt) ->
+      Format.fprintf fmt "transmute<%a, %a>" (pp_ty env) src (pp_ty env) tgt
+  | CastUnsize (src, tgt, meta) ->
+      Format.fprintf fmt "unsize_cast<%a, %a, %a>" (pp_ty env) src (pp_ty env)
+        tgt (pp_unsizing_metadata env) meta
+  | CastConcretize (src, tgt) ->
+      Format.fprintf fmt "concretize<%a, %a>" (pp_ty env) src (pp_ty env) tgt
+
+(* Only the sizes that appear in constants are supported. *)
+and pp_size_expr (env : fmt_env) (fmt : Format.formatter) (e : size_expr) : unit
+    =
+  match e with
+  | SizeExprConstant c -> pp_constant_expr env fmt c
+  | SizeExprScale (base, multiplier) ->
+      Format.fprintf fmt "(%a * %a)" (pp_size_expr env) base
+        (pp_constant_expr env) multiplier
+  | _ -> pp_string fmt "<size>"
 
 and pp_match_pattern (env : fmt_env) (fmt : Format.formatter)
     (cv : constant_expr) : unit =
@@ -574,6 +639,32 @@ and pp_match_pattern (env : fmt_env) (fmt : Format.formatter)
 
 and constant_expr_to_string env cv =
   pp_to_string (fun fmt -> pp_constant_expr env fmt cv)
+
+(** Formats the projection of field [fid] of [sub], which has type [sub_ty]. *)
+and pp_field_projection (env : fmt_env) (sub : string) (sub_ty : ty)
+    (fmt : Format.formatter) (opt_variant_id : variant_id option)
+    (fid : field_id) : unit =
+  (* The type of the sub-place tells us which declaration the field comes
+     from. *)
+  let adt = ty_as_opt_adt sub_ty in
+  let field_name =
+    match
+      Option.bind adt (fun adt ->
+          adt_field_to_string env adt.id opt_variant_id fid)
+    with
+    | Some field_name -> field_name
+    | None -> FieldId.to_string fid
+  in
+  match (opt_variant_id, adt) with
+  | None, _ -> Format.fprintf fmt "%s.%s" sub field_name
+  | Some variant_id, Some adt ->
+      Format.fprintf fmt "(%s as variant %a).%s" sub
+        (pp_adt_variant env adt.id)
+        variant_id field_name
+  | Some variant_id, None ->
+      Format.fprintf fmt "(%s as variant %s).%s" sub
+        (variant_id_to_pretty_string variant_id)
+        field_name
 
 and pp_fn_ptr_kind (env : fmt_env) (fmt : Format.formatter) (r : fn_ptr_kind) :
     unit =
@@ -1410,28 +1501,8 @@ let rec pp_projection_elem (env : fmt_env) (subplace : place)
         else operand_to_string env to_
       in
       Format.fprintf fmt "%s[%s..%s]" sub (operand_to_string env from) to_
-  | Field (opt_variant_id, fid) -> (
-      (* The type of the sub-place tells us which declaration the field comes
-         from. *)
-      let adt = ty_as_opt_adt subplace.ty in
-      let field_name =
-        match
-          Option.bind adt (fun adt ->
-              adt_field_to_string env adt.id opt_variant_id fid)
-        with
-        | Some field_name -> field_name
-        | None -> FieldId.to_string fid
-      in
-      match (opt_variant_id, adt) with
-      | None, _ -> Format.fprintf fmt "%s.%s" sub field_name
-      | Some variant_id, Some adt ->
-          Format.fprintf fmt "(%s as variant %a).%s" sub
-            (pp_adt_variant env adt.id)
-            variant_id field_name
-      | Some variant_id, None ->
-          Format.fprintf fmt "(%s as variant %s).%s" sub
-            (variant_id_to_pretty_string variant_id)
-            field_name)
+  | Field (opt_variant_id, fid) ->
+      pp_field_projection env sub subplace.ty fmt opt_variant_id fid
   | PtrMetadata -> Format.fprintf fmt "%s.metadata" sub
   | Offset n -> Format.fprintf fmt "%s.offset(%s)" sub (operand_to_string env n)
 
@@ -1444,27 +1515,6 @@ and pp_place (env : fmt_env) (fmt : Format.formatter) (p : place) : unit =
         (pp_generic_args env) global_ref.generics
 
 and place_to_string env p = pp_to_string (fun fmt -> pp_place env fmt p)
-
-and pp_cast_kind (env : fmt_env) (fmt : Format.formatter) (cast : cast_kind) :
-    unit =
-  match cast with
-  | CastScalar (src, tgt) ->
-      Format.fprintf fmt "cast<%a, %a>" pp_scalar_type src pp_scalar_type tgt
-  | CastPtrExposeProvenance (src, tgt) ->
-      Format.fprintf fmt "cast_expose<%a, %a>" (pp_ty env) src pp_scalar_type
-        tgt
-  | CastPtrWithExposedProvenance (src, tgt) ->
-      Format.fprintf fmt "cast_with_exposed<%a, %a>" pp_scalar_type src
-        (pp_ty env) tgt
-  | CastFnPtr (src, tgt) | CastRawPtr (src, tgt) ->
-      Format.fprintf fmt "cast<%a, %a>" (pp_ty env) src (pp_ty env) tgt
-  | CastTransmute (src, tgt) ->
-      Format.fprintf fmt "transmute<%a, %a>" (pp_ty env) src (pp_ty env) tgt
-  | CastUnsize (src, tgt, meta) ->
-      Format.fprintf fmt "unsize_cast<%a, %a, %a>" (pp_ty env) src (pp_ty env)
-        tgt (pp_unsizing_metadata env) meta
-  | CastConcretize (src, tgt) ->
-      Format.fprintf fmt "concretize<%a, %a>" (pp_ty env) src (pp_ty env) tgt
 
 and pp_nullop (env : fmt_env) (fmt : Format.formatter) (op : nullop) : unit =
   match op with

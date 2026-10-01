@@ -60,6 +60,20 @@ fn new_promoted_global(
     }
 }
 
+/// Compute the value of a size, as a `usize` operand.
+fn size_to_operand(ctx: &mut UllbcStatementTransformCtx<'_>, size: &SizeExpr) -> Operand {
+    match size.kind() {
+        SizeExprKind::Constant(c) => Operand::Const(c.clone()),
+        SizeExprKind::Scale(size, n) => {
+            let size = size_to_operand(ctx, size);
+            let mul = BinOp::Mul(OverflowMode::UB);
+            let rval = Rvalue::BinaryOp(mul, size, Operand::Const(n.clone()));
+            Operand::Move(ctx.rval_to_place(rval, Ty::mk_usize()))
+        }
+        _ => unreachable!("unexpected size expression in a constant"),
+    }
+}
+
 /// If the constant value is a constant ADT, push `Assign::Aggregate` statements
 /// to the vector of statements, that bind new variables to the ADT parts and
 /// the variable assigned to the complete ADT.
@@ -81,9 +95,9 @@ fn transform_constant_expr(
             let cast = UnOp::Cast(CastKind::RawPtr(usize_ty.clone(), val.ty().clone()));
             Rvalue::UnaryOp(cast, Operand::Const(ConstantExpr::new(ptr_usize, usize_ty)))
         }
-        cexpr @ (ConstantExprKind::Ref(bval, metadata)
-        | ConstantExprKind::Ptr(_, bval, metadata)) => {
-            let rk = cexpr.as_ptr().map(|(rk, _, _)| *rk);
+        cexpr @ (ConstantExprKind::Ref(bval, projs, metadata)
+        | ConstantExprKind::Ptr(_, bval, projs, metadata)) => {
+            let rk = cexpr.as_ptr().map(|(rk, ..)| *rk);
             let bval_is_sized = bval.ty().get_ptr_metadata(ctx.get_crate()).is_none();
 
             let place = match bval.kind() {
@@ -110,6 +124,19 @@ fn transform_constant_expr(
                     ctx.rval_to_place(Rvalue::Use(bval, WithRetag::No), bval_ty)
                 }
             };
+            let mut place = place;
+            for proj in projs {
+                let proj = match proj {
+                    ConstProjectionElem::Offset(size) => {
+                        ProjectionElem::Offset(Box::new(size_to_operand(ctx, size)))
+                    }
+                    _ => proj.to_projection_elem().unwrap(),
+                };
+                let ty = proj
+                    .project_type(ctx.get_crate(), place.ty())
+                    .unwrap_or_else(|| TyKind::Error("ill-typed projection".into()).into_ty());
+                place = place.project(proj, ty);
+            }
             // A sized place is unsized after being borrowed, if there's metadata.
             let mut rval = match (rk, metadata.clone().filter(|_| bval_is_sized)) {
                 // Borrow the place.
@@ -213,7 +240,7 @@ fn transform_constant_expr(
                 ConstantExprKind::Global(vtable_ref.clone()),
                 vtable_ty.clone(),
             );
-            val.with_contents_mut(|kind, _| *kind = ConstantExprKind::Ref(inner, None));
+            val.with_contents_mut(|kind, _| *kind = ConstantExprKind::Ref(inner, vec![], None));
             // Normalize further into a place access.
             return transform_constant_expr(ctx, val);
         }

@@ -1631,16 +1631,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for Place {
                 match projection {
                     ProjectionElem::Deref => write!(f, "(*{sub})"),
                     ProjectionElem::Field(variant_id, field_id) => {
-                        let tref = subplace.ty().as_adt().unwrap();
-                        match variant_id {
-                            None => write!(f, "{sub}.")?,
-                            Some(variant_id) => {
-                                write!(f, "({sub} as variant ")?;
-                                ctx.format_enum_variant(f, tref.id, *variant_id)?;
-                                write!(f, ").")?;
-                            }
-                        }
-                        ctx.format_field_name(f, tref.id, *variant_id, *field_id)
+                        fmt_field_projection(ctx, f, sub, subplace.ty(), *variant_id, *field_id)
                     }
                     ProjectionElem::PtrMetadata => write!(f, "{sub}.metadata"),
                     ProjectionElem::Index {
@@ -1670,6 +1661,29 @@ impl<C: AstFormatter> FmtWithCtx<C> for Place {
             }
         }
     }
+}
+
+/// Formats the projection of field `field_id` of `sub`, which has type `sub_ty`.
+fn fmt_field_projection<C: AstFormatter>(
+    ctx: &C,
+    f: &mut fmt::Formatter<'_>,
+    sub: impl Display,
+    sub_ty: &Ty,
+    variant_id: Option<VariantId>,
+    field_id: FieldId,
+) -> fmt::Result {
+    let Some(tref) = sub_ty.as_adt() else {
+        return write!(f, "{sub}.{field_id}");
+    };
+    match variant_id {
+        None => write!(f, "{sub}.")?,
+        Some(variant_id) => {
+            write!(f, "({sub} as variant ")?;
+            ctx.format_enum_variant(f, tref.id, variant_id)?;
+            write!(f, ").")?;
+        }
+    }
+    ctx.format_field_name(f, tref.id, variant_id, field_id)
 }
 
 impl<C: AstFormatter> FmtWithCtx<C> for PolyTraitDeclRef {
@@ -1942,34 +1956,41 @@ impl<C: AstFormatter> FmtWithCtx<C> for ConstantExpr {
                 ctx.format_enum_variant(f, type_ref.id, *variant_id)?;
                 write!(f, ")")
             }
-            ConstantExprKind::Ref(cv, meta) => {
-                if let Some(meta) = meta {
-                    write!(
-                        f,
-                        "&{} with_metadata({})",
-                        cv.with_ctx(ctx),
-                        meta.with_ctx(ctx)
-                    )
-                } else {
-                    write!(f, "&{}", cv.with_ctx(ctx))
+            ConstantExprKind::Ref(cv, projs, meta) | ConstantExprKind::Ptr(_, cv, projs, meta) => {
+                match self.kind() {
+                    ConstantExprKind::Ptr(RefKind::Mut, ..) => write!(f, "&raw mut ")?,
+                    ConstantExprKind::Ptr(RefKind::Shared, ..) => write!(f, "&raw const ")?,
+                    _ => write!(f, "&")?,
                 }
-            }
-            ConstantExprKind::Ptr(rk, cv, meta) => {
-                let rk = match rk {
-                    RefKind::Mut => "&raw mut",
-                    RefKind::Shared => "&raw const",
-                };
-                if let Some(meta) = meta {
-                    write!(
-                        f,
-                        "{} {} with_metadata({})",
-                        rk,
-                        cv.with_ctx(ctx),
-                        meta.with_ctx(ctx)
-                    )
-                } else {
-                    write!(f, "{} {}", rk, cv.with_ctx(ctx))
+                // Format the place by successively wrapping it in the projections.
+                let mut place = cv.with_ctx(ctx).to_string();
+                let mut ty = cv.ty().clone();
+                for proj in projs {
+                    place = match proj {
+                        ConstProjectionElem::Field(variant_id, field_id) => {
+                            std::fmt::from_fn(|f| {
+                                fmt_field_projection(ctx, f, &place, &ty, *variant_id, *field_id)
+                            })
+                            .to_string()
+                        }
+                        ConstProjectionElem::Index(i) => format!("{place}[{i}]"),
+                        ConstProjectionElem::Subslice { from, to } => {
+                            format!("{place}[{from}..{to}]")
+                        }
+                        ConstProjectionElem::Offset(n) => {
+                            format!("{place}.offset({})", n.with_ctx(ctx))
+                        }
+                    };
+                    ty = ctx
+                        .get_crate()
+                        .and_then(|krate| proj.project_type(krate, &ty))
+                        .unwrap_or_else(|| TyKind::Error("unknown type".into()).into_ty());
                 }
+                write!(f, "{place}")?;
+                if let Some(meta) = meta {
+                    write!(f, " with_metadata({})", meta.with_ctx(ctx))?;
+                }
+                Ok(())
             }
             ConstantExprKind::Var(id) => write!(f, "{}", id.with_ctx(ctx)),
             ConstantExprKind::Call(fp, args) => {

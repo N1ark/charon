@@ -64,7 +64,7 @@ use derive_generic_visitor::*;
     // Types that we unconditionally explore.
     drive(
         Assert, AttributeKind, BinderKind, BinOp, BorrowckStatement, BorrowKind, BuiltinAdt, BuiltinAssertKind,
-        Call, InlineAsm, AsmTemplatePiece, AsmOperand, CastKind, ClosureInfo, ClosureKind, ConstGenericParam, ConstGenericVarId,
+        Call, InlineAsm, AsmTemplatePiece, AsmOperand, CastKind, ClosureInfo, ClosureKind, ConstGenericParam, ConstGenericVarId, ConstProjectionElem,
         Deprecation, Disambiguator, DynPredicate, Field, FieldId, File, FloatTy, FloatValue,
         FnOperand, FnPtrKind, InlineAttr, IntegerTy, IntTy, UIntTy, ScalarTy,
         Ident, from_rustc::InlineAttr,

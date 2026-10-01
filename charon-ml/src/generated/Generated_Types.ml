@@ -317,6 +317,23 @@ and const_generic_param = {
 
 and const_generic_var_id = (ConstGenericVarId.id[@visitors.opaque])
 
+(** A projection inside the pointee of a [Ref]/[Ptr] constant. This is a
+    constant version of [[ProjectionElem]]. *)
+and const_projection_elem =
+  | CProjField of variant_id option * field_id
+      (** Project to the field of an ADT. *)
+  | CProjIndex of integer_value
+      (** Project to the element of an array at the given index. *)
+  | CProjSubslice of integer_value * integer_value
+      (** Project to the subarray [array[from..to]].
+
+          Fields:
+          - [from]
+          - [to] *)
+  | CProjOffset of size_expr
+      (** Like [ProjectionElem::Offset]: the place located this many bytes after
+          the current place, with the same type. *)
+
 (** A constant expression. *)
 and constant_expr = { kind : constant_expr_kind; ty : ty }
 
@@ -333,12 +350,17 @@ and constant_expr_kind =
       (** Array value.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
-  | CRef of constant_expr * unsizing_metadata option
-      (** A shared reference to a constant value.
+  | CRef of
+      constant_expr * const_projection_elem list * unsizing_metadata option
+      (** A shared reference to a constant value, or to a place inside it.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
-  | CPtr of ref_kind * constant_expr * unsizing_metadata option
-      (** A pointer to a static.
+  | CPtr of
+      ref_kind
+      * constant_expr
+      * const_projection_elem list
+      * unsizing_metadata option
+      (** A raw pointer to a constant value, or to a place inside it.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
   | CStr of string  (** [str] value. *)
@@ -472,6 +494,18 @@ and lifetime_mutability =
   | LtUnknown
       (** A lifetime for which we couldn't/didn't compute mutability. *)
 
+(** Layout information given by the metadata of an unsized type. *)
+and metadata_value =
+  | DynSize
+      (** For a DST with [dyn Trait] metadata, this refers to the size found in
+          the metadata. *)
+  | DynAlign
+      (** For a DST with [dyn Trait] metadata, this refers to the alignment
+          found in the metadata. *)
+  | SliceLength
+      (** For a DST with slice metadata, this refers to the length found in the
+          metadata. *)
+
 (** .0 outlives .1 *)
 and ('a0, 'a1) outlives_pred = 'a0 * 'a1
 
@@ -525,6 +559,34 @@ and region_param = {
           global analysis that looks even into opaque items. When unsure, err on
           the side of assuming mutability. *)
 }
+
+(** An expression that represents a size in bytes. *)
+and size_expr = size_expr_kind hash_consed
+
+and size_expr_kind =
+  | SizeExprConstant of constant_expr
+      (** An arbitrary constant of type [usize]. *)
+  | SizeExprFromMetadata of metadata_value
+      (** Layout information stored in the pointer metadata to this object. *)
+  | SizeExprMax of size_expr list
+  | SizeExprMin of size_expr list
+  | SizeExprPlus of size_expr * size_expr
+  | SizeExprScale of size_expr * constant_expr  (** Multiply by a constant. *)
+  | SizeExprAtLeast of size_expr
+      (** The size is at least the value of this expression. *)
+  | SizeExprAlignTo of size_expr * size_expr
+      (** The next multiple of [target_align] from [base].
+
+          Fields:
+          - [base]
+          - [target_align] *)
+  | SizeExprIfInhabited of ty * size_expr * size_expr
+      (** A size expression that depens on whether the given type is inhabited.
+
+          Fields:
+          - [ty]
+          - [then_size]
+          - [else_size] *)
 
 (** The value of a trait associated type. *)
 and trait_assoc_ty_impl = {
@@ -1303,18 +1365,6 @@ and layout = {
           the user. *)
 }
 
-(** Layout information given by the metadata of an unsized type. *)
-and metadata_value =
-  | DynSize
-      (** For a DST with [dyn Trait] metadata, this refers to the size found in
-          the metadata. *)
-  | DynAlign
-      (** For a DST with [dyn Trait] metadata, this refers to the alignment
-          found in the metadata. *)
-  | SliceLength
-      (** For a DST with slice metadata, this refers to the length found in the
-          metadata. *)
-
 (** An item name/path
 
     A name really is a list of strings. However, we sometimes need to introduce
@@ -1440,34 +1490,6 @@ and size = {
       (** The guarantees about this size that can be relied on according to the
           Rust Reference. *)
 }
-
-(** An expression that represents a size in bytes. *)
-and size_expr = size_expr_kind hash_consed
-
-and size_expr_kind =
-  | SizeExprConstant of constant_expr
-      (** An arbitrary constant of type [usize]. *)
-  | SizeExprFromMetadata of metadata_value
-      (** Layout information stored in the pointer metadata to this object. *)
-  | SizeExprMax of size_expr list
-  | SizeExprMin of size_expr list
-  | SizeExprPlus of size_expr * size_expr
-  | SizeExprScale of size_expr * constant_expr  (** Multiply by a constant. *)
-  | SizeExprAtLeast of size_expr
-      (** The size is at least the value of this expression. *)
-  | SizeExprAlignTo of size_expr * size_expr
-      (** The next multiple of [target_align] from [base].
-
-          Fields:
-          - [base]
-          - [target_align] *)
-  | SizeExprIfInhabited of ty * size_expr * size_expr
-      (** A size expression that depens on whether the given type is inhabited.
-
-          Fields:
-          - [ty]
-          - [then_size]
-          - [else_size] *)
 
 (** A type declaration.
 

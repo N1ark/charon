@@ -658,7 +658,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 let vtable_instance = self.erase_region_binder(vtable_instance);
                 let vtable_instance =
                     ConstantExpr::new(ConstantExprKind::Global(vtable_instance), vtbl_ty);
-                ConstantExprKind::Ref(vtable_instance, None)
+                ConstantExprKind::Ref(vtable_instance, vec![], None)
             }
             _ => ConstantExprKind::VTableRef(self.translate_trait_proof(span, trait_proof)?),
         };

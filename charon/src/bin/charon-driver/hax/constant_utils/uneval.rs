@@ -201,7 +201,7 @@ pub(crate) fn valtree_to_constant_expr<'tcx, S: UnderOwnerState<'tcx>>(
             };
             let val = valtree_to_constant_expr(s, valtree, pointee_ty, span);
             let len = ty::Const::from_target_usize(tcx, len).sinto(s);
-            ConstantExprKind::Borrow(val, Some(UnsizingMetadata::Length(len)))
+            ConstantExprKind::Borrow(val, vec![], Some(UnsizingMetadata::Length(len)))
         }
         // For other unsized pointees, computing the metadata requires putting them in an allocation.
         (_, ty::Ref(_, inner_ty, _)) if !inner_ty.is_sized(tcx, s.typing_env()) => {
@@ -212,7 +212,8 @@ pub(crate) fn valtree_to_constant_expr<'tcx, S: UnderOwnerState<'tcx>>(
             }
         }
         (_, ty::Ref(_, inner_ty, _)) => {
-            ConstantExprKind::Borrow(valtree_to_constant_expr(s, valtree, *inner_ty, span), None)
+            let val = valtree_to_constant_expr(s, valtree, *inner_ty, span);
+            ConstantExprKind::Borrow(val, vec![], None)
         }
         (ty::ValTreeKind::Branch(valtrees), ty::Str) => {
             let bytes = valtrees
@@ -457,17 +458,187 @@ fn pointer_metadata<'tcx, S: UnderOwnerState<'tcx>>(
     interp_ok(compute_unsizing_metadata(s, sized_tail, unsized_tail))
 }
 
-/// Convert the target of a valid pointer. Pointers to globals are kept as references to these
-/// globals, and we fallback to reading the bytes for other cases.
-fn pointee_to_const<'tcx, S: UnderOwnerState<'tcx>>(
+/// The projection to the place located `offset` bytes after the current place, for a pointee of type `ty`.
+fn offset_projection<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    offset: rustc_abi::Size,
+    ty: ty::Ty<'tcx>,
+    size: rustc_abi::Size,
+) -> Vec<ConstantProjectionElem> {
+    let (offset, size) = (offset.bytes(), size.bytes());
+    if offset == 0 {
+        return vec![];
+    }
+    let (count, ty) = if offset.is_multiple_of(size) {
+        (offset / size, Some(ty.sinto(s)))
+    } else {
+        (offset, None)
+    };
+    vec![ConstantProjectionElem::Offset { count, ty }]
+}
+
+/// Find the subplace of `place` that contains the place of type `to_ty` and size `size` located
+/// `offset` bytes after `place`. Returns the projection to that subplace, the subplace, and the
+/// offset of the target within it.
+fn find_subplace<'tcx>(
+    ecx: &const_eval::CompileTimeInterpCx<'tcx>,
+    place: &rustc_const_eval::interpret::MPlaceTy<'tcx>,
+    offset: rustc_abi::Size,
+    to_ty: ty::Ty<'tcx>,
+    size: rustc_abi::Size,
+) -> InterpResult<
+    'tcx,
+    Option<(
+        ConstantProjectionElem,
+        rustc_const_eval::interpret::MPlaceTy<'tcx>,
+        rustc_abi::Size,
+    )>,
+> {
+    use rustc_const_eval::interpret::Projectable;
+    match place.layout.ty.kind() {
+        ty::Array(elem, _) => {
+            let len = place.len(ecx)?;
+            let stride = place.layout.field(ecx, 0).size.bytes();
+            let Some(i) = offset.bytes().checked_div(stride) else {
+                return interp_ok(None);
+            };
+            // The target may be a subarray.
+            if let ty::Array(target_elem, _) = to_ty.kind()
+                && target_elem == elem
+                && offset.bytes().is_multiple_of(stride)
+                && i + size.bytes() / stride <= len
+            {
+                let (from, to) = (i, i + size.bytes() / stride);
+                let subslice = mir::ProjectionElem::Subslice {
+                    from,
+                    to,
+                    from_end: false,
+                };
+                let sub = ecx.project(place, subslice)?;
+                let proj = ConstantProjectionElem::Subslice { from, to };
+                return interp_ok(Some((proj, sub, rustc_abi::Size::ZERO)));
+            }
+            // The element that contains the target, if any.
+            if i < len && offset.bytes() + size.bytes() <= (i + 1) * stride {
+                let sub_offset = offset - rustc_abi::Size::from_bytes(i * stride);
+                let proj = ConstantProjectionElem::Index(i);
+                return interp_ok(Some((proj, ecx.project_index(place, i)?, sub_offset)));
+            }
+        }
+        ty::Adt(..) | ty::Tuple(..) | ty::Closure(..) => {
+            let (place, variant) = match place.layout.ty.kind() {
+                ty::Adt(adt_def, _) if adt_def.is_enum() => {
+                    let variant = ecx.read_discriminant(place)?;
+                    (ecx.project_downcast(place, variant)?, Some(variant))
+                }
+                _ => (place.clone(), None),
+            };
+            // The field that contains the target, if any.
+            for i in 0..place.layout.fields.count() {
+                let field_offset = place.layout.fields.offset(i);
+                let field_size = place.layout.field(ecx, i).size;
+                if field_offset <= offset && offset + size <= field_offset + field_size {
+                    let field = FieldIdx::from_usize(i);
+                    let proj = ConstantProjectionElem::Field(variant, field);
+                    let sub = ecx.project_field(&place, field)?;
+                    return interp_ok(Some((proj, sub, offset - field_offset)));
+                }
+            }
+        }
+        _ => {}
+    }
+    interp_ok(None)
+}
+
+/// Find projections from `place` to the place of type `to_ty` located `offset` bytes after it.
+/// There may be many ways of reaching the same destination. Returns the projections to use,
+/// and the type of the final place, which may not match `to_ty`, in which case a cast is needed.
+fn structural_path<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    ecx: &const_eval::CompileTimeInterpCx<'tcx>,
+    mut place: rustc_const_eval::interpret::MPlaceTy<'tcx>,
+    mut offset: rustc_abi::Size,
+    to_ty: ty::Ty<'tcx>,
+    size: rustc_abi::Size,
+) -> (Vec<ConstantProjectionElem>, ty::Ty<'tcx>) {
+    let mut path = vec![];
+    while !(place.layout.ty == to_ty && offset == rustc_abi::Size::ZERO) {
+        match find_subplace(ecx, &place, offset, to_ty, size).discard_err() {
+            Some(Some((proj, sub, sub_offset))) => {
+                path.push(proj);
+                place = sub;
+                offset = sub_offset;
+            }
+            _ => {
+                // Give up: we couldn't find a typed path, so we offset from the place we reached.
+                path.extend(offset_projection(s, offset, to_ty, size));
+                return (path, place.layout.ty);
+            }
+        }
+    }
+    (path, to_ty)
+}
+
+/// Express a place of type `ty` located `offset` bytes into the allocation as projections from
+/// the global `item` that stands for the allocation. Returns the type of the global, the
+/// projections and the type of the place they reach, which is `ty` unless the pointer must be
+/// cast.
+fn place_in_alloc<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    ecx: &const_eval::CompileTimeInterpCx<'tcx>,
+    place: &rustc_const_eval::interpret::MPlaceTy<'tcx>,
+    alloc_id: interpret::AllocId,
+    item: &ItemRef,
+    offset: rustc_abi::Size,
+    ty: ty::Ty<'tcx>,
+) -> Option<(ty::Ty<'tcx>, Vec<ConstantProjectionElem>, ty::Ty<'tcx>)> {
+    let tcx = s.base().tcx;
+    let layout_of = |ty| tcx.layout_of(s.typing_env().as_query_input(ty)).ok();
+    let ty = tcx.erase_and_anonymize_regions(ty);
+    let size = layout_of(ty)?.size;
+    let decl_ty = normalize(
+        tcx,
+        s.typing_env(),
+        item.def_id.type_of(s).instantiate_identity(),
+    );
+    let decl_ty = tcx.erase_and_anonymize_regions(decl_ty);
+    // Anonymous allocations are untyped (their global is a `MaybeUninit<[u8; N]>`), so we only
+    // follow the structure of statics.
+    let (path, end_ty) = if let interpret::GlobalAlloc::Static(_) = tcx.global_alloc(alloc_id) {
+        let (prov, _) = place.ptr().into_raw_parts();
+        let ptr = interpret::Pointer::new(prov, rustc_abi::Size::ZERO);
+        let base = ecx.ptr_to_mplace(ptr, layout_of(decl_ty)?);
+        structural_path(s, ecx, base, offset, ty, size)
+    } else {
+        (offset_projection(s, offset, ty, size), decl_ty)
+    };
+    Some((decl_ty, path, end_ty))
+}
+
+/// Convert a valid pointer of type `ptr_ty`. Pointers to globals are kept as pointers into these
+/// globals, and we fallback to reading the bytes of the pointee for other cases.
+fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     s: &S,
     span: rustc_span::Span,
     ecx: &const_eval::CompileTimeInterpCx<'tcx>,
     place: rustc_const_eval::interpret::MPlaceTy<'tcx>,
-) -> InterpResult<'tcx, (ConstantExpr, Option<UnsizingMetadata>)> {
+    ptr_ty: ty::Ty<'tcx>,
+) -> InterpResult<'tcx, ConstantExprKind> {
     use rustc_const_eval::interpret::Projectable;
     let tcx = s.base().tcx;
     let ty = place.layout.ty;
+    let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *ptr_ty.kind() else {
+        unreachable!()
+    };
+    let ptr_kind = |arg, projections, metadata| match ptr_ty.kind() {
+        ty::Ref(..) => ConstantExprKind::Borrow(arg, projections, metadata),
+        _ => ConstantExprKind::RawBorrow {
+            mutability: mutability.sinto(s),
+            arg,
+            projections,
+            metadata,
+        },
+    };
 
     let metadata = if ty.is_sized(tcx, s.typing_env()) {
         None
@@ -484,22 +655,34 @@ fn pointee_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     };
 
     let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
-    // TODO: A view over an anonymous allocation must cover exactly the whole allocation.
-    // Our constant pointers don't have a way to indicate their offset, so if there's a
-    // mismatch it would be wrong.
-    let covers_alloc = |global_ty| match tcx.global_alloc(alloc_id) {
-        interpret::GlobalAlloc::Memory(alloc) => tcx
-            .layout_of(s.typing_env().as_query_input(global_ty))
-            .is_ok_and(|layout| layout.size == alloc.inner().size()),
-        _ => true,
-    };
     if let Some(global_ty) = global_ty
-        && offset == rustc_abi::Size::ZERO
-        && covers_alloc(global_ty)
         && let Some(item) = alloc_as_global(s, alloc_id)
+        && let Some((decl_ty, projections, end_ty)) =
+            place_in_alloc(s, ecx, &place, alloc_id, &item, offset, global_ty)
     {
-        let kind = ConstantExprKind::NamedGlobal(item);
-        interp_ok((kind.decorate(global_ty.sinto(s), span.sinto(s)), metadata))
+        let base = ConstantExprKind::NamedGlobal(item).decorate(decl_ty.sinto(s), span.sinto(s));
+        if end_ty == tcx.erase_and_anonymize_regions(global_ty) {
+            interp_ok(ptr_kind(base, projections, metadata))
+        } else {
+            // Point to the place we reached, then cast the pointer to the right type.
+            let inner = ConstantExprKind::RawBorrow {
+                mutability: mutability.sinto(s),
+                arg: base,
+                projections,
+                metadata: None,
+            };
+            let inner_ty = ty::Ty::new_ptr(tcx, end_ty, mutability);
+            let inner = inner.decorate(inner_ty.sinto(s), span.sinto(s));
+            if metadata.is_none() {
+                interp_ok(ConstantExprKind::PtrCast(inner, None))
+            } else {
+                // Cast to the sized type first, then unsize.
+                let sized_ty = ty::Ty::new_ptr(tcx, global_ty, mutability);
+                let sized = ConstantExprKind::PtrCast(inner, None);
+                let sized = sized.decorate(sized_ty.sinto(s), span.sinto(s));
+                interp_ok(ConstantExprKind::PtrCast(sized, metadata))
+            }
+        }
     } else {
         // HACK: fallback to reading the bytes of the pointee, at the type of `global_ty`.
         let place = match global_ty {
@@ -512,7 +695,8 @@ fn pointee_to_const<'tcx, S: UnderOwnerState<'tcx>>(
             }
             _ => place,
         };
-        interp_ok((op_to_const(s, span, ecx, place.into())?, metadata))
+        let val = op_to_const(s, span, ecx, place.into())?;
+        interp_ok(ptr_kind(val, vec![], metadata))
     }
 }
 
@@ -624,16 +808,7 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
                 .filter(|place| ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err().is_some());
             if let Some(place) = place {
                 // Valid pointer case
-                let (val, metadata) = pointee_to_const(s, span, ecx, place)?;
-                match ty.kind() {
-                    ty::Ref(..) => ConstantExprKind::Borrow(val, metadata),
-                    ty::RawPtr(.., mutability) => ConstantExprKind::RawBorrow {
-                        arg: val,
-                        mutability: mutability.sinto(s),
-                        metadata,
-                    },
-                    _ => unreachable!(),
-                }
+                pointer_to_const(s, span, ecx, place, ty)?
             } else {
                 // Invalid pointer; try reading it as a raw address
                 let scalar = ecx.read_scalar(&op)?;

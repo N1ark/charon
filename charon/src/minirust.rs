@@ -969,8 +969,9 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                 ));
             }
             UnOp::Cast(CastKind::Unsize(_, target_ty, UnsizingMetadata::VTable(_, vtable))) => {
-                let ConstantExprKind::Ref(global, None) = vtable.kind() else {
-                    raise!(span, "unsupported vtable reference")
+                let global = match vtable.kind() {
+                    ConstantExprKind::Ref(global, projs, None) if projs.is_empty() => global,
+                    _ => raise!(span, "unsupported vtable reference"),
                 };
                 let ConstantExprKind::Global(gref) = global.kind() else {
                     raise!(span, "vtable reference does not name a global")

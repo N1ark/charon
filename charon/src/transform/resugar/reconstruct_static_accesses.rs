@@ -31,10 +31,13 @@ impl UllbcPass for Transform {
             .filter_map(|(loc, st)| {
                 let (dest, rvalue) = &st.kind.as_assign()?;
                 let global = match rvalue {
-                    // `Ref` for non-mut statics, `Ptr` for `static mut` and extern statics
+                    // `Ref` for non-mut statics, `Ptr` for `static mut` and extern statics.
+                    // Statics are sized, so a reference to a whole static has no projections nor
+                    // metadata.
                     Rvalue::Use(Operand::Const(c), _)
-                        if let ConstantExprKind::Ref(pointee, _)
-                        | ConstantExprKind::Ptr(_, pointee, _) = c.kind() =>
+                        if let ConstantExprKind::Ref(pointee, projs, None)
+                        | ConstantExprKind::Ptr(_, pointee, projs, None) = c.kind()
+                            && projs.is_empty() =>
                     {
                         pointee.kind().as_global()?
                     }
