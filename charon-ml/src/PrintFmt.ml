@@ -1433,6 +1433,7 @@ let rec pp_projection_elem (env : fmt_env) (subplace : place)
             (variant_id_to_pretty_string variant_id)
             field_name)
   | PtrMetadata -> Format.fprintf fmt "%s.metadata" sub
+  | Offset n -> Format.fprintf fmt "%s.offset(%s)" sub (operand_to_string env n)
 
 and pp_place (env : fmt_env) (fmt : Format.formatter) (p : place) : unit =
   match p.kind with
@@ -1505,7 +1506,6 @@ and pp_binop (fmt : Format.formatter) (binop : binop) : unit =
   | SubChecked -> pp_string fmt "checked.-"
   | MulChecked -> pp_string fmt "checked.*"
   | Cmp -> pp_string fmt "cmp"
-  | Offset -> pp_string fmt "offset"
 
 and pp_operand (env : fmt_env) (fmt : Format.formatter) (op : operand) : unit =
   match op with

@@ -58,6 +58,9 @@ pub enum ProjectionElem {
         to: Box<Operand>,
         from_end: bool,
     },
+    /// For a place `p`, `p.offset(n)` is the place located `n` bytes after `p`.
+    /// If this offset is relative to the size of `T`, it is made explicit in the operand.
+    Offset(Box<Operand>),
 }
 
 impl Place {
@@ -214,6 +217,7 @@ impl ProjectionElem {
                 }
                 _ => return None,
             },
+            Offset(_) => ty.clone(),
         })
     }
 }

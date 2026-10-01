@@ -370,6 +370,8 @@ pub trait BodyTransformCtx: Sized {
                 }
                 // Indexing for array & slice will only result in sized types, hence no metadata
                 ProjectionElem::Index { .. } => None,
+                // Offsets only apply to sized types.
+                ProjectionElem::Offset(_) => None,
                 // Ptr metadata is always sized.
                 ProjectionElem::PtrMetadata => None,
                 // A subslice of an array is an array.

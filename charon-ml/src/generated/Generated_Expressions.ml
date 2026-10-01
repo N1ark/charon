@@ -80,9 +80,6 @@ and binop =
       (** Fails if the shift is bigger than the bit-size of the type. *)
   | Shr of overflow_mode
       (** Fails if the shift is bigger than the bit-size of the type. *)
-  | Offset
-      (** [BinOp(Offset, ptr, n)] for [ptr] a pointer to type [T] offsets [ptr]
-          by [n * size_of::<T>()]. *)
   | Cmp
       (** [BinOp(Cmp, a, b)] returns [-1u8] if [a < b], [0u8] if [a == b], and
           [1u8] if [a > b]. *)
@@ -239,6 +236,10 @@ and projection_elem =
           - [from]
           - [to]
           - [from_end] *)
+  | Offset of operand
+      (** For a place [p], [p.offset(n)] is the place located [n] bytes after
+          [p]. If this offset is relative to the size of [T], it is made
+          explicit in the operand. *)
 
 (** An expression that evaluates to a value. This is the RHS of an assignment.
 *)

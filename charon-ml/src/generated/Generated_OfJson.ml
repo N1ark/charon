@@ -308,7 +308,6 @@ and binop_of_json (ctx : of_json_ctx) (js : json) : (binop, string) result =
     | `Assoc [ ("Shr", _0) ] ->
         let* _0 = overflow_mode_of_json ctx _0 in
         Ok (Shr _0)
-    | `String "Offset" -> Ok Offset
     | `String "Cmp" -> Ok Cmp
     | _ -> Error "")
 
@@ -1197,6 +1196,9 @@ and projection_elem_of_json (ctx : of_json_ctx) (js : json) :
         let* to_ = box_of_json operand_of_json ctx to_ in
         let* from_end = bool_of_json ctx from_end in
         Ok (Subslice (from, to_, from_end))
+    | `Assoc [ ("Offset", _0) ] ->
+        let* _0 = box_of_json operand_of_json ctx _0 in
+        Ok (Offset _0)
     | _ -> Error "")
 
 and provenance_of_json (ctx : of_json_ctx) (js : json) :

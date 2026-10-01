@@ -253,7 +253,6 @@ impl Display for BinOp {
             BinOp::Shl(mode) => write!(f, "{}.<<", mode),
             BinOp::Shr(mode) => write!(f, "{}.>>", mode),
             BinOp::Cmp => write!(f, "cmp"),
-            BinOp::Offset => write!(f, "offset"),
         }
     }
 }
@@ -1666,6 +1665,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for Place {
                         from_end: false,
                         ..
                     } => write!(f, "{sub}[{}..{}]", from.with_ctx(ctx), to.with_ctx(ctx)),
+                    ProjectionElem::Offset(n) => write!(f, "{sub}.offset({})", n.with_ctx(ctx)),
                 }
             }
         }
