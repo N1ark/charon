@@ -1125,6 +1125,7 @@ pub fn translate<'tcx>(
                 translate_options.consts,
                 ConstHandling::Values | ConstHandling::Bytes
             ),
+            unsized_strings: translate_options.unsized_strings,
         },
         hax::options::BoundsOptions {
             add_destruct_bounds: translate_options.add_destruct_bounds,

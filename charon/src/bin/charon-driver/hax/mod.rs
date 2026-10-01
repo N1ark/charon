@@ -31,5 +31,8 @@ pub mod options {
         /// Whether to turn anonymous const-eval allocations (e.g. the bytes of `b"foo"`) into
         /// `RawMemory` globals, or to inline their contents at each use.
         pub anon_allocs_as_globals: bool,
+        /// Whether string data is viewed as `[u8; N]`, which allows it to become an anonymous
+        /// allocation global too. Otherwise we keep `str` literals.
+        pub unsized_strings: bool,
     }
 }

@@ -34,36 +34,40 @@ where
   _1: B,
 }
 
-static test_crate::{promoted_const#2}: MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00)
+static test_crate::{promoted_const#3}: MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00)
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&test_crate::{promoted_const#2}[0], &test_crate::{promoted_const#2}[1], &test_crate::{promoted_const#2}[2], &test_crate::{promoted_const#2}[3], &test_crate::{promoted_const#2}[4], &test_crate::{promoted_const#2}[5], &test_crate::{promoted_const#2}[6], &test_crate::{promoted_const#2}[7])
+static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&test_crate::{promoted_const#3}[0], &test_crate::{promoted_const#3}[1], &test_crate::{promoted_const#3}[2], &test_crate::{promoted_const#3}[3], &test_crate::{promoted_const#3}[4], &test_crate::{promoted_const#3}[5], &test_crate::{promoted_const#3}[6], &test_crate::{promoted_const#3}[7])
 
-static test_crate::{promoted_const#4}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x62, 0x63)
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}] = RawMemory(0x68, 0x65, 0x6c, 0x6c, 0x6f)
 
-static test_crate::{promoted_const#3}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x61)
+static test_crate::{promoted_const#6}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x62, 0x63)
 
-static test_crate::{promoted_const#1}: MaybeUninit<[u8; 32usize]>[{built_in impl Sized for [u8; 32usize]}] = RawMemory(&test_crate::{promoted_const#3}[0], &test_crate::{promoted_const#3}[1], &test_crate::{promoted_const#3}[2], &test_crate::{promoted_const#3}[3], &test_crate::{promoted_const#3}[4], &test_crate::{promoted_const#3}[5], &test_crate::{promoted_const#3}[6], &test_crate::{promoted_const#3}[7], 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, &test_crate::{promoted_const#4}[0], &test_crate::{promoted_const#4}[1], &test_crate::{promoted_const#4}[2], &test_crate::{promoted_const#4}[3], &test_crate::{promoted_const#4}[4], &test_crate::{promoted_const#4}[5], &test_crate::{promoted_const#4}[6], &test_crate::{promoted_const#4}[7], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+static test_crate::{promoted_const#5}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x61)
 
-static test_crate::{promoted_const#6}: MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}] = RawMemory(0x02, 0x00, 0x00, 0x00)
+static test_crate::{promoted_const#2}: MaybeUninit<[u8; 32usize]>[{built_in impl Sized for [u8; 32usize]}] = RawMemory(&test_crate::{promoted_const#5}[0], &test_crate::{promoted_const#5}[1], &test_crate::{promoted_const#5}[2], &test_crate::{promoted_const#5}[3], &test_crate::{promoted_const#5}[4], &test_crate::{promoted_const#5}[5], &test_crate::{promoted_const#5}[6], &test_crate::{promoted_const#5}[7], 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, &test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
-static test_crate::{promoted_const#5}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7])
+static test_crate::{promoted_const#4}: MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}] = RawMemory(0x77, 0x6f, 0x72, 0x6c, 0x64)
+
+static test_crate::{promoted_const#8}: MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}] = RawMemory(0x02, 0x00, 0x00, 0x00)
+
+static test_crate::{promoted_const#7}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&test_crate::{promoted_const#8}[0], &test_crate::{promoted_const#8}[1], &test_crate::{promoted_const#8}[2], &test_crate::{promoted_const#8}[3], &test_crate::{promoted_const#8}[4], &test_crate::{promoted_const#8}[5], &test_crate::{promoted_const#8}[6], &test_crate::{promoted_const#8}[7])
 
 // Full name: test_crate::C
 const C: &'static &'static u32 = cast<*const MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}], &'_ &'_ u32>(&raw const test_crate::{promoted_const})
 
 // Full name: test_crate::STR
-const STR: &'static str = &RawMemory(0x68, 0x65, 0x6c, 0x6c, 0x6f) with_metadata(5usize)
+const STR: &'static str = unsize_cast<*const [u8; 5usize], &'_ str, 5usize>(cast<*const MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}], *const [u8; 5usize]>(&raw const test_crate::{promoted_const#1}))
 
 // Full name: test_crate::STRS
-const STRS: &'static [&'static str] = unsize_cast<*const [&'_ str; 2usize], &'_ [&'_ str], 2usize>(cast<*const MaybeUninit<[u8; 32usize]>[{built_in impl Sized for [u8; 32usize]}], *const [&'_ str; 2usize]>(&raw const test_crate::{promoted_const#1}))
+const STRS: &'static [&'static str] = unsize_cast<*const [&'_ str; 2usize], &'_ [&'_ str], 2usize>(cast<*const MaybeUninit<[u8; 32usize]>[{built_in impl Sized for [u8; 32usize]}], *const [&'_ str; 2usize]>(&raw const test_crate::{promoted_const#2}))
 
 // Full name: test_crate::STR_SUFFIX
-const STR_SUFFIX: &'static str = &RawMemory(0x65, 0x6c, 0x6c, 0x6f) with_metadata(4usize)
+const STR_SUFFIX: &'static str = unsize_cast<*const [u8; 4usize], &'_ str, 4usize>(cast<*const MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}], *const [u8; 4usize]>(&raw const test_crate::{promoted_const#1}.offset(1usize)))
 
 // Full name: test_crate::BOTH
-static BOTH: (&'static u32, &'static u32) = (cast<*const MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}], &'_ u32>(&raw const test_crate::{promoted_const#2}), cast<*const MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}], &'_ u32>(&raw const test_crate::{promoted_const#2}))
+static BOTH: (&'static u32, &'static u32) = (cast<*const MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}], &'_ u32>(&raw const test_crate::{promoted_const#3}), cast<*const MaybeUninit<[u8; 4usize]>[{built_in impl Sized for [u8; 4usize]}], &'_ u32>(&raw const test_crate::{promoted_const#3}))
 
-const test_crate::promoted::{promoted_const}: &'_ &'_ u32 = cast<*const MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}], &'_ &'_ u32>(&raw const test_crate::{promoted_const#5})
+const test_crate::promoted::{promoted_const}: &'_ &'_ u32 = cast<*const MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}], &'_ &'_ u32>(&raw const test_crate::{promoted_const#7})
 
 // Full name: test_crate::promoted
 fn promoted() -> &'static &'static u32
@@ -92,9 +96,10 @@ fn use_consts()
     let _3: &'19 [&'20 str]; // anonymous local
     let _4: &'24 str; // anonymous local
     let _5: &'25 str; // anonymous local
-    let _6: [u8; 5usize]; // anonymous local
-    let _7: &'_ [u8; 5usize]; // anonymous local
-    let _8: &'34 str; // anonymous local
+    let _6: *const MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}]; // anonymous local
+    let _7: *const [u8; 5usize]; // anonymous local
+    let _8: *const str; // anonymous local
+    let _9: &'34 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -112,14 +117,17 @@ fn use_consts()
     storage_dead(_4)
     storage_live(_5)
     storage_live(_6)
-    _6 = const RawMemory(0x77, 0x6f, 0x72, 0x6c, 0x64)
+    _6 = &raw const test_crate::{promoted_const#4}
     storage_live(_7)
-    _7 = &_6
+    _7 = cast<*const MaybeUninit<[u8; 5usize]>[{built_in impl Sized for [u8; 5usize]}], *const [u8; 5usize]>(move _6)
     storage_live(_8)
-    _8 = unsize_cast<&'_ [u8; 5usize], &'34 str, 5usize>(move _7)
-    _5 = move _8
+    _8 = unsize_cast<*const [u8; 5usize], *const str, 5usize>(move _7)
+    storage_live(_9)
+    _9 = &(*_8) with_metadata(copy _8.metadata)
+    _5 = move _9
     storage_dead(_5)
     _0 = ()
+    storage_dead(_9)
     storage_dead(_8)
     storage_dead(_7)
     storage_dead(_6)

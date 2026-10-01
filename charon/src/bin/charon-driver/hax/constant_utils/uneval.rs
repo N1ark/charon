@@ -224,6 +224,9 @@ pub(crate) fn valtree_to_constant_expr<'tcx, S: UnderOwnerState<'tcx>>(
             let len = fields.len() as u64;
             let pointee_ty = match inner_ty.kind() {
                 ty::Slice(elem) => ty::Ty::new_array(tcx, *elem, len),
+                ty::Str if s.base().options.unsized_strings => {
+                    ty::Ty::new_array(tcx, tcx.types.u8, len)
+                }
                 ty::Str => *inner_ty,
                 _ => unreachable!(),
             };
@@ -673,10 +676,14 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     } else {
         Some(pointer_metadata(s, ecx, &place)?)
     };
-    // A slice or `dyn Trait` value is viewed at the sized type it was unsized from. Other unsized
-    // values (e.g. a `CStr`) have no such type: we read them at their unsized type.
+    // A slice or `dyn Trait` value is viewed at the sized type it was unsized from, and so is a
+    // `str` with `--unsized-strings`. Other unsized values (e.g. a `CStr`) have no such type: we
+    // read them at their unsized type.
     let global_ty = match ty.kind() {
         ty::Slice(elem) => Some(ty::Ty::new_array(tcx, *elem, place.len(ecx)?)),
+        ty::Str if s.base().options.unsized_strings => {
+            Some(ty::Ty::new_array(tcx, tcx.types.u8, place.len(ecx)?))
+        }
         ty::Dynamic(preds, ..) => Some(dyn_concrete_ty(ecx, &place, preds)?),
         _ if ty.is_sized(tcx, s.typing_env()) => Some(ty),
         _ => None,
