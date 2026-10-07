@@ -691,24 +691,41 @@ fn place_in_alloc<'tcx, S: UnderOwnerState<'tcx>>(
     Some((decl_ty, path, end_ty))
 }
 
-/// The sized type at which to view the pointee `place`. A slice or `dyn Trait` value is viewed at
-/// the sized type it was unsized from, and so is a `str` with `--unsized-strings`. Other unsized
-/// values (e.g. a `CStr`) have no such type.
+/// The sized type at which to view the pointee `place` of type `ty`. A slice or `dyn Trait`
+/// value is viewed at the sized type it was unsized from, and so is a `str` with
+/// `--unsized-strings` and a generic struct with such a tail. Other unsized values (e.g. a `CStr`)
+/// have no such type.
 fn sized_view<'tcx, S: UnderOwnerState<'tcx>>(
     s: &S,
     ecx: &const_eval::CompileTimeInterpCx<'tcx>,
     place: &rustc_const_eval::interpret::MPlaceTy<'tcx>,
+    ty: ty::Ty<'tcx>,
 ) -> InterpResult<'tcx, Option<ty::Ty<'tcx>>> {
     use rustc_const_eval::interpret::Projectable;
     let tcx = s.base().tcx;
-    let ty = place.layout.ty;
+    let len = || place.meta().unwrap_meta().to_target_usize(ecx);
     interp_ok(match ty.kind() {
-        ty::Slice(elem) => Some(ty::Ty::new_array(tcx, *elem, place.len(ecx)?)),
+        _ if ty.is_sized(tcx, s.typing_env()) => Some(ty),
+        ty::Slice(elem) => Some(ty::Ty::new_array(tcx, *elem, len()?)),
         ty::Str if s.base().options.unsized_strings => {
-            Some(ty::Ty::new_array(tcx, tcx.types.u8, place.len(ecx)?))
+            Some(ty::Ty::new_array(tcx, tcx.types.u8, len()?))
         }
         ty::Dynamic(preds, ..) => Some(dyn_concrete_ty(ecx, place, preds)?),
-        _ if ty.is_sized(tcx, s.typing_env()) => Some(ty),
+        // The tail of a generic struct is unsized because of one of its type arguments.
+        ty::Adt(adt_def, args) => {
+            let mut sized_args = vec![];
+            for arg in args.iter() {
+                sized_args.push(match arg.as_type() {
+                    Some(arg) => match sized_view(s, ecx, place, arg)? {
+                        Some(arg) => arg.into(),
+                        None => return interp_ok(None),
+                    },
+                    None => arg,
+                });
+            }
+            let sized = ty::Ty::new_adt(tcx, *adt_def, tcx.mk_args(&sized_args));
+            sized.is_sized(tcx, s.typing_env()).then_some(sized)
+        }
         _ => None,
     })
 }
@@ -743,7 +760,15 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     } else {
         Some(pointer_metadata(s, ecx, &place)?)
     };
-    let global_ty = sized_view(s, ecx, &place)?;
+    let global_ty = match sized_view(s, ecx, &place, ty)? {
+        Some(sized_ty) => Some(sized_ty),
+        // We view other unsized values (e.g. a `CStr`) as bytes, except `str` that we keep as a
+        // literal.
+        None if !ty.is_str() => ecx
+            .size_and_align_of_val(&place)?
+            .map(|(size, _)| ty::Ty::new_array(tcx, tcx.types.u8, size.bytes())),
+        None => None,
+    };
 
     let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
     // Our offsets are in-bounds place projections, so they can't express pointers outside of their
@@ -819,9 +844,14 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
             }
         }
     } else {
-        // HACK: fallback to reading the bytes of the pointee, at the type of `global_ty`.
+        // HACK: fallback to reading the bytes of the pointee, at the type of `global_ty` for
+        // slices, `str` and `dyn`. Other unsized pointees stay unsized, so that they are put in a
+        // global instead of a local when the constant is used in a body.
         let place = match global_ty {
-            Some(global_ty) if global_ty != ty => {
+            Some(global_ty)
+                if global_ty != ty
+                    && matches!(ty.kind(), ty::Slice(_) | ty::Str | ty::Dynamic(..)) =>
+            {
                 let layout = tcx
                     .layout_of(s.typing_env().as_query_input(global_ty))
                     .unwrap();
@@ -967,7 +997,7 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
                 ));
                 if place.layout.is_sized() {
                     lit
-                } else if let Some(sized_ty) = sized_view(s, ecx, &place)? {
+                } else if let Some(sized_ty) = sized_view(s, ecx, &place, place.layout.ty)? {
                     // Unsize the thin pointer with the metadata.
                     let thin_ty = ty::Ty::new_ptr(s.base().tcx, sized_ty, *mutability);
                     let thin = lit.decorate(thin_ty.sinto(s), span.sinto(s));

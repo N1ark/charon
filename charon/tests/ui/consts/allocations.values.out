@@ -133,13 +133,17 @@ unsafe fn {vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
 // Full name: test_crate::{impl Tr for u8}::{vtable}
 vtable impl_Tr_for_u8::{vtable}: test_crate::Tr::{vtable} = test_crate::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr({vtable_drop_shim}<'_>), method_m: fnptr({vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8> }
 
-static test_crate::{promoted_const#4}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
+static test_crate::{promoted_const#6}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
 
-static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#4}[0], &test_crate::{promoted_const#4}[1], &test_crate::{promoted_const#4}[2], &test_crate::{promoted_const#4}[3], &test_crate::{promoted_const#4}[4], &test_crate::{promoted_const#4}[5], &test_crate::{promoted_const#4}[6], &test_crate::{promoted_const#4}[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
 
 static mut test_crate::{promoted_const#2}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x01, 0x02)
 
-static test_crate::{promoted_const#3}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
+static test_crate::{promoted_const#3}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x00, 0x01)
+
+static test_crate::{promoted_const#4}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x68, 0x69, 0x00)
+
+static test_crate::{promoted_const#5}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
 
 struct test_crate::Sync<T>
 where
@@ -217,13 +221,13 @@ where
 static WS: W<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}] = W { _0: 0u8, _1: [1u8, 2u8] }
 
 // Full name: test_crate::W_SLICE
-const W_SLICE: &'static W<[u8]>[{built_in impl MetaSized for [u8]}] = &W { _0: 0u8, _1: [1u8, 2u8] } with_metadata(2usize)
+const W_SLICE: &'static W<[u8]>[{built_in impl MetaSized for [u8]}] = &WS with_metadata(2usize)
 
 // Full name: test_crate::W_DYN
-const W_DYN: &'static W<(dyn Tr + 'static)>[{built_in impl MetaSized for (dyn Tr + 'static)}] = &W { _0: 0u8, _1: 1u8 } with_metadata(&impl_Tr_for_u8::{vtable})
+const W_DYN: &'static W<(dyn Tr + 'static)>[{built_in impl MetaSized for (dyn Tr + 'static)}] = unsize_cast<*const W<u8>[{built_in impl MetaSized for u8}], &'_ W<(dyn Tr)>[{built_in impl MetaSized for (dyn Tr)}], &impl_Tr_for_u8::{vtable}>(cast<*const MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}], *const W<u8>[{built_in impl MetaSized for u8}]>(&raw const test_crate::{promoted_const#3}))
 
 // Full name: test_crate::CSTR
-const CSTR: &'static CStr = &CStr { 0: [104i8, 105i8, 0i8] } with_metadata(3usize)
+const CSTR: &'static CStr = unsize_cast<*const [u8; 3usize], &'_ CStr, 3usize>(cast<*const MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}], *const [u8; 3usize]>(&raw const test_crate::{promoted_const#4}))
 
 // Full name: test_crate::BYTES
 static BYTES: [u8; 3usize] = [97u8, 98u8, 99u8]
@@ -281,7 +285,7 @@ fn byte_str() -> &'static [u8; 2usize]
 
     storage_live(_0)
     storage_live(_1)
-    _1 = &raw const test_crate::{promoted_const#3}
+    _1 = &raw const test_crate::{promoted_const#5}
     storage_live(_2)
     _2 = cast<*const MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}], *const [u8; 2usize]>(move _1)
     storage_live(_3)
