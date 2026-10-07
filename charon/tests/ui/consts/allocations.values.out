@@ -201,7 +201,7 @@ union U {
 static UNION: U = RawMemory(0x00, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::UNION_B
-static UNION_B: &'static u32 = cast<*const (u8, u8, u8, u8), &'_ u32>(&raw const UNION.a)
+static UNION_B: &'static u32 = &UNION.b
 
 // Full name: test_crate::MUT_PTR
 static MUT_PTR: test_crate::Sync<*mut u8>[{built_in impl Sized for *mut u8}] = test_crate::Sync { _0: &raw mut ARR[0usize] }

@@ -590,6 +590,17 @@ fn find_subplace<'tcx>(
                 return interp_ok(Some((proj, ecx.project_index(place, i)?, sub_offset)));
             }
         }
+        // Any field of a union contains the target, so we take the one of the right type if any.
+        ty::Adt(adt_def, _) if adt_def.is_union() => {
+            for i in 0..place.layout.fields.count() {
+                if offset == rustc_abi::Size::ZERO && place.layout.field(ecx, i).ty == to_ty {
+                    let field = FieldIdx::from_usize(i);
+                    let proj = ConstantProjectionElem::Field(None, field);
+                    let sub = ecx.project_field(place, field)?;
+                    return interp_ok(Some((proj, sub, offset)));
+                }
+            }
+        }
         ty::Adt(..) | ty::Tuple(..) | ty::Closure(..) => {
             let (place, variant) = match place.layout.ty.kind() {
                 ty::Adt(adt_def, _) if adt_def.is_enum() => {
