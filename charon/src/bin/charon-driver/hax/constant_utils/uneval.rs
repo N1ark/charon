@@ -760,17 +760,23 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     } else {
         Some(pointer_metadata(s, ecx, &place)?)
     };
+    let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
+    let size = ecx.size_and_align_of_val(&place)?.map(|(size, _)| size);
     let global_ty = match sized_view(s, ecx, &place, ty)? {
         Some(sized_ty) => Some(sized_ty),
-        // We view other unsized values (e.g. a `CStr`) as bytes, except `str` that we keep as a
-        // literal.
-        None if !ty.is_str() => ecx
-            .size_and_align_of_val(&place)?
-            .map(|(size, _)| ty::Ty::new_array(tcx, tcx.types.u8, size.bytes())),
-        None => None,
+        // We keep a string literal as a `str` literal.
+        None if ty.is_str()
+            && let interpret::GlobalAlloc::Memory(alloc) = tcx.global_alloc(alloc_id)
+            && offset == rustc_abi::Size::ZERO
+            && Some(alloc.inner().size()) == size =>
+        {
+            None
+        }
+        // We view other unsized values (e.g. a `CStr`, or a `str` that points into other memory)
+        // as bytes.
+        None => size.map(|size| ty::Ty::new_array(tcx, tcx.types.u8, size.bytes())),
     };
 
-    let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
     // Our offsets are in-bounds place projections, so they can't express pointers outside of their
     // allocation (one-past-the-end is fine).
     let (alloc_size, _) = tcx
