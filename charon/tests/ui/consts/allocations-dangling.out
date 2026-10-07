@@ -1,0 +1,24 @@
+error: internal compiler error: /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45: Got a scalar pair where a scalar was expected
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: Thread panicked when extracting item `test_crate::RAW_SLICE`.
+ --> tests/ui/consts/allocations-dangling.rs:5:1
+  |
+5 | const RAW_SLICE: *const [u8] = core::ptr::slice_from_raw_parts(1 as *const u8, 0);
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+error: Thread panicked when extracting item `test_crate::EMPTY`.
+ --> tests/ui/consts/allocations-dangling.rs:6:1
+  |
+6 | const EMPTY: &[u8] = unsafe { &*core::ptr::slice_from_raw_parts(1 as *const u8, 0) };
+  | ^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 1 previous error
+
+ERROR Code failed to compile
