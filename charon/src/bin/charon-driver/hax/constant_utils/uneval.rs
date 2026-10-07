@@ -789,17 +789,24 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
             place_in_alloc(s, ecx, &place, alloc_id, &item, offset, global_ty)
     {
         let base = ConstantExprKind::NamedGlobal(item).decorate(decl_ty.sinto(s), span.sinto(s));
-        if end_ty == tcx.erase_and_anonymize_regions(global_ty) {
+        // We can't take a `*mut` to an immutable global, so we take a `*const` and cast it.
+        let global_mutability = match tcx.global_alloc(alloc_id) {
+            interpret::GlobalAlloc::Static(did) => tcx.static_mutability(did),
+            interpret::GlobalAlloc::Memory(alloc) => Some(alloc.inner().mutability),
+            _ => None,
+        };
+        let borrow_mutability = global_mutability.map_or(mutability, |m| m.min(mutability));
+        if end_ty == tcx.erase_and_anonymize_regions(global_ty) && borrow_mutability == mutability {
             interp_ok(ptr_kind(base, projections, metadata))
         } else {
             // Point to the place we reached, then cast the pointer to the right type.
             let inner = ConstantExprKind::RawBorrow {
-                mutability: mutability.sinto(s),
+                mutability: borrow_mutability.sinto(s),
                 arg: base,
                 projections,
                 metadata: None,
             };
-            let inner_ty = ty::Ty::new_ptr(tcx, end_ty, mutability);
+            let inner_ty = ty::Ty::new_ptr(tcx, end_ty, borrow_mutability);
             let inner = inner.decorate(inner_ty.sinto(s), span.sinto(s));
             if metadata.is_none() {
                 interp_ok(ConstantExprKind::PtrCast(inner, None))

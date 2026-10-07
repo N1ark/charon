@@ -204,7 +204,7 @@ static UNION: U = RawMemory(0x00, 0x00, 0x00, 0x00)
 static UNION_B: &'static u32 = &UNION.b
 
 // Full name: test_crate::MUT_PTR
-static MUT_PTR: test_crate::Sync<*mut u8>[{built_in impl Sized for *mut u8}] = test_crate::Sync { _0: &raw mut ARR[0usize] }
+static MUT_PTR: test_crate::Sync<*mut u8>[{built_in impl Sized for *mut u8}] = test_crate::Sync { _0: cast<*const u8, *mut u8>(&raw const ARR[0usize]) }
 
 // Full name: test_crate::NESTED
 fn NESTED() -> &'static mut [u8]
