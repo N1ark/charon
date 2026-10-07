@@ -856,10 +856,12 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     };
     let kind = match ty.kind() {
         ty::Char | ty::Bool | ty::Uint(_) | ty::Int(_) | ty::Float(_) => {
-            let scalar = ecx.read_scalar(&op)?;
-            let scalar_int = scalar.try_to_scalar_int().unwrap();
-            let lit = scalar_int_to_constant_literal(s, scalar_int, ty);
-            ConstantExprKind::Literal(lit)
+            match ecx.read_scalar(&op)?.try_to_scalar_int() {
+                Ok(scalar_int) => {
+                    ConstantExprKind::Literal(scalar_int_to_constant_literal(s, scalar_int, ty))
+                }
+                Err(_) => ConstantExprKind::Todo("pointer stored in a scalar".into()),
+            }
         }
         ty::Adt(adt_def, ..) if adt_def.is_union() => {
             ConstantExprKind::Memory(op_to_raw_bytes(s, ecx, &op)?)
@@ -1015,8 +1017,10 @@ pub fn const_value_to_constant_expr<'tcx, S: UnderOwnerState<'tcx>>(
 ) -> InterpResult<'tcx, ConstantExpr> {
     let tcx = s.base().tcx;
     let typing_env = s.typing_env();
-    let (ecx, op) =
-        const_eval::mk_eval_cx_for_const_val(tcx.at(span), typing_env, val, ty).unwrap();
+    let Some((ecx, op)) = const_eval::mk_eval_cx_for_const_val(tcx.at(span), typing_env, val, ty)
+    else {
+        return Err(rustc_middle::err_inval!(TooGeneric)).into();
+    };
     op_to_const(s, span, &ecx, op)
 }
 
@@ -1028,8 +1032,11 @@ pub fn const_value_to_raw_memory<'tcx, S: UnderOwnerState<'tcx>>(
     span: rustc_span::Span,
 ) -> InterpResult<'tcx, ConstantExpr> {
     let tcx = s.base().tcx;
-    let (ecx, op) =
-        const_eval::mk_eval_cx_for_const_val(tcx.at(span), s.typing_env(), val, ty).unwrap();
+    let Some((ecx, op)) =
+        const_eval::mk_eval_cx_for_const_val(tcx.at(span), s.typing_env(), val, ty)
+    else {
+        return Err(rustc_middle::err_inval!(TooGeneric)).into();
+    };
     let bytes = op_to_raw_bytes(s, &ecx, &op)?;
     interp_ok(ConstantExprKind::Memory(bytes).decorate(ty.sinto(s), span.sinto(s)))
 }
