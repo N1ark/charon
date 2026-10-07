@@ -1,5 +1,6 @@
 //@ revisions=values,bytes
 //@[values] charon-args=--consts=values
+//@[values] known-failure
 //@[bytes] charon-args=--consts=bytes
 // Pointers outside of their allocation.
 #![allow(unused)]

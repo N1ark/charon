@@ -735,6 +735,16 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     let global_ty = sized_view(s, ecx, &place)?;
 
     let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
+    // Our offsets are in-bounds place projections, so they can't express pointers outside of their
+    // allocation (one-past-the-end is fine).
+    let (alloc_size, _) = tcx
+        .global_alloc(alloc_id)
+        .size_and_align(tcx, s.typing_env());
+    if offset > alloc_size {
+        return interp_ok(ConstantExprKind::Todo(
+            "pointer outside of its allocation".into(),
+        ));
+    }
     // A pointer to a function, cast to another pointer type: read it as a function pointer.
     if let interpret::GlobalAlloc::Function { instance } = tcx.global_alloc(alloc_id) {
         let sig = match instance.def {
