@@ -1,4 +1,3 @@
-//@ known-failure
 //@ charon-args=--consts=values
 // Wide pointers without provenance.
 #![allow(unused)]

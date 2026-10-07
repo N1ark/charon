@@ -646,6 +646,28 @@ fn place_in_alloc<'tcx, S: UnderOwnerState<'tcx>>(
     Some((decl_ty, path, end_ty))
 }
 
+/// The sized type at which to view the pointee `place`. A slice or `dyn Trait` value is viewed at
+/// the sized type it was unsized from, and so is a `str` with `--unsized-strings`. Other unsized
+/// values (e.g. a `CStr`) have no such type.
+fn sized_view<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    ecx: &const_eval::CompileTimeInterpCx<'tcx>,
+    place: &rustc_const_eval::interpret::MPlaceTy<'tcx>,
+) -> InterpResult<'tcx, Option<ty::Ty<'tcx>>> {
+    use rustc_const_eval::interpret::Projectable;
+    let tcx = s.base().tcx;
+    let ty = place.layout.ty;
+    interp_ok(match ty.kind() {
+        ty::Slice(elem) => Some(ty::Ty::new_array(tcx, *elem, place.len(ecx)?)),
+        ty::Str if s.base().options.unsized_strings => {
+            Some(ty::Ty::new_array(tcx, tcx.types.u8, place.len(ecx)?))
+        }
+        ty::Dynamic(preds, ..) => Some(dyn_concrete_ty(ecx, place, preds)?),
+        _ if ty.is_sized(tcx, s.typing_env()) => Some(ty),
+        _ => None,
+    })
+}
+
 /// Convert a valid pointer of type `ptr_ty`. Pointers to globals are kept as pointers into these
 /// globals, and we fallback to reading the bytes of the pointee for other cases.
 fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
@@ -676,18 +698,7 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     } else {
         Some(pointer_metadata(s, ecx, &place)?)
     };
-    // A slice or `dyn Trait` value is viewed at the sized type it was unsized from, and so is a
-    // `str` with `--unsized-strings`. Other unsized values (e.g. a `CStr`) have no such type: we
-    // read them at their unsized type.
-    let global_ty = match ty.kind() {
-        ty::Slice(elem) => Some(ty::Ty::new_array(tcx, *elem, place.len(ecx)?)),
-        ty::Str if s.base().options.unsized_strings => {
-            Some(ty::Ty::new_array(tcx, tcx.types.u8, place.len(ecx)?))
-        }
-        ty::Dynamic(preds, ..) => Some(dyn_concrete_ty(ecx, &place, preds)?),
-        _ if ty.is_sized(tcx, s.typing_env()) => Some(ty),
-        _ => None,
-    };
+    let global_ty = sized_view(s, ecx, &place)?;
 
     let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
     if let Some(global_ty) = global_ty
@@ -839,21 +850,29 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
                 _ => ConstantExprKind::Todo("Unexpected function pointer".into()),
             }
         }
-        ty::RawPtr(..) | ty::Ref(..) => {
+        ty::RawPtr(_, mutability) | ty::Ref(_, _, mutability) => {
+            let place = ecx.deref_pointer(&op)?;
             // Make sure we only read through if it's not dangling!
-            let place_dangling = ecx.deref_pointer(&op).discard_err();
-            let place = place_dangling
-                .filter(|place| ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err().is_some());
-            if let Some(place) = place {
-                // Valid pointer case
+            if ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err().is_some() {
                 pointer_to_const(s, span, ecx, place, ty)?
+            } else if let (None, addr) = place.ptr().into_raw_parts() {
+                // A pointer without provenance, e.g. null or the pointer of an empty slice.
+                let lit = ConstantExprKind::Literal(ConstantLiteral::PtrNoProvenance(
+                    addr.bytes().into(),
+                ));
+                if place.layout.is_sized() {
+                    lit
+                } else if let Some(sized_ty) = sized_view(s, ecx, &place)? {
+                    // Unsize the thin pointer with the metadata.
+                    let thin_ty = ty::Ty::new_ptr(s.base().tcx, sized_ty, *mutability);
+                    let thin = lit.decorate(thin_ty.sinto(s), span.sinto(s));
+                    let metadata = pointer_metadata(s, ecx, &place)?;
+                    ConstantExprKind::PtrCast(thin, Some(metadata))
+                } else {
+                    ConstantExprKind::Todo("dangling pointer to an unsized value".into())
+                }
             } else {
-                // Invalid pointer; try reading it as a raw address
-                let scalar = ecx.read_scalar(&op)?;
-                let scalar_int = scalar.try_to_scalar_int().unwrap();
-                let v = scalar_int.to_uint(scalar_int.size());
-                let lit = ConstantLiteral::PtrNoProvenance(v);
-                ConstantExprKind::Literal(lit)
+                ConstantExprKind::Todo("dangling pointer".into())
             }
         }
         ty::Pat(..) => {
