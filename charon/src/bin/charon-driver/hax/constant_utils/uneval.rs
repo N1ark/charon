@@ -119,11 +119,7 @@ pub fn eval_constant_to_alloc<'tcx, S: UnderOwnerState<'tcx>>(
     args: ty::GenericArgsRef<'tcx>,
     promoted: Option<mir::Promoted>,
 ) -> Option<ConstantExpr> {
-    use ty::TypeVisitableExt;
     let tcx = s.base().tcx;
-    if args.has_non_region_param() {
-        return None;
-    }
     let instance = ty::Instance::try_resolve(tcx, s.typing_env(), def_id, args).ok()??;
     let cid = interpret::GlobalId { instance, promoted };
     let alloc = tcx

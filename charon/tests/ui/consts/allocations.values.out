@@ -147,6 +147,8 @@ static test_crate::{promoted_const#5}: MaybeUninit<[u8; 3usize]>[{built_in impl 
 
 static test_crate::{promoted_const#6}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
 
+static test_crate::{promoted_const#8}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x01, 0x02, 0x03)
+
 struct test_crate::Sync<T>
 where
     TraitClause0: (T: Sized),
@@ -240,6 +242,11 @@ const STR: &'static str = &BYTES with_metadata(3usize)
 // Full name: test_crate::STR_SUFFIX
 const STR_SUFFIX: &'static str = unsize_cast<*const [u8; 2usize], &'_ str, 2usize>(cast<*const MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}], *const [u8; 2usize]>(&raw const test_crate::{promoted_const#5}.offset(1usize)))
 
+const test_crate::generic::{promoted_const}<T>: &'_ [u8; 3usize]
+where
+    TraitClause0: (T: Sized),
+ = cast<*const MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}], &'_ [u8; 3usize]>(&raw const test_crate::{promoted_const#8})
+
 // Full name: test_crate::generic
 fn generic<T>() -> &'static [u8]
 where
@@ -249,21 +256,12 @@ where
     let _1: &'3 [u8; 3usize]; // anonymous local
     let _2: &'4 [u8; 3usize]; // anonymous local
     let _3: &'5 [u8; 3usize]; // anonymous local
-    let _4: &'6 [u8; 3usize]; // anonymous local
-    let _5: &'8 [u8; 3usize]; // anonymous local
-    let _6: [u8; 3usize]; // anonymous local
 
-    storage_live(_4)
-    storage_live(_5)
-    storage_live(_6)
-    _6 = [const 1u8, const 2u8, const 3u8]
-    _5 = &_6
-    _4 = move _5
     storage_live(_0)
     storage_live(_3)
     storage_live(_1)
     storage_live(_2)
-    _3 = move _4
+    _3 = copy test_crate::generic::{promoted_const}<T>[TraitClause0]
     _2 = &(*_3)
     _1 = &(*_2)
     _0 = as_slice<'_, u8, 3usize>[{built_in impl Sized for u8}](move _1)
@@ -271,9 +269,6 @@ where
     storage_dead(_1)
     storage_dead(_2)
     storage_dead(_3)
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_4)
     return
 }
 
