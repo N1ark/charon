@@ -386,11 +386,7 @@ impl DefId {
     pub fn make_anon_alloc<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
         let tcx = s.base().tcx;
         s.with_global_cache(|cache| cache.anon_allocs.insert(alloc_id));
-        let mutability = tcx
-            .global_alloc(alloc_id)
-            .unwrap_memory()
-            .inner()
-            .mutability;
+        let mutability = anon_alloc_memory(tcx, alloc_id).inner().mutability;
         let contents = DefIdContents {
             base: DefIdBase::Alloc(alloc_id),
             kind: DefKind::Static {
@@ -400,6 +396,20 @@ impl DefId {
             },
         };
         contents.make_def_id(s)
+    }
+}
+
+/// The memory of an allocation that we turn into an anonymous global: either an anonymous
+/// allocation or a nested static.
+pub fn anon_alloc_memory<'tcx>(
+    tcx: ty::TyCtxt<'tcx>,
+    alloc_id: RAllocId,
+) -> rustc_middle::mir::interpret::ConstAllocation<'tcx> {
+    use rustc_middle::mir::interpret::GlobalAlloc;
+    match tcx.global_alloc(alloc_id) {
+        GlobalAlloc::Memory(alloc) => alloc,
+        GlobalAlloc::Static(def_id) => tcx.eval_static_initializer(def_id).unwrap(),
+        alloc => unreachable!("not an anonymous allocation: {alloc:?}"),
     }
 }
 
@@ -650,7 +660,7 @@ impl DefId {
             DefIdBase::ImplAssocItem(id) => tcx.type_of(id.item_decl_id),
             DefIdBase::Alloc(alloc_id) => {
                 // `MaybeUninit<[u8; N]>`
-                let size = tcx.global_alloc(alloc_id).unwrap_memory().inner().size();
+                let size = anon_alloc_memory(tcx, alloc_id).inner().size();
                 let bytes = ty::Ty::new_array(tcx, tcx.types.u8, size.bytes());
                 let maybe_uninit =
                     tcx.require_lang_item(rustc_attr_ir::LangItem::MaybeUninit, DUMMY_SP);

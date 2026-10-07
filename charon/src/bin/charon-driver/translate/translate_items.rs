@@ -692,7 +692,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         let (size, align) = if let hax::DefIdBase::Alloc(alloc_id) = def.def_id().base {
             let tcx = self.t_ctx.tcx;
-            let alloc = tcx.global_alloc(alloc_id).unwrap_memory().inner();
+            let alloc = hax::anon_alloc_memory(tcx, alloc_id);
+            let alloc = alloc.inner();
             (
                 Size::new(alloc.size().bytes()),
                 Size::new(alloc.align.bytes()),

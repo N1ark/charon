@@ -142,11 +142,7 @@ where
             kind = FullDefKind::Static(Static {
                 param_env: ParamEnv::empty(s, None),
                 safety: Safety::Safe,
-                mutability: tcx
-                    .global_alloc(alloc_id)
-                    .unwrap_memory()
-                    .inner()
-                    .mutability,
+                mutability: anon_alloc_memory(tcx, alloc_id).inner().mutability,
                 thread_local: false,
                 ty: def_id
                     .type_of(s)
@@ -1777,47 +1773,40 @@ impl<'tcx> FullDef<'tcx> {
         }
         let s = &s.with_hax_owner(self.def_id());
 
-        if let DefIdBase::Alloc(alloc_id) = self.def_id().base {
-            // If this is an allocation, it is untyped and we need to read it as raw memory.
-            let val = mir::ConstValue::Indirect {
-                alloc_id,
-                offset: rustc_abi::Size::ZERO,
-            };
+        let tcx = s.base().tcx;
+        let (alloc, ty, span) = if let DefIdBase::Alloc(alloc_id) = self.def_id().base {
             let ty = self.def_id().type_of(s).instantiate_identity();
-            let span = rustc_span::DUMMY_SP;
-            return const_value_to_raw_memory(s, ty.skip_normalization(), val, span).discard_err();
-        }
-
-        let def_id = self.def_id().as_real_def_id()?;
-        // Statics in `extern` blocks have no value or initializer
-        if s.base().tcx.is_foreign_item(def_id) {
-            return None;
-        }
-        let args = self.this().rustc_args(s);
-        let ty = inst_binder(
-            s.base().tcx,
-            s.typing_env(),
-            Some(args),
-            self.def_id().type_of(s),
-        );
-        let alloc = s.base().tcx.eval_static_initializer(def_id).ok()?;
-        // A static whose type has interior mutability gets a mutable allocation, which
-        // const-eval refuses to read. We don't care though, so we reintern it as immutable.
+            let alloc = anon_alloc_memory(tcx, alloc_id);
+            (alloc, ty.skip_normalization(), rustc_span::DUMMY_SP)
+        } else {
+            let def_id = self.def_id().as_real_def_id()?;
+            // Statics in `extern` blocks have no value or initializer
+            if tcx.is_foreign_item(def_id) {
+                return None;
+            }
+            let args = self.this().rustc_args(s);
+            let ty = inst_binder(tcx, s.typing_env(), Some(args), self.def_id().type_of(s));
+            let alloc = tcx.eval_static_initializer(def_id).ok()?;
+            (alloc, ty, tcx.def_span(def_id))
+        };
+        // A mutable allocation (e.g. of a `static mut`, or of a static whose type has interior
+        // mutability) can't be read by const-eval. We don't care though, so we reintern it as
+        // immutable.
         let alloc = if alloc.inner().mutability.is_mut() {
             let mut alloc = alloc.inner().clone();
             alloc.mutability = rustc_middle::mir::Mutability::Not;
-            s.base().tcx.mk_const_alloc(alloc)
+            tcx.mk_const_alloc(alloc)
         } else {
             alloc
         };
-        // `eval_static_initializer` returns an interned allocation without an `AllocId`; give it
-        // one so we can inspect it through the existing `ConstValue` path.
+        // Give the allocation a fresh `AllocId` so we can inspect it through the existing
+        // `ConstValue` path.
         let val = mir::ConstValue::Indirect {
-            alloc_id: s.base().tcx.reserve_and_set_memory_alloc(alloc),
+            alloc_id: tcx.reserve_and_set_memory_alloc(alloc),
             offset: rustc_abi::Size::ZERO,
         };
-        let span = s.base().tcx.def_span(def_id);
-        if raw_memory {
+        // Anonymous allocations are untyped, so we read them as raw memory.
+        if raw_memory || matches!(self.def_id().base, DefIdBase::Alloc(_)) {
             const_value_to_raw_memory(s, ty, val, span).discard_err()
         } else {
             const_value_to_constant_expr(s, ty, val, span).discard_err()

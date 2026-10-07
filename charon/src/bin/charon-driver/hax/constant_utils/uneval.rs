@@ -358,14 +358,14 @@ fn alloc_as_global<'tcx, S: UnderOwnerState<'tcx>>(
     use interpret::GlobalAlloc::*;
     let tcx = s.base().tcx;
     match tcx.global_alloc(alloc_id) {
-        // TODO: nested statics are synthetic items that make the rest of the machinery ICE, so we
-        // don't turn them into named globals yet.
         Static(did)
             if let rustc_hir::def::DefKind::Static { nested: false, .. } = tcx.def_kind(did) =>
         {
             Some(translate_item_ref(s, did, Default::default()))
         }
-        Memory(_) if s.base().options.anon_allocs_as_globals => {
+        // Nested statics (e.g. the `[1, 2]` in `static mut S: &mut [u8] = &mut [1, 2]`) are
+        // synthetic items, so we treat them like anonymous allocations.
+        Memory(_) | Static(_) if s.base().options.anon_allocs_as_globals => {
             let def_id = DefId::make_anon_alloc(s, alloc_id);
             Some(ItemRef::dummy_without_generics(s, def_id))
         }
