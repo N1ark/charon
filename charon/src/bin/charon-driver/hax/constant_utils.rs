@@ -88,6 +88,8 @@ pub enum ConstantExprKind {
     FnPtr(ItemRef),
     /// A pointer to a stateless closure coerced to a function.
     ClosureAsFn(ClosureArgs),
+    /// The `TypeId` of this type.
+    TypeId(Ty),
     /// A blob of memory containing the byte representation of the value. This can occur when
     /// evaluating MIR constants (e.g. unions). Interpreting this back to a structured value
     /// is left as an exercice to the consumer.
@@ -134,6 +136,8 @@ pub enum ConstantByteProvenance {
     ClosureAsFn(ClosureArgs),
     /// A pointer to the vtable of this trait implementation.
     VTable(TraitProof),
+    /// The TypeId of a type.
+    TypeId(Ty),
     /// A pointer to anything else (an anonymous allocation, a vtable...).
     Unknown,
 }

@@ -344,8 +344,9 @@ fn alloc_provenance<'tcx, S: UnderOwnerState<'tcx>>(
                 _ => ConstantByteProvenance::Unknown,
             }
         }
-        // TODO: TypeIds
-        TypeId { .. } | VTable(..) => ConstantByteProvenance::Unknown,
+        TypeId { ty } => ConstantByteProvenance::TypeId(ty.sinto(s)),
+        // TODO: vtable for marker traits
+        VTable(..) => ConstantByteProvenance::Unknown,
     }
 }
 
@@ -807,6 +808,20 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
         }
         ty::Adt(adt_def, ..) if adt_def.is_union() => {
             ConstantExprKind::Memory(op_to_raw_bytes(s, ecx, &op)?)
+        }
+        // A `TypeId` is made of pointers into the `TypeId` allocation of its type.
+        ty::Adt(adt_def, ..)
+            if s.base()
+                .tcx
+                .is_lang_item(adt_def.did(), rustc_attr_ir::LangItem::TypeId) =>
+        {
+            let ptrs = ecx.project_field(&op, FieldIdx::ZERO)?;
+            let ptr = ecx.read_pointer(&ecx.project_index(&ptrs, 0)?)?;
+            let (alloc_id, ..) = ecx.ptr_get_alloc_id(ptr, 0)?;
+            match s.base().tcx.global_alloc(alloc_id) {
+                interpret::GlobalAlloc::TypeId { ty } => ConstantExprKind::TypeId(ty.sinto(s)),
+                _ => ConstantExprKind::Todo("`TypeId` with unexpected provenance".into()),
+            }
         }
         ty::Adt(adt_def, ..) => {
             let variant = ecx.read_discriminant(&op)?;

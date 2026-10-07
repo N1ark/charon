@@ -1250,6 +1250,9 @@ and provenance_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("Function", _0) ] ->
         let* _0 = fn_ptr_of_json ctx _0 in
         Ok (ProvFunction _0)
+    | `Assoc [ ("TypeId", _0) ] ->
+        let* _0 = ty_of_json ctx _0 in
+        Ok (ProvTypeId _0)
     | `String "Unknown" -> Ok ProvUnknown
     | _ -> Error "")
 

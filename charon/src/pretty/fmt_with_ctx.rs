@@ -1893,6 +1893,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for Provenance {
         match self {
             Provenance::Global(g) => write!(f, "&{}", g.with_ctx(ctx)),
             Provenance::Function(func) => write!(f, "&{}", func.with_ctx(ctx)),
+            Provenance::TypeId(ty) => write!(f, "&TypeId({})", ty.with_ctx(ctx)),
             Provenance::Unknown => write!(f, "&?"),
         }
     }

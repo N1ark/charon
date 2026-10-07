@@ -87,6 +87,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                             _ => Provenance::Unknown,
                         }
                     }
+                    hax::ConstantByteProvenance::TypeId(ty) => {
+                        Provenance::TypeId(self.translate_ty(span, ty)?)
+                    }
                     hax::ConstantByteProvenance::Unknown => Provenance::Unknown,
                 };
                 let offset = IntegerValue::Signed(IntTy::Isize, offset as i128);
@@ -253,6 +256,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             hax::ConstantExprKind::ClosureAsFn(closure) => {
                 let fn_ref = self.translate_stateless_closure_as_fn_ref(span, closure)?;
                 ConstantExprKind::FnPtr(self.erase_region_binder(fn_ref).into())
+            }
+            hax::ConstantExprKind::TypeId(ty) => {
+                ConstantExprKind::TypeId(self.translate_ty(span, ty)?)
             }
             hax::ConstantExprKind::Memory(bytes) => {
                 let bytes: Vec<Byte> = bytes

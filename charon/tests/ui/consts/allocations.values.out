@@ -175,7 +175,7 @@ impl "impl_Tr_for_u8" Tr for u8 {
 const DYNS: &'static [&'static (dyn Tr + 'static)] = unsize_cast<*const [&'_ (dyn Tr); 1usize], &'_ [&'_ (dyn Tr)], 1usize>(cast<*const MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}], *const [&'_ (dyn Tr); 1usize]>(&raw const test_crate::{promoted_const#1}))
 
 // Full name: test_crate::TID
-const TID: TypeId = TypeId { 0: [&raw const (), &raw const ()] }
+const TID: TypeId = TypeId(u8)
 
 // Full name: test_crate::foo
 fn foo()

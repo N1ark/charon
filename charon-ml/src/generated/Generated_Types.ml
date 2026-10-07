@@ -530,6 +530,7 @@ and predicate_origin =
 and provenance =
   | ProvGlobal of global_decl_ref
   | ProvFunction of fn_ptr
+  | ProvTypeId of ty
   | ProvUnknown
 
 and ref_kind = RMut | RShared
