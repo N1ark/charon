@@ -32,6 +32,10 @@ where
 #[diagnostic_item("cstr_type")]
 pub opaque type CStr
 
+struct () {}
+
+vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
 #[lang_item(Sync)]
 #[diagnostic_item("Sync")]
 pub unsafe trait core::marker::Sync<Self>
@@ -41,8 +45,6 @@ pub unsafe trait core::marker::Sync<Self>
 pub opaque type MaybeUninit<T>
 where
     TraitClause0: (T: Sized),
-
-struct () {}
 
 struct (_, _, _, _)<A, B, C, D>
 where
@@ -65,9 +67,75 @@ static ARR: [u8; 4usize] = RawMemory(0x01, 0x02, 0x03, 0x04)
 
 static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory((&ARR + 2isize)[0], (&ARR + 2isize)[1], (&ARR + 2isize)[2], (&ARR + 2isize)[3], (&ARR + 2isize)[4], (&ARR + 2isize)[5], (&ARR + 2isize)[6], (&ARR + 2isize)[7])
 
+// Full name: test_crate::{impl Tr for u8}::m
+fn m<'_0>(self: &'_0 u8) -> u8
+{
+    let _0: u8; // return
+    let self: &'1 u8; // arg #1
+
+    storage_live(_0)
+    _0 = copy (*self)
+    storage_dead(self)
+    return
+}
+
+struct test_crate::Tr::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Tr)),
+  method_m: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+}
+
+// Full name: test_crate::Tr
+trait Tr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn m<'_0_1>;
+    vtable: test_crate::Tr::{vtable}
+}
+
+// Full name: test_crate::{impl Tr for u8}::m::{vtable_method}
+fn {vtable_method}<'_0>(_1: &'_0 (dyn Tr)) -> u8
+{
+    let _0: u8; // return
+    let _1: &'_0 (dyn Tr + '0); // arg #1
+    let _2: &'_0 u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = concretize<&'_0 (dyn Tr + '1), &'_0 u8>(move _1)
+    _0 = m<'_0>(move _2)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::{impl Tr for u8}::{vtable_drop_shim}
+unsafe fn {vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
+{
+    let ret: (); // return
+    let dyn_self: &'_0 mut (dyn Tr + '0); // arg #1
+    let target_self: &'_0 mut u8; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut (dyn Tr + '1), &'_0 mut u8>(move dyn_self)
+    storage_dead(target_self)
+    storage_dead(dyn_self)
+    return
+}
+
+// Full name: test_crate::{impl Tr for u8}::{vtable}
+vtable impl_Tr_for_u8::{vtable}: test_crate::Tr::{vtable} = test_crate::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr({vtable_drop_shim}<'_>), method_m: fnptr({vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8> }
+
 static test_crate::{promoted_const#6}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
 
-static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
 
 static test_crate::{promoted_const#2}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x00, 0x01)
 
@@ -97,39 +165,11 @@ where
 // Full name: test_crate::INTERIOR
 const INTERIOR: &'static &'static u8 = RawMemory(&test_crate::{promoted_const}[0], &test_crate::{promoted_const}[1], &test_crate::{promoted_const}[2], &test_crate::{promoted_const}[3], &test_crate::{promoted_const}[4], &test_crate::{promoted_const}[5], &test_crate::{promoted_const}[6], &test_crate::{promoted_const}[7])
 
-struct test_crate::Tr::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Tr)),
-  method_m: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
-// Full name: test_crate::Tr
-trait Tr<Self>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    fn m<'_0_1>;
-    vtable: test_crate::Tr::{vtable}
-}
-
-// Full name: test_crate::{impl Tr for u8}::m
-fn m<'_0>(self: &'_0 u8) -> u8
-{
-    let _0: u8; // return
-    let self: &'1 u8; // arg #1
-
-    storage_live(_0)
-    _0 = copy (*self)
-    storage_dead(self)
-    return
-}
-
 // Full name: test_crate::{impl Tr for u8}
 impl "impl_Tr_for_u8" Tr for u8 {
     proof ImpliedClause0: (u8: MetaSized) = {built_in impl MetaSized for u8}
     fn m<'_0_1> = m<'_0_1>
-    vtable: lazy
+    vtable: impl_Tr_for_u8::{vtable}
 }
 
 // Full name: test_crate::DYNS
@@ -186,7 +226,7 @@ static WS: W<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}] = RawMemo
 const W_SLICE: &'static W<[u8]>[{built_in impl MetaSized for [u8]}] = RawMemory(&WS[0], &WS[1], &WS[2], &WS[3], &WS[4], &WS[5], &WS[6], &WS[7], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::W_DYN
-const W_DYN: &'static W<(dyn Tr + 'static)>[{built_in impl MetaSized for (dyn Tr + 'static)}] = RawMemory(&test_crate::{promoted_const#2}[0], &test_crate::{promoted_const#2}[1], &test_crate::{promoted_const#2}[2], &test_crate::{promoted_const#2}[3], &test_crate::{promoted_const#2}[4], &test_crate::{promoted_const#2}[5], &test_crate::{promoted_const#2}[6], &test_crate::{promoted_const#2}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+const W_DYN: &'static W<(dyn Tr + 'static)>[{built_in impl MetaSized for (dyn Tr + 'static)}] = RawMemory(&test_crate::{promoted_const#2}[0], &test_crate::{promoted_const#2}[1], &test_crate::{promoted_const#2}[2], &test_crate::{promoted_const#2}[3], &test_crate::{promoted_const#2}[4], &test_crate::{promoted_const#2}[5], &test_crate::{promoted_const#2}[6], &test_crate::{promoted_const#2}[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
 
 // Full name: test_crate::CSTR
 const CSTR: &'static CStr = RawMemory(&test_crate::{promoted_const#3}[0], &test_crate::{promoted_const#3}[1], &test_crate::{promoted_const#3}[2], &test_crate::{promoted_const#3}[3], &test_crate::{promoted_const#3}[4], &test_crate::{promoted_const#3}[5], &test_crate::{promoted_const#3}[6], &test_crate::{promoted_const#3}[7], 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)

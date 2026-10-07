@@ -74,29 +74,17 @@ static ARR: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
 
 static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory((&ARR + 2isize)[0], (&ARR + 2isize)[1], (&ARR + 2isize)[2], (&ARR + 2isize)[3], (&ARR + 2isize)[4], (&ARR + 2isize)[5], (&ARR + 2isize)[6], (&ARR + 2isize)[7])
 
-static test_crate::{promoted_const#3}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
-
-static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#3}[0], &test_crate::{promoted_const#3}[1], &test_crate::{promoted_const#3}[2], &test_crate::{promoted_const#3}[3], &test_crate::{promoted_const#3}[4], &test_crate::{promoted_const#3}[5], &test_crate::{promoted_const#3}[6], &test_crate::{promoted_const#3}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
-
-static test_crate::{promoted_const#2}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
-
-struct test_crate::Sync<T>
-where
-    TraitClause0: (T: Sized),
+// Full name: test_crate::{impl Tr for u8}::m
+fn m<'_0>(self: &'_0 u8) -> u8
 {
-  _0: T,
-}
+    let _0: u8; // return
+    let self: &'1 u8; // arg #1
 
-// Full name: test_crate::{impl core::marker::Sync for test_crate::Sync<T>[TraitClause0]}
-unsafe impl<T> "impl_Sync_for_Sync" core::marker::Sync for test_crate::Sync<T>[TraitClause0]
-where
-    TraitClause0: (T: Sized),
-{
-    vtable: lazy
+    storage_live(_0)
+    _0 = copy (*self)
+    storage_dead(self)
+    return
 }
-
-// Full name: test_crate::INTERIOR
-const INTERIOR: &'static &'static u8 = cast<*const MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}], &'_ &'_ u8>(&raw const test_crate::{promoted_const})
 
 struct test_crate::Tr::{vtable} {
   size: usize,
@@ -112,18 +100,6 @@ trait Tr<Self>
     proof ImpliedClause0: (Self: MetaSized)
     fn m<'_0_1>;
     vtable: test_crate::Tr::{vtable}
-}
-
-// Full name: test_crate::{impl Tr for u8}::m
-fn m<'_0>(self: &'_0 u8) -> u8
-{
-    let _0: u8; // return
-    let self: &'1 u8; // arg #1
-
-    storage_live(_0)
-    _0 = copy (*self)
-    storage_dead(self)
-    return
 }
 
 // Full name: test_crate::{impl Tr for u8}::m::{vtable_method}
@@ -163,6 +139,30 @@ unsafe fn {vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
 
 // Full name: test_crate::{impl Tr for u8}::{vtable}
 vtable impl_Tr_for_u8::{vtable}: test_crate::Tr::{vtable} = test_crate::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr({vtable_drop_shim}<'_>), method_m: fnptr({vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8> }
+
+static test_crate::{promoted_const#3}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
+
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#3}[0], &test_crate::{promoted_const#3}[1], &test_crate::{promoted_const#3}[2], &test_crate::{promoted_const#3}[3], &test_crate::{promoted_const#3}[4], &test_crate::{promoted_const#3}[5], &test_crate::{promoted_const#3}[6], &test_crate::{promoted_const#3}[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
+
+static test_crate::{promoted_const#2}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
+
+struct test_crate::Sync<T>
+where
+    TraitClause0: (T: Sized),
+{
+  _0: T,
+}
+
+// Full name: test_crate::{impl core::marker::Sync for test_crate::Sync<T>[TraitClause0]}
+unsafe impl<T> "impl_Sync_for_Sync" core::marker::Sync for test_crate::Sync<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    vtable: lazy
+}
+
+// Full name: test_crate::INTERIOR
+const INTERIOR: &'static &'static u8 = cast<*const MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}], &'_ &'_ u8>(&raw const test_crate::{promoted_const})
 
 // Full name: test_crate::{impl Tr for u8}
 impl "impl_Tr_for_u8" Tr for u8 {

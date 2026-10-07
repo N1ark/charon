@@ -77,6 +77,16 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                         let fn_ref = self.translate_stateless_closure_as_fn_ref(span, closure)?;
                         Provenance::Function(self.erase_region_binder(fn_ref).into())
                     }
+                    hax::ConstantByteProvenance::VTable(proof) => {
+                        match self.translate_vtable_instance_const(span, proof)?.kind() {
+                            ConstantExprKind::Ref(vtable, _, None)
+                                if let ConstantExprKind::Global(gref) = vtable.kind() =>
+                            {
+                                Provenance::Global(gref.clone())
+                            }
+                            _ => Provenance::Unknown,
+                        }
+                    }
                     hax::ConstantByteProvenance::Unknown => Provenance::Unknown,
                 };
                 let offset = IntegerValue::Signed(IntTy::Isize, offset as i128);

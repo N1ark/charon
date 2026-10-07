@@ -334,8 +334,17 @@ fn alloc_provenance<'tcx, S: UnderOwnerState<'tcx>>(
             Some(item) => ConstantByteProvenance::Global(item),
             None => ConstantByteProvenance::Unknown,
         },
+        // The vtable of a `dyn` pointer.
+        VTable(ty, preds) if preds.principal().is_some() => {
+            let tcx = s.base().tcx;
+            let dyn_ty = ty::Ty::new_dynamic(tcx, preds, tcx.lifetimes.re_erased);
+            let ptr_ty = |ty| ty::Ty::new_imm_ptr(tcx, ty);
+            match compute_unsizing_metadata(s, ptr_ty(ty), ptr_ty(dyn_ty)) {
+                UnsizingMetadata::DirectVTable(proof) => ConstantByteProvenance::VTable(proof),
+                _ => ConstantByteProvenance::Unknown,
+            }
+        }
         // TODO: TypeIds
-        // VTables are not reachable here, I believe: it's UB to attempt reading a VTable's data.
         TypeId { .. } | VTable(..) => ConstantByteProvenance::Unknown,
     }
 }

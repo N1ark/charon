@@ -132,6 +132,8 @@ pub enum ConstantByteProvenance {
     Function(ItemRef),
     /// A pointer to a stateless closure's function, coerced to a function pointer.
     ClosureAsFn(ClosureArgs),
+    /// A pointer to the vtable of this trait implementation.
+    VTable(TraitProof),
     /// A pointer to anything else (an anonymous allocation, a vtable...).
     Unknown,
 }
