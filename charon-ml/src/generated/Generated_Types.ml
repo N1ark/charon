@@ -253,10 +253,18 @@ and builtin_impl_data =
 and byte =
   | Uninit  (** An uninitialized byte *)
   | Value of int  (** A concrete byte value *)
-  | Provenance of provenance * int
-      (** A byte that is part of a pointer with provenance. The u8 is the offset
-          within the pointer. Note that we do not have an actual value for this
-          pointer byte, unlike MiniRust, as that is non-deterministic. *)
+  | Provenance of provenance * integer_value * int
+      (** A byte that is part of a pointer with provenance. With the associated
+          provenance, we track the pointer offset (0 if it points to the start
+          of that allocation), and the the index of this byte within the
+          pointer. Note that we do not have an actual value for this pointer
+          byte, unlike MiniRust, as that is non-deterministic.
+
+          Fields:
+          - [provenance]
+          - [offset]
+          - [index]: Provenance bytes have to stay ordered to be usable:
+            https://github.com/rust-lang/unsafe-code-guidelines/issues/558 *)
 
 (** For all the variants: the first type gives the source type, the second one
     gives the destination type. *)

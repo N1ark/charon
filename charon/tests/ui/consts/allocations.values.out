@@ -72,7 +72,7 @@ struct str {
 // Full name: test_crate::ARR
 static ARR: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory((&ARR + 2isize)[0], (&ARR + 2isize)[1], (&ARR + 2isize)[2], (&ARR + 2isize)[3], (&ARR + 2isize)[4], (&ARR + 2isize)[5], (&ARR + 2isize)[6], (&ARR + 2isize)[7])
 
 static test_crate::{promoted_const#3}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
 

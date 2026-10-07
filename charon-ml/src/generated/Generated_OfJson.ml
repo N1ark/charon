@@ -492,10 +492,18 @@ and byte_of_json (ctx : of_json_ctx) (js : json) : (byte, string) result =
     | `Assoc [ ("Value", _0) ] ->
         let* _0 = int_of_json ctx _0 in
         Ok (Value _0)
-    | `Assoc [ ("Provenance", `List [ _0; _1 ]) ] ->
-        let* _0 = provenance_of_json ctx _0 in
-        let* _1 = int_of_json ctx _1 in
-        Ok (Provenance (_0, _1))
+    | `Assoc
+        [
+          ( "Provenance",
+            `Assoc
+              [
+                ("provenance", provenance); ("offset", offset); ("index", index);
+              ] );
+        ] ->
+        let* provenance = provenance_of_json ctx provenance in
+        let* offset = integer_value_of_json ctx offset in
+        let* index = int_of_json ctx index in
+        Ok (Provenance (provenance, offset, index))
     | _ -> Error "")
 
 and call_of_json (ctx : of_json_ctx) (js : json) : (call, string) result =

@@ -1873,7 +1873,17 @@ impl<C: AstFormatter> FmtWithCtx<C> for Byte {
         match self {
             Byte::Value(x) => write!(f, "{:#04x}", x),
             Byte::Uninit => write!(f, "--"),
-            Byte::Provenance(p, ofs) => write!(f, "{}[{}]", p.with_ctx(ctx), ofs),
+            Byte::Provenance {
+                provenance,
+                offset,
+                index,
+            } => {
+                if offset.to_bits() == 0 {
+                    write!(f, "{}[{index}]", provenance.with_ctx(ctx))
+                } else {
+                    write!(f, "({} + {offset})[{index}]", provenance.with_ctx(ctx))
+                }
+            }
         }
     }
 }

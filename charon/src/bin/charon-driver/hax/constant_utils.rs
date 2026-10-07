@@ -117,9 +117,10 @@ pub enum ConstantByte {
     Uninit,
     /// A concrete byte value.
     Value(u8),
-    /// A byte that is part of a pointer with provenance. The `u8` is the offset of this byte
-    /// within the pointer.
-    Provenance(ConstantByteProvenance, u8),
+    /// A byte that is part of a pointer with provenance. The pointer points the `i64` number of
+    /// bytes after the start of its target, and the `u8` is the index of this byte within the
+    /// pointer.
+    Provenance(ConstantByteProvenance, i64, u8),
 }
 
 /// What a pointer byte in an evaluated constant points to.

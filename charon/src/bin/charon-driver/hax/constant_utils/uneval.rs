@@ -395,10 +395,13 @@ fn imm_to_raw_bytes<'tcx, S: UnderOwnerState<'tcx>>(
                 }
             }
             interpret::Scalar::Ptr(ptr, size) => {
-                let prov = alloc_provenance(s, ptr.provenance.alloc_id());
+                let (prov, ptr_offset) = ptr.into_raw_parts();
+                let prov = alloc_provenance(s, prov.alloc_id());
+                let ptr_offset =
+                    Size::from_bytes(size.get()).sign_extend(ptr_offset.bytes().into());
                 for i in 0..size.get() {
                     bytes[offset.bytes_usize() + i as usize] =
-                        ConstantByte::Provenance(prov.clone(), i);
+                        ConstantByte::Provenance(prov.clone(), ptr_offset as i64, i);
                 }
             }
         };
@@ -442,14 +445,35 @@ fn mplace_to_raw_bytes<'tcx, S: UnderOwnerState<'tcx>>(
         )
         .collect();
 
-    for (prov_range, prov) in alloc.provenance().get_range(range, ecx) {
-        let prov = alloc_provenance(s, prov.alloc_id());
-        for i in 0..prov_range.size.bytes() {
-            let pos = prov_range.start + Size::from_bytes(i);
+    // The bytes of a pointer hold its offset into its target.
+    let data_layout = &s.base().tcx.data_layout;
+    let (ptr_size, endian) = (data_layout.pointer_size(), data_layout.endian);
+    let read_offset =
+        |raw: &[u8]| ptr_size.sign_extend(interpret::read_target_uint(endian, raw).unwrap()) as i64;
+    // Whole pointers, including the ones that only partially overlap with the range.
+    let first = range.start - Size::from_bytes(range.start.bytes().min(ptr_size.bytes() - 1));
+    for &(start, prov) in alloc.provenance().ptrs().range(first..range.end()) {
+        let target = alloc_provenance(s, prov.alloc_id());
+        let offset =
+            read_offset(alloc.get_bytes_unchecked(interpret::alloc_range(start, ptr_size)));
+        for i in 0..ptr_size.bytes() {
+            let pos = start + Size::from_bytes(i);
             if range.start <= pos && pos < range.end() {
                 bytes[(pos - range.start).bytes_usize()] =
-                    ConstantByte::Provenance(prov.clone(), i as u8);
+                    ConstantByte::Provenance(target.clone(), offset, i as u8);
             }
+        }
+    }
+    // Fragments of pointers.
+    for (i, byte) in bytes.iter_mut().enumerate() {
+        if !matches!(byte, ConstantByte::Provenance(..))
+            && let Some(frag) = alloc
+                .provenance()
+                .get_byte(range.start + Size::from_bytes(i), ecx)
+        {
+            let target = alloc_provenance(s, frag.prov.alloc_id());
+            let offset = read_offset(&frag.bytes[..ptr_size.bytes_usize()]);
+            *byte = ConstantByte::Provenance(target, offset, frag.idx);
         }
     }
     interp_ok(bytes)

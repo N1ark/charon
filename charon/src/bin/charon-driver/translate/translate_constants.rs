@@ -62,11 +62,11 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         span: Span,
         b: &hax::ConstantByte,
     ) -> Result<Byte, Error> {
-        Ok(match b {
+        Ok(match *b {
             hax::ConstantByte::Uninit => Byte::Uninit,
-            hax::ConstantByte::Value(v) => Byte::Value(*v),
-            hax::ConstantByte::Provenance(prov, offset) => {
-                let prov = match prov {
+            hax::ConstantByte::Value(v) => Byte::Value(v),
+            hax::ConstantByte::Provenance(ref prov, offset, index) => {
+                let provenance = match prov {
                     hax::ConstantByteProvenance::Global(item) => {
                         Provenance::Global(self.translate_global_decl_ref(span, item)?)
                     }
@@ -79,7 +79,12 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     }
                     hax::ConstantByteProvenance::Unknown => Provenance::Unknown,
                 };
-                Byte::Provenance(prov, *offset)
+                let offset = IntegerValue::Signed(IntTy::Isize, offset as i128);
+                Byte::Provenance {
+                    provenance,
+                    offset,
+                    index,
+                }
             }
         })
     }

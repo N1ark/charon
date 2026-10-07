@@ -39,13 +39,13 @@ where
 static ARR: [u8; 4usize] = RawMemory(0x01, 0x02, 0x03, 0x04)
 
 // Full name: test_crate::BEFORE
-static BEFORE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+static BEFORE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory((&ARR + -1isize)[0], (&ARR + -1isize)[1], (&ARR + -1isize)[2], (&ARR + -1isize)[3], (&ARR + -1isize)[4], (&ARR + -1isize)[5], (&ARR + -1isize)[6], (&ARR + -1isize)[7])
 
 // Full name: test_crate::AFTER
-static AFTER: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+static AFTER: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory((&ARR + 8isize)[0], (&ARR + 8isize)[1], (&ARR + 8isize)[2], (&ARR + 8isize)[3], (&ARR + 8isize)[4], (&ARR + 8isize)[5], (&ARR + 8isize)[6], (&ARR + 8isize)[7])
 
 // Full name: test_crate::END
-static END: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+static END: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory((&ARR + 4isize)[0], (&ARR + 4isize)[1], (&ARR + 4isize)[2], (&ARR + 4isize)[3], (&ARR + 4isize)[4], (&ARR + 4isize)[5], (&ARR + 4isize)[6], (&ARR + 4isize)[7])
 
 // Full name: test_crate::main
 fn main()

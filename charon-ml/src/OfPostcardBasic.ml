@@ -98,7 +98,8 @@ let read_varint_z ~(max_bytes : int) ~(max_last : int) (st : postcard_state) :
   loop 0 0 Z.zero
 
 let z_to_int (z : Z.t) : (int, string) result =
-  if Z.geq z Z.zero && Z.leq z (Z.of_int max_int) then Ok (Z.to_int z)
+  if Z.geq z (Z.of_int min_int) && Z.leq z (Z.of_int max_int) then
+    Ok (Z.to_int z)
   else Error "integer out of OCaml int range"
 
 let z_to_i (z : Z.t) : (Z.t, string) result =
