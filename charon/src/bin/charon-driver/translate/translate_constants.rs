@@ -234,6 +234,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 let kind = if let Some(metadata) = metadata {
                     let metadata = self.translate_unsizing_metadata(span, metadata)?;
                     CastKind::Unsize(src, ty.clone(), metadata)
+                } else if src.is_fn_ptr() {
+                    CastKind::FnPtr(src, ty.clone())
                 } else {
                     CastKind::RawPtr(src, ty.clone())
                 };

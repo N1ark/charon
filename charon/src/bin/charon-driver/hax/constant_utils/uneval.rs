@@ -735,6 +735,33 @@ fn pointer_to_const<'tcx, S: UnderOwnerState<'tcx>>(
     let global_ty = sized_view(s, ecx, &place)?;
 
     let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
+    // A pointer to a function, cast to another pointer type: read it as a function pointer.
+    if let interpret::GlobalAlloc::Function { instance } = tcx.global_alloc(alloc_id) {
+        let sig = match instance.def {
+            ty::InstanceKind::Shim(ty::ShimKind::ClosureOnce { .. }) => {
+                let ty::Closure(_, args) = instance.args.type_at(0).kind() else {
+                    unreachable!("ClosureOnce shim on non-closure")
+                };
+                tcx.signature_unclosure(args.as_closure().sig(), rustc_hir::Safety::Safe)
+            }
+            _ => instance.ty(tcx, s.typing_env()).fn_sig(tcx),
+        };
+        let fn_ptr_ty = ty::Ty::new_fn_ptr(tcx, sig);
+        let layout = tcx
+            .layout_of(s.typing_env().as_query_input(fn_ptr_ty))
+            .unwrap();
+        let ptr = place.ptr().into_pointer_or_addr().unwrap();
+        let fn_ptr = rustc_const_eval::interpret::ImmTy::from_scalar(
+            interpret::Scalar::from_pointer(ptr, &tcx),
+            layout,
+        );
+        let fn_ptr = op_to_const(s, span, ecx, fn_ptr.into())?;
+        return interp_ok(if offset == rustc_abi::Size::ZERO && ptr_ty.is_raw_ptr() {
+            ConstantExprKind::PtrCast(fn_ptr, None)
+        } else {
+            ConstantExprKind::Todo("unsupported pointer to a function".into())
+        });
+    }
     if let Some(global_ty) = global_ty
         && let Some(item) = alloc_as_global(s, alloc_id)
         && let Some((decl_ty, projections, end_ty)) =

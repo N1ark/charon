@@ -189,7 +189,7 @@ fn foo()
 }
 
 // Full name: test_crate::FN_RAW
-const FN_RAW: *const () = &raw const ()
+const FN_RAW: *const () = cast<fn(), *const ()>(fnptr(foo))
 
 // Full name: test_crate::U
 union U {
