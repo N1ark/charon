@@ -1,7 +1,7 @@
 //! Reconstruct structured expressions from rustc's various constant representations.
 use super::*;
 use rustc_const_eval::const_eval;
-use rustc_const_eval::interpret::{FnVal, InterpResult, interp_ok};
+use rustc_const_eval::interpret::{InterpResult, interp_ok};
 use rustc_middle::mir::interpret;
 use rustc_middle::{mir, ty};
 
@@ -830,11 +830,14 @@ fn op_to_const<'tcx, S: UnderOwnerState<'tcx>>(
         }
         ty::FnPtr(..) => {
             let fn_ptr = ecx.read_pointer(&op)?;
-            let FnVal::Instance(instance) = ecx.get_ptr_fn(fn_ptr)?;
-            let def_id = instance.def_id();
-            let generics = instance.args;
-            let fun = translate_item_ref(s, def_id, generics);
-            ConstantExprKind::FnPtr(fun)
+            let (alloc_id, ..) = ecx.ptr_get_alloc_id(fn_ptr, 0)?;
+            match alloc_provenance(s, alloc_id) {
+                ConstantByteProvenance::Function(item) => ConstantExprKind::FnPtr(item),
+                ConstantByteProvenance::ClosureAsFn(closure) => {
+                    ConstantExprKind::ClosureAsFn(closure)
+                }
+                _ => ConstantExprKind::Todo("Unexpected function pointer".into()),
+            }
         }
         ty::RawPtr(..) | ty::Ref(..) => {
             // Make sure we only read through if it's not dangling!

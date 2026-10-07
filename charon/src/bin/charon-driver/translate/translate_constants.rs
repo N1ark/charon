@@ -235,6 +235,10 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 let fn_ptr = self.translate_fn_ptr(span, item, TransItemSourceKind::Fun)?;
                 ConstantExprKind::FnPtr(fn_ptr)
             }
+            hax::ConstantExprKind::ClosureAsFn(closure) => {
+                let fn_ref = self.translate_stateless_closure_as_fn_ref(span, closure)?;
+                ConstantExprKind::FnPtr(self.erase_region_binder(fn_ref).into())
+            }
             hax::ConstantExprKind::Memory(bytes) => {
                 let bytes: Vec<Byte> = bytes
                     .iter()

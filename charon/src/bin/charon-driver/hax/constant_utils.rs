@@ -86,6 +86,8 @@ pub enum ConstantExprKind {
     FnDef(ItemRef),
     /// A function pointer. This is an actual pointer to that function.
     FnPtr(ItemRef),
+    /// A pointer to a stateless closure coerced to a function.
+    ClosureAsFn(ClosureArgs),
     /// A blob of memory containing the byte representation of the value. This can occur when
     /// evaluating MIR constants (e.g. unions). Interpreting this back to a structured value
     /// is left as an exercice to the consumer.
