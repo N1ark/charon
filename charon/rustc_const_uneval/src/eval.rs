@@ -38,7 +38,8 @@ impl<'tcx> ConstReader<'tcx> {
     /// Fails with:
     /// - [`ReadError::NotEvaluable`] if rustc can't evaluate the constant: if it is generic (and
     ///   not trivial, i.e. its value isn't stored directly by rustc), if its evaluation fails, if
-    ///   it's an extern static, or if it's a promoted read in [`ReadMode::Structured`];
+    ///   it's an extern static, or if it's a promoted read in [`ReadMode::Structured`] while we
+    ///   don't name allocations (see [`Config::anon_allocs_as_globals`]);
     /// - [`ReadError::NotLoadable`] if the interpreter can't load the evaluated value;
     /// - [`ReadError::Read`] if reading the loaded value fails.
     pub fn read(
@@ -69,9 +70,22 @@ impl<'tcx> ConstReader<'tcx> {
     ) -> Result<Evaluated<'tcx>, ReadError<'tcx>> {
         let tcx = self.tcx;
         let instantiate = |ty, args| ty::EarlyBinder::bind(tcx, ty).instantiate(tcx, args);
+        let resolve = |def, args, promoted| {
+            let uv = mir::UnevaluatedConst {
+                def,
+                args,
+                promoted,
+            };
+            tcx.const_eval_resolve(self.typing_env, uv, span).ok()
+        };
         Ok(match src {
             ConstSource::Item { def_id, args } => {
                 let evaluated = match mode {
+                    ReadMode::Structured
+                        if let Some(evaluated) = self.eval_to_alloc(def_id, args, None) =>
+                    {
+                        return Ok(evaluated);
+                    }
                     ReadMode::Structured => {
                         let kind = ty::AliasConstKind::new_from_def_id(
                             tcx,
@@ -84,22 +98,15 @@ impl<'tcx> ConstReader<'tcx> {
                         }
                         None
                     }
-                    ReadMode::Bytes => {
-                        let uv = mir::UnevaluatedConst {
-                            def: def_id,
-                            args,
-                            promoted: None,
-                        };
-                        let ty = tcx
-                            .type_of(def_id)
-                            .instantiate_identity()
-                            .skip_normalization();
-                        let val = tcx.const_eval_resolve(self.typing_env, uv, span).ok();
-                        val.map(|val| (val, ty))
-                    }
+                    ReadMode::Bytes => resolve(def_id, args, None).map(|val| {
+                        let ty = tcx.type_of(def_id).instantiate_identity();
+                        (val, ty.skip_normalization())
+                    }),
                 };
-                // Otherwise, we can still read the value of "trivial" consts, which rustc
-                // stores directly. This works even for generic consts.
+                // Rustc can't evaluate a generic const, evaluation may fail, and a structured read
+                // through a valtree fails for types without a valtree representation (e.g. raw
+                // pointers or unions). We can still read the value of "trivial" consts, which
+                // rustc stores directly.
                 let (val, ty) = evaluated
                     .or_else(|| tcx.trivial_const(def_id))
                     .ok_or(ReadError::NotEvaluable)?;
@@ -109,27 +116,23 @@ impl<'tcx> ConstReader<'tcx> {
                 def_id,
                 args,
                 promoted,
-            } => {
+            } => match mode {
                 // We can't go through valtrees for promoteds as we can't name them as type-level
-                // constants, so we only read them as bytes.
-                if mode == ReadMode::Structured {
-                    return Err(ReadError::NotEvaluable);
+                // constants, so when we don't name allocations we only read them as bytes.
+                ReadMode::Structured => self
+                    .eval_to_alloc(def_id, args, Some(promoted))
+                    .ok_or(ReadError::NotEvaluable)?,
+                ReadMode::Bytes => {
+                    let val =
+                        resolve(def_id, args, Some(promoted)).ok_or(ReadError::NotEvaluable)?;
+                    // Promoteds aren't items so `type_of` doesn't work for them; instead we read
+                    // their type off the return place of their MIR body.
+                    let ty = promoted_body(tcx, def_id, promoted, |body| {
+                        body.local_decls[mir::RETURN_PLACE].ty
+                    });
+                    Evaluated::Value(val, instantiate(ty, args).skip_normalization())
                 }
-                let uv = mir::UnevaluatedConst {
-                    def: def_id,
-                    args,
-                    promoted: Some(promoted),
-                };
-                let val = tcx
-                    .const_eval_resolve(self.typing_env, uv, span)
-                    .map_err(|_| ReadError::NotEvaluable)?;
-                // Promoteds aren't items so `type_of` doesn't work for them; instead we read
-                // their type off the return place of their MIR body.
-                let ty = promoted_body(tcx, def_id, promoted, |body| {
-                    body.local_decls[mir::RETURN_PLACE].ty
-                });
-                Evaluated::Value(val, instantiate(ty, args).skip_normalization())
-            }
+            },
             ConstSource::Global(global) => {
                 let alloc_id = match global {
                     // Statics in `extern` blocks have no initializer.
@@ -164,6 +167,12 @@ impl<'tcx> ConstReader<'tcx> {
                 };
                 Evaluated::Value(val, self.global_ty(global))
             }
+            ConstSource::TyConst(uv)
+                if let Some(def_id) = uv.kind.opt_def_id()
+                    && let Some(evaluated) = self.eval_to_alloc(def_id, uv.args, None) =>
+            {
+                evaluated
+            }
             ConstSource::TyConst(uv) => {
                 let value = self.eval_to_valtree(span, uv);
                 Evaluated::ValTree(value.ok_or(ReadError::NotEvaluable)?)
@@ -171,6 +180,32 @@ impl<'tcx> ConstReader<'tcx> {
             ConstSource::ValTree(value) => Evaluated::ValTree(value),
             ConstSource::Value(val, ty) => Evaluated::Value(val, ty),
         })
+    }
+
+    /// When we name allocations, evaluate a constant (or one of its promoteds) to an allocation.
+    /// Unlike valtrees, this keeps track of the allocations the value points to, which can then
+    /// become globals. Returns `None` if we don't name allocations, or if rustc can't evaluate the
+    /// constant (e.g. if its value depends on generic parameters).
+    fn eval_to_alloc(
+        &self,
+        def_id: DefId,
+        args: ty::GenericArgsRef<'tcx>,
+        promoted: Option<mir::Promoted>,
+    ) -> Option<Evaluated<'tcx>> {
+        if !self.config.anon_allocs_as_globals {
+            return None;
+        }
+        let tcx = self.tcx;
+        let instance = ty::Instance::try_resolve(tcx, self.typing_env, def_id, args).ok()??;
+        let cid = interpret::GlobalId { instance, promoted };
+        let alloc = tcx
+            .eval_to_allocation_raw(self.typing_env.as_query_input(cid))
+            .ok()?;
+        let val = mir::ConstValue::Indirect {
+            alloc_id: alloc.alloc_id,
+            offset: rustc_abi::Size::ZERO,
+        };
+        Some(Evaluated::Value(val, alloc.ty))
     }
 
     /// Evaluate a type-level constant to a valtree. Returns `None` if the constant is generic, if

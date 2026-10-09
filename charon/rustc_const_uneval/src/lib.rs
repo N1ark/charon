@@ -27,7 +27,9 @@ use rustc_middle::ty::{self, Ty, TyCtxt};
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Config {
     /// Whether to refer to anonymous allocations (e.g. the bytes of `b"foo"`) as globals, or to
-    /// inline their contents at each use.
+    /// inline their contents at each use. When we name them, structured reads of constants evaluate
+    /// them to an allocation rather than to a valtree, so that the allocations they point to become
+    /// globals too.
     pub anon_allocs_as_globals: bool,
 }
 

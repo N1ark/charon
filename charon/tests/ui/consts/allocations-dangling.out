@@ -23,13 +23,6 @@ pub trait Sized<Self>
 #[diagnostic_item("Sync")]
 pub unsafe trait core::marker::Sync<Self>
 
-// Full name: core::ptr::slice_from_raw_parts
-#[diagnostic_item("ptr_slice_from_raw_parts")]
-pub fn slice_from_raw_parts<T>(_1: *const T, _2: usize) -> *const [T]
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
 struct () {}
 
 struct str {
@@ -52,25 +45,10 @@ where
 }
 
 // Full name: test_crate::RAW_SLICE
-fn RAW_SLICE() -> *const [u8]
-{
-    let _0: *const [u8]; // return
-    let _1: *const u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    _1 = cast_with_exposed<usize, *const u8>(const 1usize)
-    _0 = slice_from_raw_parts<u8>[{built_in impl Sized for u8}](move _1, const 0usize)
-    ↳⚡ unwind_continue
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::RAW_SLICE
-const RAW_SLICE: *const [u8] = RAW_SLICE()
+const RAW_SLICE: *const [u8] = unsize_cast<*const [u8; 0usize], *const [u8], 0usize>(no-provenance 1)
 
 // Full name: test_crate::EMPTY
-const EMPTY: &'static [u8] = &[] with_metadata(0usize)
+const EMPTY: &'static [u8] = unsize_cast<*const [u8; 0usize], &'_ [u8], 0usize>(no-provenance 1)
 
 // Full name: test_crate::RAW_SLICE_STATIC
 static RAW_SLICE_STATIC: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}] = test_crate::Sync { _0: unsize_cast<*const [u8; 0usize], *const [u8], 0usize>(no-provenance 1) }

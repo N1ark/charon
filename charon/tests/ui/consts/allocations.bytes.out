@@ -60,7 +60,24 @@ struct str {
   _0: [u8],
 }
 
+// Full name: test_crate::ARR
+static ARR: [u8; 4usize] = RawMemory(0x01, 0x02, 0x03, 0x04)
+
+static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+
+static test_crate::{promoted_const#6}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
+
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(&test_crate::{promoted_const#6}[0], &test_crate::{promoted_const#6}[1], &test_crate::{promoted_const#6}[2], &test_crate::{promoted_const#6}[3], &test_crate::{promoted_const#6}[4], &test_crate::{promoted_const#6}[5], &test_crate::{promoted_const#6}[6], &test_crate::{promoted_const#6}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+
+static test_crate::{promoted_const#2}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x00, 0x01)
+
+static test_crate::{promoted_const#3}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x68, 0x69, 0x00)
+
+static test_crate::{promoted_const#4}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x61, 0x62, 0x63)
+
 static test_crate::{promoted_const#5}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x61, 0x62)
+
+static test_crate::{promoted_const#7}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x01, 0x02, 0x03)
 
 struct test_crate::Sync<T>
 where
@@ -76,9 +93,6 @@ where
 {
     vtable: lazy
 }
-
-// Full name: test_crate::ARR
-static ARR: [u8; 4usize] = RawMemory(0x01, 0x02, 0x03, 0x04)
 
 // Full name: test_crate::INTERIOR
 const INTERIOR: &'static &'static u8 = RawMemory(&test_crate::{promoted_const}[0], &test_crate::{promoted_const}[1], &test_crate::{promoted_const}[2], &test_crate::{promoted_const}[3], &test_crate::{promoted_const}[4], &test_crate::{promoted_const}[5], &test_crate::{promoted_const}[6], &test_crate::{promoted_const}[7])

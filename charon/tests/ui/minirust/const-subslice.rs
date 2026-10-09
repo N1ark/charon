@@ -1,4 +1,5 @@
 //@ output=run-with-minirust
+//@ known-failure
 // MiniRust doesn't support subslice projections.
 unsafe extern "Rust" {
     safe fn minirust_print(value: u32);

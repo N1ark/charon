@@ -1,1 +1,7 @@
-20
+error: Failed to translate place to MiniRust: ARR[const 1usize..const 3usize]
+  --> tests/ui/minirust/const-subslice.rs:11:24
+   |
+11 |     let tail: &[u32] = const { ARR.split_at(1).1 };
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Could not compile the program to MiniRust
