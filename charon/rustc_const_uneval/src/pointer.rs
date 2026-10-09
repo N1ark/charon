@@ -13,10 +13,33 @@ impl<'tcx> ConstReader<'tcx> {
     ) -> InterpResult<'tcx, Const<'tcx>> {
         let tcx = self.tcx;
         let ptr_ty = op.layout.ty;
-        let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *ptr_ty.kind() else {
-            unreachable!("not a pointer type: {ptr_ty:?}")
-        };
         let place = ecx.deref_pointer(op)?;
+        // A pointer to a function, cast to another pointer type: we read it as a cast of a
+        // function pointer.
+        if let (Some(prov), offset) = place.ptr().into_raw_parts()
+            && let AllocTarget::Fn(target) = self.alloc_target(prov.alloc_id())
+        {
+            // We can only express a thin raw pointer to the start of the function.
+            if offset != Size::ZERO || !ptr_ty.is_raw_ptr() || place.meta().has_meta() {
+                let kind = ConstKind::Unsupported("unsupported pointer to a function");
+                return interp_ok(Const { ty: ptr_ty, kind });
+            }
+            let sig = match target {
+                FnTarget::Instance(instance) => instance.ty(tcx, self.typing_env).fn_sig(tcx),
+                FnTarget::ClosureAsFn(_, args) => {
+                    tcx.signature_unclosure(args.as_closure().sig(), rustc_hir::Safety::Safe)
+                }
+            };
+            let fn_ptr = Const {
+                ty: Ty::new_fn_ptr(tcx, sig),
+                kind: ConstKind::FnPtr(target),
+            };
+            let kind = ConstKind::PtrCast {
+                ptr: Box::new(fn_ptr),
+                unsize: None,
+            };
+            return interp_ok(Const { ty: ptr_ty, kind });
+        }
         let ty = place.layout.ty;
         let unsize = if place.meta().has_meta() {
             let tail = tcx.struct_tail_for_codegen(ty, self.typing_env);
@@ -34,9 +57,7 @@ impl<'tcx> ConstReader<'tcx> {
         let kind = match place.ptr().into_raw_parts() {
             // Rustc rejects dangling pointers in final values, so a pointer with provenance
             // points to a live allocation.
-            (Some(_), _) => {
-                self.read_pointer_into_alloc(ecx, place, mutability, unsize, view_ty)?
-            }
+            (Some(_), _) => self.read_pointer_into_alloc(ecx, place, ptr_ty, unsize, view_ty)?,
             // A pointer without provenance, e.g. null or the pointer of an empty slice.
             (None, addr) => {
                 let addr = ConstKind::PtrNoProvenance(addr.bytes().into());
@@ -54,7 +75,7 @@ impl<'tcx> ConstReader<'tcx> {
                     // Unsize the thin pointer with the metadata.
                     (Some(unsize), Some(view_ty)) => ConstKind::PtrCast {
                         ptr: Box::new(Const {
-                            ty: Ty::new_ptr(tcx, view_ty, mutability),
+                            ty: Ty::new_ptr(tcx, view_ty, pointer_mutability(ptr_ty)),
                             kind: addr,
                         }),
                         unsize: Some(unsize),
@@ -74,12 +95,13 @@ impl<'tcx> ConstReader<'tcx> {
         &self,
         ecx: &CompileTimeInterpCx<'tcx>,
         place: MPlaceTy<'tcx>,
-        mutability: ty::Mutability,
+        ptr_ty: Ty<'tcx>,
         unsize: Option<Unsize<'tcx>>,
         view_ty: Option<Ty<'tcx>>,
     ) -> InterpResult<'tcx, ConstKind<'tcx>> {
         let tcx = self.tcx;
         let ty = place.layout.ty;
+        let mutability = pointer_mutability(ptr_ty);
         let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
         let alloc_target = self.alloc_target(alloc_id);
         // A pointer outside of its allocation (one-past-the-end is fine) needs a wrapping offset.

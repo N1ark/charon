@@ -352,14 +352,13 @@ pub fn FN() -> fn() -> u8
 // Full name: ptr_cast_in_bodies_aux::FN
 pub static FN: fn() -> u8 = FN()
 
-// Full name: ptr_cast_in_bodies_aux::CLOSURE::{closure}
-struct {closure} {}
+struct ptr_cast_in_bodies_aux::CLOSURE::{closure} {}
 
-// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl Fn<()> for {closure}}::call
-fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u8
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call
+fn {impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call<'_0>(_1: &'_0 ptr_cast_in_bodies_aux::CLOSURE::{closure}, tupled_args: ()) -> u8
 {
     let _0: u8; // return
-    let _1: &'1 {closure}; // arg #1
+    let _1: &'1 ptr_cast_in_bodies_aux::CLOSURE::{closure}; // arg #1
     let tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -369,18 +368,18 @@ fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u8
     return
 }
 
-// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnMut<()> for {closure}}::call_mut
-fn call_mut<'_0>(state: &'_0 mut {closure}, args: ()) -> u8
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_mut
+fn {impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_mut<'_0>(state: &'_0 mut ptr_cast_in_bodies_aux::CLOSURE::{closure}, args: ()) -> u8
 {
     let _0: u8; // return
-    let state: &'_0 mut {closure}; // arg #1
+    let state: &'_0 mut ptr_cast_in_bodies_aux::CLOSURE::{closure}; // arg #1
     let args: (); // arg #2
-    let _3: &'0 {closure}; // anonymous local
+    let _3: &'0 ptr_cast_in_bodies_aux::CLOSURE::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &(*state)
-    _0 = call<'2>(move _3, move args)
+    _0 = {impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call<'2>(move _3, move args)
     ↳⚡ storage_dead(_3)
         storage_dead(args)
         storage_dead(state)
@@ -391,18 +390,18 @@ fn call_mut<'_0>(state: &'_0 mut {closure}, args: ()) -> u8
     return
 }
 
-// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnOnce<()> for {closure}}::call_once
-fn call_once(_1: {closure}, _2: ()) -> u8
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_once
+fn {impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_once(_1: ptr_cast_in_bodies_aux::CLOSURE::{closure}, _2: ()) -> u8
 {
     let _0: u8; // return
-    let _1: {closure}; // arg #1
+    let _1: ptr_cast_in_bodies_aux::CLOSURE::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut {closure}; // anonymous local
+    let _3: &'1 mut ptr_cast_in_bodies_aux::CLOSURE::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'2>(move _3, move _2)
+    _0 = {impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_mut<'2>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -413,19 +412,18 @@ fn call_once(_1: {closure}, _2: ()) -> u8
     return
 }
 
-// Full name: ptr_cast_in_bodies_aux::CLOSURE::{closure}::{as_fn}
-fn {as_fn}() -> u8
+fn ptr_cast_in_bodies_aux::CLOSURE::{closure}::{as_fn}() -> u8
 {
     let _0: u8; // return
     let args: (); // local
-    let state: {closure}; // local
+    let state: ptr_cast_in_bodies_aux::CLOSURE::{closure}; // local
 
     storage_live(_0)
     storage_live(args)
     storage_live(state)
     args = ()
-    state = {closure} {  }
-    _0 = call_once(move state, move args)
+    state = ptr_cast_in_bodies_aux::CLOSURE::{closure} {  }
+    _0 = {impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE::{closure}}::call_once(move state, move args)
     ↳⚡ storage_dead(state)
         storage_dead(args)
         unwind_continue
@@ -442,7 +440,7 @@ pub fn CLOSURE() -> fn() -> u8
 
     storage_live(_0)
     storage_live(_1)
-    _1 = cast<{as_fn}, fn() -> u8>(const {as_fn})
+    _1 = cast<ptr_cast_in_bodies_aux::CLOSURE::{closure}::{as_fn}, fn() -> u8>(const ptr_cast_in_bodies_aux::CLOSURE::{closure}::{as_fn})
     _0 = move _1
     return
 }
@@ -450,19 +448,99 @@ pub fn CLOSURE() -> fn() -> u8
 // Full name: ptr_cast_in_bodies_aux::CLOSURE
 pub static CLOSURE: fn() -> u8 = CLOSURE()
 
+struct ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure} {}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW::{impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call
+fn {impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call<'_0>(_1: &'_0 ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}, tupled_args: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: &'1 ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // arg #1
+    let tupled_args: (); // arg #2
+
+    storage_live(_0)
+    _0 = const 3u8
+    storage_dead(tupled_args)
+    storage_dead(_1)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW::{impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_mut
+fn {impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_mut<'_0>(state: &'_0 mut ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}, args: ()) -> u8
+{
+    let _0: u8; // return
+    let state: &'_0 mut ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // arg #1
+    let args: (); // arg #2
+    let _3: &'0 ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &(*state)
+    _0 = {impl Fn<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call<'2>(move _3, move args)
+    ↳⚡ storage_dead(_3)
+        storage_dead(args)
+        storage_dead(state)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(args)
+    storage_dead(state)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW::{impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_once
+fn {impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_once(_1: ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}, _2: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // arg #1
+    let _2: (); // arg #2
+    let _3: &'1 mut ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &mut _1
+    _0 = {impl FnMut<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_mut<'2>(move _3, move _2)
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+fn ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}::{as_fn}() -> u8
+{
+    let _0: u8; // return
+    let args: (); // local
+    let state: ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}; // local
+
+    storage_live(_0)
+    storage_live(args)
+    storage_live(state)
+    args = ()
+    state = ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure} {  }
+    _0 = {impl FnOnce<()> for ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}}::call_once(move state, move args)
+    ↳⚡ storage_dead(state)
+        storage_dead(args)
+        unwind_continue
+    storage_dead(state)
+    storage_dead(args)
+    return
+}
+
 // Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW
 pub fn CLOSURE_RAW() -> ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]
 {
     let _0: ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]; // return
-    let _1: (); // anonymous local
+    let _1: fn() -> u8; // anonymous local
     let _2: *const (); // anonymous local
     let _3: ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = ()
+    _1 = cast<ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}::{as_fn}, fn() -> u8>(const ptr_cast_in_bodies_aux::CLOSURE_RAW::{closure}::{as_fn})
     storage_live(_2)
-    _2 = &raw const _1
+    _2 = cast<fn() -> u8, *const ()>(move _1)
     storage_live(_3)
     _3 = ptr_cast_in_bodies_aux::Sync { _0: move _2 }
     _0 = move _3

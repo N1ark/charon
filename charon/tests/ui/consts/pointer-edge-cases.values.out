@@ -58,8 +58,6 @@ struct () {}
 
 vtable core::marker::Send::{vtable}<Self>: core::marker::Send::{vtable} = Opaque(VTable was chosen to be opaque)
 
-vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
-
 // Full name: core::marker::Copy
 #[lang_item(Copy)]
 #[diagnostic_item("Copy")]
@@ -79,13 +77,6 @@ pub unsafe trait core::marker::Sync<Self>
 pub opaque type MaybeUninit<T>
 where
     TraitClause0: (T: Sized),
-
-// Full name: core::ptr::slice_from_raw_parts
-#[diagnostic_item("ptr_slice_from_raw_parts")]
-pub fn slice_from_raw_parts<T>(_1: *const T, _2: usize) -> *const [T]
-where
-    TraitClause0: (T: Sized),
-= <opaque>
 
 struct (_, _, _)<A, B, C>
 where
@@ -159,105 +150,29 @@ impl "impl_Tr_for_unit" Tr for () {
     vtable: lazy
 }
 
-// Full name: test_crate::{impl Tr for u8}::{vtable_drop_shim}
-unsafe fn {vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
-{
-    let ret: (); // return
-    let dyn_self: &'_0 mut (dyn Tr + '0); // arg #1
-    let target_self: &'_0 mut u8; // local
-
-    storage_live(ret)
-    ret = ()
-    storage_live(target_self)
-    target_self = concretize<&'_0 mut (dyn Tr + '1), &'_0 mut u8>(move dyn_self)
-    storage_dead(target_self)
-    storage_dead(dyn_self)
-    return
-}
-
-// Full name: test_crate::{impl Tr for u8}::{vtable}
-vtable impl_Tr_for_u8::{vtable}: test_crate::Tr::{vtable} = test_crate::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr({vtable_drop_shim}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8> }
-
 // Full name: test_crate::{impl Tr for u8}
 impl "impl_Tr_for_u8" Tr for u8 {
     proof ImpliedClause0: (u8: MetaSized) = {built_in impl MetaSized for u8}
-    vtable: impl_Tr_for_u8::{vtable}
+    vtable: lazy
 }
 
 // Full name: test_crate::X
 static X: u8 = 0u8
 
 // Full name: test_crate::FN_PTR
-static FN_PTR: test_crate::Sync<*const ()>[{built_in impl Sized for *const ()}] = test_crate::Sync { _0: &raw const () }
+static FN_PTR: test_crate::Sync<*const ()>[{built_in impl Sized for *const ()}] = test_crate::Sync { _0: cast<fn(), *const ()>(fnptr(foo)) }
 
 // Full name: test_crate::FN_OFFSET
-static FN_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
+static FN_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(unsupported pointer to a function) }
 
 // Full name: test_crate::FN_SLICE
-fn FN_SLICE() -> test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}]
-{
-    let _0: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}]; // return
-    let _1: *const [u8]; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: fn(); // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    _3 = cast<foo, fn()>(const foo)
-    _2 = cast<fn(), *const u8>(move _3)
-    storage_dead(_3)
-    _1 = slice_from_raw_parts<u8>[{built_in impl Sized for u8}](move _2, const 3usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::FN_SLICE
-static FN_SLICE: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}] = FN_SLICE()
+static FN_SLICE: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}] = test_crate::Sync { _0: Opaque(unsupported pointer to a function) }
 
 // Full name: test_crate::FN_DYN
-fn FN_DYN() -> test_crate::Sync<*const (dyn Tr + 'static)>[{built_in impl Sized for *const (dyn Tr + 'static)}]
-{
-    let _0: test_crate::Sync<*const (dyn Tr + '12)>[{built_in impl Sized for *const (dyn Tr + '15)}]; // return
-    let _1: *const (dyn Tr + '16); // anonymous local
-    let _2: *const (dyn Tr + '17); // anonymous local
-    let _3: *const (dyn Tr + '18); // anonymous local
-    let _4: *const (dyn Tr + '19); // anonymous local
-    let _5: *const u8; // anonymous local
-    let _6: fn(); // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    storage_live(_5)
-    storage_live(_6)
-    _6 = cast<foo, fn()>(const foo)
-    _5 = cast<fn(), *const u8>(move _6)
-    _4 = unsize_cast<*const u8, *const (dyn Tr + '20), &impl_Tr_for_u8::{vtable}>(move _5)
-    storage_dead(_6)
-    storage_dead(_5)
-    _3 = cast<*const (dyn Tr + '19), *const (dyn Tr + '21)>(move _4)
-    _2 = copy _3
-    _1 = unsize_cast<*const (dyn Tr + '17), *const (dyn Tr + '22),  at []>(move _2)
-    storage_dead(_4)
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_3)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::FN_DYN
-static FN_DYN: test_crate::Sync<*const (dyn Tr + 'static)>[{built_in impl Sized for *const (dyn Tr + 'static)}] = FN_DYN()
+static FN_DYN: test_crate::Sync<*const (dyn Tr + 'static)>[{built_in impl Sized for *const (dyn Tr + 'static)}] = test_crate::Sync { _0: Opaque(unsupported pointer to a function) }
 
 // Full name: test_crate::FN_REF
-static FN_REF: &'static () = &()
+static FN_REF: &'static () = Opaque(unsupported pointer to a function)
 
 // Full name: test_crate::DYN
 const DYN: &'static (dyn Debug + 'static) = unsize_cast<*const u8, &'_ (dyn Debug), &{impl#15}::{vtable}>(cast<*const MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], *const u8>(&raw const test_crate::{promoted_const}))
@@ -328,8 +243,90 @@ union U {
 // Full name: test_crate::MARKER_VTABLE
 static MARKER_VTABLE: test_crate::Sync<U>[{built_in impl Sized for U}] = test_crate::Sync { _0: RawMemory(&test_crate::{promoted_const#1}[0], &test_crate::{promoted_const#1}[1], &test_crate::{promoted_const#1}[2], &test_crate::{promoted_const#1}[3], &test_crate::{promoted_const#1}[4], &test_crate::{promoted_const#1}[5], &test_crate::{promoted_const#1}[6], &test_crate::{promoted_const#1}[7], &core::marker::Send::{vtable}<u8>[0], &core::marker::Send::{vtable}<u8>[1], &core::marker::Send::{vtable}<u8>[2], &core::marker::Send::{vtable}<u8>[3], &core::marker::Send::{vtable}<u8>[4], &core::marker::Send::{vtable}<u8>[5], &core::marker::Send::{vtable}<u8>[6], &core::marker::Send::{vtable}<u8>[7]) }
 
+// Full name: test_crate::CLOSURE_RAW::{closure}
+struct {closure} {}
+
+// Full name: test_crate::CLOSURE_RAW::{impl Fn<()> for {closure}}::call
+fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: &'1 {closure}; // arg #1
+    let tupled_args: (); // arg #2
+
+    storage_live(_0)
+    _0 = const 1u8
+    storage_dead(tupled_args)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::CLOSURE_RAW::{impl FnMut<()> for {closure}}::call_mut
+fn call_mut<'_0>(state: &'_0 mut {closure}, args: ()) -> u8
+{
+    let _0: u8; // return
+    let state: &'_0 mut {closure}; // arg #1
+    let args: (); // arg #2
+    let _3: &'0 {closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &(*state)
+    _0 = call<'2>(move _3, move args)
+    ↳⚡ storage_dead(_3)
+        storage_dead(args)
+        storage_dead(state)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(args)
+    storage_dead(state)
+    return
+}
+
+// Full name: test_crate::CLOSURE_RAW::{impl FnOnce<()> for {closure}}::call_once
+fn call_once(_1: {closure}, _2: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: {closure}; // arg #1
+    let _2: (); // arg #2
+    let _3: &'1 mut {closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &mut _1
+    _0 = call_mut<'2>(move _3, move _2)
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::CLOSURE_RAW::{closure}::{as_fn}
+fn {as_fn}() -> u8
+{
+    let _0: u8; // return
+    let args: (); // local
+    let state: {closure}; // local
+
+    storage_live(_0)
+    storage_live(args)
+    storage_live(state)
+    args = ()
+    state = {closure} {  }
+    _0 = call_once(move state, move args)
+    ↳⚡ storage_dead(state)
+        storage_dead(args)
+        unwind_continue
+    storage_dead(state)
+    storage_dead(args)
+    return
+}
+
 // Full name: test_crate::CLOSURE_RAW
-static CLOSURE_RAW: test_crate::Sync<*const ()>[{built_in impl Sized for *const ()}] = test_crate::Sync { _0: &raw const () }
+static CLOSURE_RAW: test_crate::Sync<*const ()>[{built_in impl Sized for *const ()}] = test_crate::Sync { _0: cast<fn() -> u8, *const ()>(fnptr({as_fn})) }
 
 // Full name: test_crate::ZARR
 static ZARR: ((), [(); 4usize], u8) = ((), [(), (), (), ()], 1u8)
