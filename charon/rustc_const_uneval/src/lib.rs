@@ -220,9 +220,13 @@ pub enum Byte<'tcx> {
     Uninit,
     /// A concrete byte value.
     Value(u8),
-    /// A byte of a pointer into the given allocation. The `u8` is the index of this byte within the
-    /// pointer.
-    Ptr(AllocTarget<'tcx>, u8),
+    /// The `index`th byte of a pointer into `target`, which points `offset` bytes after the start
+    /// of `target`.
+    Ptr {
+        target: AllocTarget<'tcx>,
+        offset: i64,
+        index: u8,
+    },
 }
 
 /// A global allocation.

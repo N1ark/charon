@@ -153,7 +153,7 @@ pub static P: &'static u32 = RawMemory(&X[0], &X[1], &X[2], &X[3], &X[4], &X[5],
 pub static Y: W<u16>[{built_in impl Sized for u16}, impl_Tr_for_u16] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::Q
-pub static Q: &'static u32 = RawMemory(&Y[0], &Y[1], &Y[2], &Y[3], &Y[4], &Y[5], &Y[6], &Y[7])
+pub static Q: &'static u32 = RawMemory((&Y + 4)[0], (&Y + 4)[1], (&Y + 4)[2], (&Y + 4)[3], (&Y + 4)[4], (&Y + 4)[5], (&Y + 4)[6], (&Y + 4)[7])
 
 // Full name: test_crate::assoc
 pub fn assoc() -> u32
@@ -193,7 +193,7 @@ where
 pub static CELL: Sy<UnsafeCell<(u8, u32)>[{built_in impl MetaSized for (u8, u32)}]>[{built_in impl Sized for UnsafeCell<(u8, u32)>[{built_in impl MetaSized for (u8, u32)}]}] = RawMemory(0x01, --, --, --, 0x02, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::CELL_FIELD
-pub static CELL_FIELD: Sy<*mut u32>[{built_in impl Sized for *mut u32}] = RawMemory(&CELL[0], &CELL[1], &CELL[2], &CELL[3], &CELL[4], &CELL[5], &CELL[6], &CELL[7])
+pub static CELL_FIELD: Sy<*mut u32>[{built_in impl Sized for *mut u32}] = RawMemory((&CELL + 4)[0], (&CELL + 4)[1], (&CELL + 4)[2], (&CELL + 4)[3], (&CELL + 4)[4], (&CELL + 4)[5], (&CELL + 4)[6], (&CELL + 4)[7])
 
 // Full name: test_crate::ATOM
 pub static ATOM: Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive_for_u32] = RawMemory(0x03, 0x00, 0x00, 0x00)

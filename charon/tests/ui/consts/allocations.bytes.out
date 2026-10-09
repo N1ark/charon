@@ -63,7 +63,7 @@ struct str {
 // Full name: test_crate::ARR
 static ARR: [u8; 4usize] = RawMemory(0x01, 0x02, 0x03, 0x04)
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&ARR[0], &ARR[1], &ARR[2], &ARR[3], &ARR[4], &ARR[5], &ARR[6], &ARR[7])
+static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory((&ARR + 2)[0], (&ARR + 2)[1], (&ARR + 2)[2], (&ARR + 2)[3], (&ARR + 2)[4], (&ARR + 2)[5], (&ARR + 2)[6], (&ARR + 2)[7])
 
 static test_crate::{promoted_const#6}: MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}] = RawMemory(0x01)
 
@@ -198,7 +198,7 @@ static BYTES: [u8; 3usize] = RawMemory(0x61, 0x62, 0x63)
 const STR: &'static str = RawMemory(&BYTES[0], &BYTES[1], &BYTES[2], &BYTES[3], &BYTES[4], &BYTES[5], &BYTES[6], &BYTES[7], 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::STR_SUFFIX
-const STR_SUFFIX: &'static str = RawMemory(&test_crate::{promoted_const#4}[0], &test_crate::{promoted_const#4}[1], &test_crate::{promoted_const#4}[2], &test_crate::{promoted_const#4}[3], &test_crate::{promoted_const#4}[4], &test_crate::{promoted_const#4}[5], &test_crate::{promoted_const#4}[6], &test_crate::{promoted_const#4}[7], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+const STR_SUFFIX: &'static str = RawMemory((&test_crate::{promoted_const#4} + 1)[0], (&test_crate::{promoted_const#4} + 1)[1], (&test_crate::{promoted_const#4} + 1)[2], (&test_crate::{promoted_const#4} + 1)[3], (&test_crate::{promoted_const#4} + 1)[4], (&test_crate::{promoted_const#4} + 1)[5], (&test_crate::{promoted_const#4} + 1)[6], (&test_crate::{promoted_const#4} + 1)[7], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 const test_crate::generic::{promoted_const}<T>: &'_ [u8; 3usize]
 where

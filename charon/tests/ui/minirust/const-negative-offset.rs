@@ -1,4 +1,5 @@
 //@ output=run-with-minirust
+//@ known-failure
 // MiniRust relocations can't point before the start of their target.
 unsafe extern "Rust" {
     safe fn minirust_print(value: u32);

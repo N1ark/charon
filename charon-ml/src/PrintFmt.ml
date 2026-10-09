@@ -444,7 +444,9 @@ and pp_byte (env : fmt_env) (fmt : Format.formatter) (cv : byte) : unit =
   match cv with
   | Uninit -> pp_string fmt "--"
   | Value b -> Format.fprintf fmt "0x%02x" b
-  | Provenance (p, i) -> Format.fprintf fmt "%a[%d]" (pp_provenance env) p i
+  | Provenance (p, 0, i) -> Format.fprintf fmt "%a[%d]" (pp_provenance env) p i
+  | Provenance (p, offset, i) ->
+      Format.fprintf fmt "(%a + %d)[%d]" (pp_provenance env) p offset i
 
 and pp_unsizing_metadata (env : fmt_env) (fmt : Format.formatter)
     (meta : unsizing_metadata) : unit =

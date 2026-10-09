@@ -1,1 +1,7 @@
-20
+error: MiniRust relocations can't point before their target
+  --> tests/ui/minirust/const-negative-offset.rs:11:1
+   |
+11 | static BEFORE: Sync<*const u32> = Sync((&raw const ARR).cast::<u32>().wrapping_sub(1));
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Could not compile the program to MiniRust

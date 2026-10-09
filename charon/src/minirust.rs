@@ -1147,7 +1147,11 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
             match byte {
                 Byte::Uninit => bytes.push(None),
                 Byte::Value(value) => bytes.push(Some(*value)),
-                Byte::Provenance(provenance, pointer_byte) => {
+                Byte::Provenance {
+                    provenance,
+                    offset: target_offset,
+                    index,
+                } => {
                     let name = match provenance {
                         Provenance::Global(gref) => self.global_name(gref.id),
                         Provenance::Function(_) => {
@@ -1161,14 +1165,15 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                         }
                     };
                     // FIXME(minirust): MiniRust does not seem to support pointer fragments
-                    if *pointer_byte == 0 {
+                    if *index == 0 {
+                        let Ok(target_offset) = u64::try_from(*target_offset) else {
+                            raise!(span, "MiniRust relocations can't point before their target")
+                        };
                         relocations.push((
                             mini_size(u64::try_from(offset).context(span)?),
                             mini::Relocation {
                                 name,
-                                // FIXME(minirust): Charon's raw bytes do not record the offset
-                                // within the target allocation.
-                                offset: mini::Size::ZERO,
+                                offset: mini_size(target_offset),
                             },
                         ));
                     }

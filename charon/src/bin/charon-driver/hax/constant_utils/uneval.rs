@@ -283,11 +283,16 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
                 let bytes = bytes.iter().map(|byte| match *byte {
                     Byte::Uninit => ConstantByte::Uninit,
                     Byte::Value(v) => ConstantByte::Value(v),
-                    Byte::Ptr(target, i) => {
+                    Byte::Ptr {
+                        target,
+                        offset,
+                        index,
+                    } => {
                         if last_prov.as_ref().is_none_or(|(last, _)| *last != target) {
                             last_prov = Some((target, target.sinto(s)));
                         }
-                        ConstantByte::Provenance(last_prov.as_ref().unwrap().1.clone(), i)
+                        let prov = last_prov.as_ref().unwrap().1.clone();
+                        ConstantByte::Provenance(prov, offset, index)
                     }
                 });
                 ConstantExprKind::Memory(bytes.collect())
