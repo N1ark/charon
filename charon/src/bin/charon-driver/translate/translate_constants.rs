@@ -57,41 +57,30 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         })
     }
 
-    fn translate_constant_byte(
+    fn translate_provenance(
         &mut self,
         span: Span,
-        b: &hax::ConstantByte,
-    ) -> Result<Byte, Error> {
-        Ok(match *b {
-            hax::ConstantByte::Uninit => Byte::Uninit,
-            hax::ConstantByte::Value(v) => Byte::Value(v),
-            hax::ConstantByte::Provenance(ref prov, offset, index) => {
-                let provenance = match prov {
-                    hax::ConstantByteProvenance::Global(item) => {
-                        Provenance::Global(self.translate_global_decl_ref(span, item)?)
+        prov: &hax::ConstantByteProvenance,
+    ) -> Result<Provenance, Error> {
+        Ok(match prov {
+            hax::ConstantByteProvenance::Global(item) => {
+                Provenance::Global(self.translate_global_decl_ref(span, item)?)
+            }
+            hax::ConstantByteProvenance::Function(target) => {
+                Provenance::Function(self.translate_fn_ptr_target(span, target)?)
+            }
+            hax::ConstantByteProvenance::VTable(proof) => {
+                match self.translate_vtable_instance_const(span, proof)?.kind() {
+                    ConstantExprKind::Ref(vtable, None)
+                        if let GlobalPlaceKind::Global(gref) = &vtable.kind =>
+                    {
+                        Provenance::Global(gref.clone())
                     }
-                    hax::ConstantByteProvenance::Function(target) => {
-                        Provenance::Function(self.translate_fn_ptr_target(span, target)?)
-                    }
-                    hax::ConstantByteProvenance::VTable(proof) => {
-                        match self.translate_vtable_instance_const(span, proof)?.kind() {
-                            ConstantExprKind::Ref(vtable, None)
-                                if let GlobalPlaceKind::Global(gref) = &vtable.kind =>
-                            {
-                                Provenance::Global(gref.clone())
-                            }
-                            _ => raise_error!(self, span, "vtable without a global"),
-                        }
-                    }
-                    hax::ConstantByteProvenance::TypeId(ty) => {
-                        Provenance::TypeId(self.translate_ty(span, ty)?)
-                    }
-                };
-                Byte::Provenance {
-                    provenance,
-                    offset,
-                    index,
+                    _ => raise_error!(self, span, "vtable without a global"),
                 }
+            }
+            hax::ConstantByteProvenance::TypeId(ty) => {
+                Provenance::TypeId(self.translate_ty(span, ty)?)
             }
         })
     }
@@ -260,11 +249,27 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             hax::ConstantExprKind::TypeId(ty) => {
                 ConstantExprKind::TypeId(self.translate_ty(span, ty)?)
             }
-            hax::ConstantExprKind::Memory(bytes) => {
-                let bytes: Vec<Byte> = bytes
+            hax::ConstantExprKind::Memory(memory) => {
+                let mut bytes: Vec<Byte> = memory
+                    .bytes
                     .iter()
-                    .map(|b| self.translate_constant_byte(span, b))
-                    .try_collect()?;
+                    .map(|b| b.map_or(Byte::Uninit, Byte::Value))
+                    .collect();
+                for ptr in &memory.ptrs {
+                    let provenance = self.translate_provenance(span, &ptr.provenance)?;
+                    // The pointer may straddle the bounds of the bytes; we keep the bytes inside.
+                    for index in 0..ptr.size {
+                        if let Ok(pos) = usize::try_from(ptr.start + index as i64)
+                            && let Some(byte) = bytes.get_mut(pos)
+                        {
+                            *byte = Byte::Provenance {
+                                provenance: provenance.clone(),
+                                offset: ptr.offset,
+                                index,
+                            };
+                        }
+                    }
+                }
                 ConstantExprKind::RawMemory(bytes)
             }
             hax::ConstantExprKind::Todo(msg) => {

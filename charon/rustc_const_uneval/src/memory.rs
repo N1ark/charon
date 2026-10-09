@@ -34,7 +34,7 @@ impl<'tcx> ConstReader<'tcx> {
         &self,
         ecx: &CompileTimeInterpCx<'tcx>,
         op: &OpTy<'tcx>,
-    ) -> InterpResult<'tcx, Vec<Byte<'tcx>>> {
+    ) -> InterpResult<'tcx, RawBytes<'tcx>> {
         op.as_mplace_or_imm().either(
             |mplace| self.read_mplace_bytes(ecx, &mplace),
             |imm| interp_ok(self.read_imm_bytes(&imm)),
@@ -42,8 +42,11 @@ impl<'tcx> ConstReader<'tcx> {
     }
 
     /// The bytes of an immediate, which is made of at most two scalars.
-    fn read_imm_bytes(&self, imm: &ImmTy<'tcx>) -> Vec<Byte<'tcx>> {
-        let mut bytes = vec![Byte::Uninit; imm.layout.size.bytes_usize()];
+    fn read_imm_bytes(&self, imm: &ImmTy<'tcx>) -> RawBytes<'tcx> {
+        let mut bytes = RawBytes {
+            bytes: vec![None; imm.layout.size.bytes_usize()],
+            ptrs: vec![],
+        };
         let mut write = |offset: Size, scalar: interpret::Scalar| {
             match scalar {
                 interpret::Scalar::Int(int) => {
@@ -52,15 +55,15 @@ impl<'tcx> ConstReader<'tcx> {
                     interpret::write_target_uint(endian, &mut scalar, int.to_bits(int.size()))
                         .unwrap();
                     for (i, b) in scalar.into_iter().enumerate() {
-                        bytes[offset.bytes_usize() + i] = Byte::Value(b);
+                        bytes.bytes[offset.bytes_usize() + i] = Some(b);
                     }
                 }
                 interpret::Scalar::Ptr(ptr, size) => {
                     let (prov, ptr_offset) = ptr.into_raw_parts();
                     let size = Size::from_bytes(size.get());
-                    for (i, byte) in self.ptr_bytes(prov, ptr_offset.bytes(), size).enumerate() {
-                        bytes[offset.bytes_usize() + i] = byte;
-                    }
+                    let start = offset.bytes() as i64;
+                    let ptr = self.raw_ptr(start, prov, ptr_offset.bytes(), size);
+                    bytes.ptrs.push(ptr);
                 }
             };
         };
@@ -84,52 +87,51 @@ impl<'tcx> ConstReader<'tcx> {
         &self,
         ecx: &CompileTimeInterpCx<'tcx>,
         mplace: &MPlaceTy<'tcx>,
-    ) -> InterpResult<'tcx, Vec<Byte<'tcx>>> {
+    ) -> InterpResult<'tcx, RawBytes<'tcx>> {
         let size = mplace.layout.size;
         if size.bytes() == 0 {
-            return interp_ok(vec![]);
+            return interp_ok(RawBytes {
+                bytes: vec![],
+                ptrs: vec![],
+            });
         }
         let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(mplace.ptr(), size.bytes() as i64)?;
         let alloc = ecx.get_alloc_raw(alloc_id)?;
         let range = interpret::alloc_range(offset, size);
         let raw_bytes = alloc.get_bytes_unchecked(range);
-        let mut bytes: Vec<Byte<'tcx>> = (0..size.bytes())
-            .map(
-                |i| match alloc.init_mask().get(offset + Size::from_bytes(i)) {
-                    true => Byte::Value(raw_bytes[i as usize]),
-                    false => Byte::Uninit,
-                },
-            )
+        let bytes = (0..size.bytes())
+            .map(|i| {
+                let init = alloc.init_mask().get(offset + Size::from_bytes(i));
+                init.then_some(raw_bytes[i as usize])
+            })
             .collect();
 
         // Interned allocations have no pointer fragments, so these are all whole pointers, whose
         // bytes hold their offset into their target. A pointer may straddle the boundaries of
         // `range`.
         let endian = self.tcx.data_layout.endian;
-        for (prov_range, prov) in alloc.provenance().get_range(range, ecx) {
-            let raw_offset = alloc.get_bytes_unchecked(prov_range);
-            let ptr_offset = interpret::read_target_uint(endian, raw_offset).unwrap() as u64;
-            for (i, byte) in self
-                .ptr_bytes(prov, ptr_offset, prov_range.size)
-                .enumerate()
-            {
-                let pos = prov_range.start + Size::from_bytes(i);
-                if range.start <= pos && pos < range.end() {
-                    bytes[(pos - range.start).bytes_usize()] = byte;
-                }
-            }
-        }
-        interp_ok(bytes)
+        let ptrs = alloc
+            .provenance()
+            .get_range(range, ecx)
+            .map(|(prov_range, prov)| {
+                let raw_offset = alloc.get_bytes_unchecked(prov_range);
+                let ptr_offset = interpret::read_target_uint(endian, raw_offset).unwrap() as u64;
+                let start = prov_range.start.bytes() as i64 - range.start.bytes() as i64;
+                self.raw_ptr(start, prov, ptr_offset, prov_range.size)
+            })
+            .collect();
+        interp_ok(RawBytes { bytes, ptrs })
     }
 
-    /// The bytes of a pointer of size `size` with provenance `prov`, located `offset` bytes after
-    /// the start of its target (as an unsigned integer of that size).
-    fn ptr_bytes(
+    /// A pointer of size `size` with provenance `prov`, located `offset` bytes after the start of
+    /// its target (as an unsigned integer of that size), whose first byte is at `start`.
+    fn raw_ptr(
         &self,
+        start: i64,
         prov: interpret::CtfeProvenance,
         offset: u64,
         size: Size,
-    ) -> impl Iterator<Item = Byte<'tcx>> {
+    ) -> RawPtr<'tcx> {
         let target = self.alloc_target(prov.alloc_id());
         // The offsets of the pointers of a `TypeId` are chunks of its type's hash, which
         // `AllocTarget::TypeId` already stands for, so we drop them. We can't tell which pointer of
@@ -139,11 +141,12 @@ impl<'tcx> ConstReader<'tcx> {
             AllocTarget::TypeId(ty) if type_id_offsets(self.tcx, ty).contains(&offset) => 0,
             _ => size.sign_extend(offset.into()) as i64,
         };
-        (0..size.bytes()).map(move |index| Byte::Ptr {
+        RawPtr {
+            start,
+            size: size.bytes() as u8,
             target,
             offset,
-            index: index as u8,
-        })
+        }
     }
 
     /// The sized type that `tail`, the unsized tail of `place`, was unsized from. This is found in

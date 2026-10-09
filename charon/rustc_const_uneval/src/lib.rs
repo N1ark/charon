@@ -142,7 +142,7 @@ pub enum ConstKind<'tcx> {
     },
     /// The raw bytes of the value. Used for values that have no structured representation (e.g.
     /// unions).
-    Memory(Vec<Byte<'tcx>>),
+    Memory(RawBytes<'tcx>),
     /// A valid constant that we can't represent.
     Unsupported(&'static str),
 }
@@ -212,21 +212,29 @@ pub struct Unsize<'tcx> {
     pub to: Ty<'tcx>,
 }
 
-/// A byte of an evaluated constant, in the MiniRust sense.
+/// The raw bytes of a value, in the MiniRust sense: each byte is uninitialized, a concrete value,
+/// or part of a pointer.
+#[derive(Debug, Clone)]
+pub struct RawBytes<'tcx> {
+    /// The value of each byte, or `None` if it is uninitialized (e.g. padding, or the bytes of a
+    /// union not covered by the active field) or part of a pointer.
+    pub bytes: Vec<Option<u8>>,
+    /// The pointers stored in the bytes, by increasing position.
+    pub ptrs: Vec<RawPtr<'tcx>>,
+}
+
+/// A pointer stored in raw bytes.
 #[derive(Debug, Clone, Copy)]
-pub enum Byte<'tcx> {
-    /// An uninitialized byte (e.g. padding, or the bytes of a union not covered by the active
-    /// field).
-    Uninit,
-    /// A concrete byte value.
-    Value(u8),
-    /// The `index`th byte of a pointer into `target`, which points `offset` bytes after the start
-    /// of `target`.
-    Ptr {
-        target: AllocTarget<'tcx>,
-        offset: i64,
-        index: u8,
-    },
+pub struct RawPtr<'tcx> {
+    /// The position of the first byte of the pointer. A pointer may straddle the bounds of the
+    /// bytes, so this may be negative and the pointer may extend past their end.
+    pub start: i64,
+    /// The size of the pointer.
+    pub size: u8,
+    /// What the pointer points into.
+    pub target: AllocTarget<'tcx>,
+    /// How far into its target the pointer points.
+    pub offset: i64,
 }
 
 /// A global allocation.

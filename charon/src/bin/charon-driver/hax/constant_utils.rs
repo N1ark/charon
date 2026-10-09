@@ -85,7 +85,7 @@ pub enum ConstantExprKind {
     /// A blob of memory containing the byte representation of the value. This can occur when
     /// evaluating MIR constants (e.g. unions). Interpreting this back to a structured value
     /// is left as an exercice to the consumer.
-    Memory(Vec<ConstantByte>),
+    Memory(ConstantMemory),
     Todo(String),
 }
 
@@ -108,18 +108,29 @@ pub enum ConstantProjectionElem {
     },
 }
 
-/// A byte of an evaluated constant, in the MiniRust sense.
+/// The bytes of an evaluated constant, in the MiniRust sense: each byte is uninitialized, a
+/// concrete value, or part of a pointer.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ConstantByte {
-    /// An uninitialized byte (e.g. padding, or the bytes of a union not covered by the active
-    /// field).
-    Uninit,
-    /// A concrete byte value.
-    Value(u8),
-    /// A byte that is part of a pointer with provenance. The pointer points the `i64` number of
-    /// bytes after the start of its target, and the `u8` is the index of this byte within the
-    /// pointer.
-    Provenance(ConstantByteProvenance, i64, u8),
+pub struct ConstantMemory {
+    /// The value of each byte, or `None` if it is uninitialized (e.g. padding, or the bytes of a
+    /// union not covered by the active field) or part of a pointer.
+    pub bytes: Vec<Option<u8>>,
+    /// The pointers stored in the bytes, by increasing position.
+    pub ptrs: Vec<ConstantPointer>,
+}
+
+/// A pointer stored in the bytes of an evaluated constant.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ConstantPointer {
+    /// The position of the first byte of the pointer. A pointer may straddle the bounds of the
+    /// bytes, so this may be negative and the pointer may extend past their end.
+    pub start: i64,
+    /// The size of the pointer.
+    pub size: u8,
+    /// What the pointer points to.
+    pub provenance: ConstantByteProvenance,
+    /// How far into its target the pointer points.
+    pub offset: i64,
 }
 
 /// The function a function pointer points to.

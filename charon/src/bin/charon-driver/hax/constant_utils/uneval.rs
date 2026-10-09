@@ -1,6 +1,6 @@
 //! Translate constants to hax: type-system constants, and the values read by `rustc_const_uneval`.
 use super::*;
-use rustc_const_uneval::{AllocTarget, Byte, ConstReader, PtrTarget, ReadError};
+use rustc_const_uneval::{AllocTarget, ConstReader, PtrTarget, ReadError};
 use rustc_middle::ty;
 
 #[tracing::instrument(level = "trace", skip(s))]
@@ -281,25 +281,26 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
             ConstKind::PtrCast { ptr, unsize } => {
                 ConstantExprKind::PtrCast(ptr.sinto(s), unsizing_metadata(unsize))
             }
-            ConstKind::Memory(bytes) => {
-                // The bytes of a pointer share their provenance; we convert it only once.
-                let mut last_prov: Option<(AllocTarget, ConstantByteProvenance)> = None;
-                let bytes = bytes.iter().map(|byte| match *byte {
-                    Byte::Uninit => ConstantByte::Uninit,
-                    Byte::Value(v) => ConstantByte::Value(v),
-                    Byte::Ptr {
-                        target,
-                        offset,
-                        index,
-                    } => {
-                        if last_prov.as_ref().is_none_or(|(last, _)| *last != target) {
-                            last_prov = Some((target, target.sinto(s)));
-                        }
-                        let prov = last_prov.as_ref().unwrap().1.clone();
-                        ConstantByte::Provenance(prov, offset, index)
-                    }
-                });
-                ConstantExprKind::Memory(bytes.collect())
+            ConstKind::Memory(memory) => {
+                // Many pointers may share their target; we convert it only once.
+                let mut provenances = HashMap::default();
+                let ptrs = memory
+                    .ptrs
+                    .iter()
+                    .map(|ptr| ConstantPointer {
+                        start: ptr.start,
+                        size: ptr.size,
+                        provenance: provenances
+                            .entry(ptr.target)
+                            .or_insert_with(|| ptr.target.sinto(s))
+                            .clone(),
+                        offset: ptr.offset,
+                    })
+                    .collect();
+                ConstantExprKind::Memory(ConstantMemory {
+                    bytes: memory.bytes.clone(),
+                    ptrs,
+                })
             }
             ConstKind::TypeId(ty) => ConstantExprKind::TypeId(ty.sinto(s)),
             ConstKind::Unsupported(msg) => ConstantExprKind::Todo(msg.to_string()),
