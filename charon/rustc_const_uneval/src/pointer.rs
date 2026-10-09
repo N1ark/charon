@@ -1,5 +1,6 @@
 //! Reading pointers out of const-eval memory.
 use crate::*;
+use interpret::GlobalAlloc;
 use rustc_abi::{FieldIdx, FieldsShape, Size};
 use rustc_const_eval::const_eval::CompileTimeInterpCx;
 use rustc_const_eval::interpret::{InterpResult, MPlaceTy, OpTy, Projectable, interp_ok};
@@ -122,34 +123,40 @@ impl<'tcx> ConstReader<'tcx> {
                     ty: decl_ty,
                     projections,
                 };
-                if end_ty == tcx.erase_and_anonymize_regions(view_ty) {
+                // We can't take a `*mut` to an immutable global, so we take a `*const` and cast it.
+                let global_mutability = match tcx.global_alloc(alloc_id) {
+                    GlobalAlloc::Static(def_id) => tcx.static_mutability(def_id),
+                    GlobalAlloc::Memory(alloc) => Some(alloc.inner().mutability),
+                    _ => None,
+                };
+                let borrow_mutability = global_mutability.map_or(mutability, |m| m.min(mutability));
+                if end_ty == tcx.erase_and_anonymize_regions(view_ty)
+                    && borrow_mutability == mutability
+                {
                     ConstKind::Ptr { target, unsize }
                 } else {
                     // Point to the place we reached, then cast the pointer to the right type.
-                    let ptr = |ty, kind| Box::new(Const { ty, kind });
-                    let inner = ptr(
-                        Ty::new_ptr(tcx, end_ty, mutability),
-                        ConstKind::Ptr {
+                    let cast = |ptr, unsize| ConstKind::PtrCast {
+                        ptr: Box::new(ptr),
+                        unsize,
+                    };
+                    let inner = Const {
+                        ty: Ty::new_ptr(tcx, end_ty, borrow_mutability),
+                        kind: ConstKind::Ptr {
                             target,
                             unsize: None,
                         },
-                    );
+                    };
                     match unsize {
-                        None => ConstKind::PtrCast {
-                            ptr: inner,
-                            unsize: None,
-                        },
+                        None => cast(inner, None),
                         // Cast to the sized type first, then unsize.
-                        Some(unsize) => ConstKind::PtrCast {
-                            ptr: ptr(
-                                Ty::new_ptr(tcx, view_ty, mutability),
-                                ConstKind::PtrCast {
-                                    ptr: inner,
-                                    unsize: None,
-                                },
-                            ),
-                            unsize: Some(unsize),
-                        },
+                        Some(unsize) => {
+                            let sized = Const {
+                                ty: Ty::new_ptr(tcx, view_ty, mutability),
+                                kind: cast(inner, None),
+                            };
+                            cast(sized, Some(unsize))
+                        }
                     }
                 }
             } else if !in_bounds {

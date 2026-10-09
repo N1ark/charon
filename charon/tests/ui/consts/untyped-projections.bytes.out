@@ -202,12 +202,16 @@ pub static ATOM: Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive
 pub fn atomic() -> *mut u32
 {
     let _0: *mut u32; // return
-    let _1: *mut u32; // anonymous local
+    let _1: *const u32; // anonymous local
+    let _2: *mut u32; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = &raw mut ATOM.0.0.0
-    _0 = move _1
+    _1 = &raw const ATOM.0.0.0
+    storage_live(_2)
+    _2 = cast<*const u32, *mut u32>(move _1)
+    _0 = move _2
+    storage_dead(_2)
     storage_dead(_1)
     return
 }
