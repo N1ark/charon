@@ -16,18 +16,7 @@ impl<'tcx> ConstReader<'tcx> {
         let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *ptr_ty.kind() else {
             unreachable!("not a pointer type: {ptr_ty:?}")
         };
-        // Make sure we only read through if it's not dangling!
-        let pointee = ecx
-            .deref_pointer(op)
-            .discard_err()
-            .filter(|place| ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err().is_some());
-        let Some(place) = pointee else {
-            // Invalid pointer; try reading it as a raw address
-            let int = ecx.read_scalar(op)?.to_scalar_int()?;
-            let kind = ConstKind::PtrNoProvenance(int.to_uint(int.size()));
-            return interp_ok(Const { ty: ptr_ty, kind });
-        };
-
+        let place = ecx.deref_pointer(op)?;
         let ty = place.layout.ty;
         let unsize = if place.meta().has_meta() {
             let tail = tcx.struct_tail_for_codegen(ty, self.typing_env);
@@ -37,13 +26,46 @@ impl<'tcx> ConstReader<'tcx> {
             None
         };
         // A slice or `dyn Trait` value is viewed at the sized type it was unsized from. Other
-        // unsized values (e.g. a `CStr`) have no such type: we read them at their unsized type.
+        // unsized values (e.g. a `CStr`) have no such type.
         let view_ty = match ty.kind() {
             _ if place.layout.is_sized() => Some(ty),
             ty::Slice(_) | ty::Dynamic(..) => unsize.map(|unsize| unsize.from),
             _ => None,
         };
-        let kind = self.read_pointer_into_alloc(ecx, place, mutability, unsize, view_ty)?;
+        let kind = match place.ptr().into_raw_parts() {
+            // Rustc rejects dangling pointers in final values, so a pointer with provenance
+            // points to a live allocation.
+            (Some(_), _) => {
+                self.read_pointer_into_alloc(ecx, place, mutability, unsize, view_ty)?
+            }
+            // A pointer without provenance, e.g. null or the pointer of an empty slice.
+            (None, addr) => {
+                let addr = ConstKind::PtrNoProvenance(addr.bytes().into());
+                match (unsize, view_ty) {
+                    // An address is a raw pointer, which we cast to a reference (e.g. a dangling
+                    // reference to a ZST).
+                    (None, _) if ptr_ty.is_ref() => ConstKind::PtrCast {
+                        ptr: Box::new(Const {
+                            ty: Ty::new_ptr(tcx, ty, pointer_mutability(ptr_ty)),
+                            kind: addr,
+                        }),
+                        unsize: None,
+                    },
+                    (None, _) => addr,
+                    // Unsize the thin pointer with the metadata.
+                    (Some(unsize), Some(view_ty)) => ConstKind::PtrCast {
+                        ptr: Box::new(Const {
+                            ty: Ty::new_ptr(tcx, view_ty, mutability),
+                            kind: addr,
+                        }),
+                        unsize: Some(unsize),
+                    },
+                    // Other unsized pointees have no sized type to unsize from, so we keep the
+                    // address and metadata as bytes.
+                    (Some(_), None) => ConstKind::Memory(self.read_raw_bytes(ecx, op)?),
+                }
+            }
+        };
         interp_ok(Const { ty: ptr_ty, kind })
     }
 
@@ -166,6 +188,14 @@ impl<'tcx> ConstReader<'tcx> {
         };
         Some((decl_ty, path, end_ty))
     }
+}
+
+/// The mutability of the pointer type `ty`.
+fn pointer_mutability(ty: Ty<'_>) -> ty::Mutability {
+    let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *ty.kind() else {
+        unreachable!("not a pointer type: {ty:?}")
+    };
+    mutability
 }
 
 /// The projection to the place located `offset` bytes after the current place, for a pointee of

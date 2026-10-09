@@ -36,7 +36,7 @@ pub const E: &'static [u8; 0usize] = &[]
 pub const EM: &'static mut [u8; 0usize] = &[]
 
 // Full name: test_crate::ZS
-pub static ZS: &'static () = no-provenance 1
+pub static ZS: &'static () = cast<*const (), &'_ ()>(no-provenance 1)
 
 // Full name: test_crate::body
 pub fn body() -> (&'static (), &'static [u8; 0usize], &'static mut [u8; 0usize])

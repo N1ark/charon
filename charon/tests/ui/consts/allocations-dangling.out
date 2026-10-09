@@ -1,42 +1,105 @@
-error: internal compiler error: /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45: Got a scalar pair where a scalar was expected
+# Final LLBC before serialization:
+
+// Full name: core::ffi::c_str::CStr
+#[lang_item(CStr)]
+#[diagnostic_item("cstr_type")]
+pub opaque type CStr
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+#[lang_item(Sync)]
+#[diagnostic_item("Sync")]
+pub unsafe trait core::marker::Sync<Self>
+
+// Full name: core::ptr::slice_from_raw_parts
+#[diagnostic_item("ptr_slice_from_raw_parts")]
+pub fn slice_from_raw_parts<T>(_1: *const T, _2: usize) -> *const [T]
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+struct () {}
+
+struct str {
+  _0: [u8],
+}
+
+struct test_crate::Sync<T>
+where
+    TraitClause0: (T: Sized),
+{
+  _0: T,
+}
+
+// Full name: test_crate::{impl core::marker::Sync for test_crate::Sync<T>[TraitClause0]}
+unsafe impl<T> "impl_Sync_for_Sync" core::marker::Sync for test_crate::Sync<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    vtable: lazy
+}
+
+// Full name: test_crate::RAW_SLICE
+fn RAW_SLICE() -> *const [u8]
+{
+    let _0: *const [u8]; // return
+    let _1: *const u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = cast_with_exposed<usize, *const u8>(const 1usize)
+    _0 = slice_from_raw_parts<u8>[{built_in impl Sized for u8}](move _1, const 0usize)
+    ↳⚡ unwind_continue
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::RAW_SLICE
+const RAW_SLICE: *const [u8] = RAW_SLICE()
+
+// Full name: test_crate::EMPTY
+const EMPTY: &'static [u8] = &[] with_metadata(0usize)
+
+// Full name: test_crate::RAW_SLICE_STATIC
+static RAW_SLICE_STATIC: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}] = test_crate::Sync { _0: unsize_cast<*const [u8; 0usize], *const [u8], 0usize>(no-provenance 1) }
+
+// Full name: test_crate::STR
+static STR: test_crate::Sync<*const str>[{built_in impl Sized for *const str}] = test_crate::Sync { _0: RawMemory(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) }
+
+// Full name: test_crate::CSTR
+static CSTR: test_crate::Sync<*const CStr>[{built_in impl Sized for *const CStr}] = test_crate::Sync { _0: RawMemory(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) }
+
+// Full name: test_crate::Dst
+struct Dst {
+  x: u8,
+  tail: [u8],
+}
+
+// Full name: test_crate::DST
+static DST: test_crate::Sync<*const Dst>[{built_in impl Sized for *const Dst}] = test_crate::Sync { _0: RawMemory(0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) }
+
+// Full name: test_crate::main
+fn main()
+{
+    let _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = ()
+    return
+}
 
 
-thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
-Got a scalar pair where a scalar was expected
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-error: Thread panicked when extracting item `test_crate::RAW_SLICE_STATIC`.
-  --> tests/ui/consts/allocations-dangling.rs:10:1
-   |
-10 | static RAW_SLICE_STATIC: Sync<*const [u8]> = Sync(core::ptr::slice_from_raw_parts(1 as *const u8, 0));
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
-thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
-Got a scalar pair where a scalar was expected
-error: Thread panicked when extracting item `test_crate::STR`.
-  --> tests/ui/consts/allocations-dangling.rs:12:1
-   |
-12 | static STR: Sync<*const str> = Sync(core::ptr::slice_from_raw_parts(1 as *const u8, 3) as *const str);
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
-Got a scalar pair where a scalar was expected
-error: Thread panicked when extracting item `test_crate::CSTR`.
-  --> tests/ui/consts/allocations-dangling.rs:13:1
-   |
-13 | static CSTR: Sync<*const core::ffi::CStr> =
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
-Got a scalar pair where a scalar was expected
-error: Thread panicked when extracting item `test_crate::DST`.
-  --> tests/ui/consts/allocations-dangling.rs:19:1
-   |
-19 | static DST: Sync<*const Dst> = Sync(core::ptr::slice_from_raw_parts(2 as *const u8, 4) as *const Dst);
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-error: aborting due to 1 previous error
-
-ERROR Code failed to compile
