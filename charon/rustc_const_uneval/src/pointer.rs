@@ -48,12 +48,7 @@ impl<'tcx> ConstReader<'tcx> {
         } else {
             None
         };
-        // The sized type at which we view the pointee, if any.
-        let view_ty = match ty.kind() {
-            _ if place.layout.is_sized() => Some(ty),
-            _ if self.is_viewed_unsized_from(ty) => unsize.map(|unsize| unsize.from),
-            _ => None,
-        };
+        let view_ty = self.sized_view(ty, unsize);
         let kind = match place.ptr().into_raw_parts() {
             // Rustc rejects dangling pointers in final values, so a pointer with provenance
             // points to a live allocation.
@@ -104,10 +99,21 @@ impl<'tcx> ConstReader<'tcx> {
         let mutability = pointer_mutability(ptr_ty);
         let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
         let alloc_target = self.alloc_target(alloc_id);
+        // We view other unsized values (e.g. a `CStr`) as bytes, except `str` that we keep as a
+        // literal. An extern type has no known size, so we view it as an empty array.
+        let global_ty = match view_ty {
+            Some(view_ty) => Some(view_ty),
+            None if !ty.is_str() => {
+                let size = ecx.size_and_align_of_val(&place)?;
+                let size = size.map_or(0, |(size, _)| size.bytes());
+                Some(Ty::new_array(tcx, tcx.types.u8, size))
+            }
+            None => None,
+        };
         // A pointer outside of its allocation (one-past-the-end is fine) needs a wrapping offset.
         let in_bounds = offset <= ecx.get_alloc_info(alloc_id).size;
         interp_ok(
-            if let Some(view_ty) = view_ty
+            if let Some(global_ty) = global_ty
                 && let AllocTarget::Global(global) = alloc_target
                 && (self.is_named_global(global)
                     // We can't read the pointee of a pointer outside of its allocation, so we name
@@ -115,7 +121,7 @@ impl<'tcx> ConstReader<'tcx> {
                     || !in_bounds
                         && matches!(tcx.global_alloc(alloc_id), interpret::GlobalAlloc::Memory(_)))
                 && let Some((decl_ty, projections, end_ty)) =
-                    self.place_in_global(ecx, &place, global, offset, in_bounds, view_ty)
+                    self.place_in_global(ecx, &place, global, offset, in_bounds, global_ty)
             {
                 let target = PtrTarget::Global {
                     global,
@@ -124,7 +130,7 @@ impl<'tcx> ConstReader<'tcx> {
                 };
                 // We can't take a `*mut` to an immutable global, so we take a `*const` and cast it.
                 let borrow_mutability = global_mutability(tcx, global).min(mutability);
-                if end_ty == tcx.erase_and_anonymize_regions(view_ty)
+                if end_ty == tcx.erase_and_anonymize_regions(global_ty)
                     && borrow_mutability == mutability
                 {
                     ConstKind::Ptr { target, unsize }
@@ -146,7 +152,7 @@ impl<'tcx> ConstReader<'tcx> {
                         // Cast to the sized type first, then unsize.
                         Some(unsize) => {
                             let sized = Const {
-                                ty: Ty::new_ptr(tcx, view_ty, mutability),
+                                ty: Ty::new_ptr(tcx, global_ty, mutability),
                                 kind: cast(inner, None),
                             };
                             cast(sized, Some(unsize))
@@ -159,10 +165,15 @@ impl<'tcx> ConstReader<'tcx> {
                 // A vtable has no global we can point into, and const-eval can't read its contents.
                 ConstKind::Unsupported("pointer into a vtable")
             } else {
-                // HACK: fallback to reading the value of the pointee, at type `view_ty`.
-                let place = match view_ty {
-                    Some(view_ty) if view_ty != ty => {
-                        place.offset(Size::ZERO, ecx.layout_of(view_ty)?, ecx)?
+                // HACK: fallback to reading the value of the pointee, at type `global_ty` for
+                // slices, `str` and `dyn`. Other unsized pointees stay unsized, so that they are put
+                // in a global instead of a local when the constant is used in a body.
+                let place = match global_ty {
+                    Some(global_ty)
+                        if global_ty != ty
+                            && matches!(ty.kind(), ty::Slice(_) | ty::Str | ty::Dynamic(..)) =>
+                    {
+                        place.offset(Size::ZERO, ecx.layout_of(global_ty)?, ecx)?
                     }
                     _ => place,
                 };
@@ -170,6 +181,60 @@ impl<'tcx> ConstReader<'tcx> {
                 ConstKind::Ptr { target, unsize }
             },
         )
+    }
+
+    /// The sized type at which we view a pointee of type `ty`, whose unsized tail (if any) was
+    /// unsized according to `unsize`. A slice or `dyn Trait` value is viewed at the sized type it
+    /// was unsized from, and so is a `str` with `unsized_strings` and a generic struct whose tail is
+    /// such a type parameter. Other unsized values (e.g. a `CStr`) have no such type.
+    fn sized_view(&self, ty: Ty<'tcx>, unsize: Option<Unsize<'tcx>>) -> Option<Ty<'tcx>> {
+        let tcx = self.tcx;
+        match unsize {
+            // Pointers to sized types and to extern types are thin.
+            None => ty.is_sized(tcx, self.typing_env).then_some(ty),
+            Some(unsize) => self.with_sized_tail(ty, unsize),
+        }
+    }
+
+    /// `ty` with its unsized tail replaced by the sized type it was unsized from (see
+    /// `sized_view`).
+    fn with_sized_tail(&self, ty: Ty<'tcx>, unsize: Unsize<'tcx>) -> Option<Ty<'tcx>> {
+        let tcx = self.tcx;
+        match ty.kind() {
+            _ if ty == unsize.to => self.is_viewed_unsized_from(ty).then_some(unsize.from),
+            // The tail of a generic struct is unsized because of one of its type parameters: we
+            // replace that parameter.
+            ty::Adt(adt_def, args) if let Some(index) = self.tail_param(*adt_def) => {
+                let tail = self.with_sized_tail(args.type_at(index), unsize)?;
+                let args = args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, arg)| if i == index { tail.into() } else { arg });
+                Some(Ty::new_adt(tcx, *adt_def, tcx.mk_args_from_iter(args)))
+            }
+            _ => None,
+        }
+    }
+
+    /// The index of the type parameter of `adt_def` that its tail is made of, if it is a struct
+    /// whose last field is that parameter, or a struct whose tail is that parameter.
+    fn tail_param(&self, adt_def: ty::AdtDef<'tcx>) -> Option<usize> {
+        if !adt_def.is_struct() {
+            return None;
+        }
+        let field = adt_def.non_enum_variant().fields.iter().last()?;
+        let mut ty = self
+            .tcx
+            .type_of(field.did)
+            .instantiate_identity()
+            .skip_normalization();
+        loop {
+            match *ty.kind() {
+                ty::Param(param) => return Some(param.index as usize),
+                ty::Adt(inner, args) => ty = args.type_at(self.tail_param(inner)?),
+                _ => return None,
+            }
+        }
     }
 
     /// Whether we view a value of the unsized type `ty` at the sized type it was unsized from: a
