@@ -117,6 +117,9 @@ pub struct ConstantMemory {
     pub bytes: Vec<Option<u8>>,
     /// The pointers stored in the bytes, by increasing position.
     pub ptrs: Vec<ConstantPointer>,
+    /// The targets of the pointers. Many pointers may share a target, so we store each target once
+    /// and pointers refer to it by its index in this list.
+    pub provenances: Vec<ConstantByteProvenance>,
 }
 
 /// A pointer stored in the bytes of an evaluated constant.
@@ -127,8 +130,9 @@ pub struct ConstantPointer {
     pub start: i64,
     /// The size of the pointer.
     pub size: u8,
-    /// What the pointer points to.
-    pub provenance: ConstantByteProvenance,
+    /// What the pointer points to, as an index into the `provenances` of the enclosing
+    /// `ConstantMemory`.
+    pub provenance: usize,
     /// How far into its target the pointer points.
     pub offset: i64,
 }

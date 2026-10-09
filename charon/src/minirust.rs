@@ -1137,13 +1137,13 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
         if gdecl.ty.get_ptr_metadata(self.krate).is_none() {
             check!(
                 span,
-                u64::try_from(memory.len()).context(span)? == self.size(span, &gdecl.size)?,
+                u64::try_from(memory.bytes.len()).context(span)? == self.size(span, &gdecl.size)?,
                 "global value and layout have different sizes"
             );
         }
         let mut bytes = mini::List::new();
         let mut relocations = mini::List::new();
-        for (offset, byte) in memory.iter().enumerate() {
+        for (offset, byte) in memory.bytes.iter().enumerate() {
             match byte {
                 Byte::Uninit => bytes.push(None),
                 Byte::Value(value) => bytes.push(Some(*value)),
@@ -1152,7 +1152,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                     offset: target_offset,
                     index,
                 } => {
-                    let name = match provenance {
+                    let name = match &memory.provenances[*provenance] {
                         Provenance::Global(gref)
                             if self
                                 .krate

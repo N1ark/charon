@@ -443,7 +443,7 @@ and byte_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = u8_of_postcard ctx st in
          Ok (Value _0)
      | 2 ->
-         let* provenance = provenance_of_postcard ctx st in
+         let* provenance = usize_of_postcard ctx st in
          let* offset = i64_of_postcard ctx st in
          let* index = u8_of_postcard ctx st in
          Ok (Provenance (provenance, offset, index))
@@ -614,7 +614,7 @@ and constant_expr_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
          let* _0 = ty_of_postcard ctx st in
          Ok (CTypeId _0)
      | 15 ->
-         let* _0 = list_of_postcard byte_of_postcard ctx st in
+         let* _0 = raw_memory_of_postcard ctx st in
          Ok (CRawMemory _0)
      | 16 ->
          let* _0 =
@@ -1152,6 +1152,13 @@ and provenance_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = ty_of_postcard ctx st in
          Ok (ProvTypeId _0)
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
+
+and raw_memory_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (raw_memory, string) result =
+  combine_error_msgs st __FUNCTION__
+    (let* bytes = list_of_postcard byte_of_postcard ctx st in
+     let* provenances = list_of_postcard provenance_of_postcard ctx st in
+     Ok ({ bytes; provenances } : raw_memory))
 
 and ref_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (ref_kind, string) result =

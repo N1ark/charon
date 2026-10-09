@@ -253,13 +253,14 @@ and builtin_impl_data =
 and byte =
   | Uninit  (** An uninitialized byte *)
   | Value of int  (** A concrete byte value *)
-  | Provenance of provenance * int * int
-      (** A byte that is part of a pointer with provenance. With the associated
-          provenance, we track the offset of the pointer into its target (0 if
-          it points to the start of that allocation; it may be negative or past
-          the end), and the index of this byte within the pointer. Note that we
-          do not have an actual value for this pointer byte, unlike MiniRust, as
-          that is non-deterministic.
+  | Provenance of int * int * int
+      (** A byte that is part of a pointer with provenance, given as an index
+          into the [provenances] of the enclosing [RawMemory]. With the
+          associated provenance, we track the offset of the pointer into its
+          target (0 if it points to the start of that allocation; it may be
+          negative or past the end), and the index of this byte within the
+          pointer. Note that we do not have an actual value for this pointer
+          byte, unlike MiniRust, as that is non-deterministic.
 
           Fields:
           - [provenance]
@@ -397,7 +398,7 @@ and constant_expr_kind =
 
           This is eliminated inside functions if [--raw-consts] is off. *)
   | CTypeId of ty  (** The [TypeId] value for a type. *)
-  | CRawMemory of byte list
+  | CRawMemory of raw_memory
       (** Raw memory value obtained from constant evaluation. Used when a more
           structured representation isn't possible (e.g. for unions) or just
           isn't implemented yet. *)
@@ -547,6 +548,15 @@ and provenance =
   | ProvTypeId of ty
       (** The allocation backing the [TypeId] of this type, whose offsets encode
           the hash of the type. *)
+
+(** Raw memory: a list of bytes, which may contain pointers. *)
+and raw_memory = {
+  bytes : byte list;
+  provenances : provenance list;
+      (** The targets of the pointers in [bytes]. Many bytes share a target, so
+          we store each target once and bytes refer to it by its index in this
+          list. *)
+}
 
 and ref_kind = RMut | RShared
 

@@ -500,7 +500,7 @@ and byte_of_json (ctx : of_json_ctx) (js : json) : (byte, string) result =
                 ("provenance", provenance); ("offset", offset); ("index", index);
               ] );
         ] ->
-        let* provenance = provenance_of_json ctx provenance in
+        let* provenance = int_of_json ctx provenance in
         let* offset = int_of_json ctx offset in
         let* index = int_of_json ctx index in
         Ok (Provenance (provenance, offset, index))
@@ -683,7 +683,7 @@ and constant_expr_kind_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = ty_of_json ctx _0 in
         Ok (CTypeId _0)
     | `Assoc [ ("RawMemory", _0) ] ->
-        let* _0 = list_of_json byte_of_json ctx _0 in
+        let* _0 = raw_memory_of_json ctx _0 in
         Ok (CRawMemory _0)
     | `Assoc [ ("Var", _0) ] ->
         let* _0 = de_bruijn_var_of_json const_generic_var_id_of_json ctx _0 in
@@ -1276,6 +1276,16 @@ and provenance_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("TypeId", _0) ] ->
         let* _0 = ty_of_json ctx _0 in
         Ok (ProvTypeId _0)
+    | _ -> Error "")
+
+and raw_memory_of_json (ctx : of_json_ctx) (js : json) :
+    (raw_memory, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | `Assoc [ ("bytes", bytes); ("provenances", provenances) ] ->
+        let* bytes = list_of_json byte_of_json ctx bytes in
+        let* provenances = list_of_json provenance_of_json ctx provenances in
+        Ok ({ bytes; provenances } : raw_memory)
     | _ -> Error "")
 
 and ref_kind_of_json (ctx : of_json_ctx) (js : json) : (ref_kind, string) result

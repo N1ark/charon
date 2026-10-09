@@ -1913,23 +1913,25 @@ impl Display for RawAttribute {
     }
 }
 
-impl<C: AstFormatter> FmtWithCtx<C> for Byte {
+impl<C: AstFormatter> FmtWithCtx<C> for RawMemory {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Byte::Value(x) => write!(f, "{:#04x}", x),
-            Byte::Uninit => write!(f, "--"),
+        let bytes = self.bytes.iter().map(|byte| match byte {
+            Byte::Value(x) => format!("{:#04x}", x),
+            Byte::Uninit => "--".to_owned(),
             Byte::Provenance {
                 provenance,
                 offset,
                 index,
             } => {
+                let provenance = self.provenances[*provenance].with_ctx(ctx);
                 if *offset == 0 {
-                    write!(f, "{}[{index}]", provenance.with_ctx(ctx))
+                    format!("{provenance}[{index}]")
                 } else {
-                    write!(f, "({} + {offset})[{index}]", provenance.with_ctx(ctx))
+                    format!("({provenance} + {offset})[{index}]")
                 }
             }
-        }
+        });
+        write!(f, "RawMemory({})", bytes.format(", "))
     }
 }
 
@@ -2073,10 +2075,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for ConstantExpr {
                 write!(f, ")")
             }
             ConstantExprKind::PtrNoProvenance(v) => write!(f, "no-provenance {v}"),
-            ConstantExprKind::RawMemory(bytes) => {
-                let bytes = bytes.iter().map(|v| v.with_ctx(ctx)).format(", ");
-                write!(f, "RawMemory({})", bytes)
-            }
+            ConstantExprKind::RawMemory(memory) => write!(f, "{}", memory.with_ctx(ctx)),
             ConstantExprKind::Opaque(cause) => write!(f, "Opaque({cause})"),
         }
     }

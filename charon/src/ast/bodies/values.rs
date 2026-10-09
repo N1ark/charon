@@ -65,7 +65,7 @@ pub enum ConstantExprKind {
     TypeId(Ty),
     /// Raw memory value obtained from constant evaluation. Used when a more structured
     /// representation isn't possible (e.g. for unions) or just isn't implemented yet.
-    RawMemory(Vec<Byte>),
+    RawMemory(RawMemory),
 
     /// A const generic var
     Var(ConstGenericDbVar),
@@ -225,6 +225,16 @@ pub enum Provenance {
     TypeId(Ty),
 }
 
+/// Raw memory: a list of bytes, which may contain pointers.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+pub struct RawMemory {
+    pub bytes: Vec<Byte>,
+    /// The targets of the pointers in `bytes`. Many bytes share a target, so we store each target
+    /// once and bytes refer to it by its index in this list.
+    pub provenances: Vec<Provenance>,
+}
+
 /// A byte, in the MiniRust sense: it can either be uninitialized, a concrete u8 value,
 /// or part of a pointer with provenance (e.g. to a global or a function)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -234,13 +244,14 @@ pub enum Byte {
     Uninit,
     /// A concrete byte value
     Value(u8),
-    /// A byte that is part of a pointer with provenance. With the associated provenance, we track
+    /// A byte that is part of a pointer with provenance, given as an index into the
+    /// `provenances` of the enclosing `RawMemory`. With the associated provenance, we track
     /// the offset of the pointer into its target (0 if it points to the start of that allocation;
     /// it may be negative or past the end), and the index of this byte within the pointer. Note
     /// that we do not have an actual value for this pointer byte, unlike MiniRust, as that is
     /// non-deterministic.
     Provenance {
-        provenance: Provenance,
+        provenance: usize,
         offset: i64,
         /// Provenance bytes have to stay ordered to be usable:
         /// https://github.com/rust-lang/unsafe-code-guidelines/issues/558

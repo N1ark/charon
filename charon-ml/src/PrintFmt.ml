@@ -439,13 +439,16 @@ and pp_provenance (env : fmt_env) (fmt : Format.formatter) (pv : provenance) :
   | ProvFunction fn_ptr -> Format.fprintf fmt "&%a" (pp_fn_ptr env) fn_ptr
   | ProvTypeId ty -> Format.fprintf fmt "&TypeId(%a)" (pp_ty env) ty
 
-and pp_byte (env : fmt_env) (fmt : Format.formatter) (cv : byte) : unit =
+and pp_byte (env : fmt_env) (provenances : provenance list)
+    (fmt : Format.formatter) (cv : byte) : unit =
   match cv with
   | Uninit -> pp_string fmt "--"
   | Value b -> Format.fprintf fmt "0x%02x" b
-  | Provenance (p, 0, i) -> Format.fprintf fmt "%a[%d]" (pp_provenance env) p i
+  | Provenance (p, 0, i) ->
+      Format.fprintf fmt "%a[%d]" (pp_provenance env) (List.nth provenances p) i
   | Provenance (p, offset, i) ->
-      Format.fprintf fmt "(%a + %d)[%d]" (pp_provenance env) p offset i
+      Format.fprintf fmt "(%a + %d)[%d]" (pp_provenance env)
+        (List.nth provenances p) offset i
 
 and pp_unsizing_metadata (env : fmt_env) (fmt : Format.formatter)
     (meta : unsizing_metadata) : unit =
@@ -539,8 +542,10 @@ and pp_constant_expr (env : fmt_env) (fmt : Format.formatter)
       Format.fprintf fmt "offset_of(%a.%s%s)" (pp_type_decl_ref env) ty
         variant_name field_name
   | CTypeId ty -> Format.fprintf fmt "TypeId(%a)" (pp_ty env) ty
-  | CRawMemory bytes ->
-      Format.fprintf fmt "RawMemory(%a)" (pp_sep_list ", " (pp_byte env)) bytes
+  | CRawMemory { bytes; provenances } ->
+      Format.fprintf fmt "RawMemory(%a)"
+        (pp_sep_list ", " (pp_byte env provenances))
+        bytes
   | COpaque reason -> Format.fprintf fmt "Opaque(%s)" reason
   | CAdt (variant_id, fields) -> begin
       match cv.ty with

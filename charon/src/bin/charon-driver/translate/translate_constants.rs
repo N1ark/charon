@@ -255,22 +255,26 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     .iter()
                     .map(|b| b.map_or(Byte::Uninit, Byte::Value))
                     .collect();
+                let provenances = memory
+                    .provenances
+                    .iter()
+                    .map(|prov| self.translate_provenance(span, prov))
+                    .try_collect()?;
                 for ptr in &memory.ptrs {
-                    let provenance = self.translate_provenance(span, &ptr.provenance)?;
                     // The pointer may straddle the bounds of the bytes; we keep the bytes inside.
                     for index in 0..ptr.size {
                         if let Ok(pos) = usize::try_from(ptr.start + index as i64)
                             && let Some(byte) = bytes.get_mut(pos)
                         {
                             *byte = Byte::Provenance {
-                                provenance: provenance.clone(),
+                                provenance: ptr.provenance,
                                 offset: ptr.offset,
                                 index,
                             };
                         }
                     }
                 }
-                ConstantExprKind::RawMemory(bytes)
+                ConstantExprKind::RawMemory(RawMemory { bytes, provenances })
             }
             hax::ConstantExprKind::Todo(msg) => {
                 register_error!(self, span, "Unsupported constant: {:?}", msg);

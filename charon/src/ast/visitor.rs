@@ -69,7 +69,7 @@ use derive_generic_visitor::*;
         FnOperand, FnPtrKind, InlineAttr, IntegerTy, IntTy, UIntTy, ScalarTy,
         Ident, from_rustc::InlineAttr,
         llbc_ast::ExprBody, llbc_ast::StatementKind,
-        Loc, Locals, NullOp, Operand, PathElem, PlaceKind, GlobalPlaceKind, Provenance,
+        Loc, Locals, NullOp, Operand, PathElem, PlaceKind, GlobalPlaceKind, Provenance, RawMemory,
         RawAttribute, RefKind, RegionId, RegionParam, IntegerValue, TraitItemName, TraitMethodId, AssocTypeId, AssocConstId, AssocItemId, MaybeAssocItemId,
         TranslatedCrate, TypeDeclKind, TypeParam, TypePattern, TypeVarId,
         ullbc_ast::BlockData, ullbc_ast::BlockId, ullbc_ast::ExprBody, ullbc_ast::StatementKind,

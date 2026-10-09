@@ -151,8 +151,8 @@ let trait_impl_ref_to_string env iref =
 let provenance_to_string env pv =
   PrintFmt.pp_to_string (fun fmt -> PrintFmt.pp_provenance env fmt pv)
 
-let byte_to_string env cv =
-  PrintFmt.pp_to_string (fun fmt -> PrintFmt.pp_byte env fmt cv)
+let byte_to_string env provenances cv =
+  PrintFmt.pp_to_string (fun fmt -> PrintFmt.pp_byte env provenances fmt cv)
 
 let unsizing_metadata_to_string env meta =
   PrintFmt.pp_to_string (fun fmt -> PrintFmt.pp_unsizing_metadata env fmt meta)

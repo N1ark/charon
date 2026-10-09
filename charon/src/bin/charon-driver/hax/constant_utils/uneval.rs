@@ -283,23 +283,25 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
             }
             ConstKind::Memory(memory) => {
                 // Many pointers may share their target; we convert it only once.
-                let mut provenances = HashMap::default();
+                let mut provenance_ids = HashMap::default();
+                let mut provenances = vec![];
                 let ptrs = memory
                     .ptrs
                     .iter()
                     .map(|ptr| ConstantPointer {
                         start: ptr.start,
                         size: ptr.size,
-                        provenance: provenances
-                            .entry(ptr.target)
-                            .or_insert_with(|| ptr.target.sinto(s))
-                            .clone(),
+                        provenance: *provenance_ids.entry(ptr.target).or_insert_with(|| {
+                            provenances.push(ptr.target.sinto(s));
+                            provenances.len() - 1
+                        }),
                         offset: ptr.offset,
                     })
                     .collect();
                 ConstantExprKind::Memory(ConstantMemory {
                     bytes: memory.bytes.clone(),
                     ptrs,
+                    provenances,
                 })
             }
             ConstKind::TypeId(ty) => ConstantExprKind::TypeId(ty.sinto(s)),
