@@ -31,6 +31,9 @@ pub struct Config {
     /// them to an allocation rather than to a valtree, so that the allocations they point to become
     /// globals too.
     pub anon_allocs_as_globals: bool,
+    /// Whether to view string data as `[u8; N]`, which allows it to become a global too. Otherwise
+    /// we keep `str` values.
+    pub unsized_strings: bool,
 }
 
 /// Evaluates and reads constants in a given typing environment.

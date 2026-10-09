@@ -295,7 +295,7 @@ pub fn main()
     storage_live(_0)
     _0 = ()
     storage_live(_1)
-    _1 = s<&RawMemory(0x68, 0xc3, 0xa9) with_metadata(3usize)>()
+    _1 = s<&[104u8, 195u8, 169u8] with_metadata(3usize)>()
     ↳⚡ unwind_continue
     storage_dead(_1)
     storage_live(_2)
@@ -311,11 +311,11 @@ pub fn main()
     ↳⚡ unwind_continue
     storage_dead(_4)
     storage_live(_5)
-    _5 = p<P { a: 1u8, b: &RawMemory(0x78) with_metadata(1usize) }>()
+    _5 = p<P { a: 1u8, b: &[120u8] with_metadata(1usize) }>()
     ↳⚡ unwind_continue
     storage_dead(_5)
     storage_live(_6)
-    _6 = arr_of_str<[&RawMemory(0x61) with_metadata(1usize), &RawMemory(0x62, 0x63) with_metadata(2usize)]>()
+    _6 = arr_of_str<[&[97u8] with_metadata(1usize), &[98u8, 99u8] with_metadata(2usize)]>()
     ↳⚡ unwind_continue
     storage_dead(_6)
     storage_live(_7)
