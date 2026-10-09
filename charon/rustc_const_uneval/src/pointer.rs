@@ -123,11 +123,12 @@ impl<'tcx> ConstReader<'tcx> {
         interp_ok(
             if let Some(global_ty) = global_ty
                 && let AllocTarget::Global(global) = alloc_target
-                && (self.is_named_global(global)
-                    // We can't read the pointee of a pointer outside of its allocation, so we name
-                    // the allocation even if we otherwise inline them.
-                    || !in_bounds
-                        && matches!(tcx.global_alloc(alloc_id), interpret::GlobalAlloc::Memory(_)))
+                // We refer to statics by name, and to other globals if requested. We can't
+                // read the pointee of a pointer outside of its allocation, so we always name
+                // the allocation then.
+                && (matches!(global, GlobalRef::Static(_))
+                    || self.config.anon_allocs_as_globals
+                    || !in_bounds)
                 && let Some((decl_ty, projections, end_ty)) =
                     self.place_in_global(ecx, &place, global, offset, in_bounds, global_ty)
             {

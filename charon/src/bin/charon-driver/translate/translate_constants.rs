@@ -80,13 +80,12 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                             {
                                 Provenance::Global(gref.clone())
                             }
-                            _ => Provenance::Unknown,
+                            _ => raise_error!(self, span, "vtable without a global"),
                         }
                     }
                     hax::ConstantByteProvenance::TypeId(ty) => {
                         Provenance::TypeId(self.translate_ty(span, ty)?)
                     }
-                    hax::ConstantByteProvenance::Unknown => Provenance::Unknown,
                 };
                 Byte::Provenance {
                     provenance,

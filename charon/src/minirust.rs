@@ -1169,9 +1169,6 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                         Provenance::TypeId(_) => {
                             raise!(span, "MiniRust globals cannot contain type ids")
                         }
-                        Provenance::Unknown => {
-                            raise!(span, "global contains a pointer with unknown provenance")
-                        }
                     };
                     // FIXME(minirust): MiniRust does not seem to support pointer fragments
                     if *index == 0 {

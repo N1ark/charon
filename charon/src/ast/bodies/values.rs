@@ -212,14 +212,17 @@ pub struct FloatValue {
     pub ty: FloatTy,
 }
 
+/// What a pointer stored in raw memory points to.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 #[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("Prov"))]
 pub enum Provenance {
+    /// A global.
     Global(GlobalDeclRef),
+    /// A function.
     Function(FnPtr),
+    /// The allocation backing the `TypeId` of this type, whose offsets encode the hash of the type.
     TypeId(Ty),
-    Unknown,
 }
 
 /// A byte, in the MiniRust sense: it can either be uninitialized, a concrete u8 value,

@@ -540,11 +540,13 @@ and predicate_origin =
   | TraitItem of assoc_type_id
   | OriginDyn  (** Clauses that are part of a [dyn Trait] type. *)
 
+(** What a pointer stored in raw memory points to. *)
 and provenance =
-  | ProvGlobal of global_decl_ref
-  | ProvFunction of fn_ptr
+  | ProvGlobal of global_decl_ref  (** A global. *)
+  | ProvFunction of fn_ptr  (** A function. *)
   | ProvTypeId of ty
-  | ProvUnknown
+      (** The allocation backing the [TypeId] of this type, whose offsets encode
+          the hash of the type. *)
 
 and ref_kind = RMut | RShared
 

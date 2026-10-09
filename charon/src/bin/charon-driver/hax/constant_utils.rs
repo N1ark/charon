@@ -142,8 +142,6 @@ pub enum ConstantByteProvenance {
     VTable(TraitProof),
     /// The TypeId of a type.
     TypeId(Ty),
-    /// A pointer to anything else (an anonymous allocation, a vtable...).
-    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

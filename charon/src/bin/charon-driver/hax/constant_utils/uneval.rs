@@ -128,16 +128,7 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for ty::Value<'tcx> 
     }
 }
 
-/// The reader for constants evaluated in the current context.
-fn const_reader<'tcx, S: UnderOwnerState<'tcx>>(s: &S) -> ConstReader<'tcx> {
-    ConstReader {
-        tcx: s.base().tcx,
-        typing_env: s.typing_env(),
-        config: s.base().options.consts,
-    }
-}
-
-/// The global standing for `self`, which must be named (see `ConstReader::is_named_global`).
+/// The global standing for `self`.
 impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ItemRef> for GlobalRef {
     fn sinto(&self, s: &S) -> ItemRef {
         match *self {
@@ -179,20 +170,19 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantByteProvenance> for AllocT
     fn sinto(&self, s: &S) -> ConstantByteProvenance {
         match *self {
             AllocTarget::Fn(target) => ConstantByteProvenance::Function(target.sinto(s)),
-            AllocTarget::Global(global) if const_reader(s).is_named_global(global) => {
-                ConstantByteProvenance::Global(global.sinto(s))
-            }
+            // Raw bytes can't contain the pointee, so we always point to a global.
+            AllocTarget::Global(global) => ConstantByteProvenance::Global(global.sinto(s)),
             // The vtable of a `dyn` pointer, including for marker-only `dyn` types like `dyn Send`.
             AllocTarget::VTable(ty, preds) => {
                 let tcx = s.base().tcx;
                 let dyn_ty = ty::Ty::new_dynamic(tcx, preds, tcx.lifetimes.re_erased);
                 match unsizing_metadata(s, ty, dyn_ty) {
                     UnsizingMetadata::DirectVTable(proof) => ConstantByteProvenance::VTable(proof),
-                    _ => ConstantByteProvenance::Unknown,
+                    // Unsizing a sized type to a `dyn` always uses a vtable.
+                    metadata => unreachable!("unexpected vtable metadata {metadata:?}"),
                 }
             }
             AllocTarget::TypeId(ty) => ConstantByteProvenance::TypeId(ty.sinto(s)),
-            AllocTarget::Global(_) => ConstantByteProvenance::Unknown,
         }
     }
 }
@@ -350,7 +340,12 @@ pub fn read_const<'tcx, S: UnderOwnerState<'tcx>>(
     src: ConstSource<'tcx>,
     mode: ReadMode,
 ) -> Option<ConstantExpr> {
-    match const_reader(s).read(span, src, mode) {
+    let reader = ConstReader {
+        tcx: s.base().tcx,
+        typing_env: s.typing_env(),
+        config: s.base().options.consts,
+    };
+    match reader.read(span, src, mode) {
         Ok(val) => Some(val.sinto(s)),
         Err(ReadError::NotEvaluable) => None,
         Err(err) => {
