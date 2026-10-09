@@ -44,18 +44,24 @@ pub static ARR: [u32; 3usize] = ARR()
 pub fn END() -> Sync<*const u32>[{built_in impl Sized for *const u32}]
 {
     let _0: Sync<*const u32>[{built_in impl Sized for *const u32}]; // return
-    let _1: isize; // anonymous local
-    let _2: *const u32; // anonymous local
-    let _3: Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
+    let _1: *const [u32; 3usize]; // anonymous local
+    let _2: *const [u32; 3usize]; // anonymous local
+    let _3: isize; // anonymous local
+    let _4: *const u32; // anonymous local
+    let _5: Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = const 3isize ub.* const size_of::<u32>()
+    _1 = &raw const ARR
     storage_live(_2)
-    _2 = &raw const ARR.offset!(copy _1)
+    _2 = cast<*const [u32; 3usize]>(move _1)
     storage_live(_3)
-    _3 = Sync { _0: move _2 }
-    _0 = noretag move _3
+    _3 = const 3isize ub.* const size_of::<u32>()
+    storage_live(_4)
+    _4 = &raw const (*_2).offset!(copy _3)
+    storage_live(_5)
+    _5 = Sync { _0: move _4 }
+    _0 = noretag move _5
     return
 }
 
@@ -66,15 +72,21 @@ pub static END: Sync<*const u32>[{built_in impl Sized for *const u32}] = END()
 pub fn BYTE() -> Sync<*const u16>[{built_in impl Sized for *const u16}]
 {
     let _0: Sync<*const u16>[{built_in impl Sized for *const u16}]; // return
-    let _1: *const u16; // anonymous local
-    let _2: Sync<*const u16>[{built_in impl Sized for *const u16}]; // anonymous local
+    let _1: *const [u32; 3usize]; // anonymous local
+    let _2: *const [u32; 3usize]; // anonymous local
+    let _3: *const u16; // anonymous local
+    let _4: Sync<*const u16>[{built_in impl Sized for *const u16}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = &raw const ARR.offset!(const 3isize)
+    _1 = &raw const ARR
     storage_live(_2)
-    _2 = Sync { _0: move _1 }
-    _0 = noretag move _2
+    _2 = cast<*const [u32; 3usize]>(move _1)
+    storage_live(_3)
+    _3 = &raw const (*_2).offset!(const 3isize)
+    storage_live(_4)
+    _4 = Sync { _0: move _3 }
+    _0 = noretag move _4
     return
 }
 
@@ -85,18 +97,24 @@ pub static BYTE: Sync<*const u16>[{built_in impl Sized for *const u16}] = BYTE()
 pub fn OOB() -> Sync<*const u32>[{built_in impl Sized for *const u32}]
 {
     let _0: Sync<*const u32>[{built_in impl Sized for *const u32}]; // return
-    let _1: isize; // anonymous local
-    let _2: *const u32; // anonymous local
-    let _3: Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
+    let _1: *const [u32; 3usize]; // anonymous local
+    let _2: *const [u32; 3usize]; // anonymous local
+    let _3: isize; // anonymous local
+    let _4: *const u32; // anonymous local
+    let _5: Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = const -1isize wrap.* const size_of::<u32>()
+    _1 = &raw const ARR
     storage_live(_2)
-    _2 = &raw const ARR.wrapping_offset!(copy _1)
+    _2 = cast<*const [u32; 3usize]>(move _1)
     storage_live(_3)
-    _3 = Sync { _0: move _2 }
-    _0 = noretag move _3
+    _3 = const -1isize wrap.* const size_of::<u32>()
+    storage_live(_4)
+    _4 = &raw const (*_2).wrapping_offset!(copy _3)
+    storage_live(_5)
+    _5 = Sync { _0: move _4 }
+    _0 = noretag move _5
     return
 }
 
