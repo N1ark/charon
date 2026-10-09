@@ -1,5 +1,6 @@
 //! Reading pointers out of const-eval memory.
 use crate::*;
+use interpret::GlobalAlloc;
 use rustc_abi::{FieldIdx, FieldsShape, Size};
 use rustc_const_eval::const_eval::CompileTimeInterpCx;
 use rustc_const_eval::interpret::{InterpResult, MPlaceTy, OpTy, Projectable, interp_ok};
@@ -99,16 +100,23 @@ impl<'tcx> ConstReader<'tcx> {
         let mutability = pointer_mutability(ptr_ty);
         let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
         let alloc_target = self.alloc_target(alloc_id);
-        // We view other unsized values (e.g. a `CStr`) as bytes, except `str` that we keep as a
-        // literal. An extern type has no known size, so we view it as an empty array.
+        let size = ecx.size_and_align_of_val(&place)?.map(|(size, _)| size);
         let global_ty = match view_ty {
             Some(view_ty) => Some(view_ty),
-            None if !ty.is_str() => {
-                let size = ecx.size_and_align_of_val(&place)?;
-                let size = size.map_or(0, |(size, _)| size.bytes());
+            // We keep a string literal as a `str` literal.
+            None if ty.is_str()
+                && let GlobalAlloc::Memory(alloc) = tcx.global_alloc(alloc_id)
+                && offset == Size::ZERO
+                && Some(alloc.inner().size()) == size =>
+            {
+                None
+            }
+            // We view other unsized values (e.g. a `CStr`, or a `str` that points into other
+            // memory) as bytes. An extern type has no known size, so we view it as an empty array.
+            None => {
+                let size = size.map_or(0, |size| size.bytes());
                 Some(Ty::new_array(tcx, tcx.types.u8, size))
             }
-            None => None,
         };
         // A pointer outside of its allocation (one-past-the-end is fine) needs a wrapping offset.
         let in_bounds = offset <= ecx.get_alloc_info(alloc_id).size;
