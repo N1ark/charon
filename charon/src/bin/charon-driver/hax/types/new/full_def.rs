@@ -146,11 +146,7 @@ where
             kind = FullDefKind::Static(Static {
                 param_env: ParamEnv::empty(s, None),
                 safety: Safety::Safe,
-                mutability: tcx
-                    .global_alloc(alloc_id)
-                    .unwrap_memory()
-                    .inner()
-                    .mutability,
+                mutability: rustc_const_uneval::global_mutability(tcx, GlobalRef::Alloc(alloc_id)),
                 thread_local: false,
                 ty: def_id
                     .type_of(s)

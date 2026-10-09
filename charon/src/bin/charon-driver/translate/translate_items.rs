@@ -692,7 +692,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         let (size, align) = if let hax::DefIdBase::Alloc(alloc_id) = def.def_id().base {
             let tcx = self.t_ctx.tcx;
-            let alloc = tcx.global_alloc(alloc_id).unwrap_memory().inner();
+            let alloc = rustc_const_uneval::alloc_memory(tcx, alloc_id);
+            let alloc = alloc.inner();
             (
                 Size::new(alloc.size().bytes()),
                 Size::new(alloc.align.bytes()),
@@ -725,8 +726,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         // Try to evaluate the constant/static into a value if requested. This isn't always
         // possible (e.g. for generic constants or recursive statics), in which case we fall back
-        // to a call to the initializer below. Globals that stand for an anonymous allocation have
-        // no initializer, so they are always evaluated.
+        // to a call to the initializer below. Globals that stand for an allocation without an item
+        // (an anonymous allocation or a nested static) have no initializer, so they are always
+        // evaluated.
         let is_anon_alloc = matches!(def.def_id().base, hax::DefIdBase::Alloc(..));
         let mode = match self.options.consts {
             ConstHandling::Bytes => Some(hax::ReadMode::Bytes),

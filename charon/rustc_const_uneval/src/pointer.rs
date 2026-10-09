@@ -1,6 +1,5 @@
 //! Reading pointers out of const-eval memory.
 use crate::*;
-use interpret::GlobalAlloc;
 use rustc_abi::{FieldIdx, FieldsShape, Size};
 use rustc_const_eval::const_eval::CompileTimeInterpCx;
 use rustc_const_eval::interpret::{InterpResult, MPlaceTy, OpTy, Projectable, interp_ok};
@@ -124,12 +123,7 @@ impl<'tcx> ConstReader<'tcx> {
                     projections,
                 };
                 // We can't take a `*mut` to an immutable global, so we take a `*const` and cast it.
-                let global_mutability = match tcx.global_alloc(alloc_id) {
-                    GlobalAlloc::Static(def_id) => tcx.static_mutability(def_id),
-                    GlobalAlloc::Memory(alloc) => Some(alloc.inner().mutability),
-                    _ => None,
-                };
-                let borrow_mutability = global_mutability.map_or(mutability, |m| m.min(mutability));
+                let borrow_mutability = global_mutability(tcx, global).min(mutability);
                 if end_ty == tcx.erase_and_anonymize_regions(view_ty)
                     && borrow_mutability == mutability
                 {

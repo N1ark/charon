@@ -14,6 +14,35 @@ enum Evaluated<'tcx> {
     Value(mir::ConstValue, Ty<'tcx>),
 }
 
+/// The memory of an allocation without a corresponding item (see [`GlobalRef::Alloc`]): an
+/// anonymous allocation or a nested static.
+pub fn alloc_memory<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    alloc_id: interpret::AllocId,
+) -> interpret::ConstAllocation<'tcx> {
+    match tcx.global_alloc(alloc_id) {
+        interpret::GlobalAlloc::Memory(alloc) => alloc,
+        interpret::GlobalAlloc::Static(def_id) => tcx.eval_static_initializer(def_id).unwrap(),
+        alloc => unreachable!("not an allocation without an item: {alloc:?}"),
+    }
+}
+
+/// The type at which we view an allocation without a corresponding item: `MaybeUninit<[u8; N]>`.
+pub fn alloc_ty<'tcx>(tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> Ty<'tcx> {
+    let size = alloc_memory(tcx, alloc_id).inner().size();
+    let bytes = Ty::new_array(tcx, tcx.types.u8, size.bytes());
+    let maybe_uninit = tcx.require_lang_item(LangItem::MaybeUninit, rustc_span::DUMMY_SP);
+    Ty::new_adt(tcx, tcx.adt_def(maybe_uninit), tcx.mk_args(&[bytes.into()]))
+}
+
+/// The mutability of a global.
+pub fn global_mutability(tcx: TyCtxt<'_>, global: GlobalRef) -> mir::Mutability {
+    match global {
+        GlobalRef::Static(def_id) => tcx.static_mutability(def_id).unwrap(),
+        GlobalRef::Alloc(alloc_id) => alloc_memory(tcx, alloc_id).inner().mutability,
+    }
+}
+
 /// Call `f` on the MIR of the given promoted constant.
 pub fn promoted_body<'tcx, R>(
     tcx: TyCtxt<'tcx>,
@@ -134,35 +163,31 @@ impl<'tcx> ConstReader<'tcx> {
                 }
             },
             ConstSource::Global(global) => {
-                let alloc_id = match global {
+                let alloc = match global {
                     // Statics in `extern` blocks have no initializer.
                     GlobalRef::Static(def_id) if tcx.is_foreign_item(def_id) => {
                         return Err(ReadError::NotEvaluable);
                     }
-                    GlobalRef::Static(def_id) => {
-                        let alloc = tcx
-                            .eval_static_initializer(def_id)
-                            .map_err(|_| ReadError::NotEvaluable)?;
-                        // A static whose type has interior mutability gets a mutable allocation,
-                        // which const-eval refuses to read. We don't care though, so we reintern
-                        // it as immutable.
-                        let alloc = if alloc.inner().mutability.is_mut() {
-                            let mut alloc = alloc.inner().clone();
-                            alloc.mutability = mir::Mutability::Not;
-                            tcx.mk_const_alloc(alloc)
-                        } else {
-                            alloc
-                        };
-                        // `eval_static_initializer` returns an interned allocation without an
-                        // `AllocId`; give it one so we can read it like any other allocation.
-                        // This creates a fresh `AllocId` each time we read the static.
-                        // FIXME: this breaks sharing.
-                        tcx.reserve_and_set_memory_alloc(alloc)
-                    }
-                    GlobalRef::Alloc(alloc_id) => alloc_id,
+                    GlobalRef::Static(def_id) => tcx
+                        .eval_static_initializer(def_id)
+                        .map_err(|_| ReadError::NotEvaluable)?,
+                    GlobalRef::Alloc(alloc_id) => alloc_memory(tcx, alloc_id),
                 };
+                // A mutable allocation (e.g. of a `static mut`, or of a static whose type has
+                // interior mutability) can't be read by const-eval. We don't care though, so we
+                // reintern it as immutable.
+                let alloc = if alloc.inner().mutability.is_mut() {
+                    let mut alloc = alloc.inner().clone();
+                    alloc.mutability = mir::Mutability::Not;
+                    tcx.mk_const_alloc(alloc)
+                } else {
+                    alloc
+                };
+                // Give the allocation a fresh `AllocId` so we can read it like any other
+                // allocation. This creates a fresh `AllocId` each time we read the global.
+                // FIXME: this breaks sharing.
                 let val = mir::ConstValue::Indirect {
-                    alloc_id,
+                    alloc_id: tcx.reserve_and_set_memory_alloc(alloc),
                     offset: rustc_abi::Size::ZERO,
                 };
                 Evaluated::Value(val, self.global_ty(global))
@@ -242,15 +267,7 @@ impl<'tcx> ConstReader<'tcx> {
                     .instantiate_identity()
                     .skip_normalization(),
             ),
-            GlobalRef::Alloc(alloc_id) => {
-                let (size, _) = tcx
-                    .global_alloc(alloc_id)
-                    .size_and_align(tcx, self.typing_env);
-                let bytes = Ty::new_array(tcx, tcx.types.u8, size.bytes());
-                let maybe_uninit =
-                    tcx.require_lang_item(LangItem::MaybeUninit, rustc_span::DUMMY_SP);
-                Ty::new_adt(tcx, tcx.adt_def(maybe_uninit), tcx.mk_args(&[bytes.into()]))
-            }
+            GlobalRef::Alloc(alloc_id) => alloc_ty(tcx, alloc_id),
         }
     }
 

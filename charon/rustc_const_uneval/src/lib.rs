@@ -16,7 +16,7 @@ mod memory;
 mod pointer;
 mod valtree;
 
-pub use eval::promoted_body;
+pub use eval::{alloc_memory, alloc_ty, global_mutability, promoted_body};
 
 use rustc_abi::{ExternAbi, FieldIdx, VariantIdx};
 use rustc_hir::def_id::DefId;
@@ -26,10 +26,10 @@ use rustc_middle::ty::{self, Ty, TyCtxt};
 /// The options that affect how constants are read.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Config {
-    /// Whether to refer to anonymous allocations (e.g. the bytes of `b"foo"`) as globals, or to
-    /// inline their contents at each use. When we name them, structured reads of constants evaluate
-    /// them to an allocation rather than to a valtree, so that the allocations they point to become
-    /// globals too.
+    /// Whether to refer to allocations without an item (anonymous allocations, e.g. the bytes of
+    /// `b"foo"`, and nested statics) as globals, or to inline their contents at each use. When we
+    /// name them, structured reads of constants evaluate them to an allocation rather than to
+    /// a valtree, so that the allocations they point to become globals too.
     pub anon_allocs_as_globals: bool,
     /// Whether to view string data as `[u8; N]`, which allows it to become a global too. Otherwise
     /// we keep `str` values.
