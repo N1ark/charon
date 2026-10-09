@@ -218,6 +218,7 @@ pub struct FloatValue {
 pub enum Provenance {
     Global(GlobalDeclRef),
     Function(FnPtr),
+    TypeId(Ty),
     Unknown,
 }
 

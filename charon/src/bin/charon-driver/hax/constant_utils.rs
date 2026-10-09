@@ -80,6 +80,8 @@ pub enum ConstantExprKind {
     FnDef(ItemRef),
     /// A function pointer. This is an actual pointer to that function.
     FnPtr(FnPtrTarget),
+    /// The `TypeId` of this type.
+    TypeId(Ty),
     /// A blob of memory containing the byte representation of the value. This can occur when
     /// evaluating MIR constants (e.g. unions). Interpreting this back to a structured value
     /// is left as an exercice to the consumer.
@@ -135,6 +137,8 @@ pub enum ConstantByteProvenance {
     Global(ItemRef),
     /// A pointer to a function.
     Function(FnPtrTarget),
+    /// The TypeId of a type.
+    TypeId(Ty),
     /// A pointer to anything else (an anonymous allocation, a vtable...).
     Unknown,
 }

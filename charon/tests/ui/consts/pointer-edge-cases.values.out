@@ -326,16 +326,16 @@ fn mk_type_id(ptrs: [*const u8; 2usize]) -> TypeId
 }
 
 // Full name: test_crate::TYPE_ID_DATA
-static TYPE_ID_DATA: TypeId = TypeId { 0: [cast<*const u8, *const ()>(&raw const X), cast<*const u8, *const ()>(&raw const X)] }
+static TYPE_ID_DATA: TypeId = Opaque(`TypeId` not made by `TypeId::of`)
 
 // Full name: test_crate::TYPE_ID_MIXED
-static TYPE_ID_MIXED: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
+static TYPE_ID_MIXED: TypeId = Opaque(`TypeId` not made by `TypeId::of`)
 
 // Full name: test_crate::TYPE_ID_SWAPPED
-static TYPE_ID_SWAPPED: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
+static TYPE_ID_SWAPPED: TypeId = Opaque(`TypeId` not made by `TypeId::of`)
 
 // Full name: test_crate::TYPE_ID_OFFSET
-static TYPE_ID_OFFSET: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
+static TYPE_ID_OFFSET: TypeId = Opaque(`TypeId` not made by `TypeId::of`)
 
 // Full name: test_crate::U
 union U {

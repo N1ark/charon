@@ -15,9 +15,9 @@ pub trait core::marker::Sized<Self>
 
 struct () {}
 
-pub static test_crate::TID::i686-unknown-linux-gnu: core::any::TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3])
+pub static test_crate::TID::i686-unknown-linux-gnu: core::any::TypeId = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3])
 
-pub static test_crate::TID::x86_64-unknown-linux-gnu: core::any::TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+pub static test_crate::TID::x86_64-unknown-linux-gnu: core::any::TypeId = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7])
 
 pub static test_crate::ARR: [u32; 2usize] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
 

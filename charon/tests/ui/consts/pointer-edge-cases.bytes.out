@@ -172,7 +172,7 @@ static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] 
 static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
 
 // Full name: test_crate::TYPE_ID_PTR
-static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7])
 
 // Full name: test_crate::type_id_ptrs
 fn type_id_ptrs(id: TypeId) -> [*const u8; 2usize]
@@ -214,13 +214,13 @@ fn mk_type_id(ptrs: [*const u8; 2usize]) -> TypeId
 static TYPE_ID_DATA: TypeId = RawMemory(&X[0], &X[1], &X[2], &X[3], &X[4], &X[5], &X[6], &X[7], &X[0], &X[1], &X[2], &X[3], &X[4], &X[5], &X[6], &X[7])
 
 // Full name: test_crate::TYPE_ID_MIXED
-static TYPE_ID_MIXED: TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static TYPE_ID_MIXED: TypeId = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7], &TypeId(u16)[0], &TypeId(u16)[1], &TypeId(u16)[2], &TypeId(u16)[3], &TypeId(u16)[4], &TypeId(u16)[5], &TypeId(u16)[6], &TypeId(u16)[7])
 
 // Full name: test_crate::TYPE_ID_SWAPPED
-static TYPE_ID_SWAPPED: TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static TYPE_ID_SWAPPED: TypeId = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7])
 
 // Full name: test_crate::TYPE_ID_OFFSET
-static TYPE_ID_OFFSET: TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static TYPE_ID_OFFSET: TypeId = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7], &TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7])
 
 // Full name: test_crate::U
 union U {

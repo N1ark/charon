@@ -77,6 +77,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     hax::ConstantByteProvenance::Function(target) => {
                         Provenance::Function(self.translate_fn_ptr_target(span, target)?)
                     }
+                    hax::ConstantByteProvenance::TypeId(ty) => {
+                        Provenance::TypeId(self.translate_ty(span, ty)?)
+                    }
                     hax::ConstantByteProvenance::Unknown => Provenance::Unknown,
                 };
                 Byte::Provenance(prov, *offset)
@@ -253,6 +256,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             }
             hax::ConstantExprKind::FnPtr(target) => {
                 ConstantExprKind::FnPtr(self.translate_fn_ptr_target(span, target)?)
+            }
+            hax::ConstantExprKind::TypeId(ty) => {
+                ConstantExprKind::TypeId(self.translate_ty(span, ty)?)
             }
             hax::ConstantExprKind::Memory(bytes) => {
                 let bytes: Vec<Byte> = bytes

@@ -2,6 +2,14 @@
 
 struct () {}
 
+// Full name: core::marker::Destruct
+#[lang_item(Destruct)]
+pub trait Destruct<Self>
+{
+    fn drop_glue<'_0_1>;
+    non-dyn-compatible
+}
+
 struct core::marker::MetaSized::{vtable} {
   size: usize,
   align: usize,
@@ -12,23 +20,6 @@ struct core::marker::MetaSized::{vtable} {
 #[fundamental]
 #[lang_item(MetaSized)]
 pub trait MetaSized<Self>
-
-// Full name: core::marker::Sized
-#[fundamental]
-#[lang_item(Sized)]
-pub trait Sized<Self>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    non-dyn-compatible
-}
-
-// Full name: core::marker::Destruct
-#[lang_item(Destruct)]
-pub trait Destruct<Self>
-{
-    fn drop_glue<'_0_1>;
-    non-dyn-compatible
-}
 
 unsafe fn core::marker::MetaSized::{vtable_drop_shim}<'_0, Self>(dyn_self: &'_0 mut (dyn MetaSized))
 {
@@ -50,6 +41,21 @@ unsafe fn core::marker::MetaSized::{vtable_drop_shim}<'_0, Self>(dyn_self: &'_0 
 }
 
 vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = core::marker::MetaSized::{vtable} { size: size_of::<Self>(), align: align_of::<Self>(), drop: fnptr(core::marker::MetaSized::{vtable_drop_shim}<'_, Self>) }
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::any::TypeId
+#[lang_item(TypeId)]
+pub struct TypeId {
+  data: [*const (); 2usize],
+}
 
 struct core::marker::Sync::{vtable} {
   size: usize,
@@ -545,6 +551,19 @@ pub fn BAD_STR() -> &'static str
 // Full name: ptr_cast_in_bodies_aux::BAD_STR
 pub static BAD_STR: &'static str = BAD_STR()
 
+// Full name: ptr_cast_in_bodies_aux::TID
+pub fn TID() -> TypeId
+{
+    let _0: TypeId; // return
+
+    storage_live(_0)
+    _0 = const TypeId(u8)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::TID
+pub static TID: TypeId = TID()
+
 // Full name: ptr_cast_in_bodies_aux::OOB
 pub fn OOB() -> ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]
 {
@@ -620,6 +639,18 @@ where
   _6: G,
 }
 
+struct (_, _, _, _)<A, B, C, D>
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (B: Sized),
+    TraitClause2: (C: Sized),
+{
+  _0: A,
+  _1: B,
+  _2: C,
+  _3: D,
+}
+
 // Full name: test_crate::main
 fn main()
 {
@@ -636,10 +667,11 @@ fn main()
     let _10: &'94 DynTail; // anonymous local
     let _11: &'99 SliceTail; // anonymous local
     let _12: &'104 W<str>[{built_in impl MetaSized for str}]; // anonymous local
-    let _13: (&'129 str, &'130 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}], &'131 (dyn Tr + '132)); // anonymous local
+    let _13: (&'129 str, TypeId, &'130 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}], &'131 (dyn Tr + '132)); // anonymous local
     let _14: &'139 str; // anonymous local
-    let _15: &'144 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
-    let _16: &'146 (dyn Tr + '147); // anonymous local
+    let _15: TypeId; // anonymous local
+    let _16: &'146 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
+    let _17: &'148 (dyn Tr + '149); // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -683,10 +715,13 @@ fn main()
     storage_live(_14)
     _14 = copy BAD_STR
     storage_live(_15)
-    _15 = &OOB
+    _15 = copy TID
     storage_live(_16)
-    _16 = copy DYN
-    _13 = (move _14, move _15, move _16)
+    _16 = &OOB
+    storage_live(_17)
+    _17 = copy DYN
+    _13 = (move _14, move _15, move _16, move _17)
+    storage_dead(_17)
     storage_dead(_16)
     storage_dead(_15)
     storage_dead(_14)

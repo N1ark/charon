@@ -2,6 +2,7 @@
 use crate::*;
 use interpret::GlobalAlloc;
 use rustc_abi::{FieldIdx, Size};
+use rustc_attr_ir::LangItem;
 use rustc_const_eval::const_eval::CompileTimeInterpCx;
 use rustc_const_eval::interpret::{
     FnVal, ImmTy, Immediate, InterpResult, MPlaceTy, OpTy, Projectable, interp_ok,
@@ -146,6 +147,33 @@ impl<'tcx> ConstReader<'tcx> {
         })
     }
 
+    /// Read a `TypeId`. It is made of pointers into the `TypeId` allocation of its type, whose
+    /// offsets are the chunks of the type's hash (see rustc's `write_type_id`). Other values (e.g.
+    /// transmuted pointers) aren't the `TypeId` of any type.
+    fn read_type_id(
+        &self,
+        ecx: &CompileTimeInterpCx<'tcx>,
+        op: &OpTy<'tcx>,
+    ) -> InterpResult<'tcx, ConstKind<'tcx>> {
+        let ptrs = ecx.project_field(op, FieldIdx::ZERO)?;
+        let mut parts = vec![];
+        for i in 0..ptrs.len(ecx)? {
+            let ptr = ecx.read_pointer(&ecx.project_index(&ptrs, i)?)?;
+            parts.push(ptr.into_raw_parts());
+        }
+        // A `TypeId` points into the `TypeId` allocation of its type, at the chunks of its hash.
+        if let Some(prov) = parts[0].0
+            && let AllocTarget::TypeId(ty) = self.alloc_target(prov.alloc_id())
+            && parts
+                .iter()
+                .zip(type_id_offsets(self.tcx, ty))
+                .all(|(&(p, offset), expected)| p == Some(prov) && offset.bytes() == expected)
+        {
+            return interp_ok(ConstKind::TypeId(ty));
+        }
+        interp_ok(ConstKind::Unsupported("`TypeId` not made by `TypeId::of`"))
+    }
+
     /// Read an evaluated operand back as a structured constant.
     pub(crate) fn read_op(
         &self,
@@ -170,6 +198,9 @@ impl<'tcx> ConstReader<'tcx> {
             }
             ty::Adt(adt_def, ..) if adt_def.is_union() => {
                 ConstKind::Memory(self.read_raw_bytes(ecx, &op)?)
+            }
+            ty::Adt(adt_def, ..) if self.tcx.is_lang_item(adt_def.did(), LangItem::TypeId) => {
+                self.read_type_id(ecx, &op)?
             }
             ty::Adt(adt_def, ..) => {
                 let variant = ecx.read_discriminant(&op)?;
@@ -240,4 +271,18 @@ impl<'tcx> ConstReader<'tcx> {
         };
         interp_ok(Const { ty, kind })
     }
+}
+
+/// The offsets of the pointers that make up the `TypeId` of `ty`: the chunks of its hash (see
+/// rustc's `write_type_id`).
+fn type_id_offsets<'tcx>(tcx: TyCtxt<'tcx>, ty: Ty<'tcx>) -> Vec<u64> {
+    let dl = &tcx.data_layout;
+    let hash = tcx.type_id_hash(ty).as_u128();
+    let hash = match dl.endian {
+        rustc_abi::Endian::Little => hash.to_le_bytes(),
+        rustc_abi::Endian::Big => hash.to_be_bytes(),
+    };
+    hash.chunks(dl.pointer_size().bytes_usize())
+        .map(|chunk| interpret::read_target_uint(dl.endian, chunk).unwrap() as u64)
+        .collect()
 }

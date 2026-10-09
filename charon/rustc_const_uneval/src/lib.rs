@@ -121,6 +121,8 @@ pub enum ConstKind<'tcx> {
     },
     /// A function pointer.
     FnPtr(FnTarget<'tcx>),
+    /// The `TypeId` of this type.
+    TypeId(Ty<'tcx>),
     /// A valid reference or raw pointer; `ty` tells which.
     Ptr {
         target: PtrTarget<'tcx>,

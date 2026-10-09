@@ -53,6 +53,8 @@ pub static STR_TAIL: &W<str> =
     unsafe { &*(&W(0u8, [104u8, 105]) as &W<[u8]> as *const W<[u8]> as *const W<str>) };
 // A non-UTF-8 `str`.
 pub static BAD_STR: &str = unsafe { core::str::from_utf8_unchecked(&[0xff, 0x61]) };
+// A `TypeId`.
+pub static TID: core::any::TypeId = core::any::TypeId::of::<u8>();
 // A wrapping out-of-bounds pointer.
 pub static OOB: Sync<*const u32> = Sync((&raw const ARR).cast::<u32>().wrapping_sub(1));
 // A `&dyn` to an anonymous allocation.

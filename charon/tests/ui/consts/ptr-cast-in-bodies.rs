@@ -7,5 +7,5 @@ use ptr_cast_in_bodies_aux::*;
 fn main() {
     let _ = (&END, &BYTE, WORDS);
     let _ = (&RAW_SLICE, FN, CLOSURE, &CLOSURE_RAW, DYN_TAIL, SLICE_TAIL, STR_TAIL);
-    let _ = (BAD_STR, &OOB, DYN);
+    let _ = (BAD_STR, TID, &OOB, DYN);
 }
