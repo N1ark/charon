@@ -1,4 +1,4 @@
-error: global contains a pointer with unknown provenance
+error: MiniRust globals cannot contain pointers to vtables
   --> tests/ui/minirust/const-vtable-relocation.rs:15:1
    |
 15 | static DYN: &dyn Tr = &5u8;

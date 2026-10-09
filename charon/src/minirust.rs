@@ -1153,6 +1153,15 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                     index,
                 } => {
                     let name = match provenance {
+                        Provenance::Global(gref)
+                            if self
+                                .krate
+                                .global_decls
+                                .get(gref.id)
+                                .is_some_and(|global| global.global_kind.is_vtable()) =>
+                        {
+                            raise!(span, "MiniRust globals cannot contain pointers to vtables")
+                        }
                         Provenance::Global(gref) => self.global_name(gref.id),
                         Provenance::Function(_) => {
                             raise!(span, "MiniRust globals cannot contain function pointers")

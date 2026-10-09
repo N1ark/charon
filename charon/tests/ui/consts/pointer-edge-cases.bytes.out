@@ -54,6 +54,12 @@ opaque type core::marker::Send::{vtable}
 #[diagnostic_item("Send")]
 pub unsafe trait Send<Self>
 
+struct () {}
+
+vtable core::marker::Send::{vtable}<Self>: core::marker::Send::{vtable} = Opaque(VTable was chosen to be opaque)
+
+vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
 // Full name: core::marker::Copy
 #[lang_item(Copy)]
 #[diagnostic_item("Copy")]
@@ -73,8 +79,6 @@ pub unsafe trait core::marker::Sync<Self>
 pub opaque type MaybeUninit<T>
 where
     TraitClause0: (T: Sized),
-
-struct () {}
 
 struct (_, _, _)<A, B, C>
 where
@@ -148,10 +152,29 @@ impl "impl_Tr_for_unit" Tr for () {
     vtable: lazy
 }
 
+// Full name: test_crate::{impl Tr for u8}::{vtable_drop_shim}
+unsafe fn {vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
+{
+    let ret: (); // return
+    let dyn_self: &'_0 mut (dyn Tr + '0); // arg #1
+    let target_self: &'_0 mut u8; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut (dyn Tr + '1), &'_0 mut u8>(move dyn_self)
+    storage_dead(target_self)
+    storage_dead(dyn_self)
+    return
+}
+
+// Full name: test_crate::{impl Tr for u8}::{vtable}
+vtable impl_Tr_for_u8::{vtable}: test_crate::Tr::{vtable} = test_crate::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr({vtable_drop_shim}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8> }
+
 // Full name: test_crate::{impl Tr for u8}
 impl "impl_Tr_for_u8" Tr for u8 {
     proof ImpliedClause0: (u8: MetaSized) = {built_in impl MetaSized for u8}
-    vtable: lazy
+    vtable: impl_Tr_for_u8::{vtable}
 }
 
 // Full name: test_crate::X
@@ -167,19 +190,19 @@ static FN_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8
 static FN_SLICE: test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}] = RawMemory(&foo[0], &foo[1], &foo[2], &foo[3], &foo[4], &foo[5], &foo[6], &foo[7], 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::FN_DYN
-static FN_DYN: test_crate::Sync<*const (dyn Tr + 'static)>[{built_in impl Sized for *const (dyn Tr + 'static)}] = RawMemory(&foo[0], &foo[1], &foo[2], &foo[3], &foo[4], &foo[5], &foo[6], &foo[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static FN_DYN: test_crate::Sync<*const (dyn Tr + 'static)>[{built_in impl Sized for *const (dyn Tr + 'static)}] = RawMemory(&foo[0], &foo[1], &foo[2], &foo[3], &foo[4], &foo[5], &foo[6], &foo[7], &impl_Tr_for_u8::{vtable}[0], &impl_Tr_for_u8::{vtable}[1], &impl_Tr_for_u8::{vtable}[2], &impl_Tr_for_u8::{vtable}[3], &impl_Tr_for_u8::{vtable}[4], &impl_Tr_for_u8::{vtable}[5], &impl_Tr_for_u8::{vtable}[6], &impl_Tr_for_u8::{vtable}[7])
 
 // Full name: test_crate::FN_REF
 static FN_REF: &'static () = RawMemory(&foo[0], &foo[1], &foo[2], &foo[3], &foo[4], &foo[5], &foo[6], &foo[7])
 
 // Full name: test_crate::DYN
-const DYN: &'static (dyn Debug + 'static) = RawMemory(&test_crate::{promoted_const}[0], &test_crate::{promoted_const}[1], &test_crate::{promoted_const}[2], &test_crate::{promoted_const}[3], &test_crate::{promoted_const}[4], &test_crate::{promoted_const}[5], &test_crate::{promoted_const}[6], &test_crate::{promoted_const}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+const DYN: &'static (dyn Debug + 'static) = RawMemory(&test_crate::{promoted_const}[0], &test_crate::{promoted_const}[1], &test_crate::{promoted_const}[2], &test_crate::{promoted_const}[3], &test_crate::{promoted_const}[4], &test_crate::{promoted_const}[5], &test_crate::{promoted_const}[6], &test_crate::{promoted_const}[7], &{impl#15}::{vtable}[0], &{impl#15}::{vtable}[1], &{impl#15}::{vtable}[2], &{impl#15}::{vtable}[3], &{impl#15}::{vtable}[4], &{impl#15}::{vtable}[5], &{impl#15}::{vtable}[6], &{impl#15}::{vtable}[7])
 
 // Full name: test_crate::VTABLE
-static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&{impl#15}::{vtable}[0], &{impl#15}::{vtable}[1], &{impl#15}::{vtable}[2], &{impl#15}::{vtable}[3], &{impl#15}::{vtable}[4], &{impl#15}::{vtable}[5], &{impl#15}::{vtable}[6], &{impl#15}::{vtable}[7])
 
 // Full name: test_crate::VTABLE_OFFSET
-static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory((&? + 1000)[0], (&? + 1000)[1], (&? + 1000)[2], (&? + 1000)[3], (&? + 1000)[4], (&? + 1000)[5], (&? + 1000)[6], (&? + 1000)[7])
+static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory((&{impl#15}::{vtable} + 1000)[0], (&{impl#15}::{vtable} + 1000)[1], (&{impl#15}::{vtable} + 1000)[2], (&{impl#15}::{vtable} + 1000)[3], (&{impl#15}::{vtable} + 1000)[4], (&{impl#15}::{vtable} + 1000)[5], (&{impl#15}::{vtable} + 1000)[6], (&{impl#15}::{vtable} + 1000)[7])
 
 // Full name: test_crate::TYPE_ID_PTR
 static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = RawMemory(&TypeId(u8)[0], &TypeId(u8)[1], &TypeId(u8)[2], &TypeId(u8)[3], &TypeId(u8)[4], &TypeId(u8)[5], &TypeId(u8)[6], &TypeId(u8)[7])
@@ -239,7 +262,7 @@ union U {
 }
 
 // Full name: test_crate::MARKER_VTABLE
-static MARKER_VTABLE: test_crate::Sync<U>[{built_in impl Sized for U}] = RawMemory(&test_crate::{promoted_const#1}[0], &test_crate::{promoted_const#1}[1], &test_crate::{promoted_const#1}[2], &test_crate::{promoted_const#1}[3], &test_crate::{promoted_const#1}[4], &test_crate::{promoted_const#1}[5], &test_crate::{promoted_const#1}[6], &test_crate::{promoted_const#1}[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+static MARKER_VTABLE: test_crate::Sync<U>[{built_in impl Sized for U}] = RawMemory(&test_crate::{promoted_const#1}[0], &test_crate::{promoted_const#1}[1], &test_crate::{promoted_const#1}[2], &test_crate::{promoted_const#1}[3], &test_crate::{promoted_const#1}[4], &test_crate::{promoted_const#1}[5], &test_crate::{promoted_const#1}[6], &test_crate::{promoted_const#1}[7], &core::marker::Send::{vtable}<u8>[0], &core::marker::Send::{vtable}<u8>[1], &core::marker::Send::{vtable}<u8>[2], &core::marker::Send::{vtable}<u8>[3], &core::marker::Send::{vtable}<u8>[4], &core::marker::Send::{vtable}<u8>[5], &core::marker::Send::{vtable}<u8>[6], &core::marker::Send::{vtable}<u8>[7])
 
 // Full name: test_crate::CLOSURE_RAW::{closure}
 struct {closure} {}

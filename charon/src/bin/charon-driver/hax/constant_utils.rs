@@ -138,6 +138,8 @@ pub enum ConstantByteProvenance {
     Global(ItemRef),
     /// A pointer to a function.
     Function(FnPtrTarget),
+    /// A pointer to the vtable of this trait implementation.
+    VTable(TraitProof),
     /// The TypeId of a type.
     TypeId(Ty),
     /// A pointer to anything else (an anonymous allocation, a vtable...).

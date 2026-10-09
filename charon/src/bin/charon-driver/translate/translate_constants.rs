@@ -73,6 +73,16 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     hax::ConstantByteProvenance::Function(target) => {
                         Provenance::Function(self.translate_fn_ptr_target(span, target)?)
                     }
+                    hax::ConstantByteProvenance::VTable(proof) => {
+                        match self.translate_vtable_instance_const(span, proof)?.kind() {
+                            ConstantExprKind::Ref(vtable, None)
+                                if let GlobalPlaceKind::Global(gref) = &vtable.kind =>
+                            {
+                                Provenance::Global(gref.clone())
+                            }
+                            _ => Provenance::Unknown,
+                        }
+                    }
                     hax::ConstantByteProvenance::TypeId(ty) => {
                         Provenance::TypeId(self.translate_ty(span, ty)?)
                     }
