@@ -135,7 +135,10 @@ impl<C: AstFormatter> FmtWithCtx<C> for BuiltinAssertKind {
 
 impl<C: AstFormatter> FmtWithCtx<C> for ItemId {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match ctx.get_crate() {
+        // A frontend may report an error before it named every item the message mentions.
+        match ctx.get_crate().filter(|krate| {
+            krate.short_names.contains_key(self) || krate.item_names.contains_key(self)
+        }) {
             None => write!(f, "{self}"),
             Some(translated) => translated.item_short_name(*self).fmt_with_ctx(ctx, f),
         }
