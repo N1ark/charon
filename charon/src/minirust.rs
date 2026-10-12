@@ -1158,8 +1158,11 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                 Byte::Uninit => bytes.push(None),
                 Byte::Value(value) => bytes.push(Some(*value)),
                 Byte::Provenance(provenance, pointer_byte) => {
-                    let name = match provenance {
-                        Provenance::Global(gref) => self.global_name(gref.id),
+                    let (name, target_offset) = match provenance {
+                        Provenance::Global(gref) => (self.global_name(gref.id), 0),
+                        Provenance::GlobalOffset(gref, target_offset) => {
+                            (self.global_name(gref.id), *target_offset)
+                        }
                         Provenance::Function(_) => {
                             raise!(span, "MiniRust globals cannot contain function pointers")
                         }
@@ -1173,9 +1176,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                             mini_size(u64::try_from(offset).context(span)?),
                             mini::Relocation {
                                 name,
-                                // FIXME(minirust): Charon's raw bytes do not record the offset
-                                // within the target allocation.
-                                offset: mini::Size::ZERO,
+                                offset: mini_size(target_offset),
                             },
                         ));
                     }

@@ -1210,6 +1210,10 @@ and provenance_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = fn_ptr_of_json ctx _0 in
         Ok (ProvFunction _0)
     | `String "Unknown" -> Ok ProvUnknown
+    | `Assoc [ ("GlobalOffset", `List [ _0; _1 ]) ] ->
+        let* _0 = global_decl_ref_of_json ctx _0 in
+        let* _1 = int_of_json ctx _1 in
+        Ok (ProvGlobalOffset (_0, _1))
     | _ -> Error "")
 
 and ref_kind_of_json (ctx : of_json_ctx) (js : json) : (ref_kind, string) result

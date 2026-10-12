@@ -1873,6 +1873,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for Provenance {
             Provenance::Global(g) => write!(f, "&{}", g.with_ctx(ctx)),
             Provenance::Function(func) => write!(f, "&{}", func.with_ctx(ctx)),
             Provenance::Unknown => write!(f, "&?"),
+            Provenance::GlobalOffset(g, offset) => write!(f, "&{}+{offset}", g.with_ctx(ctx)),
         }
     }
 }

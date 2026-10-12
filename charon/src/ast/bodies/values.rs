@@ -140,6 +140,8 @@ pub enum Provenance {
     Global(GlobalDeclRef),
     Function(FnPtr),
     Unknown,
+    /// A pointer to the given number of bytes into a global (`Global` points to its start).
+    GlobalOffset(GlobalDeclRef, u64),
 }
 
 /// A byte, in the MiniRust sense: it can either be uninitialized, a concrete u8 value,

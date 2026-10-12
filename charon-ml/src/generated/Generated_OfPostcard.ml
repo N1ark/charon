@@ -1098,6 +1098,10 @@ and provenance_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = fn_ptr_of_postcard ctx st in
          Ok (ProvFunction _0)
      | 2 -> Ok ProvUnknown
+     | 3 ->
+         let* _0 = global_decl_ref_of_postcard ctx st in
+         let* _1 = u64_of_postcard ctx st in
+         Ok (ProvGlobalOffset (_0, _1))
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
 
 and ref_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :

@@ -460,6 +460,8 @@ and pp_provenance (env : fmt_env) (fmt : Format.formatter) (pv : provenance) :
   | ProvGlobal gref -> Format.fprintf fmt "&%a" (pp_global_decl_ref env) gref
   | ProvFunction fn_ptr -> Format.fprintf fmt "&%a" (pp_fn_ptr env) fn_ptr
   | ProvUnknown -> pp_string fmt "&?"
+  | ProvGlobalOffset (gref, offset) ->
+      Format.fprintf fmt "&%a+%d" (pp_global_decl_ref env) gref offset
 
 and pp_byte (env : fmt_env) (fmt : Format.formatter) (cv : byte) : unit =
   match cv with

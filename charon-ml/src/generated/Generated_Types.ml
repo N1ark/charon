@@ -440,6 +440,9 @@ and provenance =
   | ProvGlobal of global_decl_ref
   | ProvFunction of fn_ptr
   | ProvUnknown
+  | ProvGlobalOffset of global_decl_ref * int
+      (** A pointer to the given number of bytes into a global ([Global] points
+          to its start). *)
 
 and ref_kind = RMut | RShared
 
