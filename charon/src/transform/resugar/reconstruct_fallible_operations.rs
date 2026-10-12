@@ -30,7 +30,8 @@ fn compute_uses(body: &ExprBody) -> LocalUses {
         let mut uses = HashSet::default();
         let mut visitor = UsedLocalsVisitor(&mut uses);
 
-        // do a simple live variable analysis by walking the block backwards
+        // do a simple live variable analysis by walking the block backwards, from the terminator
+        let _ = block.terminator.drive_body(&mut visitor);
         for statement in block.statements.iter().rev() {
             match &statement.kind {
                 StatementKind::Assign(place, rval) => {
@@ -168,6 +169,7 @@ fn is_raw_ptr(place: &Place) -> bool {
 fn remove_dynamic_checks(
     ctx: &mut TransformCtx,
     uses: &LocalUses,
+    terminator_uses: &LocalUses,
     block_id: BlockId,
     locals: &mut Locals,
     statements: &mut [Statement],
@@ -537,7 +539,10 @@ fn remove_dynamic_checks(
             },
             rest @ ..,
         ] if let Some(tuple_local_id) = tuple.as_local()
-            && !used_outside_block(tuple_local_id) =>
+            && !used_outside_block(tuple_local_id)
+            // E.g. by an overflow check kept as an assert terminator (see
+            // `move_asserts_to_statements`).
+            && !terminator_uses[block_id].contains(&tuple_local_id) =>
         {
             // Check if the result boolean is used in any other way than just getting the integer
             // result.
@@ -749,9 +754,25 @@ impl UllbcPass for Transform {
 
     fn transform_body(&self, ctx: &mut TransformCtx, b: &mut ExprBody) {
         let local_uses: LocalUses = compute_uses(b);
+        // The locals each block's terminator uses.
+        let terminator_uses: LocalUses = b.body.map_ref(|block| {
+            let mut uses = HashSet::default();
+            block.terminator.dyn_visit_in_body(|p: &Place| {
+                uses.extend(p.local_id());
+            });
+            uses
+        });
         let mut pending_shift_checks = Vec::new();
         b.transform_sequences_fwd(|id, locals, seq| {
-            remove_dynamic_checks(ctx, &local_uses, id, locals, seq, &mut pending_shift_checks);
+            remove_dynamic_checks(
+                ctx,
+                &local_uses,
+                &terminator_uses,
+                id,
+                locals,
+                seq,
+                &mut pending_shift_checks,
+            );
             Vec::new()
         });
         // Resolve the checks whose shift lives in a later block (see [PendingShiftCheck]).
