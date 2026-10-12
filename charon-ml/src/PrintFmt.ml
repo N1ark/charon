@@ -230,13 +230,39 @@ let generic_params_at_dbid (env : fmt_env) (dbid : int) : generic_params option
       let index = List.length env.generics - dbid in
       if dbid > 0 && index >= 0 then List.nth_opt env.generics index else None
 
+(** The [short_names] and [item_names] of the last crate printed, as tables:
+    looking them up in their lists makes printing a name linear in the size of
+    the crate. *)
+let name_tables :
+    (crate * (item_id, name) Hashtbl.t * (item_id, name) Hashtbl.t) option
+    Domain.DLS.key =
+  Domain.DLS.new_key (fun () -> None)
+
+let get_name_tables (crate : crate) =
+  match Domain.DLS.get name_tables with
+  | Some (crate', short_names, item_names) when crate' == crate ->
+      (short_names, item_names)
+  | _ ->
+      let table l =
+        let tbl = Hashtbl.create (List.length l) in
+        (* [List.assoc] returns the first binding *)
+        List.iter (fun (id, name) -> Hashtbl.replace tbl id name) (List.rev l);
+        tbl
+      in
+      let short_names = table crate.short_names in
+      let item_names = table crate.item_names in
+      Domain.DLS.set name_tables (Some (crate, short_names, item_names));
+      (short_names, item_names)
+
 let find_short_name (env : fmt_env) (id : item_id) : name option =
-  match List.assoc_opt id env.crate.short_names with
+  let short_names, item_names = get_name_tables env.crate in
+  match Hashtbl.find_opt short_names id with
   | Some name -> Some name
-  | None -> List.assoc_opt id env.crate.item_names
+  | None -> Hashtbl.find_opt item_names id
 
 let has_short_name (env : fmt_env) (id : item_id) : name option =
-  List.assoc_opt id env.crate.short_names
+  let short_names, _ = get_name_tables env.crate in
+  Hashtbl.find_opt short_names id
 
 let item_id_to_pretty_string (id : item_id) : string =
   match id with
