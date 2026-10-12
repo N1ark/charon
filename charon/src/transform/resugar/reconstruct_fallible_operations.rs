@@ -156,6 +156,13 @@ struct PendingShiftCheck {
     cast_local: Option<LocalId>,
 }
 
+/// Whether this place is a raw pointer. Indexing through a raw pointer to a slice checks the bounds
+/// like any other indexing, but in rustc's lowering of `get_unchecked` (where it is UB) the same
+/// projection comes without the check: keep the bounds checks of raw pointers, to tell them apart.
+fn is_raw_ptr(place: &Place) -> bool {
+    matches!(place.ty().kind(), TyKind::RawPtr(..))
+}
+
 /// Rustc inserts dynamic checks during MIR lowering. They all end in an `Assert` statement (and
 /// this is the only use of this statement).
 fn remove_dynamic_checks(
@@ -207,7 +214,8 @@ fn remove_dynamic_checks(
             rest @ ..,
         ] if lt_op2 == len
             && cond == is_in_bounds
-            && let Some((_, ProjectionElem::PtrMetadata)) = len_op.as_projection() =>
+            && let Some((slice_ptr, ProjectionElem::PtrMetadata)) = len_op.as_projection()
+            && !is_raw_ptr(slice_ptr) =>
         {
             rest
         }
@@ -222,6 +230,7 @@ fn remove_dynamic_checks(
                     StatementKind::Assign(
                         reborrow,
                         Rvalue::RawPtr {
+                            place: reborrowed,
                             kind: RefKind::Shared,
                             ..
                         },
@@ -257,7 +266,10 @@ fn remove_dynamic_checks(
         ] if lt_op2 == len
             && cond == is_in_bounds
             && let Some((slice_place, ProjectionElem::PtrMetadata)) = len_op.as_projection()
-            && reborrow == slice_place =>
+            && reborrow == slice_place
+            && !reborrowed.as_projection().is_some_and(|(ptr, elem)| {
+                matches!(elem, ProjectionElem::Deref) && is_raw_ptr(ptr)
+            }) =>
         {
             rest
         }
