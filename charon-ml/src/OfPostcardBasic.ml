@@ -235,7 +235,9 @@ let list_of_postcard
     (a_of_postcard : 'ctx -> postcard_state -> ('a, string) result) (ctx : 'ctx)
     (st : postcard_state) : ('a list, string) result =
   let* len = usize_of_postcard ctx st in
-  if len > 1_000_000 then
+  (* Each element takes at least one byte, so a longer sequence is corrupt. Only
+     checked for long sequences, as [in_channel_length] is a system call. *)
+  if len > 1_000_000 && len > in_channel_length st.ic - pos_in st.ic then
     Error
       ("suspicious postcard sequence length " ^ string_of_int len
      ^ " (varint read at byte "
