@@ -5,10 +5,14 @@
 //! ensure the gotos we substitute the asserts with get merged, but before
 //! [`crate::transform::resugar::reconstruct_fallible_operations`], since it will expect the
 //! asserts to be in statements.
+//! In ULLBC, which keeps unwinding paths, the asserts whose unwinding runs cleanup code (e.g. drops)
+//! stay terminators, so that this cleanup still runs when the check fails.
+
+use std::collections::HashSet;
 
 use crate::ast::*;
 use crate::transform::TransformCtx;
-use crate::ullbc_ast::{ExprBody, Statement, StatementKind, TerminatorKind};
+use crate::ullbc_ast::{BlockId, ExprBody, Statement, StatementKind, TerminatorKind};
 
 use crate::transform::ctx::UllbcPass;
 
@@ -18,11 +22,27 @@ impl UllbcPass for Transform {
         options.reconstruct_fallible_operations
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, b: &mut ExprBody) {
+    fn transform_body(&self, ctx: &mut TransformCtx, b: &mut ExprBody) {
         // Start by computing the set of blocks which are actually panics.
         // Remark: doing this in two steps because reading the blocks at random
         // while doing in-place updates is not natural to do in Rust.
         let panics = b.as_abort_map();
+        // The blocks that only continue unwinding.
+        let resumes: HashSet<BlockId> = b
+            .body
+            .iter_enumerated()
+            .filter(|(_, block)| {
+                block.statements.iter().all(|st| {
+                    matches!(
+                        st.kind,
+                        StatementKind::Nop
+                            | StatementKind::StorageLive(_)
+                            | StatementKind::StorageDead(_)
+                    )
+                }) && matches!(block.terminator.kind, TerminatorKind::UnwindResume)
+            })
+            .map(|(id, _)| id)
+            .collect();
 
         for block in b.body.iter_mut() {
             let TerminatorKind::Assert {
@@ -32,11 +52,18 @@ impl UllbcPass for Transform {
                         ..
                     },
                 target,
-                ..
+                on_unwind,
             } = &block.terminator.kind
             else {
                 continue;
             };
+            // A statement can't unwind: in ULLBC, which keeps unwinding paths, keep the asserts whose
+            // unwinding runs cleanup code (e.g. drops), which would otherwise be skipped when the
+            // check fails.
+            if ctx.options.ullbc && !panics.contains_key(on_unwind) && !resumes.contains(on_unwind)
+            {
+                continue;
+            }
 
             let new_terminator = TerminatorKind::Goto { target: *target };
             let old_terminator = std::mem::replace(&mut block.terminator.kind, new_terminator);
