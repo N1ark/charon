@@ -36,7 +36,7 @@ impl UllbcPass for Transform {
                         if let ConstantExprKind::Ref(pointee, _)
                         | ConstantExprKind::Ptr(_, pointee, _) = c.kind() =>
                     {
-                        pointee.kind().as_global()?
+                        pointee.kind.as_global()?
                     }
                     // Thread-local statics are accessed through `Rvalue::ThreadLocalRef` in MIR.
                     Rvalue::Ref { place, .. } | Rvalue::RawPtr { place, .. } => {

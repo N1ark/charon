@@ -972,7 +972,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                 let ConstantExprKind::Ref(global, None) = vtable.kind() else {
                     raise!(span, "unsupported vtable reference")
                 };
-                let ConstantExprKind::Global(gref) = global.kind() else {
+                let GlobalPlaceKind::Global(gref) = &global.kind else {
                     raise!(span, "vtable reference does not name a global")
                 };
                 let pointee = target_ty

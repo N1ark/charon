@@ -519,6 +519,29 @@ and const_generic_var_id_of_postcard (ctx : of_postcard_ctx)
     (st : postcard_state) : (const_generic_var_id, string) result =
   combine_error_msgs st __FUNCTION__ (ConstGenericVarId.id_of_postcard ctx st)
 
+and const_projection_elem_of_postcard (ctx : of_postcard_ctx)
+    (st : postcard_state) : (const_projection_elem, string) result =
+  combine_error_msgs st __FUNCTION__
+    (let* __tag = int_of_postcard ctx st in
+     match __tag with
+     | 0 ->
+         let* _0 = option_of_postcard variant_id_of_postcard ctx st in
+         let* _1 = field_id_of_postcard ctx st in
+         Ok (CProjField (_0, _1))
+     | 1 ->
+         let* _0 = integer_value_of_postcard ctx st in
+         Ok (CProjIndex _0)
+     | 2 ->
+         let* from = integer_value_of_postcard ctx st in
+         let* to_ = integer_value_of_postcard ctx st in
+         Ok (CProjSubslice (from, to_))
+     | 3 ->
+         let* count = integer_value_of_postcard ctx st in
+         let* ty = option_of_postcard ty_of_postcard ctx st in
+         let* in_bounds = bool_of_postcard ctx st in
+         Ok (CProjOffset (count, ty, in_bounds))
+     | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
+
 and constant_expr_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (constant_expr, string) result =
   combine_error_msgs st __FUNCTION__
@@ -559,12 +582,12 @@ and constant_expr_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
          let* _0 = list_of_postcard constant_expr_of_postcard ctx st in
          Ok (CArray _0)
      | 6 ->
-         let* _0 = constant_expr_of_postcard ctx st in
+         let* _0 = global_place_of_postcard ctx st in
          let* _1 = option_of_postcard unsizing_metadata_of_postcard ctx st in
          Ok (CRef (_0, _1))
      | 7 ->
          let* _0 = ref_kind_of_postcard ctx st in
-         let* _1 = constant_expr_of_postcard ctx st in
+         let* _1 = global_place_of_postcard ctx st in
          let* _2 = option_of_postcard unsizing_metadata_of_postcard ctx st in
          Ok (CPtr (_0, _1, _2))
      | 8 ->
@@ -835,6 +858,30 @@ and global_decl_ref_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (let* id = global_decl_id_of_postcard ctx st in
      let* generics = box_of_postcard generic_args_of_postcard ctx st in
      Ok ({ id; generics } : global_decl_ref))
+
+and global_place_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (global_place, string) result =
+  combine_error_msgs st __FUNCTION__
+    (let* global_place_kind = global_place_kind_of_postcard ctx st in
+     let* global_place_ty = ty_of_postcard ctx st in
+     Ok ({ global_place_kind; global_place_ty } : global_place))
+
+and global_place_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
+    : (global_place_kind, string) result =
+  combine_error_msgs st __FUNCTION__
+    (let* __tag = int_of_postcard ctx st in
+     match __tag with
+     | 0 ->
+         let* _0 = global_decl_ref_of_postcard ctx st in
+         Ok (GlobalPlaceGlobal _0)
+     | 1 ->
+         let* _0 = constant_expr_of_postcard ctx st in
+         Ok (GlobalPlaceValue _0)
+     | 2 ->
+         let* _0 = box_of_postcard global_place_of_postcard ctx st in
+         let* _1 = const_projection_elem_of_postcard ctx st in
+         Ok (GlobalPlaceProjection (_0, _1))
+     | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
 
 and hash_consed_of_postcard :
     'a0.

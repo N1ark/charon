@@ -63,14 +63,16 @@ pub enum ConstantExprKind {
     /// If `options.inline_anon_consts` is `false`, this is also used for inline const blocks and
     /// advanced const generics expressions.
     NamedGlobal(ItemRef),
-    /// A shared reference to a static variable.
-    Borrow(ConstantExpr, Option<UnsizingMetadata>),
-    /// A raw borrow (`*const` or `*mut`).
-    RawBorrow {
-        mutability: Mutability,
+    /// A reference or raw pointer (as given by the type of this constant) to a place inside a
+    /// constant value: `projections` applied to `arg`, each with the type of the place it reaches.
+    Ptr {
         arg: ConstantExpr,
+        projections: Vec<(ConstantProjectionElem, Ty)>,
         metadata: Option<UnsizingMetadata>,
     },
+    /// Casts a thin pointer to the type of this constant. If metadata is given, this is an
+    /// unsizing cast from the pointee of the given pointer.
+    PtrCast(ConstantExpr, Option<UnsizingMetadata>),
     ConstRef {
         id: ParamConst,
     },
@@ -83,6 +85,25 @@ pub enum ConstantExprKind {
     /// is left as an exercice to the consumer.
     Memory(Vec<ConstantByte>),
     Todo(String),
+}
+
+/// Projects a place inside the pointee of a constant pointer.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ConstantProjectionElem {
+    /// A field of a struct, tuple or closure, or of the given variant of an enum.
+    Field(Option<VariantIdx>, FieldIdx),
+    /// An element of an array.
+    Index(u64),
+    /// The subarray `array[from..to]`.
+    Subslice { from: u64, to: u64 },
+    /// The place `count * size_of(ty)` bytes after the current place, or
+    /// `count` bytes if `ty` is `None`. If `in_bounds` is `false`, this may point outside of the
+    /// allocation.
+    Offset {
+        count: i64,
+        ty: Option<Ty>,
+        in_bounds: bool,
+    },
 }
 
 /// A byte of an evaluated constant, in the MiniRust sense.

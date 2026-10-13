@@ -159,45 +159,87 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     ConstantExprKind::Global(global_ref)
                 }
             },
-            hax::ConstantExprKind::Borrow(v, _)
-                if let hax::ConstantExprKind::Literal(hax::ConstantLiteral::Str(s)) =
-                    v.contents.as_ref()
+            hax::ConstantExprKind::Ptr { arg, .. }
+                if ty.is_ref()
+                    && let hax::ConstantExprKind::Literal(hax::ConstantLiteral::Str(s)) =
+                        arg.contents.as_ref()
                     && !self.t_ctx.options.unsized_strings =>
             {
                 ConstantExprKind::Str(s.clone())
             }
-
-            hax::ConstantExprKind::Borrow(v, metadata) => {
-                let mut val = self.translate_constant_expr(span, v)?;
+            hax::ConstantExprKind::Ptr {
+                arg,
+                projections,
+                metadata,
+            } => {
+                let mut val = self.translate_constant_expr(span, arg)?;
                 // With `--unsized-strings`, a string literal is the `[u8; N]` behind the `&str`.
-                if let hax::ConstantExprKind::Literal(hax::ConstantLiteral::Str(s)) =
-                    v.contents.as_ref()
+                if ty.is_ref()
+                    && let hax::ConstantExprKind::Literal(hax::ConstantLiteral::Str(s)) =
+                        arg.contents.as_ref()
                 {
                     let len = ConstantExpr::mk_usize(s.len() as u128);
                     let ty_is_sized = self.translate_sized_proof(span, self.tcx.types.u8)?;
                     let array_ty = Ty::mk_array(Ty::mk_u8(), len, ty_is_sized);
                     val.with_contents_mut(|_, ty| *ty = array_ty);
                 }
-                let metadata = if let Some(metadata) = metadata {
-                    Some(self.translate_unsizing_metadata(span, metadata)?)
-                } else {
-                    None
+                let mut place = match val.kind() {
+                    ConstantExprKind::Global(global_ref) => {
+                        GlobalPlace::new_global(global_ref.clone(), val.ty().clone())
+                    }
+                    _ => GlobalPlace::new_value(val),
                 };
-                ConstantExprKind::Ref(val, metadata)
+                for (proj, proj_ty) in projections {
+                    let proj = match *proj {
+                        hax::ConstantProjectionElem::Field(variant, field) => {
+                            ConstProjectionElem::Field(
+                                variant.map(|v| self.translate_variant_id(v)),
+                                self.translate_field_id(field),
+                            )
+                        }
+                        hax::ConstantProjectionElem::Index(i) => {
+                            ConstProjectionElem::Index(IntegerValue::mk_usize(i as u128))
+                        }
+                        hax::ConstantProjectionElem::Subslice { from, to } => {
+                            ConstProjectionElem::Subslice {
+                                from: IntegerValue::mk_usize(from as u128),
+                                to: IntegerValue::mk_usize(to as u128),
+                            }
+                        }
+                        hax::ConstantProjectionElem::Offset {
+                            count,
+                            ref ty,
+                            in_bounds,
+                        } => ConstProjectionElem::Offset {
+                            count: IntegerValue::Signed(IntTy::Isize, count as i128),
+                            ty: ty
+                                .as_ref()
+                                .map(|ty| self.translate_ty(span, ty))
+                                .transpose()?,
+                            in_bounds,
+                        },
+                    };
+                    place = place.project(proj, self.translate_ty(span, proj_ty)?);
+                }
+                let metadata = metadata
+                    .as_ref()
+                    .map(|metadata| self.translate_unsizing_metadata(span, metadata))
+                    .transpose()?;
+                match ty.kind() {
+                    TyKind::RawPtr(_, rk) => ConstantExprKind::Ptr(*rk, place, metadata),
+                    _ => ConstantExprKind::Ref(place, metadata),
+                }
             }
-            hax::ConstantExprKind::RawBorrow {
-                mutability,
-                arg,
-                metadata,
-            } => {
-                let arg = self.translate_constant_expr(span, arg)?;
-                let rk = RefKind::mutable(mutability.is_mut());
-                let metadata = if let Some(metadata) = metadata {
-                    Some(self.translate_unsizing_metadata(span, metadata)?)
+            hax::ConstantExprKind::PtrCast(ptr, metadata) => {
+                let ptr = self.translate_constant_expr(span, ptr)?;
+                let src = ptr.ty().clone();
+                let kind = if let Some(metadata) = metadata {
+                    let metadata = self.translate_unsizing_metadata(span, metadata)?;
+                    CastKind::Unsize(src, ty.clone(), metadata)
                 } else {
-                    None
+                    CastKind::RawPtr(src, ty.clone())
                 };
-                ConstantExprKind::Ptr(rk, arg, metadata)
+                ConstantExprKind::Cast(ptr, kind)
             }
             hax::ConstantExprKind::ConstRef { id } => {
                 match self.lookup_const_generic_var(span, id) {

@@ -192,6 +192,12 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
             ty::Pat(base_ty, _) => *base_ty,
             _ => self.ty,
         };
+        let unsizing_metadata = |unsize: &Option<rustc_const_uneval::Unsize<'tcx>>| {
+            unsize.map(|unsize| {
+                let ref_to = |ty| ty::Ty::new_imm_ref(tcx, tcx.lifetimes.re_static, ty);
+                compute_unsizing_metadata(s, ref_to(unsize.from), ref_to(unsize.to))
+            })
+        };
         let kind = match &self.kind {
             ConstKind::Scalar(scalar_int) => {
                 ConstantExprKind::Literal(scalar_int_to_constant_literal(s, *scalar_int, ty))
@@ -247,26 +253,33 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
             }
             ConstKind::FnPtr(target) => ConstantExprKind::FnPtr(target.sinto(s)),
             ConstKind::Ptr { target, unsize } => {
-                let metadata = unsize.map(|unsize| {
-                    let ref_to = |ty| ty::Ty::new_imm_ref(tcx, tcx.lifetimes.re_static, ty);
-                    compute_unsizing_metadata(s, ref_to(unsize.from), ref_to(unsize.to))
-                });
-                let arg = match target {
-                    PtrTarget::Global { global, ty } => Decorated {
-                        contents: Box::new(ConstantExprKind::NamedGlobal(global.sinto(s))),
-                        ty: ty.sinto(s),
-                    },
-                    PtrTarget::Inline(val) => val.sinto(s),
+                let metadata = unsizing_metadata(unsize);
+                let (arg, projections) = match target {
+                    PtrTarget::Global {
+                        global,
+                        ty,
+                        projections,
+                    } => {
+                        let global = Decorated {
+                            contents: Box::new(ConstantExprKind::NamedGlobal(global.sinto(s))),
+                            ty: ty.sinto(s),
+                        };
+                        let projections = projections
+                            .iter()
+                            .map(|(proj, ty)| (proj.sinto(s), ty.sinto(s)))
+                            .collect();
+                        (global, projections)
+                    }
+                    PtrTarget::Inline(val) => (val.sinto(s), vec![]),
                 };
-                match ty.kind() {
-                    ty::Ref(..) => ConstantExprKind::Borrow(arg, metadata),
-                    ty::RawPtr(_, mutability) => ConstantExprKind::RawBorrow {
-                        mutability: mutability.sinto(s),
-                        arg,
-                        metadata,
-                    },
-                    _ => unreachable!("unexpected pointer type {ty:?}"),
+                ConstantExprKind::Ptr {
+                    arg,
+                    projections,
+                    metadata,
                 }
+            }
+            ConstKind::PtrCast { ptr, unsize } => {
+                ConstantExprKind::PtrCast(ptr.sinto(s), unsizing_metadata(unsize))
             }
             ConstKind::Memory(bytes) => {
                 // The bytes of a pointer share their provenance; we convert it only once.
@@ -288,6 +301,28 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr> for rustc_const_unev
         Decorated {
             contents: Box::new(kind),
             ty: self.ty.sinto(s),
+        }
+    }
+}
+
+impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantProjectionElem>
+    for rustc_const_uneval::Projection<'tcx>
+{
+    fn sinto(&self, s: &S) -> ConstantProjectionElem {
+        use rustc_const_uneval::Projection;
+        match *self {
+            Projection::Field(variant, field) => ConstantProjectionElem::Field(variant, field),
+            Projection::Index(i) => ConstantProjectionElem::Index(i),
+            Projection::Subslice { from, to } => ConstantProjectionElem::Subslice { from, to },
+            Projection::Offset {
+                count,
+                ty,
+                in_bounds,
+            } => ConstantProjectionElem::Offset {
+                count,
+                ty: ty.sinto(s),
+                in_bounds,
+            },
         }
     }
 }

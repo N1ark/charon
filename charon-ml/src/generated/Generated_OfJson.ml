@@ -577,6 +577,32 @@ and const_generic_var_id_of_json (ctx : of_json_ctx) (js : json) :
     | x -> ConstGenericVarId.id_of_json ctx x
     | _ -> Error "")
 
+and const_projection_elem_of_json (ctx : of_json_ctx) (js : json) :
+    (const_projection_elem, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | `Assoc [ ("Field", `List [ _0; _1 ]) ] ->
+        let* _0 = option_of_json variant_id_of_json ctx _0 in
+        let* _1 = field_id_of_json ctx _1 in
+        Ok (CProjField (_0, _1))
+    | `Assoc [ ("Index", _0) ] ->
+        let* _0 = integer_value_of_json ctx _0 in
+        Ok (CProjIndex _0)
+    | `Assoc [ ("Subslice", `Assoc [ ("from", from); ("to", to_) ]) ] ->
+        let* from = integer_value_of_json ctx from in
+        let* to_ = integer_value_of_json ctx to_ in
+        Ok (CProjSubslice (from, to_))
+    | `Assoc
+        [
+          ( "Offset",
+            `Assoc [ ("count", count); ("ty", ty); ("in_bounds", in_bounds) ] );
+        ] ->
+        let* count = integer_value_of_json ctx count in
+        let* ty = option_of_json ty_of_json ctx ty in
+        let* in_bounds = bool_of_json ctx in_bounds in
+        Ok (CProjOffset (count, ty, in_bounds))
+    | _ -> Error "")
+
 and constant_expr_of_json (ctx : of_json_ctx) (js : json) :
     (constant_expr, string) result =
   combine_error_msgs js __FUNCTION__
@@ -618,12 +644,12 @@ and constant_expr_kind_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = list_of_json constant_expr_of_json ctx _0 in
         Ok (CArray _0)
     | `Assoc [ ("Ref", `List [ _0; _1 ]) ] ->
-        let* _0 = constant_expr_of_json ctx _0 in
+        let* _0 = global_place_of_json ctx _0 in
         let* _1 = option_of_json unsizing_metadata_of_json ctx _1 in
         Ok (CRef (_0, _1))
     | `Assoc [ ("Ptr", `List [ _0; _1; _2 ]) ] ->
         let* _0 = ref_kind_of_json ctx _0 in
-        let* _1 = constant_expr_of_json ctx _1 in
+        let* _1 = global_place_of_json ctx _1 in
         let* _2 = option_of_json unsizing_metadata_of_json ctx _2 in
         Ok (CPtr (_0, _1, _2))
     | `Assoc [ ("Str", _0) ] ->
@@ -934,6 +960,32 @@ and global_decl_ref_of_json (ctx : of_json_ctx) (js : json) :
         let* id = global_decl_id_of_json ctx id in
         let* generics = box_of_json generic_args_of_json ctx generics in
         Ok ({ id; generics } : global_decl_ref)
+    | _ -> Error "")
+
+and global_place_of_json (ctx : of_json_ctx) (js : json) :
+    (global_place, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | `Assoc [ ("kind", kind); ("ty", ty) ] ->
+        let* global_place_kind = global_place_kind_of_json ctx kind in
+        let* global_place_ty = ty_of_json ctx ty in
+        Ok ({ global_place_kind; global_place_ty } : global_place)
+    | _ -> Error "")
+
+and global_place_kind_of_json (ctx : of_json_ctx) (js : json) :
+    (global_place_kind, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | `Assoc [ ("Global", _0) ] ->
+        let* _0 = global_decl_ref_of_json ctx _0 in
+        Ok (GlobalPlaceGlobal _0)
+    | `Assoc [ ("Value", _0) ] ->
+        let* _0 = constant_expr_of_json ctx _0 in
+        Ok (GlobalPlaceValue _0)
+    | `Assoc [ ("Projection", `List [ _0; _1 ]) ] ->
+        let* _0 = box_of_json global_place_of_json ctx _0 in
+        let* _1 = const_projection_elem_of_json ctx _1 in
+        Ok (GlobalPlaceProjection (_0, _1))
     | _ -> Error "")
 
 and hash_consed_of_json :

@@ -11,26 +11,6 @@ opaque type core::marker::MetaSized::{vtable}
 #[lang_item(MetaSized)]
 pub trait MetaSized<Self>
 
-// Full name: core::any::{TypeId}::of
-pub fn of<T>() -> TypeId
-where
-    TraitClause0: (T: MetaSized),
-    TypeOutlives0: T: 'static,
-= <opaque>
-
-// Full name: core::ops::index::Index
-#[lang_item(Index)]
-pub trait Index<Self, Idx>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    proof ImpliedClause1: (Idx: MetaSized)
-    proof ImpliedClause2: (Self::Output: MetaSized)
-    type Output
-    #[track_caller]
-    fn index<'_0_1>;
-    vtable: core::ops::index::Index::{vtable}<Idx, Self::Output>
-}
-
 // Full name: core::marker::Sized
 #[fundamental]
 #[lang_item(Sized)]
@@ -39,17 +19,6 @@ pub trait Sized<Self>
     proof ImpliedClause0: (Self: MetaSized)
     non-dyn-compatible
 }
-
-// Full name: core::array::{impl Index<I> for [T; N]}::index
-pub fn impl_Index_for_array::index<'_0, T, I, const N : usize>(_1: &'_0 [T; N], _2: I) -> &'_0 TraitClause2::Output
-where
-    TraitClause0: (T: Sized),
-    TraitClause1: (I: Sized),
-    TraitClause2: ([T]: Index<I>),
-    TypeOutlives0: T: '_0,
-    TypeOutlives1: TraitClause2::Output: '_0,
-    TypeOutlives2: I: '_0,
-= <opaque>
 
 // Full name: core::clone::Clone
 #[lang_item(Clone)]
@@ -103,148 +72,12 @@ pub trait Copy<Self>
 #[diagnostic_item("Sync")]
 pub unsafe trait core::marker::Sync<Self>
 
-// Full name: core::option::Option
-#[lang_item(Option)]
-#[diagnostic_item("Option")]
-pub enum Option<T>
-where
-    TraitClause0: (T: Sized),
-{
-  None,
-  Some { _0: T },
-}
-
-// Full name: core::ptr::const_ptr::{*const T}::cast
-#[diagnostic_item("const_ptr_cast")]
-pub fn cast<T, U>(_1: *const T) -> *const U
-where
-    TraitClause0: (U: Sized),
-= <opaque>
-
-// Full name: core::ptr::const_ptr::{*const T}::add
-#[track_caller]
-pub unsafe fn add<T>(_1: *const T, _2: usize) -> *const T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
-// Full name: core::ptr::const_ptr::{*const T}::wrapping_add
-pub fn wrapping_add<T>(_1: *const T, _2: usize) -> *const T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
 // Full name: core::ptr::slice_from_raw_parts
 #[diagnostic_item("ptr_slice_from_raw_parts")]
 pub fn slice_from_raw_parts<T>(_1: *const T, _2: usize) -> *const [T]
 where
     TraitClause0: (T: Sized),
 = <opaque>
-
-// Full name: core::slice::index::SliceIndex
-#[diagnostic_item("SliceIndex")]
-pub unsafe trait SliceIndex<Self, T>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    proof ImpliedClause1: (T: MetaSized)
-    proof ImpliedClause2: (Self::Output: MetaSized)
-    type Output
-    fn get<'_0_1>;
-    fn get_mut<'_0_1>;
-    fn get_unchecked;
-    fn get_unchecked_mut;
-    #[track_caller]
-    fn index<'_0_1>;
-    #[track_caller]
-    fn index_mut<'_0_1>;
-    vtable: core::slice::index::SliceIndex::{vtable}<T, Self::Output>
-}
-
-// Full name: core::slice::index::{impl Index<I> for [T]}::index
-pub fn impl_Index_for_slice::index<'_0, T, I>(_1: &'_0 [T], _2: I) -> &'_0 TraitClause2::Output
-where
-    TraitClause0: (T: Sized),
-    TraitClause1: (I: Sized),
-    TraitClause2: (I: SliceIndex<[T]>),
-    TypeOutlives0: T: '_0,
-    TypeOutlives1: TraitClause2::Output: '_0,
-    TypeOutlives2: I: '_0,
-= <opaque>
-
-// Full name: core::slice::index::{impl Index<I> for [T]}
-impl<T, I> "impl_Index_for_slice" Index<I> for [T]
-where
-    TraitClause0: (T: Sized),
-    TraitClause1: (I: Sized),
-    TraitClause2: (I: SliceIndex<[T]>),
-{
-    proof ImpliedClause0: ([T]: MetaSized) = {built_in impl MetaSized for [T]}
-    proof ImpliedClause1: (I: MetaSized) = TraitClause1::ImpliedClause0
-    proof ImpliedClause2: (TraitClause2::Output: MetaSized) = TraitClause2::ImpliedClause2
-    type Output = TraitClause2::Output
-    fn index<'_0_1> = impl_Index_for_slice::index<'_0_1, T, I>[TraitClause0, TraitClause1, TraitClause2]
-    vtable: lazy
-}
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::index_mut
-pub fn impl_SliceIndex_slice_for_usize::index_mut<'_0, T>(_1: usize, _2: &'_0 mut [T]) -> &'_0 mut T
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::index
-pub fn impl_SliceIndex_slice_for_usize::index<'_0, T>(_1: usize, _2: &'_0 [T]) -> &'_0 T
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_unchecked_mut
-#[track_caller]
-pub unsafe fn impl_SliceIndex_slice_for_usize::get_unchecked_mut<T>(_1: usize, _2: *mut [T]) -> *mut T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_unchecked
-#[track_caller]
-pub unsafe fn impl_SliceIndex_slice_for_usize::get_unchecked<T>(_1: usize, _2: *const [T]) -> *const T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_mut
-pub fn impl_SliceIndex_slice_for_usize::get_mut<'_0, T>(_1: usize, _2: &'_0 mut [T]) -> Option<&'_0 mut T>[{built_in impl Sized for &'_0 mut T}]
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get
-pub fn impl_SliceIndex_slice_for_usize::get<'_0, T>(_1: usize, _2: &'_0 [T]) -> Option<&'_0 T>[{built_in impl Sized for &'_0 T}]
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
-
-// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}
-unsafe impl<T> "impl_SliceIndex_slice_for_usize" SliceIndex<[T]> for usize
-where
-    TraitClause0: (T: Sized),
-{
-    proof ImpliedClause0: (usize: MetaSized) = {built_in impl MetaSized for usize}
-    proof ImpliedClause1: ([T]: MetaSized) = {built_in impl MetaSized for [T]}
-    proof ImpliedClause2: (T: MetaSized) = TraitClause0::ImpliedClause0
-    type Output = T
-    fn get<'_0_1> = impl_SliceIndex_slice_for_usize::get<'_0_1, T>[TraitClause0]
-    fn get_mut<'_0_1> = impl_SliceIndex_slice_for_usize::get_mut<'_0_1, T>[TraitClause0]
-    fn get_unchecked = impl_SliceIndex_slice_for_usize::get_unchecked<T>[TraitClause0]
-    fn get_unchecked_mut = impl_SliceIndex_slice_for_usize::get_unchecked_mut<T>[TraitClause0]
-    fn index<'_0_1> = impl_SliceIndex_slice_for_usize::index<'_0_1, T>[TraitClause0]
-    fn index_mut<'_0_1> = impl_SliceIndex_slice_for_usize::index_mut<'_0_1, T>[TraitClause0]
-    vtable: lazy
-}
 
 struct (_, _, _)<A, B, C>
 where
@@ -346,30 +179,7 @@ static X: u8 = 0u8
 static FN_PTR: test_crate::Sync<*const ()>[{built_in impl Sized for *const ()}] = test_crate::Sync { _0: &raw const () }
 
 // Full name: test_crate::FN_OFFSET
-fn FN_OFFSET() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: fn(); // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    _3 = cast<foo, fn()>(const foo)
-    _2 = cast<fn(), *const u8>(move _3)
-    storage_dead(_3)
-    _1 = wrapping_add<u8>[{built_in impl Sized for u8}](move _2, const 1usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::FN_OFFSET
-static FN_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = FN_OFFSET()
+static FN_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
 
 // Full name: test_crate::FN_SLICE
 fn FN_SLICE() -> test_crate::Sync<*const [u8]>[{built_in impl Sized for *const [u8]}]
@@ -471,134 +281,13 @@ fn DYN() -> &'static (dyn Debug + 'static)
 const DYN: &'static (dyn Debug + 'static) = DYN()
 
 // Full name: test_crate::VTABLE
-fn VTABLE() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: [*const u8; 2usize]; // anonymous local
-    let _3: &'3 (dyn Debug + '4); // anonymous local
-    let _4: &'5 (dyn Debug + '6); // anonymous local
-    let _5: &'7 (dyn Debug + '8); // anonymous local
-    let _6: usize; // anonymous local
-    let _7: &'_ [*const u8; 2usize]; // anonymous local
-    let _8: &'_ *const u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    storage_live(_5)
-    _5 = copy DYN
-    _4 = &(*_5) with_metadata(copy _5.metadata)
-    _3 = unsize_cast<&'5 (dyn Debug + '6), &'10 (dyn Debug + '11),  at []>(move _4)
-    storage_dead(_4)
-    _2 = transmute<&'3 (dyn Debug + '4), [*const u8; 2usize]>(move _3)
-    storage_dead(_3)
-    storage_live(_6)
-    _6 = const 1usize
-    storage_live(_7)
-    _7 = &_2
-    storage_live(_8)
-    _8 = impl_Index_for_array::index<'_, *const u8, usize, 2usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_Index_for_slice<*const u8, usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<*const u8>[{built_in impl Sized for *const u8}]]](move _7, copy _6)
-    ↳⚡ undefined_behavior
-    _1 = copy (*_8)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::VTABLE
-static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = VTABLE()
+static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer into a vtable) }
 
 // Full name: test_crate::VTABLE_OFFSET
-fn VTABLE_OFFSET() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: [*const u8; 2usize]; // anonymous local
-    let _4: &'3 (dyn Debug + '4); // anonymous local
-    let _5: &'5 (dyn Debug + '6); // anonymous local
-    let _6: &'7 (dyn Debug + '8); // anonymous local
-    let _7: usize; // anonymous local
-    let _8: &'_ [*const u8; 2usize]; // anonymous local
-    let _9: &'_ *const u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    storage_live(_5)
-    storage_live(_6)
-    _6 = copy DYN
-    _5 = &(*_6) with_metadata(copy _6.metadata)
-    _4 = unsize_cast<&'5 (dyn Debug + '6), &'10 (dyn Debug + '11),  at []>(move _5)
-    storage_dead(_5)
-    _3 = transmute<&'3 (dyn Debug + '4), [*const u8; 2usize]>(move _4)
-    storage_dead(_4)
-    storage_live(_7)
-    _7 = const 1usize
-    storage_live(_8)
-    _8 = &_3
-    storage_live(_9)
-    _9 = impl_Index_for_array::index<'_, *const u8, usize, 2usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_Index_for_slice<*const u8, usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<*const u8>[{built_in impl Sized for *const u8}]]](move _8, copy _7)
-    ↳⚡ undefined_behavior
-    _2 = copy (*_9)
-    _1 = wrapping_add<u8>[{built_in impl Sized for u8}](move _2, const 1000usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_7)
-    storage_dead(_6)
-    storage_dead(_3)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::VTABLE_OFFSET
-static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = VTABLE_OFFSET()
+static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
 
 // Full name: test_crate::TYPE_ID_PTR
-fn TYPE_ID_PTR() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: [*const u8; 2usize]; // anonymous local
-    let _3: TypeId; // anonymous local
-    let _4: usize; // anonymous local
-    let _5: &'_ [*const u8; 2usize]; // anonymous local
-    let _6: &'_ *const u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    _3 = of<u8>[{built_in impl MetaSized for u8}]()
-    ↳⚡ unwind_continue
-    _2 = transmute<TypeId, [*const u8; 2usize]>(move _3)
-    storage_dead(_3)
-    storage_live(_4)
-    _4 = const 0usize
-    storage_live(_5)
-    _5 = &_2
-    storage_live(_6)
-    _6 = impl_Index_for_array::index<'_, *const u8, usize, 2usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_Index_for_slice<*const u8, usize>[{built_in impl Sized for *const u8}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<*const u8>[{built_in impl Sized for *const u8}]]](move _5, copy _4)
-    ↳⚡ undefined_behavior
-    _1 = copy (*_6)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_4)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::TYPE_ID_PTR
-static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = TYPE_ID_PTR()
+static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
 
 // Full name: test_crate::type_id_ptrs
 fn type_id_ptrs(id: TypeId) -> [*const u8; 2usize]
@@ -637,16 +326,16 @@ fn mk_type_id(ptrs: [*const u8; 2usize]) -> TypeId
 }
 
 // Full name: test_crate::TYPE_ID_DATA
-static TYPE_ID_DATA: TypeId = TypeId { 0: [&raw const X, &raw const X] }
+static TYPE_ID_DATA: TypeId = TypeId { 0: [cast<*const u8, *const ()>(&raw const X), cast<*const u8, *const ()>(&raw const X)] }
 
 // Full name: test_crate::TYPE_ID_MIXED
-static TYPE_ID_MIXED: TypeId = TypeId { 0: [&raw const (), &raw const ()] }
+static TYPE_ID_MIXED: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
 
 // Full name: test_crate::TYPE_ID_SWAPPED
-static TYPE_ID_SWAPPED: TypeId = TypeId { 0: [&raw const (), &raw const ()] }
+static TYPE_ID_SWAPPED: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
 
 // Full name: test_crate::TYPE_ID_OFFSET
-static TYPE_ID_OFFSET: TypeId = TypeId { 0: [&raw const (), &raw const ()] }
+static TYPE_ID_OFFSET: TypeId = TypeId { 0: [Opaque(pointer outside of its allocation), Opaque(pointer outside of its allocation)] }
 
 // Full name: test_crate::U
 union U {
@@ -664,10 +353,10 @@ static CLOSURE_RAW: test_crate::Sync<*const ()>[{built_in impl Sized for *const 
 static ZARR: ((), [(); 4usize], u8) = ((), [(), (), (), ()], 1u8)
 
 // Full name: test_crate::ZPTR
-static ZPTR: &'static () = &ZARR
+static ZPTR: &'static () = &ZARR._0
 
 // Full name: test_crate::ZFIELD
-static ZFIELD: &'static u8 = &ZARR
+static ZFIELD: &'static u8 = &ZARR._2
 
 // Full name: test_crate::Bytes
 union Bytes {
@@ -679,7 +368,7 @@ union Bytes {
 static UNION: Bytes = RawMemory(0x00, 0x00, 0x00, 0x00)
 
 // Full name: test_crate::UNION_A1
-static UNION_A1: &'static u8 = &0u8
+static UNION_A1: &'static u8 = cast<*const Bytes, &'_ u8>(&raw const UNION.offset(1isize * size_of::<u8>()))
 
 // Full name: test_crate::Half
 union Half {
@@ -784,59 +473,10 @@ extern fn EXT_E() -> E
 extern unsafe static EXT_E: E = EXT_E()
 
 // Full name: test_crate::EXT_PTR
-fn EXT_PTR() -> &'static u32
-{
-    let _0: &'1 u32; // return
-    let _1: &'2 u32; // anonymous local
-    let _2: usize; // anonymous local
-    let _3: &'_ [u32; 4usize]; // anonymous local
-    let _4: &'_ u32; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    _2 = const 1usize
-    storage_live(_3)
-    _3 = &EXT
-    storage_live(_4)
-    _4 = impl_Index_for_array::index<'_, u32, usize, 4usize>[{built_in impl Sized for u32}, {built_in impl Sized for usize}, impl_Index_for_slice<u32, usize>[{built_in impl Sized for u32}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u32>[{built_in impl Sized for u32}]]](move _3, copy _2)
-    ↳⚡ undefined_behavior
-    _1 = &(*_4)
-    _0 = &(*_1)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::EXT_PTR
-static EXT_PTR: &'static u32 = EXT_PTR()
+static EXT_PTR: &'static u32 = &EXT[1usize]
 
 // Full name: test_crate::EXT_E_PTR
-fn EXT_E_PTR() -> test_crate::Sync<*const u32>[{built_in impl Sized for *const u32}]
-{
-    let _0: test_crate::Sync<*const u32>[{built_in impl Sized for *const u32}]; // return
-    let _1: *const u32; // anonymous local
-    let _2: *const u32; // anonymous local
-    let _3: *const E; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    _3 = &raw const EXT_E
-    _2 = cast<E, u32>[{built_in impl Sized for u32}](move _3)
-    ↳⚡ unwind_continue
-    storage_dead(_3)
-    _1 = add<u32>[{built_in impl Sized for u32}](move _2, const 1usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::EXT_E_PTR
-static EXT_E_PTR: test_crate::Sync<*const u32>[{built_in impl Sized for *const u32}] = EXT_E_PTR()
+static EXT_E_PTR: test_crate::Sync<*const u32>[{built_in impl Sized for *const u32}] = test_crate::Sync { _0: cast<*const E, *const u32>(&raw const EXT_E.offset(1isize * size_of::<u32>())) }
 
 // Full name: test_crate::main
 fn main()

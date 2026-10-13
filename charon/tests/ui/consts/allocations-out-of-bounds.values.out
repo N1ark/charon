@@ -14,35 +14,9 @@ pub trait Sized<Self>
     non-dyn-compatible
 }
 
-// Full name: core::array::{[T; N]}::as_slice
-pub fn as_slice<'_0, T, const N : usize>(_1: &'_0 [T; N]) -> &'_0 [T]
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
-
 #[lang_item(Sync)]
 #[diagnostic_item("Sync")]
 pub unsafe trait core::marker::Sync<Self>
-
-// Full name: core::ptr::const_ptr::{*const T}::wrapping_add
-pub fn wrapping_add<T>(_1: *const T, _2: usize) -> *const T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
-// Full name: core::ptr::const_ptr::{*const T}::wrapping_sub
-pub fn wrapping_sub<T>(_1: *const T, _2: usize) -> *const T
-where
-    TraitClause0: (T: Sized),
-= <opaque>
-
-// Full name: core::slice::{[T]}::as_ptr
-pub fn as_ptr<'_0, T>(_1: &'_0 [T]) -> *const T
-where
-    TraitClause0: (T: Sized),
-    TypeOutlives0: T: '_0,
-= <opaque>
 
 struct () {}
 
@@ -65,100 +39,13 @@ where
 static ARR: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
 
 // Full name: test_crate::BEFORE
-fn BEFORE() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: &'1 [u8]; // anonymous local
-    let _4: &'3 [u8; 4usize]; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    _4 = &ARR
-    _3 = as_slice<'_, u8, 4usize>[{built_in impl Sized for u8}](move _4)
-    ↳⚡ undefined_behavior
-    storage_dead(_4)
-    _2 = as_ptr<'8, u8>[{built_in impl Sized for u8}](move _3)
-    ↳⚡ unwind_continue
-    storage_dead(_3)
-    _1 = wrapping_sub<u8>[{built_in impl Sized for u8}](move _2, const 1usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::BEFORE
-static BEFORE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = BEFORE()
+static BEFORE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: cast<*const [u8; 4usize], *const u8>(&raw const ARR.wrapping_offset(-1isize * size_of::<u8>())) }
 
 // Full name: test_crate::AFTER
-fn AFTER() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: &'1 [u8]; // anonymous local
-    let _4: &'3 [u8; 4usize]; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    _4 = &ARR
-    _3 = as_slice<'_, u8, 4usize>[{built_in impl Sized for u8}](move _4)
-    ↳⚡ undefined_behavior
-    storage_dead(_4)
-    _2 = as_ptr<'8, u8>[{built_in impl Sized for u8}](move _3)
-    ↳⚡ unwind_continue
-    storage_dead(_3)
-    _1 = wrapping_add<u8>[{built_in impl Sized for u8}](move _2, const 8usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::AFTER
-static AFTER: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = AFTER()
+static AFTER: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: cast<*const [u8; 4usize], *const u8>(&raw const ARR.wrapping_offset(8isize * size_of::<u8>())) }
 
 // Full name: test_crate::END
-fn END() -> test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]
-{
-    let _0: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}]; // return
-    let _1: *const u8; // anonymous local
-    let _2: *const u8; // anonymous local
-    let _3: &'1 [u8]; // anonymous local
-    let _4: &'3 [u8; 4usize]; // anonymous local
-
-    storage_live(_0)
-    storage_live(_1)
-    storage_live(_2)
-    storage_live(_3)
-    storage_live(_4)
-    _4 = &ARR
-    _3 = as_slice<'_, u8, 4usize>[{built_in impl Sized for u8}](move _4)
-    ↳⚡ undefined_behavior
-    storage_dead(_4)
-    _2 = as_ptr<'8, u8>[{built_in impl Sized for u8}](move _3)
-    ↳⚡ unwind_continue
-    storage_dead(_3)
-    _1 = wrapping_add<u8>[{built_in impl Sized for u8}](move _2, const 4usize)
-    ↳⚡ unwind_continue
-    storage_dead(_2)
-    _0 = test_crate::Sync { _0: move _1 }
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::END
-static END: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = END()
+static END: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: cast<*const [u8; 4usize], *const u8>(&raw const ARR.offset(4isize * size_of::<u8>())) }
 
 // Full name: test_crate::main
 fn main()

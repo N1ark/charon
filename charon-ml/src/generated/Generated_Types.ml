@@ -321,6 +321,29 @@ and const_generic_param = {
 
 and const_generic_var_id = (ConstGenericVarId.id[@visitors.opaque])
 
+(** A projection inside the pointee of a [Ref]/[Ptr] constant. This is a
+    constant version of [[ProjectionElem]]. *)
+and const_projection_elem =
+  | CProjField of variant_id option * field_id
+      (** Project to the field of an ADT. *)
+  | CProjIndex of integer_value
+      (** Project to the element of an array at the given index. *)
+  | CProjSubslice of integer_value * integer_value
+      (** Project to the subarray [array[from..to]].
+
+          Fields:
+          - [from]
+          - [to] *)
+  | CProjOffset of integer_value * ty option * bool
+      (** Like [ProjectionElem::Offset]: the place located
+          [count * size_of::<ty>()] bytes after the current place (or [count]
+          bytes if [ty] is [None]), with the same type. [count] is an [isize].
+
+          Fields:
+          - [count]
+          - [ty]
+          - [in_bounds] *)
+
 (** A constant expression. *)
 and constant_expr = { kind : constant_expr_kind; ty : ty }
 
@@ -337,12 +360,12 @@ and constant_expr_kind =
       (** Array value.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
-  | CRef of constant_expr * unsizing_metadata option
-      (** A shared reference to a constant value.
+  | CRef of global_place * unsizing_metadata option
+      (** A shared reference to a constant place.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
-  | CPtr of ref_kind * constant_expr * unsizing_metadata option
-      (** A pointer to a static.
+  | CPtr of ref_kind * global_place * unsizing_metadata option
+      (** A raw pointer to a constant place.
 
           This is eliminated inside functions if [--raw-consts] is off. *)
   | CStr of string  (** [str] value. *)
@@ -463,6 +486,23 @@ and generic_params = {
 
 (** Reference to a global declaration. *)
 and global_decl_ref = { id : global_decl_id; generics : generic_args }
+
+(** The place a [Ref]/[Ptr] constant points to, e.g. [GLOBAL.0[1]]. This is a
+    constant version of [[Place]]. *)
+and global_place = {
+  global_place_kind : global_place_kind;
+  global_place_ty : ty;
+      (** The type of the place, which can't always be computed from the type of
+          the global (e.g. for fields of opaque types). *)
+}
+
+and global_place_kind =
+  | GlobalPlaceGlobal of global_decl_ref  (** A global. *)
+  | GlobalPlaceValue of constant_expr
+      (** A constant value that isn't stored in a global, e.g. the pointee of a
+          reference in a const generic argument. It has no projections. *)
+  | GlobalPlaceProjection of global_place * const_projection_elem
+      (** A subplace of a place. *)
 
 (** Hash-consed data structure: a reference-counted wrapper that guarantees that
     two equal value will be stored at the same address. This makes it possible

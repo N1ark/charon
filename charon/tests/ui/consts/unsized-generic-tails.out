@@ -65,16 +65,16 @@ where
 }
 
 // Full name: test_crate::S1
-pub static S1: S<[u16], [u8; 2usize]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8; 2usize]}] = S { p: &test_crate::{promoted_const} with_metadata(3usize), tail: [4u8, 5u8] }
+pub static S1: S<[u16], [u8; 2usize]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8; 2usize]}] = S { p: unsize_cast<*const [u16; 3usize], &'_ [u16], 3usize>(cast<*const MaybeUninit<[u8; 6usize]>[{built_in impl Sized for [u8; 6usize]}], *const [u16; 3usize]>(&raw const test_crate::{promoted_const})), tail: [4u8, 5u8] }
 
 // Full name: test_crate::R1
-pub static R1: &'static S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = &S { p: &test_crate::{promoted_const} with_metadata(3usize), tail: [4u8, 5u8] } with_metadata(2usize)
+pub static R1: &'static S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = &S { p: unsize_cast<*const [u16; 3usize], &'_ [u16], 3usize>(cast<*const MaybeUninit<[u8; 6usize]>[{built_in impl Sized for [u8; 6usize]}], *const [u16; 3usize]>(&raw const test_crate::{promoted_const})), tail: [4u8, 5u8] } with_metadata(2usize)
 
 // Full name: test_crate::C0
 const C0: S<[u16], [u8; 2usize]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8; 2usize]}] = S { p: &[1u16, 2u16, 3u16] with_metadata(3usize), tail: [4u8, 5u8] }
 
 // Full name: test_crate::C1
-pub const C1: &'static S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = &S { p: &test_crate::{promoted_const#1} with_metadata(3usize), tail: [4u8, 5u8] } with_metadata(2usize)
+pub const C1: &'static S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = &S { p: unsize_cast<*const [u16; 3usize], &'_ [u16], 3usize>(cast<*const MaybeUninit<[u8; 6usize]>[{built_in impl Sized for [u8; 6usize]}], *const [u16; 3usize]>(&raw const test_crate::{promoted_const#1})), tail: [4u8, 5u8] } with_metadata(2usize)
 
 struct test_crate::Tr::{vtable} {
   size: usize,
@@ -119,16 +119,16 @@ impl "impl_Tr_for_u8" Tr for u8 {
 }
 
 // Full name: test_crate::S2
-pub static S2: S<(dyn Tr + 'static), [u8; 2usize]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8; 2usize]}] = S { p: &test_crate::{promoted_const#2} with_metadata(&impl_Tr_for_u8::{vtable}), tail: [4u8, 5u8] }
+pub static S2: S<(dyn Tr + 'static), [u8; 2usize]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8; 2usize]}] = S { p: unsize_cast<*const u8, &'_ (dyn Tr), &impl_Tr_for_u8::{vtable}>(cast<*const MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], *const u8>(&raw const test_crate::{promoted_const#2})), tail: [4u8, 5u8] }
 
 // Full name: test_crate::R2
-pub static R2: &'static S<(dyn Tr + 'static), [u8]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8]}] = &S { p: &test_crate::{promoted_const#2} with_metadata(&impl_Tr_for_u8::{vtable}), tail: [4u8, 5u8] } with_metadata(2usize)
+pub static R2: &'static S<(dyn Tr + 'static), [u8]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8]}] = &S { p: unsize_cast<*const u8, &'_ (dyn Tr), &impl_Tr_for_u8::{vtable}>(cast<*const MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], *const u8>(&raw const test_crate::{promoted_const#2})), tail: [4u8, 5u8] } with_metadata(2usize)
 
 // Full name: test_crate::S3
-pub static S3: S<[u8], u8>[{built_in impl MetaSized for [u8]}, {built_in impl MetaSized for u8}] = S { p: &test_crate::{promoted_const#3} with_metadata(1usize), tail: 7u8 }
+pub static S3: S<[u8], u8>[{built_in impl MetaSized for [u8]}, {built_in impl MetaSized for u8}] = S { p: unsize_cast<*const [u8; 1usize], &'_ [u8], 1usize>(cast<*const MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], *const [u8; 1usize]>(&raw const test_crate::{promoted_const#3})), tail: 7u8 }
 
 // Full name: test_crate::R3
-pub static R3: &'static S<[u8], (dyn Tr + 'static)>[{built_in impl MetaSized for [u8]}, {built_in impl MetaSized for (dyn Tr + 'static)}] = &S { p: &test_crate::{promoted_const#3} with_metadata(1usize), tail: 7u8 } with_metadata(&impl_Tr_for_u8::{vtable})
+pub static R3: &'static S<[u8], (dyn Tr + 'static)>[{built_in impl MetaSized for [u8]}, {built_in impl MetaSized for (dyn Tr + 'static)}] = &S { p: unsize_cast<*const [u8; 1usize], &'_ [u8], 1usize>(cast<*const MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], *const [u8; 1usize]>(&raw const test_crate::{promoted_const#3})), tail: 7u8 } with_metadata(&impl_Tr_for_u8::{vtable})
 
 // Full name: test_crate::C2
 fn C2() -> S<(dyn Tr + 'static), [u8; 2usize]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8; 2usize]}]
@@ -173,7 +173,7 @@ where
 // Full name: test_crate::C2
 const C2: S<(dyn Tr + 'static), [u8; 2usize]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8; 2usize]}] = C2()
 
-pub const test_crate::body::{promoted_const}: S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = S { p: &test_crate::{promoted_const#4} with_metadata(3usize), tail: [4u8, 5u8] } with_metadata(2usize)
+pub const test_crate::body::{promoted_const}: S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}] = S { p: unsize_cast<*const [u16; 3usize], &'42 [u16], 3usize>(cast<*const MaybeUninit<[u8; 6usize]>[{built_in impl Sized for [u8; 6usize]}], *const [u16; 3usize]>(&raw const test_crate::{promoted_const#4})), tail: [4u8, 5u8] } with_metadata(2usize)
 
 // Full name: test_crate::body
 pub fn body() -> (&'static S<[u16], [u8]>[{built_in impl MetaSized for [u16]}, {built_in impl MetaSized for [u8]}], &'static S<(dyn Tr + 'static), [u8]>[{built_in impl MetaSized for (dyn Tr + 'static)}, {built_in impl MetaSized for [u8]}])

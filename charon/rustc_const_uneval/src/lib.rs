@@ -18,7 +18,7 @@ mod valtree;
 
 pub use eval::promoted_body;
 
-use rustc_abi::{ExternAbi, VariantIdx};
+use rustc_abi::{ExternAbi, FieldIdx, VariantIdx};
 use rustc_hir::def_id::DefId;
 use rustc_middle::mir::{self, interpret};
 use rustc_middle::ty::{self, Ty, TyCtxt};
@@ -127,6 +127,12 @@ pub enum ConstKind<'tcx> {
         /// For a wide pointer, how to recover it from a thin pointer to the target.
         unsize: Option<Unsize<'tcx>>,
     },
+    /// A cast of the thin pointer `ptr` to the pointer type `ty`. With `unsize`, this is an
+    /// unsizing cast.
+    PtrCast {
+        ptr: Box<Const<'tcx>>,
+        unsize: Option<Unsize<'tcx>>,
+    },
     /// The raw bytes of the value. Used for values that have no structured representation (e.g.
     /// unions).
     Memory(Vec<Byte<'tcx>>),
@@ -159,10 +165,36 @@ impl<'tcx> ConstKind<'tcx> {
 /// What a pointer points to.
 #[derive(Debug, Clone)]
 pub enum PtrTarget<'tcx> {
-    /// A global, viewed at type `ty`.
-    Global { global: GlobalRef, ty: Ty<'tcx> },
+    /// A place inside a global: `projections` applied to `global`, whose type is `ty`.
+    Global {
+        global: GlobalRef,
+        ty: Ty<'tcx>,
+        projections: ProjectionPath<'tcx>,
+    },
     /// The value behind the pointer, when we don't refer to its global by name.
     Inline(Box<Const<'tcx>>),
+}
+
+/// Projections from a global to a place inside it.
+pub type ProjectionPath<'tcx> = Vec<(Projection<'tcx>, Ty<'tcx>)>;
+
+/// A projection applied to a pointer.
+#[derive(Debug, Clone)]
+pub enum Projection<'tcx> {
+    /// A field of a struct, tuple or closure, or of the given variant of an enum.
+    Field(Option<VariantIdx>, FieldIdx),
+    /// An element of an array.
+    Index(u64),
+    /// The subarray `array[from..to]`.
+    Subslice { from: u64, to: u64 },
+    /// The place located `count * size_of::<ty>()` bytes after the current place, or `count`
+    /// bytes if `ty` is `None`, with the same type. If `in_bounds` is `false`, this may point
+    /// outside of the allocation.
+    Offset {
+        count: i64,
+        ty: Option<Ty<'tcx>>,
+        in_bounds: bool,
+    },
 }
 
 /// The unsizing that turns a thin pointer to the target of a pointer into the actual wide pointer:
