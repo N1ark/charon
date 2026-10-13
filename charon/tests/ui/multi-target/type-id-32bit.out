@@ -1,0 +1,28 @@
+#[lang_item(TypeId)]
+pub opaque type core::any::TypeId
+
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait core::marker::MetaSized<Self>
+
+#[fundamental]
+#[lang_item(Sized)]
+pub trait core::marker::Sized<Self>
+{
+    proof ImpliedClause0: (Self: core::marker::MetaSized)
+    non-dyn-compatible
+}
+
+struct () {}
+
+pub static test_crate::TID::i686-unknown-linux-gnu: core::any::TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3], &?[0], &?[1], &?[2], &?[3])
+
+pub static test_crate::TID::x86_64-unknown-linux-gnu: core::any::TypeId = RawMemory(&?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7], &?[0], &?[1], &?[2], &?[3], &?[4], &?[5], &?[6], &?[7])
+
+pub static test_crate::ARR: [u32; 2usize] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
+
+pub static test_crate::P::i686-unknown-linux-gnu: &'static u32 = RawMemory(&test_crate::ARR[0], &test_crate::ARR[1], &test_crate::ARR[2], &test_crate::ARR[3])
+
+pub static test_crate::P::x86_64-unknown-linux-gnu: &'static u32 = RawMemory(&test_crate::ARR[0], &test_crate::ARR[1], &test_crate::ARR[2], &test_crate::ARR[3], &test_crate::ARR[4], &test_crate::ARR[5], &test_crate::ARR[6], &test_crate::ARR[7])
+
+

@@ -1,0 +1,7 @@
+error: global contains a pointer with unknown provenance
+  --> tests/ui/minirust/const-vtable-relocation.rs:15:1
+   |
+15 | static DYN: &dyn Tr = &5u8;
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Could not compile the program to MiniRust
