@@ -49,7 +49,11 @@ impl<'tcx> ConstReader<'tcx> {
         let in_bounds = offset <= ecx.get_alloc_info(alloc_id).size;
         let kind = if let Some(view_ty) = view_ty
             && let AllocTarget::Global(global) = alloc_target
-            && self.is_named_global(global)
+            && (self.is_named_global(global)
+                // We can't read the pointee of a pointer outside of its allocation, so we name
+                // the allocation even if we otherwise inline them.
+                || !in_bounds
+                    && matches!(tcx.global_alloc(alloc_id), interpret::GlobalAlloc::Memory(_)))
             && let Some((decl_ty, projections, end_ty)) =
                 self.place_in_global(ecx, &place, global, offset, in_bounds, view_ty)
         {
