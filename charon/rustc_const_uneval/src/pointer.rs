@@ -168,14 +168,14 @@ impl<'tcx> ConstReader<'tcx> {
                         }
                     }
                 }
-            } else if !in_bounds {
-                ConstKind::Unsupported("pointer outside of its allocation")
             } else if let AllocTarget::VTable(..) = alloc_target {
                 // A vtable has no global we can point into, and const-eval can't read its contents.
                 ConstKind::Unsupported("pointer into a vtable")
             } else if let AllocTarget::TypeId(..) = alloc_target {
                 // Likewise, the allocation of a `TypeId` has no contents.
                 ConstKind::Unsupported("pointer into a `TypeId`")
+            } else if !in_bounds {
+                ConstKind::Unsupported("pointer outside of its allocation")
             } else {
                 // HACK: fallback to reading the value of the pointee, at type `global_ty` for
                 // slices, `str` and `dyn`. Other unsized pointees stay unsized, so that they are put

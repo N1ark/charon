@@ -181,10 +181,10 @@ const DYN: &'static (dyn Debug + 'static) = unsize_cast<*const u8, &'_ (dyn Debu
 static VTABLE: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer into a vtable) }
 
 // Full name: test_crate::VTABLE_OFFSET
-static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
+static VTABLE_OFFSET: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer into a vtable) }
 
 // Full name: test_crate::TYPE_ID_PTR
-static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer outside of its allocation) }
+static TYPE_ID_PTR: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: Opaque(pointer into a `TypeId`) }
 
 // Full name: test_crate::type_id_ptrs
 fn type_id_ptrs(id: TypeId) -> [*const u8; 2usize]
