@@ -1,0 +1,626 @@
+# Final LLBC before serialization:
+
+struct () {}
+
+struct core::marker::MetaSized::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn MetaSized)),
+}
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Destruct
+#[lang_item(Destruct)]
+pub trait Destruct<Self>
+{
+    fn drop_glue<'_0_1>;
+    non-dyn-compatible
+}
+
+unsafe fn core::marker::MetaSized::{vtable_drop_shim}<'_0, Self>(dyn_self: &'_0 mut (dyn MetaSized))
+{
+    let ret: (); // return
+    let dyn_self: &'_0 mut (dyn MetaSized + '0); // arg #1
+    let target_self: &'_0 mut Self; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut (dyn MetaSized + '1), &'_0 mut Self>(move dyn_self)
+    drop[{built_in impl Destruct for Self}::drop_glue<'3>] (*target_self)
+    ↳⚡ storage_dead(target_self)
+        storage_dead(dyn_self)
+        unwind_continue
+    storage_dead(target_self)
+    storage_dead(dyn_self)
+    return
+}
+
+vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = core::marker::MetaSized::{vtable} { size: size_of::<Self>(), align: align_of::<Self>(), drop: fnptr(core::marker::MetaSized::{vtable_drop_shim}<'_, Self>) }
+
+struct core::marker::Sync::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn core::marker::Sync)),
+}
+
+#[lang_item(Sync)]
+#[diagnostic_item("Sync")]
+pub unsafe trait core::marker::Sync<Self>
+
+unsafe fn core::marker::Sync::{vtable_drop_shim}<'_0, Self>(dyn_self: &'_0 mut (dyn core::marker::Sync))
+{
+    let ret: (); // return
+    let dyn_self: &'_0 mut (dyn core::marker::Sync + '0); // arg #1
+    let target_self: &'_0 mut Self; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut (dyn core::marker::Sync + '1), &'_0 mut Self>(move dyn_self)
+    drop[{built_in impl Destruct for Self}::drop_glue<'3>] (*target_self)
+    ↳⚡ storage_dead(target_self)
+        storage_dead(dyn_self)
+        unwind_continue
+    storage_dead(target_self)
+    storage_dead(dyn_self)
+    return
+}
+
+vtable core::marker::Sync::{vtable}<Self>: core::marker::Sync::{vtable} = core::marker::Sync::{vtable} { size: size_of::<Self>(), align: align_of::<Self>(), drop: fnptr(core::marker::Sync::{vtable_drop_shim}<'_, Self>) }
+
+pub struct ptr_cast_in_bodies_aux::Sync<T>
+where
+    TraitClause0: (T: Sized),
+{
+  _0: T,
+}
+
+// Full name: ptr_cast_in_bodies_aux::ARR
+pub fn ARR() -> [u32; 3usize]
+{
+    let _0: [u32; 3usize]; // return
+    let _1: [u32; 3usize]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = [const 1u32, const 2u32, const 3u32]
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::ARR
+pub static ARR: [u32; 3usize] = ARR()
+
+// Full name: ptr_cast_in_bodies_aux::END
+pub fn END() -> ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]
+= <missing>
+
+// Full name: ptr_cast_in_bodies_aux::END
+pub static END: ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}] = END()
+
+// Full name: ptr_cast_in_bodies_aux::BYTE
+pub fn BYTE() -> ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}]
+{
+    let _0: ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}]; // return
+    let _1: u16; // anonymous local
+    let _2: *const u16; // anonymous local
+    let _3: ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = const 512u16
+    storage_live(_2)
+    _2 = &raw const _1
+    storage_live(_3)
+    _3 = ptr_cast_in_bodies_aux::Sync { _0: move _2 }
+    _0 = move _3
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::BYTE
+pub static BYTE: ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}] = BYTE()
+
+// Full name: ptr_cast_in_bodies_aux::WORDS
+pub fn WORDS() -> &'static [u16]
+{
+    let _0: &'0 [u16]; // return
+
+    storage_live(_0)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::WORDS
+pub static WORDS: &'static [u16] = WORDS()
+
+struct ptr_cast_in_bodies_aux::Tr::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Tr)),
+  method_m: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::marker::Sync::{vtable},
+}
+
+// Full name: ptr_cast_in_bodies_aux::Tr
+pub trait Tr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: core::marker::Sync)
+    fn m<'_0_1>;
+    vtable: ptr_cast_in_bodies_aux::Tr::{vtable}
+}
+
+// Full name: ptr_cast_in_bodies_aux::{impl Tr for u8}::m
+pub fn m<'_0>(self: &'_0 u8) -> u8
+{
+    let _0: u8; // return
+    let self: &'1 u8; // arg #1
+
+    storage_live(_0)
+    _0 = copy (*self)
+    storage_dead(self)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::{impl Tr for u8}::m::{vtable_method}
+fn {vtable_method}<'_0>(_1: &'_0 (dyn Tr)) -> u8
+{
+    let _0: u8; // return
+    let _1: &'_0 (dyn Tr + '0); // arg #1
+    let _2: &'_0 u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = concretize<&'_0 (dyn Tr + '1), &'_0 u8>(move _1)
+    _0 = m<'_0>(move _2)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::{impl Tr for u8}::{vtable_drop_shim}
+unsafe fn impl_Tr_for_u8::{vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Tr))
+{
+    let ret: (); // return
+    let dyn_self: &'_0 mut (dyn Tr + '0); // arg #1
+    let target_self: &'_0 mut u8; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut (dyn Tr + '1), &'_0 mut u8>(move dyn_self)
+    storage_dead(target_self)
+    storage_dead(dyn_self)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::{impl Tr for u8}::{vtable}
+vtable impl_Tr_for_u8::{vtable}: ptr_cast_in_bodies_aux::Tr::{vtable} = ptr_cast_in_bodies_aux::Tr::{vtable} { size: size_of::<u8>(), align: align_of::<u8>(), drop: fnptr(impl_Tr_for_u8::{vtable_drop_shim}<'_>), method_m: fnptr({vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<u8>, super_trait_1: &core::marker::Sync::{vtable}<u8> }
+
+// Full name: ptr_cast_in_bodies_aux::{impl Tr for u8}
+impl "impl_Tr_for_u8" Tr for u8 {
+    proof ImpliedClause0: (u8: MetaSized) = {built_in impl MetaSized for u8}
+    proof ImpliedClause1: (u8: core::marker::Sync) = {built_in impl core::marker::Sync for u8}
+    fn m<'_0_1> = m<'_0_1>
+    vtable: impl_Tr_for_u8::{vtable}
+}
+
+// Full name: ptr_cast_in_bodies_aux::W
+pub struct W<T>
+where
+    TraitClause0: (T: MetaSized),
+{
+  _0: u8,
+  _1: T,
+}
+
+// Full name: ptr_cast_in_bodies_aux::DynTail
+pub struct DynTail {
+  x: u8,
+  t: (dyn Tr + 'static),
+}
+
+// Full name: ptr_cast_in_bodies_aux::SliceTail
+pub struct SliceTail {
+  x: u8,
+  t: [u16],
+}
+
+// Full name: ptr_cast_in_bodies_aux::RAW_SLICE
+pub fn RAW_SLICE() -> ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}]
+{
+    let _0: ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}]; // return
+    let _1: *const [u32; 3usize]; // anonymous local
+    let _2: *const [u32]; // anonymous local
+    let _3: ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = &raw const ARR
+    storage_live(_2)
+    _2 = unsize_cast<*const [u32; 3usize], *const [u32], 3usize>(move _1)
+    storage_live(_3)
+    _3 = ptr_cast_in_bodies_aux::Sync { _0: move _2 }
+    _0 = move _3
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::RAW_SLICE
+pub static RAW_SLICE: ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}] = RAW_SLICE()
+
+// Full name: ptr_cast_in_bodies_aux::foo
+pub fn foo() -> u8
+{
+    let _0: u8; // return
+
+    storage_live(_0)
+    _0 = const 1u8
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::FN
+pub fn FN() -> fn() -> u8
+{
+    let _0: fn() -> u8; // return
+    let _1: fn() -> u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = cast<foo, fn() -> u8>(const foo)
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::FN
+pub static FN: fn() -> u8 = FN()
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{closure}
+struct {closure} {}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl Fn<()> for {closure}}::call
+fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: &'1 {closure}; // arg #1
+    let tupled_args: (); // arg #2
+
+    storage_live(_0)
+    _0 = const 2u8
+    storage_dead(tupled_args)
+    storage_dead(_1)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnMut<()> for {closure}}::call_mut
+fn call_mut<'_0>(state: &'_0 mut {closure}, args: ()) -> u8
+{
+    let _0: u8; // return
+    let state: &'_0 mut {closure}; // arg #1
+    let args: (); // arg #2
+    let _3: &'0 {closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &(*state)
+    _0 = call<'2>(move _3, move args)
+    ↳⚡ storage_dead(_3)
+        storage_dead(args)
+        storage_dead(state)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(args)
+    storage_dead(state)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{impl FnOnce<()> for {closure}}::call_once
+fn call_once(_1: {closure}, _2: ()) -> u8
+{
+    let _0: u8; // return
+    let _1: {closure}; // arg #1
+    let _2: (); // arg #2
+    let _3: &'1 mut {closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &mut _1
+    _0 = call_mut<'2>(move _3, move _2)
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE::{closure}::{as_fn}
+fn {as_fn}() -> u8
+{
+    let _0: u8; // return
+    let args: (); // local
+    let state: {closure}; // local
+
+    storage_live(_0)
+    storage_live(args)
+    storage_live(state)
+    args = ()
+    state = {closure} {  }
+    _0 = call_once(move state, move args)
+    ↳⚡ storage_dead(state)
+        storage_dead(args)
+        unwind_continue
+    storage_dead(state)
+    storage_dead(args)
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE
+pub fn CLOSURE() -> fn() -> u8
+{
+    let _0: fn() -> u8; // return
+    let _1: fn() -> u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = cast<{as_fn}, fn() -> u8>(const {as_fn})
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE
+pub static CLOSURE: fn() -> u8 = CLOSURE()
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW
+pub fn CLOSURE_RAW() -> ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]
+{
+    let _0: ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]; // return
+    let _1: (); // anonymous local
+    let _2: *const (); // anonymous local
+    let _3: ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = ()
+    storage_live(_2)
+    _2 = &raw const _1
+    storage_live(_3)
+    _3 = ptr_cast_in_bodies_aux::Sync { _0: move _2 }
+    _0 = move _3
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::CLOSURE_RAW
+pub static CLOSURE_RAW: ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}] = CLOSURE_RAW()
+
+pub const ptr_cast_in_bodies_aux::DYN_TAIL::{promoted_const}: DynTail = DynTail { x: 1u8, t: 2u8 } with_metadata(&impl_Tr_for_u8::{vtable})
+
+// Full name: ptr_cast_in_bodies_aux::DYN_TAIL
+pub fn DYN_TAIL() -> &'static DynTail
+{
+    let _0: &'0 DynTail; // return
+    let _1: &'static ptr_cast_in_bodies_aux::Tr::{vtable}; // anonymous local
+    let _2: &'2 DynTail; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = &impl_Tr_for_u8::{vtable}
+    storage_live(_2)
+    _2 = &ptr_cast_in_bodies_aux::DYN_TAIL::{promoted_const} with_metadata(move _1)
+    _0 = move _2
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::DYN_TAIL
+pub static DYN_TAIL: &'static DynTail = DYN_TAIL()
+
+pub const ptr_cast_in_bodies_aux::SLICE_TAIL::{promoted_const}: SliceTail = SliceTail { x: 1u8, t: [2u16, 3u16] } with_metadata(2usize)
+
+// Full name: ptr_cast_in_bodies_aux::SLICE_TAIL
+pub fn SLICE_TAIL() -> &'static SliceTail
+{
+    let _0: &'0 SliceTail; // return
+    let _1: &'2 SliceTail; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = &ptr_cast_in_bodies_aux::SLICE_TAIL::{promoted_const} with_metadata(const 2usize)
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::SLICE_TAIL
+pub static SLICE_TAIL: &'static SliceTail = SLICE_TAIL()
+
+struct str {
+  _0: [u8],
+}
+
+pub const ptr_cast_in_bodies_aux::STR_TAIL::{promoted_const}: W<str>[{built_in impl MetaSized for str}] = W { _0: 0u8, _1: str { _0: [104u8, 105u8] } } with_metadata(2usize)
+
+// Full name: ptr_cast_in_bodies_aux::STR_TAIL
+pub fn STR_TAIL() -> &'static W<str>[{built_in impl MetaSized for str}]
+{
+    let _0: &'0 W<str>[{built_in impl MetaSized for str}]; // return
+    let _1: &'2 W<str>[{built_in impl MetaSized for str}]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = &ptr_cast_in_bodies_aux::STR_TAIL::{promoted_const} with_metadata(const 2usize)
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::STR_TAIL
+pub static STR_TAIL: &'static W<str>[{built_in impl MetaSized for str}] = STR_TAIL()
+
+pub const ptr_cast_in_bodies_aux::BAD_STR::{promoted_const}: str = [255, 97] with_metadata(2usize)
+
+// Full name: ptr_cast_in_bodies_aux::BAD_STR
+pub fn BAD_STR() -> &'static str
+{
+    let _0: &'0 str; // return
+    let _1: &'2 str; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = &ptr_cast_in_bodies_aux::BAD_STR::{promoted_const} with_metadata(const 2usize)
+    _0 = move _1
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::BAD_STR
+pub static BAD_STR: &'static str = BAD_STR()
+
+// Full name: ptr_cast_in_bodies_aux::OOB
+pub fn OOB() -> ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]
+= <missing>
+
+// Full name: ptr_cast_in_bodies_aux::OOB
+pub static OOB: ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}] = OOB()
+
+// Full name: ptr_cast_in_bodies_aux::DYN
+pub fn DYN() -> &'static (dyn Tr + 'static)
+{
+    let _0: &'0 (dyn Tr + '1); // return
+    let _1: u8; // anonymous local
+    let _2: &'_ u8; // anonymous local
+    let _3: &'4 (dyn Tr + '5); // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = const 5u8
+    storage_live(_2)
+    _2 = &_1
+    storage_live(_3)
+    _3 = unsize_cast<&'_ u8, &'4 (dyn Tr + '5), &impl_Tr_for_u8::{vtable}>(move _2)
+    _0 = move _3
+    return
+}
+
+// Full name: ptr_cast_in_bodies_aux::DYN
+pub static DYN: &'static (dyn Tr + 'static) = DYN()
+
+struct (_, _, _)<A, B, C>
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (B: Sized),
+{
+  _0: A,
+  _1: B,
+  _2: C,
+}
+
+struct (_, _, _, _, _, _, _)<A, B, C, D, E, F, G>
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (B: Sized),
+    TraitClause2: (C: Sized),
+    TraitClause3: (D: Sized),
+    TraitClause4: (E: Sized),
+    TraitClause5: (F: Sized),
+{
+  _0: A,
+  _1: B,
+  _2: C,
+  _3: D,
+  _4: E,
+  _5: F,
+  _6: G,
+}
+
+// Full name: test_crate::main
+fn main()
+{
+    let _0: (); // return
+    let _1: (&'18 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}], &'19 ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}], &'20 [u16]); // anonymous local
+    let _2: &'27 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
+    let _3: &'29 ptr_cast_in_bodies_aux::Sync<*const u16>[{built_in impl Sized for *const u16}]; // anonymous local
+    let _4: &'31 [u16]; // anonymous local
+    let _5: (&'70 ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}], fn() -> u8, fn() -> u8, &'71 ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}], &'72 DynTail, &'73 SliceTail, &'74 W<str>[{built_in impl MetaSized for str}]); // anonymous local
+    let _6: &'87 ptr_cast_in_bodies_aux::Sync<*const [u32]>[{built_in impl Sized for *const [u32]}]; // anonymous local
+    let _7: fn() -> u8; // anonymous local
+    let _8: fn() -> u8; // anonymous local
+    let _9: &'92 ptr_cast_in_bodies_aux::Sync<*const ()>[{built_in impl Sized for *const ()}]; // anonymous local
+    let _10: &'94 DynTail; // anonymous local
+    let _11: &'99 SliceTail; // anonymous local
+    let _12: &'104 W<str>[{built_in impl MetaSized for str}]; // anonymous local
+    let _13: (&'129 str, &'130 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}], &'131 (dyn Tr + '132)); // anonymous local
+    let _14: &'139 str; // anonymous local
+    let _15: &'144 ptr_cast_in_bodies_aux::Sync<*const u32>[{built_in impl Sized for *const u32}]; // anonymous local
+    let _16: &'146 (dyn Tr + '147); // anonymous local
+
+    storage_live(_0)
+    _0 = ()
+    storage_live(_1)
+    storage_live(_2)
+    _2 = &END
+    storage_live(_3)
+    _3 = &BYTE
+    storage_live(_4)
+    _4 = copy WORDS
+    _1 = (move _2, move _3, move _4)
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_live(_5)
+    storage_live(_6)
+    _6 = &RAW_SLICE
+    storage_live(_7)
+    _7 = copy FN
+    storage_live(_8)
+    _8 = copy CLOSURE
+    storage_live(_9)
+    _9 = &CLOSURE_RAW
+    storage_live(_10)
+    _10 = copy DYN_TAIL
+    storage_live(_11)
+    _11 = copy SLICE_TAIL
+    storage_live(_12)
+    _12 = copy STR_TAIL
+    _5 = (move _6, move _7, move _8, move _9, move _10, move _11, move _12)
+    storage_dead(_12)
+    storage_dead(_11)
+    storage_dead(_10)
+    storage_dead(_9)
+    storage_dead(_8)
+    storage_dead(_7)
+    storage_dead(_6)
+    storage_dead(_5)
+    storage_live(_13)
+    storage_live(_14)
+    _14 = copy BAD_STR
+    storage_live(_15)
+    _15 = &OOB
+    storage_live(_16)
+    _16 = copy DYN
+    _13 = (move _14, move _15, move _16)
+    storage_dead(_16)
+    storage_dead(_15)
+    storage_dead(_14)
+    storage_dead(_13)
+    _0 = ()
+    return
+}
+
+
+

@@ -1,0 +1,94 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+struct () {}
+
+struct (_, _, _)<A, B, C>
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (B: Sized),
+{
+  _0: A,
+  _1: B,
+  _2: C,
+}
+
+// Full name: test_crate::Z
+pub const Z: &'static () = &()
+
+// Full name: test_crate::E
+pub const E: &'static [u8; 0usize] = &[]
+
+// Full name: test_crate::EM
+pub const EM: &'static mut [u8; 0usize] = &[]
+
+// Full name: test_crate::ZS
+pub static ZS: &'static () = no-provenance 1
+
+// Full name: test_crate::body
+pub fn body() -> (&'static (), &'static [u8; 0usize], &'static mut [u8; 0usize])
+{
+    let _0: (&'18 (), &'19 [u8; 0usize], &'20 mut [u8; 0usize]); // return
+    let a: &'27 (); // local
+    let b: &'28 [u8; 0usize]; // local
+    let _3: &'29 (); // anonymous local
+    let _4: &'30 [u8; 0usize]; // anonymous local
+    let _5: &'31 mut [u8; 0usize]; // anonymous local
+    let _6: &'32 mut [u8; 0usize]; // anonymous local
+    let _7: (); // anonymous local
+    let _8: &'33 (); // anonymous local
+    let _9: [u8; 0usize]; // anonymous local
+    let _10: &'34 [u8; 0usize]; // anonymous local
+
+    storage_live(_0)
+    storage_live(a)
+    storage_live(_7)
+    _7 = ()
+    storage_live(_8)
+    _8 = &_7
+    a = move _8
+    fake_read(a)
+    storage_live(b)
+    storage_live(_9)
+    _9 = []
+    storage_live(_10)
+    _10 = &_9
+    b = move _10
+    fake_read(b)
+    storage_live(_3)
+    _3 = &(*a)
+    storage_live(_4)
+    _4 = &(*b)
+    storage_live(_5)
+    storage_live(_6)
+    _6 = copy EM
+    _5 = &mut (*_6)
+    _0 = (move _3, move _4, move _5)
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(b)
+    storage_dead(a)
+    storage_dead(_6)
+    storage_dead(_10)
+    storage_dead(_9)
+    storage_dead(_8)
+    storage_dead(_7)
+    return
+}
+
+
+

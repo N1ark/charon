@@ -1,0 +1,233 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::cell::UnsafeCell
+#[lang_item(UnsafeCell)]
+pub opaque type UnsafeCell<T>
+where
+    TraitClause0: (T: MetaSized),
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    fn clone<'_0_1>;
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u32}::clone
+pub fn clone<'_0>(_1: &'_0 u32) -> u32
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u32}
+impl "impl_Clone_for_u32" Clone for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    fn clone<'_0_1> = clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Copy
+#[lang_item(Copy)]
+#[diagnostic_item("Copy")]
+pub trait Copy<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Clone)
+    non-dyn-compatible
+}
+
+// Full name: core::marker::{impl Copy for u32}
+impl "impl_Copy_for_u32" Copy for u32 {
+    proof ImpliedClause0: (u32: MetaSized) = {built_in impl MetaSized for u32}
+    proof ImpliedClause1: (u32: Clone) = impl_Clone_for_u32
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Sync
+#[lang_item(Sync)]
+#[diagnostic_item("Sync")]
+pub unsafe trait Sync<Self>
+
+// Full name: core::sync::atomic::private::Align4
+pub opaque type Align4<T>
+where
+    TraitClause0: (T: Sized),
+
+// Full name: core::sync::atomic::AtomicPrimitive
+pub unsafe trait AtomicPrimitive<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    proof ImpliedClause1: (Self: Copy)
+    proof ImpliedClause2: (Self::Storage: Sized)
+    type Storage
+    non-dyn-compatible
+}
+
+// Full name: core::sync::atomic::{impl AtomicPrimitive for u32}
+unsafe impl "impl_AtomicPrimitive_for_u32" AtomicPrimitive for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    proof ImpliedClause1: (u32: Copy) = impl_Copy_for_u32
+    proof ImpliedClause2: (Align4<u32>[{built_in impl Sized for u32}]: Sized) = {built_in impl Sized for Align4<u32>[{built_in impl Sized for u32}]}
+    type Storage = Align4<u32>[{built_in impl Sized for u32}]
+    non-dyn-compatible
+}
+
+// Full name: core::sync::atomic::Atomic
+#[diagnostic_item("Atomic")]
+pub opaque type Atomic<T>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: AtomicPrimitive),
+
+// Full name: core::sync::atomic::{Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive_for_u32]}::as_ptr
+pub fn as_ptr<'_0>(_1: &'_0 Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive_for_u32]) -> *mut u32
+= <opaque>
+
+struct () {}
+
+struct (_, _)<A, B>
+where
+    TraitClause0: (A: Sized),
+{
+  _0: A,
+  _1: B,
+}
+
+// Full name: test_crate::Tr
+pub trait Tr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self::S: Sized)
+    type S
+    vtable: test_crate::Tr::{vtable}<Self::S>
+}
+
+// Full name: test_crate::Inner
+pub struct Inner {
+  v: u32,
+}
+
+// Full name: test_crate::{impl Tr for u8}
+impl "impl_Tr_for_u8" Tr for u8 {
+    proof ImpliedClause0: (u8: MetaSized) = {built_in impl MetaSized for u8}
+    proof ImpliedClause1: (Inner: Sized) = {built_in impl Sized for Inner}
+    type S = Inner
+    vtable: lazy
+}
+
+// Full name: test_crate::{impl Tr for u16}
+impl "impl_Tr_for_u16" Tr for u16 {
+    proof ImpliedClause0: (u16: MetaSized) = {built_in impl MetaSized for u16}
+    proof ImpliedClause1: ((u32, u32): Sized) = {built_in impl Sized for (u32, u32)}
+    type S = (u32, u32)
+    vtable: lazy
+}
+
+// Full name: test_crate::W
+pub struct W<T>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Tr),
+{
+  _0: TraitClause1::S,
+}
+
+// Full name: test_crate::X
+pub static X: W<u8>[{built_in impl Sized for u8}, impl_Tr_for_u8] = RawMemory(0x05, 0x00, 0x00, 0x00)
+
+// Full name: test_crate::P
+pub static P: &'static u32 = RawMemory(&X[0], &X[1], &X[2], &X[3], &X[4], &X[5], &X[6], &X[7])
+
+// Full name: test_crate::Y
+pub static Y: W<u16>[{built_in impl Sized for u16}, impl_Tr_for_u16] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
+
+// Full name: test_crate::Q
+pub static Q: &'static u32 = RawMemory(&Y[0], &Y[1], &Y[2], &Y[3], &Y[4], &Y[5], &Y[6], &Y[7])
+
+// Full name: test_crate::assoc
+pub fn assoc() -> u32
+{
+    let _0: u32; // return
+    let _1: &'1 u32; // anonymous local
+    let _2: u32; // anonymous local
+    let _3: &'2 u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    storage_live(_2)
+    _2 = const 5u32
+    storage_live(_3)
+    _3 = &_2
+    _1 = move _3
+    _0 = copy (*_1)
+    storage_dead(_1)
+    storage_dead(_3)
+    storage_dead(_2)
+    return
+}
+
+// Full name: test_crate::Sy
+pub struct Sy<T>
+where
+    TraitClause0: (T: Sized),
+{
+  _0: T,
+}
+
+// Full name: test_crate::{impl Sync for Sy<T>[TraitClause0]}
+unsafe impl<T> "impl_Sync_for_Sy" Sync for Sy<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    vtable: lazy
+}
+
+// Full name: test_crate::CELL
+pub static CELL: Sy<UnsafeCell<(u8, u32)>[{built_in impl MetaSized for (u8, u32)}]>[{built_in impl Sized for UnsafeCell<(u8, u32)>[{built_in impl MetaSized for (u8, u32)}]}] = RawMemory(0x01, --, --, --, 0x02, 0x00, 0x00, 0x00)
+
+// Full name: test_crate::CELL_FIELD
+pub static CELL_FIELD: Sy<*mut u32>[{built_in impl Sized for *mut u32}] = RawMemory(&CELL[0], &CELL[1], &CELL[2], &CELL[3], &CELL[4], &CELL[5], &CELL[6], &CELL[7])
+
+// Full name: test_crate::ATOM
+pub static ATOM: Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive_for_u32] = RawMemory(0x03, 0x00, 0x00, 0x00)
+
+// Full name: test_crate::atomic
+pub fn atomic() -> *mut u32
+{
+    let _0: *mut u32; // return
+    let _1: *mut u32; // anonymous local
+    let _2: *mut u32; // anonymous local
+    let _3: &'1 Atomic<u32>[{built_in impl Sized for u32}, impl_AtomicPrimitive_for_u32]; // anonymous local
+
+    storage_live(_1)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = &ATOM
+    _2 = as_ptr<'5>(move _3)
+    ↳⚡ undefined_behavior
+    storage_dead(_3)
+    _1 = move _2
+    storage_live(_0)
+    _0 = move _1
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+
+

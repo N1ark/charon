@@ -1,0 +1,42 @@
+error: internal compiler error: /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45: Got a scalar pair where a scalar was expected
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: Thread panicked when extracting item `test_crate::RAW_SLICE_STATIC`.
+  --> tests/ui/consts/allocations-dangling.rs:10:1
+   |
+10 | static RAW_SLICE_STATIC: Sync<*const [u8]> = Sync(core::ptr::slice_from_raw_parts(1 as *const u8, 0));
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+error: Thread panicked when extracting item `test_crate::STR`.
+  --> tests/ui/consts/allocations-dangling.rs:12:1
+   |
+12 | static STR: Sync<*const str> = Sync(core::ptr::slice_from_raw_parts(1 as *const u8, 3) as *const str);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+error: Thread panicked when extracting item `test_crate::CSTR`.
+  --> tests/ui/consts/allocations-dangling.rs:13:1
+   |
+13 | static CSTR: Sync<*const core::ffi::CStr> =
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /Users/opale/.rustup/toolchains/nightly-2026-09-17-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_const_eval/src/interpret/operand.rs:86:45:
+Got a scalar pair where a scalar was expected
+error: Thread panicked when extracting item `test_crate::DST`.
+  --> tests/ui/consts/allocations-dangling.rs:19:1
+   |
+19 | static DST: Sync<*const Dst> = Sync(core::ptr::slice_from_raw_parts(2 as *const u8, 4) as *const Dst);
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 1 previous error
+
+ERROR Code failed to compile
