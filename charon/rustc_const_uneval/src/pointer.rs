@@ -5,27 +5,27 @@ use rustc_const_eval::const_eval::CompileTimeInterpCx;
 use rustc_const_eval::interpret::{InterpResult, MPlaceTy, OpTy, Projectable, interp_ok};
 
 impl<'tcx> ConstReader<'tcx> {
-    /// Read a reference or raw pointer. Pointers to globals that we name are kept as pointers to
-    /// these globals, and we fall back to reading the pointee for other cases.
+    /// Read a reference or raw pointer.
     pub(crate) fn read_pointer(
         &self,
         ecx: &CompileTimeInterpCx<'tcx>,
         op: &OpTy<'tcx>,
     ) -> InterpResult<'tcx, Const<'tcx>> {
         let tcx = self.tcx;
+        let ptr_ty = op.layout.ty;
+        let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *ptr_ty.kind() else {
+            unreachable!("not a pointer type: {ptr_ty:?}")
+        };
         // Make sure we only read through if it's not dangling!
-        let pointee = ecx.deref_pointer(op).discard_err().and_then(|place| {
-            let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err()?;
-            Some((place, alloc_id, offset))
-        });
-        let Some((place, alloc_id, offset)) = pointee else {
+        let pointee = ecx
+            .deref_pointer(op)
+            .discard_err()
+            .filter(|place| ecx.ptr_get_alloc_id(place.ptr(), 0).discard_err().is_some());
+        let Some(place) = pointee else {
             // Invalid pointer; try reading it as a raw address
             let int = ecx.read_scalar(op)?.to_scalar_int()?;
             let kind = ConstKind::PtrNoProvenance(int.to_uint(int.size()));
-            return interp_ok(Const {
-                ty: op.layout.ty,
-                kind,
-            });
+            return interp_ok(Const { ty: ptr_ty, kind });
         };
 
         let ty = place.layout.ty;
@@ -43,79 +43,89 @@ impl<'tcx> ConstReader<'tcx> {
             ty::Slice(_) | ty::Dynamic(..) => unsize.map(|unsize| unsize.from),
             _ => None,
         };
+        let kind = self.read_pointer_into_alloc(ecx, place, mutability, unsize, view_ty)?;
+        interp_ok(Const { ty: ptr_ty, kind })
+    }
 
+    /// Read a pointer to `place`, which has provenance. Pointers to globals that we name are kept
+    /// as pointers to these globals, and we fall back to reading the pointee for other cases.
+    fn read_pointer_into_alloc(
+        &self,
+        ecx: &CompileTimeInterpCx<'tcx>,
+        place: MPlaceTy<'tcx>,
+        mutability: ty::Mutability,
+        unsize: Option<Unsize<'tcx>>,
+        view_ty: Option<Ty<'tcx>>,
+    ) -> InterpResult<'tcx, ConstKind<'tcx>> {
+        let tcx = self.tcx;
+        let ty = place.layout.ty;
+        let (alloc_id, offset, _) = ecx.ptr_get_alloc_id(place.ptr(), 0)?;
         let alloc_target = self.alloc_target(alloc_id);
         // A pointer outside of its allocation (one-past-the-end is fine) needs a wrapping offset.
         let in_bounds = offset <= ecx.get_alloc_info(alloc_id).size;
-        let kind = if let Some(view_ty) = view_ty
-            && let AllocTarget::Global(global) = alloc_target
-            && (self.is_named_global(global)
-                // We can't read the pointee of a pointer outside of its allocation, so we name
-                // the allocation even if we otherwise inline them.
-                || !in_bounds
-                    && matches!(tcx.global_alloc(alloc_id), interpret::GlobalAlloc::Memory(_)))
-            && let Some((decl_ty, projections, end_ty)) =
-                self.place_in_global(ecx, &place, global, offset, in_bounds, view_ty)
-        {
-            let target = PtrTarget::Global {
-                global,
-                ty: decl_ty,
-                projections,
-            };
-            if end_ty == tcx.erase_and_anonymize_regions(view_ty) {
-                ConstKind::Ptr { target, unsize }
-            } else {
-                // Point to the place we reached, then cast the pointer to the right type.
-                let (ty::Ref(.., mutability) | ty::RawPtr(_, mutability)) = *op.layout.ty.kind()
-                else {
-                    unreachable!()
+        interp_ok(
+            if let Some(view_ty) = view_ty
+                && let AllocTarget::Global(global) = alloc_target
+                && (self.is_named_global(global)
+                    // We can't read the pointee of a pointer outside of its allocation, so we name
+                    // the allocation even if we otherwise inline them.
+                    || !in_bounds
+                        && matches!(tcx.global_alloc(alloc_id), interpret::GlobalAlloc::Memory(_)))
+                && let Some((decl_ty, projections, end_ty)) =
+                    self.place_in_global(ecx, &place, global, offset, in_bounds, view_ty)
+            {
+                let target = PtrTarget::Global {
+                    global,
+                    ty: decl_ty,
+                    projections,
                 };
-                let ptr = |ty, kind| Box::new(Const { ty, kind });
-                let inner = ptr(
-                    Ty::new_ptr(tcx, end_ty, mutability),
-                    ConstKind::Ptr {
-                        target,
-                        unsize: None,
-                    },
-                );
-                match unsize {
-                    None => ConstKind::PtrCast {
-                        ptr: inner,
-                        unsize: None,
-                    },
-                    // Cast to the sized type first, then unsize.
-                    Some(unsize) => ConstKind::PtrCast {
-                        ptr: ptr(
-                            Ty::new_ptr(tcx, view_ty, mutability),
-                            ConstKind::PtrCast {
-                                ptr: inner,
-                                unsize: None,
-                            },
-                        ),
-                        unsize: Some(unsize),
-                    },
+                if end_ty == tcx.erase_and_anonymize_regions(view_ty) {
+                    ConstKind::Ptr { target, unsize }
+                } else {
+                    // Point to the place we reached, then cast the pointer to the right type.
+                    let ptr = |ty, kind| Box::new(Const { ty, kind });
+                    let inner = ptr(
+                        Ty::new_ptr(tcx, end_ty, mutability),
+                        ConstKind::Ptr {
+                            target,
+                            unsize: None,
+                        },
+                    );
+                    match unsize {
+                        None => ConstKind::PtrCast {
+                            ptr: inner,
+                            unsize: None,
+                        },
+                        // Cast to the sized type first, then unsize.
+                        Some(unsize) => ConstKind::PtrCast {
+                            ptr: ptr(
+                                Ty::new_ptr(tcx, view_ty, mutability),
+                                ConstKind::PtrCast {
+                                    ptr: inner,
+                                    unsize: None,
+                                },
+                            ),
+                            unsize: Some(unsize),
+                        },
+                    }
                 }
-            }
-        } else if !in_bounds {
-            ConstKind::Unsupported("pointer outside of its allocation")
-        } else if let AllocTarget::VTable(..) = alloc_target {
-            // A vtable has no global we can point into, and const-eval can't read its contents.
-            ConstKind::Unsupported("pointer into a vtable")
-        } else {
-            // HACK: fallback to reading the value of the pointee, at type `view_ty`.
-            let place = match view_ty {
-                Some(view_ty) if view_ty != ty => {
-                    place.offset(Size::ZERO, ecx.layout_of(view_ty)?, ecx)?
-                }
-                _ => place,
-            };
-            let target = PtrTarget::Inline(Box::new(self.read_op(ecx, place.into())?));
-            ConstKind::Ptr { target, unsize }
-        };
-        interp_ok(Const {
-            ty: op.layout.ty,
-            kind,
-        })
+            } else if !in_bounds {
+                ConstKind::Unsupported("pointer outside of its allocation")
+            } else if let AllocTarget::VTable(..) = alloc_target {
+                // A vtable has no global we can point into, and const-eval can't read its contents.
+                ConstKind::Unsupported("pointer into a vtable")
+            } else {
+                // HACK: fallback to reading the value of the pointee, at type `view_ty`.
+                let place = match view_ty {
+                    Some(view_ty) if view_ty != ty => {
+                        place.offset(Size::ZERO, ecx.layout_of(view_ty)?, ecx)?
+                    }
+                    _ => place,
+                };
+                let target = PtrTarget::Inline(Box::new(self.read_op(ecx, place.into())?));
+                ConstKind::Ptr { target, unsize }
+            },
+        )
     }
 
     /// Express the place of type `ty` located `offset` bytes into `global` (whose allocation
