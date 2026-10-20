@@ -177,7 +177,10 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ConstantExpr<'tcx>>
         let unsizing_metadata = |unsize: &Option<rustc_const_uneval::Unsize<'tcx>>| {
             unsize.map(|unsize| {
                 let ref_to = |ty| ty::Ty::new_imm_ref(tcx, tcx.lifetimes.re_static, ty);
-                compute_unsizing_metadata(s, ref_to(unsize.from), ref_to(unsize.to))
+                let (path, metadata) =
+                    compute_unsizing_metadata(s, ref_to(unsize.from), ref_to(unsize.to));
+                assert!(path.is_empty(), "Non-empty unsize path in const ptr");
+                metadata
             })
         };
         let kind = match &self.kind {
