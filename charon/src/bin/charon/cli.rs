@@ -69,6 +69,12 @@ pub struct CargoArgs {
     #[command(flatten)]
     pub opts: CliOpts,
 
+    /// Compile in test mode, as `cargo test --no-run` does, instead of with `cargo build`. Cargo's
+    /// target selection then picks test targets: e.g. `--lib` selects the library's unit tests.
+    /// Test functions keep their `#[test]` attribute.
+    #[arg(long)]
+    pub test: bool,
+
     /// Args that `cargo build` accepts.
     #[arg(last = true)]
     pub cargo: Vec<String>,

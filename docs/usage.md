@@ -8,6 +8,11 @@ Charon provides various options and flags to tweak its behaviour: you can displa
 documentation with `--help`.
 In particular, you can pretty-print the translated crate with both `--print-ullbc` and `--print-llbc`, depending on the Charon intermediate representation you wish to use.
 
+To translate tests, pass `--test`: Charon then builds with `cargo test --no-run` instead of `cargo
+build`, e.g. `charon cargo --test -- --lib` translates the library's unit tests. The test harness
+consumes `#[test]` attributes, so Charon gives test functions an `Attribute::Unknown` with path
+`test` instead, which `--start-from-attribute=test` matches.
+
 Charon supports per-crate configuration via the `[package.metadata.charon]` section in `Cargo.toml`. 
 The exact list can be found by looking at `src/bin/charon/toml_config.rs`. 
 If an option is set both as a CLI flag and as a toml value and we can't merge them, the CLI flag wins.

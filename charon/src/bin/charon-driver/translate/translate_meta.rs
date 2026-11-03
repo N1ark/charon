@@ -903,11 +903,22 @@ impl<'tcx> TranslateCtx<'tcx> {
         // Default to `false` for impl blocks and closures.
         let public = def.visibility.unwrap_or(false);
         let inline = self.translate_inline(def);
-        let attributes = def
+        let mut attributes = def
             .attributes
             .iter()
             .filter_map(|attr| self.translate_attribute(def.def_id(), attr))
             .collect_vec();
+        // Restore the `#[test]` attribute the test harness expansion consumed.
+        if def
+            .def_id()
+            .as_real_def_id()
+            .is_some_and(|id| self.test_functions.contains(&id))
+        {
+            attributes.push(Attribute::Unknown(RawAttribute {
+                path: "test".to_owned(),
+                args: None,
+            }));
+        }
 
         let rename = {
             let mut renames = attributes.iter().filter_map(|a| a.as_rename()).cloned();

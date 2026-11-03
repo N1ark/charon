@@ -147,6 +147,9 @@ pub struct TranslateCtx<'tcx> {
     pub cached_item_metas: HashMap<TransItemSource<'tcx>, ItemMeta>,
     /// Compute which lifetimes are used in a `&'a mut T`. This is a global fixpoint analysis.
     pub lt_mutability_computer: LifetimeMutabilityComputer,
+    /// The `#[test]` functions of the crate, when it is compiled as a test harness (see
+    /// `test_functions`).
+    pub test_functions: HashSet<rustc_span::def_id::DefId>,
 }
 
 /// Tracks whether a method is used (i.e. called or (non-opaquely) implemented).

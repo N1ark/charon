@@ -312,6 +312,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             &["--tests".to_owned()],
             Success,
         ),
+        mktest(
+            "test-mode",
+            root.join("test-mode"),
+            &[
+                "--test".to_owned(),
+                "--start-from-attribute=test".to_owned(),
+            ],
+            &["--lib".to_owned()],
+            Success,
+        ),
     ];
 
     let args = libtest_mimic::Arguments::from_args();

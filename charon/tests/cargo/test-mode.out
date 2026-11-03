@@ -1,0 +1,263 @@
+# Final LLBC before serialization:
+
+// Full name: core::fmt::Error
+pub struct Error {}
+
+// Full name: core::fmt::Formatter
+#[diagnostic_item("Formatter")]
+pub opaque type Formatter<mut 'a>
+where
+    Outlives0: ('a: 'a),
+
+// Full name: core::fmt::Arguments
+#[lang_item(FormatArguments)]
+pub opaque type Arguments<'a>
+
+struct () {}
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::result::Result
+#[diagnostic_item("Result")]
+pub enum Result<T, E>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (E: Sized),
+{
+  Ok { _0: T },
+  Err { _0: E },
+}
+
+// Full name: core::fmt::Debug
+#[diagnostic_item("Debug")]
+pub trait Debug<Self>
+{
+    fn fmt<'_0_1, '_1_1, '_2_1>;
+    vtable: core::fmt::Debug::{vtable}
+}
+
+// Full name: core::fmt::num::{impl Debug for u32}::fmt
+pub fn fmt<'_0, '_1, '_2>(_1: &'_0 u32, _2: &'_1 mut Formatter<'_2>) -> Result<(), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}]
+where
+    Outlives0: ('_2: '_1),
+= <opaque>
+
+// Full name: core::fmt::num::{impl Debug for u32}
+impl "impl_Debug_for_u32" Debug for u32 {
+    fn fmt<'_0_1, '_1_1, '_2_1> = fmt<'_0_1, '_1_1, '_2_1>
+    vtable: lazy
+}
+
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T>
+where
+    TraitClause0: (T: Sized),
+{
+  None,
+  Some { _0: T },
+}
+
+struct str {
+  _0: [u8],
+}
+
+// Full name: core::panicking::panic
+#[track_caller]
+#[lang_item(Panic)]
+pub fn panic(_1: &'static str) -> !
+= <opaque>
+
+// Full name: core::panicking::AssertKind
+pub enum AssertKind {
+  Eq,
+  Ne,
+  Match,
+}
+
+// Full name: core::panicking::assert_failed
+#[track_caller]
+pub fn assert_failed<'_0, '_1, '_2, T, U>(_1: AssertKind, _2: &'_0 T, _3: &'_1 U, _4: Option<Arguments<'_2>>[{built_in impl Sized for Arguments<'_2>}]) -> !
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (U: MetaSized),
+    TraitClause2: (T: Debug),
+    TraitClause3: (U: Debug),
+    Outlives0: (T: '_0),
+    Outlives1: (U: '_1),
+= <opaque>
+
+struct (_, _)<A, B>
+where
+    TraitClause0: (A: Sized),
+{
+  _0: A,
+  _1: B,
+}
+
+// Full name: test_mode::answer
+fn answer() -> u32
+{
+    let _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 42u32
+    return
+}
+
+pub fn test_mode::helpers::tests::plain() -> u32
+{
+    let _0: u32; // return
+
+    storage_live(_0)
+    _0 = answer()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_mode::tests::plain#1::{promoted_const}
+fn {promoted_const}() -> &'_ u32
+{
+    let _0: &'0 u32; // return
+    let _1: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = const 42u32
+    _0 = &_1
+    return
+}
+
+// Full name: test_mode::tests::plain#1::{promoted_const}
+const {promoted_const}: &'_ u32 = {promoted_const}()
+
+#[test]
+fn test_mode::tests::plain#1()
+{
+    let _0: (); // return
+    let _1: (&'9 u32, &'10 u32); // anonymous local
+    let _2: &'14 u32; // anonymous local
+    let _3: u32; // anonymous local
+    let _4: &'15 u32; // anonymous local
+    let left_val: &'16 u32; // local
+    let right_val: &'17 u32; // local
+    let _7: bool; // anonymous local
+    let _8: u32; // anonymous local
+    let _9: u32; // anonymous local
+    let kind: AssertKind; // local
+    let _11: !; // anonymous local
+    let _12: AssertKind; // anonymous local
+    let _13: &'18 u32; // anonymous local
+    let _14: &'19 u32; // anonymous local
+    let _15: &'20 u32; // anonymous local
+    let _16: &'21 u32; // anonymous local
+    let _17: Option<Arguments<'30>>[{built_in impl Sized for Arguments<'30>}]; // anonymous local
+    let _18: &'34 u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_18)
+    _0 = ()
+    storage_live(_1)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = test_mode::helpers::tests::plain()
+    ↳⚡ unwind_continue
+    _2 = &_3
+    storage_live(_4)
+    _18 = copy {promoted_const}
+    _4 = &(*_18)
+    _1 = (move _2, move _4)
+    storage_dead(_4)
+    storage_dead(_2)
+    storage_live(left_val)
+    left_val = copy _1._0
+    storage_live(right_val)
+    right_val = copy _1._1
+    storage_live(_7)
+    storage_live(_8)
+    _8 = copy (*left_val)
+    storage_live(_9)
+    _9 = copy (*right_val)
+    _7 = move _8 == move _9
+    if move _7 {
+    } else {
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_live(kind)
+        kind = AssertKind::Eq {  }
+        fake_read(kind)
+        storage_live(_11)
+        storage_live(_12)
+        _12 = move kind
+        storage_live(_13)
+        storage_live(_14)
+        _14 = &(*left_val)
+        _13 = &(*_14)
+        storage_live(_15)
+        storage_live(_16)
+        _16 = &(*right_val)
+        _15 = &(*_16)
+        storage_live(_17)
+        _17 = Option::None {  }
+        _11 = assert_failed<'53, '54, '55, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, impl_Debug_for_u32, impl_Debug_for_u32](move _12, move _13, move _15, move _17)
+        ↳⚡ unwind_continue
+    }
+    storage_dead(_9)
+    storage_dead(_8)
+    storage_dead(_7)
+    storage_dead(right_val)
+    storage_dead(left_val)
+    storage_dead(_3)
+    storage_dead(_1)
+    _0 = ()
+    return
+}
+
+pub const test_mode::tests::panics#1::{promoted_const}: str = "explicit panic" with_metadata(14usize)
+
+// Full name: test_mode::tests::panics#1
+#[should_panic]
+#[test]
+fn panics()
+{
+    let _0: (); // return
+    let _1: !; // anonymous local
+    let _2: &'1 str; // anonymous local
+
+    storage_live(_0)
+    _0 = ()
+    storage_live(_1)
+    storage_live(_2)
+    _2 = &test_mode::tests::panics#1::{promoted_const} with_metadata(const 14usize)
+    _1 = panic(move _2)
+    ↳⚡ unwind_continue
+}
+
+// Full name: test_mode::tests::ignored#1
+#[ignore]
+#[test]
+fn ignored()
+{
+    let _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = ()
+    return
+}
+
+
+

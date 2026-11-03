@@ -1140,6 +1140,65 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     }
 }
 
+/// The `#[test]` functions of the crate, when it is compiled as a test harness (`rustc --test`).
+///
+/// The harness expansion consumes the `#[test]` attribute of a test function: it leaves the
+/// function unmarked, next to a generated `#[rustc_test_marker]` item (a `test::TestDescAndFn`)
+/// whose initializer calls it. We find each test function as the argument-less local function its
+/// marker calls (benchmarks take a `Bencher`).
+fn test_functions(tcx: TyCtxt<'_>) -> rustc_hash::FxHashSet<DefId> {
+    use rustc_hir::intravisit::{self, Visitor};
+    use rustc_hir::{Expr, ExprKind, QPath, def::DefKind, def::Res};
+
+    /// Collects the local functions an expression refers to, including in closures.
+    struct LocalFns<'tcx> {
+        tcx: TyCtxt<'tcx>,
+        fns: Vec<DefId>,
+    }
+    impl<'tcx> Visitor<'tcx> for LocalFns<'tcx> {
+        type NestedFilter = rustc_middle::hir::nested_filter::OnlyBodies;
+        fn maybe_tcx(&mut self) -> TyCtxt<'tcx> {
+            self.tcx
+        }
+        fn visit_expr(&mut self, expr: &'tcx Expr<'tcx>) {
+            if let ExprKind::Path(QPath::Resolved(None, path)) = expr.kind
+                && let Res::Def(DefKind::Fn, def_id) = path.res
+                && def_id.is_local()
+            {
+                self.fns.push(def_id);
+            }
+            intravisit::walk_expr(self, expr)
+        }
+    }
+
+    if !tcx.sess.is_test_crate() {
+        return Default::default();
+    }
+    tcx.hir_crate_items(())
+        .free_items()
+        .map(|item| item.owner_id.def_id)
+        .filter(|&marker| {
+            let attrs = tcx.hir_attrs(tcx.local_def_id_to_hir_id(marker));
+            rustc_hir::attrs::find_attr!(attrs, RustcTestMarker(..))
+        })
+        .flat_map(|marker| {
+            let mut visitor = LocalFns {
+                tcx,
+                fns: Vec::new(),
+            };
+            visitor.visit_body(tcx.hir_body_owned_by(marker));
+            visitor.fns
+        })
+        .filter(|&f| {
+            tcx.fn_sig(f)
+                .skip_binder()
+                .inputs()
+                .skip_binder()
+                .is_empty()
+        })
+        .collect()
+}
+
 #[tracing::instrument(skip(tcx, error_ctx))]
 pub fn translate<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -1215,12 +1274,30 @@ pub fn translate<'tcx>(
         cached_names: Default::default(),
         cached_item_metas: Default::default(),
         lt_mutability_computer: Default::default(),
+        test_functions: test_functions(tcx),
     };
     ctx.register_target_info();
     ctx.reserve_unit_decl();
     ctx.register_builtin_functions()?;
 
-    // Start translating from the selected items.
+    // Start translating from the selected items. The items selected by attributes are enqueued in
+    // a single pass over the crate, so that they are numbered in source order whatever the order of
+    // the `--start-from-attribute` flags.
+    let mut attr_paths = Some(
+        ctx.options
+            .start_from
+            .iter()
+            .filter_map(|start_from| match start_from {
+                StartFrom::Attribute(attr_name) => Some(
+                    attr_name
+                        .split("::")
+                        .map(rustc_span::Symbol::intern)
+                        .collect_vec(),
+                ),
+                _ => None,
+            })
+            .collect_vec(),
+    );
     for start_from in ctx.options.start_from.clone() {
         match start_from {
             StartFrom::Pattern { pattern, strict } => {
@@ -1231,15 +1308,20 @@ pub fn translate<'tcx>(
                     }
                 }
             }
-            StartFrom::Attribute(attr_name) => {
-                let attr_path = attr_name
-                    .split("::")
-                    .map(rustc_span::Symbol::intern)
-                    .collect_vec();
+            StartFrom::Attribute(_) => {
+                let Some(attr_paths) = attr_paths.take() else {
+                    continue;
+                };
                 let mut add_if_attr_matches = |ldid: rustc_hir::def_id::LocalDefId| {
                     let def_id: hax::DefId = ldid.to_def_id().sinto(&ctx.hax_state);
+                    let attrs = def_id.attrs(tcx);
+                    // The test harness expansion consumes `#[test]` attributes.
+                    let is_test = ctx.test_functions.contains(&ldid.to_def_id());
                     if !matches!(def_id.kind, hax::DefKind::Mod)
-                        && def_id.attrs(tcx).iter().any(|a| a.path_matches(&attr_path))
+                        && attr_paths.iter().any(|path| {
+                            attrs.iter().any(|a| a.path_matches(path))
+                                || is_test && path.as_slice() == [sym::test]
+                        })
                     {
                         ctx.enqueue_module_item(&def_id, ContainmentNode::Start);
                     }

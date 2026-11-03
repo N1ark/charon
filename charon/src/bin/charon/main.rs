@@ -78,13 +78,18 @@ pub fn main() -> Result<()> {
             options.apply_preset();
             options.validate()?;
             let targets = std::mem::take(&mut options.targets);
+            let subcommand = if subcmd_cargo.test {
+                CargoSubcommand::Test
+            } else {
+                CargoSubcommand::Build
+            };
             if targets.is_empty() {
-                translate_with_cargo(options, subcmd_cargo.cargo)?
+                translate_with_cargo(options, subcommand, subcmd_cargo.cargo)?
             } else {
                 translate_multi_target(targets, options, |opts: CliOpts, target: &str| {
                     let mut cargo_args = subcmd_cargo.cargo.clone();
                     cargo_args.extend(["--target".to_owned(), target.to_owned()]);
-                    translate_with_cargo(opts, cargo_args)
+                    translate_with_cargo(opts, subcommand, cargo_args)
                 })?
             }
         }
@@ -212,8 +217,27 @@ fn translate_multi_target(
     Ok(ExitStatus::default())
 }
 
+/// The cargo command that compiles the selected crates.
+#[derive(Debug, Clone, Copy)]
+enum CargoSubcommand {
+    /// `cargo build`.
+    Build,
+    /// `cargo test --no-run`, which compiles the selected targets in test mode.
+    Test,
+}
+
+impl CargoSubcommand {
+    fn args(self) -> &'static [&'static str] {
+        match self {
+            Self::Build => &["build"],
+            Self::Test => &["test", "--no-run"],
+        }
+    }
+}
+
 fn translate_with_cargo(
     options: CliOpts,
+    subcommand: CargoSubcommand,
     mut cargo_args: Vec<String>,
 ) -> anyhow::Result<ExitStatus> {
     ensure_rustup();
@@ -244,11 +268,11 @@ fn translate_with_cargo(
     // `CHARON_SELECTED_CRATE_{crate_name}` changes, then cache should be invalidated and the
     // driver re-run. We then set it with a fresh value for all the crates that are targeted by the
     // current command (e.g. the workspace roots, or a crate selected with `-p`).
-    for crate_name in cargo_targets(&cargo_args)? {
+    for crate_name in cargo_targets(subcommand, &cargo_args)? {
         let nonce = fresh_nonce();
         cmd.env(selected_crate_var(&crate_name), &nonce);
     }
-    cmd.arg("build");
+    cmd.args(subcommand.args());
 
     if let Some(sysroot) = miri_sysroot(options.sysroot.as_deref(), &target) {
         cmd.env(CHARON_SYSROOT_VAR, sysroot);
@@ -262,8 +286,11 @@ fn translate_with_cargo(
         .expect("failed to wait for cargo?"))
 }
 
-/// Returns the names of the crates that `cargo build <build_args>` selects.
-fn cargo_targets(build_args: &[String]) -> anyhow::Result<Vec<String>> {
+/// Returns the names of the crates that `cargo <subcommand> <build_args>` selects.
+fn cargo_targets(
+    subcommand: CargoSubcommand,
+    build_args: &[String],
+) -> anyhow::Result<Vec<String>> {
     /// The parts of cargo's `--unit-graph` output we use.
     #[derive(Deserialize)]
     struct UnitGraph {
@@ -280,19 +307,21 @@ fn cargo_targets(build_args: &[String]) -> anyhow::Result<Vec<String>> {
     }
 
     let mut cmd = toolchain::in_toolchain("cargo")?;
-    cmd.args(["build", "--unit-graph", "-Z", "unstable-options"]);
+    cmd.args(subcommand.args());
+    cmd.args(["--unit-graph", "-Z", "unstable-options"]);
     cmd.args(build_args);
     trace!("running {cmd:?}");
     let output = cmd.output().context("could not run cargo")?;
     if !output.status.success() {
         anyhow::bail!(
-            "`cargo build --unit-graph` failed with {}:\n{}",
+            "`cargo {} --unit-graph` failed with {}:\n{}",
+            subcommand.args().join(" "),
             output.status,
             String::from_utf8_lossy(&output.stderr)
         );
     }
     let graph: UnitGraph = serde_json::from_slice(&output.stdout)
-        .context("could not parse the output of `cargo build --unit-graph`")?;
+        .context("could not parse the output of `cargo --unit-graph`")?;
     Ok(graph
         .roots
         .into_iter()

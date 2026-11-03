@@ -362,6 +362,7 @@ pub const test_attributes::tests::test_ignore::{promoted_const#1}: str = "src/li
 pub const test_attributes::tests::test_ignore::{promoted_const}: str = "tests::test_ignore" with_metadata(18usize)
 
 #[ignore]
+#[test]
 fn test_attributes::tests::test_ignore#1()
 {
     let _0: (); // return
@@ -506,6 +507,7 @@ pub const test_attributes::tests::test_should_panic::{promoted_const}: str = "te
 pub const test_attributes::tests::test_should_panic#1::{promoted_const}: str = "This test should panic" with_metadata(22usize)
 
 #[should_panic]
+#[test]
 fn test_attributes::tests::test_should_panic#1()
 {
     let _0: (); // return
@@ -656,6 +658,7 @@ pub const test_attributes::tests::test_foo::{promoted_const#1}: str = "src/lib.r
 
 pub const test_attributes::tests::test_foo::{promoted_const}: str = "tests::test_foo" with_metadata(15usize)
 
+#[test]
 fn test_attributes::tests::test_foo#1()
 {
     let _0: (); // return
