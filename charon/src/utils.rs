@@ -396,6 +396,82 @@ pub mod serialize_map_to_array {
             Ok(map)
         }
     }
+
+    /// A converter between an `SeqHashMap` whose values are `SeqHashMap`s and a sequence of
+    /// named key-value pairs, whose values are sequences of named key-value pairs too.
+    pub struct NestedSeqHashMapToArray<K, K2, V>(PhantomData<(K, K2, V)>);
+
+    /// An inner map of a [`NestedSeqHashMapToArray`].
+    struct InnerMap<M>(M);
+
+    impl<State: ?Sized, K, V> SerializeState<State> for InnerMap<&SeqHashMap<K, V>>
+    where
+        K: SerializeState<State>,
+        V: SerializeState<State>,
+    {
+        fn serialize_state<S: Serializer>(
+            &self,
+            state: &State,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            SeqHashMapToArray::serialize_state(self.0, state, serializer)
+        }
+    }
+
+    impl<'de, State: ?Sized, K, V> DeserializeState<'de, State> for InnerMap<SeqHashMap<K, V>>
+    where
+        K: DeserializeState<'de, State> + Eq + Hash,
+        V: DeserializeState<'de, State>,
+    {
+        fn deserialize_state<D: Deserializer<'de>>(
+            state: &State,
+            deserializer: D,
+        ) -> Result<Self, D::Error> {
+            Ok(InnerMap(SeqHashMapToArray::deserialize_state(
+                state,
+                deserializer,
+            )?))
+        }
+    }
+
+    impl<K, K2, V> NestedSeqHashMapToArray<K, K2, V> {
+        pub fn serialize_state<S, State: ?Sized>(
+            map: &SeqHashMap<K, SeqHashMap<K2, V>>,
+            state: &State,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            K: SerializeState<State>,
+            K2: SerializeState<State>,
+            V: SerializeState<State>,
+            S: Serializer,
+        {
+            serializer.collect_seq(map.iter().map(|(key, value)| {
+                serde_state::WithState::new(
+                    KeyValue {
+                        key,
+                        value: InnerMap(value),
+                    },
+                    state,
+                )
+            }))
+        }
+
+        pub fn deserialize_state<'de, D, State: ?Sized>(
+            state: &State,
+            deserializer: D,
+        ) -> Result<SeqHashMap<K, SeqHashMap<K2, V>>, D::Error>
+        where
+            K: DeserializeState<'de, State> + Eq + Hash,
+            K2: DeserializeState<'de, State> + Eq + Hash,
+            V: DeserializeState<'de, State>,
+            D: Deserializer<'de>,
+        {
+            let map: SeqHashMap<K, InnerMap<SeqHashMap<K2, V>>> =
+                SeqHashMapToArray::deserialize_state(state, deserializer)?;
+            Ok(map.into_iter().map(|(key, value)| (key, value.0)).collect())
+        }
+    }
 }
 
 // This is the amount of bytes that need to be left on the stack before increasing the size. It

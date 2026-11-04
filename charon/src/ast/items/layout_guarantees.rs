@@ -967,6 +967,7 @@ mod tests {
                 src: TypeSource::Normal,
                 kind: TypeDeclKind::Opaque,
                 layout: layouts,
+                monomorphic_layouts: Default::default(),
                 ptr_metadata: PtrMetadata::None,
                 marker_traits: None,
             },

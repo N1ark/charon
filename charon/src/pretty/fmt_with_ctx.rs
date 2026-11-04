@@ -3339,6 +3339,22 @@ impl<C: AstFormatter> FmtWithCtx<C> for TypeDecl {
                     }
                 }
             }
+            let builtin = match self.src {
+                TypeSource::Builtin(builtin) => Some(builtin),
+                _ => None,
+            };
+            for (args, layouts) in &self.monomorphic_layouts {
+                let tref = TypeDeclRef::new(self.def_id, args.clone(), builtin);
+                let ty = TyKind::Adt(tref).into_ty();
+                for (target, layout) in layouts {
+                    let heading = match layouts.len() {
+                        1 => format!("layout of `{}`", ty.with_ctx(ctx)),
+                        _ => format!("layout of `{}` for target `{target}`", ty.with_ctx(ctx)),
+                    };
+                    writeln!(f)?;
+                    fmt_layout(f, &heading, layout)?;
+                }
+            }
         }
 
         Ok(())

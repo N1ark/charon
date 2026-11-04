@@ -2162,6 +2162,7 @@ and cli_options_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      let* monomorphize_mut =
        option_of_postcard monomorphize_mut_of_postcard ctx st
      in
+     let* monomorphic_layouts = bool_of_postcard ctx st in
      let* start_from = list_of_postcard string_of_postcard ctx st in
      let* start_from_if_exists = list_of_postcard string_of_postcard ctx st in
      let* start_from_attribute = list_of_postcard string_of_postcard ctx st in
@@ -2231,6 +2232,7 @@ and cli_options_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
           sysroot;
           monomorphize;
           monomorphize_mut;
+          monomorphic_layouts;
           start_from;
           start_from_if_exists;
           start_from_attribute;
@@ -3653,6 +3655,12 @@ and type_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
        index_map_of_postcard string_of_postcard layout_of_postcard
          int_of_postcard ctx st
      in
+     let* monomorphic_layouts =
+       index_map_of_postcard generic_args_of_postcard
+         (index_map_of_postcard string_of_postcard layout_of_postcard
+            int_of_postcard)
+         int_of_postcard ctx st
+     in
      let* ptr_metadata = ptr_metadata_of_postcard ctx st in
      let* marker_traits =
        option_of_postcard
@@ -3667,6 +3675,7 @@ and type_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
           src;
           kind;
           layout;
+          monomorphic_layouts;
           ptr_metadata;
           marker_traits;
         }

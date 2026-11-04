@@ -2568,6 +2568,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
           ("sysroot", sysroot);
           ("monomorphize", monomorphize);
           ("monomorphize_mut", monomorphize_mut);
+          ("monomorphic_layouts", monomorphic_layouts);
           ("start_from", start_from);
           ("start_from_if_exists", start_from_if_exists);
           ("start_from_attribute", start_from_attribute);
@@ -2636,6 +2637,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
         let* monomorphize_mut =
           option_of_json monomorphize_mut_of_json ctx monomorphize_mut
         in
+        let* monomorphic_layouts = bool_of_json ctx monomorphic_layouts in
         let* start_from = list_of_json string_of_json ctx start_from in
         let* start_from_if_exists =
           list_of_json string_of_json ctx start_from_if_exists
@@ -2727,6 +2729,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
              sysroot;
              monomorphize;
              monomorphize_mut;
+             monomorphic_layouts;
              start_from;
              start_from_if_exists;
              start_from_attribute;
@@ -4436,6 +4439,7 @@ and type_decl_of_json (ctx : of_json_ctx) (js : json) :
           ("src", src);
           ("kind", kind);
           ("layout", layout);
+          ("monomorphic_layouts", monomorphic_layouts);
           ("ptr_metadata", ptr_metadata);
           ("marker_traits", marker_traits);
         ] ->
@@ -4446,6 +4450,11 @@ and type_decl_of_json (ctx : of_json_ctx) (js : json) :
         let* kind = type_decl_kind_of_json ctx kind in
         let* layout =
           index_map_of_json string_of_json layout_of_json int_of_json ctx layout
+        in
+        let* monomorphic_layouts =
+          index_map_of_json generic_args_of_json
+            (index_map_of_json string_of_json layout_of_json int_of_json)
+            int_of_json ctx monomorphic_layouts
         in
         let* ptr_metadata = ptr_metadata_of_json ctx ptr_metadata in
         let* marker_traits =
@@ -4461,6 +4470,7 @@ and type_decl_of_json (ctx : of_json_ctx) (js : json) :
              src;
              kind;
              layout;
+             monomorphic_layouts;
              ptr_metadata;
              marker_traits;
            }

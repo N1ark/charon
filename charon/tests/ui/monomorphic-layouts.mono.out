@@ -1,0 +1,395 @@
+# Final LLBC before serialization:
+
+// Full name: core::option::Option::<bool>
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option::<bool> {
+  None,
+  Some { _0: bool },
+}
+// layout:
+//     size: 1usize (guaranteed: at_least(align_to((offset_of(Option::<bool>.Some._0) + size_of::<bool>()), align_of::<bool>()))),
+//     align: 1usize (guaranteed: at_least(align_of::<bool>())),
+//     discriminator: read at offset 0 { 2u8 => None, 3u8..=255u8 => invalid, _ => Some },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 2u8],
+//         },
+//         Some: {
+//             offset of _0: 0 (guaranteed: aligned(align_of::<bool>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+struct (_, _, _)::<u8, u32, u16> {
+  _0: u8,
+  _1: u32,
+  _2: u16,
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to(max((offset_of((_, _, _)::<u8, u32, u16>._0) + size_of::<u8>()), (offset_of((_, _, _)::<u8, u32, u16>._1) + size_of::<u32>()), (offset_of((_, _, _)::<u8, u32, u16>._2) + size_of::<u16>())), max(align_of::<u8>(), align_of::<u32>(), align_of::<u16>())))),
+//     align: 4usize (guaranteed: at_least(max(align_of::<u8>(), align_of::<u32>(), align_of::<u16>()))),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             offset of _0: 4 (guaranteed: aligned(align_of::<u8>())),
+//             offset of _1: 0 (guaranteed: aligned(align_of::<u32>())),
+//             offset of _2: 6 (guaranteed: aligned(align_of::<u16>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: core::option::Option::<(u8, u32, u16)>
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option::<(u8, u32, u16)> {
+  None,
+  Some { _0: (u8, u32, u16) },
+}
+// layout:
+//     size: 12usize (guaranteed: at_least(align_to((offset_of(Option::<(u8, u32, u16)>.Some._0) + size_of::<(u8, u32, u16)>()), align_of::<(u8, u32, u16)>()))),
+//     align: 4usize (guaranteed: at_least(align_of::<(u8, u32, u16)>())),
+//     discriminator: read at offset 0 { 0u32 => None, 1u32 => Some, _ => invalid },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 0u32],
+//         },
+//         Some: {
+//             offset of _0: 4 (guaranteed: aligned(align_of::<(u8, u32, u16)>())),
+//             inhabited: true,
+//             tagger: [0 := 1u32],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: alloc::boxed::Box::<List::<u8>>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<List::<u8>, Global>
+// layout:
+//     size: 8usize,
+//     align: 8usize,
+//     discriminator: @Variant0,
+//     inhabited: true,
+//     variants: [
+//         @Variant0: {
+//             offset of 0: 0,
+//             offset of 1: 8,
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: core::option::Option::<Box::<List::<u8>, Global>>
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option::<Box::<List::<u8>, Global>> {
+  None,
+  Some { _0: Box::<List::<u8>, Global> },
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to((offset_of(Option::<Box::<List::<u8>, Global>>.Some._0) + size_of::<Box::<List::<u8>, Global>>()), align_of::<Box::<List::<u8>, Global>>()))),
+//     align: 8usize (guaranteed: at_least(align_of::<Box::<List::<u8>, Global>>())),
+//     discriminator: read at offset 0 { 0isize => None, _ => Some },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 0isize],
+//         },
+//         Some: {
+//             offset of _0: 0 (guaranteed: aligned(align_of::<Box::<List::<u8>, Global>>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+struct () {}
+// layout:
+//     size: 0usize (guaranteed: at_least(0usize)),
+//     align: 1usize (guaranteed: at_least(1usize)),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: core::option::Option::{impl Destruct for Option::<Box::<List::<u8>, Global>>}::drop_glue::<Box::<List::<u8>, Global>>
+unsafe fn {impl Destruct for Option::<Box::<List::<u8>, Global>>}::drop_glue::<Box::<List::<u8>, Global>><'_0>(_1: &'_0 mut Option::<Box::<List::<u8>, Global>>)
+= <opaque>
+
+// Full name: core::option::Option::<&'_ u8>
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option::<&'_ u8> {
+  None,
+  Some { _0: &'_ u8 },
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to((offset_of(Option::<&'_ u8>.Some._0) + size_of::<&'_ u8>()), align_of::<&'_ u8>()))),
+//     align: 8usize (guaranteed: at_least(align_of::<&'_ u8>())),
+//     discriminator: read at offset 0 { 0isize => None, _ => Some },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 0isize],
+//         },
+//         Some: {
+//             offset of _0: 0 (guaranteed: aligned(align_of::<&'_ u8>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: test_crate::List::<u8>
+struct List::<u8> {
+  head: u8,
+  tail: Option::<Box::<List::<u8>, Global>>,
+}
+// layout:
+//     size: 16usize (guaranteed: at_least(align_to(max((offset_of(List::<u8>.head) + size_of::<u8>()), (offset_of(List::<u8>.tail) + size_of::<Option::<Box::<List::<u8>, Global>>>())), max(align_of::<u8>(), align_of::<Option::<Box::<List::<u8>, Global>>>())))),
+//     align: 8usize (guaranteed: at_least(max(align_of::<u8>(), align_of::<Option::<Box::<List::<u8>, Global>>>()))),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             offset of head: 8 (guaranteed: aligned(align_of::<u8>())),
+//             offset of tail: 0 (guaranteed: aligned(align_of::<Option::<Box::<List::<u8>, Global>>>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+struct (_, _)::<List::<u8>, u8> {
+  _0: List::<u8>,
+  _1: u8,
+}
+// layout:
+//     size: 24usize (guaranteed: at_least(align_to(max((offset_of((_, _)::<List::<u8>, u8>._0) + size_of::<List::<u8>>()), (offset_of((_, _)::<List::<u8>, u8>._1) + size_of::<u8>())), max(align_of::<List::<u8>>(), align_of::<u8>())))),
+//     align: 8usize (guaranteed: at_least(max(align_of::<List::<u8>>(), align_of::<u8>()))),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             offset of _0: 0 (guaranteed: aligned(align_of::<List::<u8>>())),
+//             offset of _1: 16 (guaranteed: aligned(align_of::<u8>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: test_crate::List::{impl Destruct for List::<u8>}::drop_glue::<u8>
+unsafe fn {impl Destruct for List::<u8>}::drop_glue::<u8><'_0>(_1: &'_0 mut List::<u8>)
+{
+    let _0: (); // return
+    let _1: &'1 mut List::<u8>; // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    drop[{impl Destruct for Option::<Box::<List::<u8>, Global>>}::drop_glue::<Box::<List::<u8>, Global>><'2>] (*_1).tail
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
+}
+
+// Full name: (_, _)::{impl Destruct for (List::<u8>, u8)}::drop_glue::<List::<u8>, u8>
+unsafe fn {impl Destruct for (List::<u8>, u8)}::drop_glue::<List::<u8>, u8><'_0>(_1: &'_0 mut (List::<u8>, u8))
+{
+    let _0: (); // return
+    let _1: &'1 mut (List::<u8>, u8); // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    drop[{impl Destruct for List::<u8>}::drop_glue::<u8><'2>] (*_1)._0
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::Tail::<u32>
+struct Tail::<u32> {
+  a: u8,
+  t: u32,
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to(max((offset_of(Tail::<u32>.a) + size_of::<u8>()), (offset_of(Tail::<u32>.t) + size_of::<u32>())), max(align_of::<u8>(), align_of::<u32>())))),
+//     align: 4usize (guaranteed: at_least(max(align_of::<u8>(), align_of::<u32>()))),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             offset of a: 0 (guaranteed: aligned(align_of::<u8>())),
+//             offset of t: 4 (guaranteed: aligned(align_of::<u32>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: test_crate::Either::<u8, char>
+enum Either::<u8, char> {
+  Left { _0: u8 },
+  Right { _0: char },
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to(max((offset_of(Either::<u8, char>.Left._0) + size_of::<u8>()), (offset_of(Either::<u8, char>.Right._0) + size_of::<char>())), max(align_of::<u8>(), align_of::<char>())))),
+//     align: 4usize (guaranteed: at_least(max(align_of::<u8>(), align_of::<char>()))),
+//     discriminator: read at offset 0 { 0u8 => Left, 1u8 => Right, _ => invalid },
+//     inhabited: true,
+//     variants: [
+//         Left: {
+//             offset of _0: 1 (guaranteed: aligned(align_of::<u8>())),
+//             inhabited: true,
+//             tagger: [0 := 0u8],
+//         },
+//         Right: {
+//             offset of _0: 4 (guaranteed: aligned(align_of::<char>())),
+//             inhabited: true,
+//             tagger: [0 := 1u8],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: test_crate::instances::{closure}
+struct {closure} {
+  _0: u32,
+  _1: u32,
+}
+// layout:
+//     size: 8usize (guaranteed: at_least(align_to(max((offset_of({closure}._0) + size_of::<u32>()), (offset_of({closure}._1) + size_of::<u32>())), max(align_of::<u32>(), align_of::<u32>())))),
+//     align: 4usize (guaranteed: at_least(max(align_of::<u32>(), align_of::<u32>()))),
+//     discriminator: _,
+//     inhabited: true,
+//     variants: [
+//         _: {
+//             offset of _0: 0 (guaranteed: aligned(align_of::<u32>())),
+//             offset of _1: 4 (guaranteed: aligned(align_of::<u32>())),
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
+
+// Full name: test_crate::instances
+fn instances(x: u32, list: List::<u8>) -> Option::<(u8, u32, u16)>
+{
+    let _0: Option::<(u8, u32, u16)>; // return
+    let x: u32; // arg #1
+    let list: List::<u8>; // arg #2
+    let _3: [u8; 2usize]; // anonymous local
+    let _4: Option::<bool>; // anonymous local
+    let _5: Option::<&'_ u8>; // anonymous local
+    let _6: Either::<u8, char>; // anonymous local
+    let tail: Tail::<u32>; // local
+    let _8: {closure}; // anonymous local
+    let _9: (List::<u8>, u8); // anonymous local
+    let _10: List::<u8>; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = [const 1u8, const 2u8]
+    storage_dead(_3)
+    storage_live(_4)
+    _4 = Option::<bool>::None {  }
+    set_type(typeof(_4) <= Option::<bool>)
+    storage_dead(_4)
+    storage_live(_5)
+    _5 = Option::<&'_ u8>::None {  }
+    set_type(typeof(_5) <= Option::<&'_ u8>)
+    storage_dead(_5)
+    storage_live(_6)
+    _6 = Either::<u8, char>::Left { _0: const 0u8 }
+    set_type(typeof(_6) <= Either::<u8, char>)
+    storage_dead(_6)
+    storage_live(tail)
+    tail = Tail::<u32> { a: const 1u8, t: const 7u32 }
+    fake_read(tail)
+    storage_live(_8)
+    _8 = {closure} { _0: copy tail.t, _1: copy x }
+    storage_dead(_8)
+    storage_live(_9)
+    storage_live(_10)
+    _10 = move list
+    _9 = (move _10, const 0u8)
+    conditional_drop[{impl Destruct for List::<u8>}::drop_glue::<u8><'0>] _10
+    ↳⚡ conditional_drop[{impl Destruct for (List::<u8>, u8)}::drop_glue::<List::<u8>, u8><'2>] _9
+        ↳⚡ storage_dead(list)
+            storage_dead(x)
+            unwind_terminate
+        conditional_drop[{impl Destruct for List::<u8>}::drop_glue::<u8><'4>] list
+        ↳⚡ storage_dead(list)
+            storage_dead(x)
+            unwind_terminate
+        storage_dead(list)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_10)
+    conditional_drop[{impl Destruct for (List::<u8>, u8)}::drop_glue::<List::<u8>, u8><'1>] _9
+    ↳⚡ conditional_drop[{impl Destruct for List::<u8>}::drop_glue::<u8><'4>] list
+        ↳⚡ storage_dead(list)
+            storage_dead(x)
+            unwind_terminate
+        storage_dead(list)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_9)
+    _0 = Option::<(u8, u32, u16)>::None {  }
+    storage_dead(tail)
+    conditional_drop[{impl Destruct for List::<u8>}::drop_glue::<u8><'3>] list
+    ↳⚡ storage_dead(list)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(list)
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::instances::{impl Fn<()> for {closure}}::call
+extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u32
+{
+    let _0: u32; // return
+    let _1: &'1 {closure}; // arg #1
+    let tupled_args: (); // arg #2
+    let _3: u32; // anonymous local
+    let _4: u32; // anonymous local
+    let _5: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_5)
+    storage_live(_3)
+    _3 = copy (*_1)._0
+    storage_live(_4)
+    _4 = copy (*_1)._1
+    _5 = copy _3 panic.+ copy _4
+    _0 = move _5
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(_5)
+    storage_dead(tupled_args)
+    storage_dead(_1)
+    return
+}
+
+
+

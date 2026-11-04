@@ -147,6 +147,10 @@ pub struct TranslateCtx<'tcx> {
     pub cached_item_metas: HashMap<TransItemSource<'tcx>, ItemMeta>,
     /// Compute which lifetimes are used in a `&'a mut T`. This is a global fixpoint analysis.
     pub lt_mutability_computer: LifetimeMutabilityComputer,
+    /// The layouts of the closed instances of the type declarations, by declaration and generic
+    /// arguments, for `--monomorphic-layouts`. Moved to `TypeDecl::monomorphic_layouts` once
+    /// every item is translated.
+    pub monomorphic_layouts: HashMap<TypeDeclId, SeqHashMap<GenericArgs, Layout>>,
     /// The `#[test]` functions of the crate, when it is compiled as a test harness (see
     /// `test_functions`).
     pub test_functions: HashSet<rustc_span::def_id::DefId>,
@@ -193,6 +197,9 @@ pub(crate) struct ItemTransCtx<'tcx, 'ctx> {
     pub binding_levels: BindingStack<BindingLevel<'tcx>>,
     /// When `Some`, translate any erased lifetime to a fresh `Region::Body` lifetime.
     pub lifetime_freshener: Option<IndexMap<RegionId, ()>>,
+    /// Whether we're translating the field types of a type instance for `--monomorphic-layouts`,
+    /// which records their layouts itself.
+    pub translating_instance_fields: bool,
 }
 
 /// Translates `T` into `U` using `hax`'s `SInto` trait, catching any hax panics.
@@ -308,6 +315,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             error_on_trait_proof_error: true,
             binding_levels: Default::default(),
             lifetime_freshener: None,
+            translating_instance_fields: false,
         }
     }
 

@@ -1274,6 +1274,7 @@ pub fn translate<'tcx>(
         cached_names: Default::default(),
         cached_item_metas: Default::default(),
         lt_mutability_computer: Default::default(),
+        monomorphic_layouts: Default::default(),
         test_functions: test_functions(tcx),
     };
     ctx.register_target_info();
@@ -1425,6 +1426,16 @@ pub fn translate<'tcx>(
     while let Some(item_src) = ctx.items_to_translate.pop_front() {
         if ctx.processed.insert(item_src.clone()) {
             ctx.translate_item(&item_src);
+        }
+    }
+
+    let target = ctx.get_target_triple();
+    for (id, layouts) in std::mem::take(&mut ctx.monomorphic_layouts) {
+        if let Some(decl) = ctx.translated.type_decls.get_mut(id) {
+            for (args, layout) in layouts {
+                let per_target = decl.monomorphic_layouts.entry(args).or_default();
+                per_target.insert(target.clone(), layout);
+            }
         }
     }
 
