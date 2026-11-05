@@ -3418,6 +3418,12 @@ and target_info_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
         }
          : target_info))
 
+and target_layouts_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (target_layouts, string) result =
+  combine_error_msgs st __FUNCTION__
+    (index_map_of_postcard string_of_postcard layout_of_postcard int_of_postcard
+       ctx st)
+
 and trait_assoc_const_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
     : (trait_assoc_const, string) result =
   combine_error_msgs st __FUNCTION__
@@ -3675,10 +3681,7 @@ and type_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      let* generics = generic_params_of_postcard ctx st in
      let* src = type_source_of_postcard ctx st in
      let* kind = type_decl_kind_of_postcard ctx st in
-     let* layout =
-       index_map_of_postcard string_of_postcard layout_of_postcard
-         int_of_postcard ctx st
-     in
+     let* layout = target_layouts_of_postcard ctx st in
      let* ptr_metadata = ptr_metadata_of_postcard ctx st in
      let* marker_traits =
        option_of_postcard
