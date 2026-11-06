@@ -208,6 +208,12 @@ and cli_options = {
           monomorphized with a mutable reference (or type containing one); said
           differently, so that the presence of mutable references in a type is
           independent of its generics. This is used by Aeneas. *)
+  monomorphic_layouts : bool;
+      (** Record the layouts of the closed type instances that appear in
+          translated items (e.g. [Option<u32>] or [(u8, bool)]) in
+          [TypeDecl::monomorphic_layouts]. These are the layouts that
+          [--monomorphize] gives the monomorphized type declarations, without
+          monomorphizing. *)
   start_from : string list;
       (** A list of item paths to use as starting points for the translation. We
           will translate these items and any items they refer to, according to

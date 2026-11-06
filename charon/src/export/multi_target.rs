@@ -404,6 +404,7 @@ impl ZipAst for ItemComparer<'_> {
             kind: left_kind,
             // Layouts are allowed to differ per target.
             layout: _,
+            monomorphic_layouts: _,
             ptr_metadata: left_ptr_metadata,
             marker_traits: left_marker_traits,
         } = left;
@@ -414,6 +415,7 @@ impl ZipAst for ItemComparer<'_> {
             src: right_src,
             kind: right_kind,
             layout: _,
+            monomorphic_layouts: _,
             ptr_metadata: right_ptr_metadata,
             marker_traits: right_marker_traits,
         } = right;
@@ -715,8 +717,28 @@ impl<'a> ItemDeduplicator<'a> {
             }
         }
 
-        // Remap all ids.
-        self.krate.drive_mut(&mut IdRefMapperVisitor::new(&remap));
+        // Remap all ids. The arguments of several instances of a type may become equal: their
+        // per-target layouts are merged.
+        let monomorphic_layouts: Vec<_> = self
+            .krate
+            .type_decls
+            .iter_mut()
+            .map(|decl| (decl.def_id, mem::take(&mut decl.monomorphic_layouts)))
+            .collect();
+        let mut mapper = IdRefMapperVisitor::new(&remap);
+        self.krate.drive_mut(&mut mapper);
+        for (id, layouts) in monomorphic_layouts {
+            let Some(decl) = self.krate.type_decls.get_mut(id) else {
+                continue;
+            };
+            for (mut args, layouts) in layouts {
+                let _ = args.drive_mut(&mut mapper);
+                decl.monomorphic_layouts
+                    .entry(args)
+                    .or_default()
+                    .extend(layouts.0);
+            }
+        }
 
         for decl in facade_decls {
             self.krate
@@ -751,8 +773,21 @@ impl<'a> ItemDeduplicator<'a> {
                         .flatten()
                 })
                 .collect();
+            let mut monomorphic_layouts: SeqHashMap<GenericArgs, TargetLayouts> = SeqHashMap::new();
+            for &id in group.ids.values() {
+                let id = *id.as_type().unwrap();
+                if let Some(tdecl) = self.krate.type_decls.get_mut(id) {
+                    for (args, layouts) in mem::take(&mut tdecl.monomorphic_layouts) {
+                        monomorphic_layouts
+                            .entry(args)
+                            .or_default()
+                            .extend(layouts.0);
+                    }
+                }
+            }
             if let Some(dest) = self.krate.type_decls.get_mut(canonical_type_id) {
                 dest.layout.0 = layouts;
+                dest.monomorphic_layouts = monomorphic_layouts;
             }
         }
 
