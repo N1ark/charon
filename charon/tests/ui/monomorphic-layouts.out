@@ -58,6 +58,23 @@ pub enum Option<T> {
 //         },
 //     ],
 //     repr(Rust),
+// layout of `Option<u8>`:
+//     size: 2usize,
+//     align: 1usize,
+//     discriminator: read at offset 0 { 0u8 => None, 1u8 => Some, _ => invalid },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 0u8],
+//         },
+//         Some: {
+//             offset of _0: 1,
+//             inhabited: true,
+//             tagger: [0 := 1u8],
+//         },
+//     ],
+//     repr(Rust),
 
 struct () {}
 // layout:
