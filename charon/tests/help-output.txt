@@ -105,6 +105,9 @@ Options:
       --translate-assert-panic-fns
           Record the functions that rustc's codegen calls when a builtin check fails in `Assert::panic_fn`
 
+      --link-extern-fns
+          For functions declared in `extern { .. }` blocks, also translate the function exported under the same symbol, i.e. what the linker will resolve them to, and record it in `Body::Extern`
+
       --duplicate-defaulted-methods
           Whenever an impl doesn't implement a method (because it has a default body), this creates a duplicate method as if it had been implemented. This can simplify the call-graphs as otherwise calls within the default body would be indirected through trait proofs
 

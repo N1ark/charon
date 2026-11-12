@@ -2490,7 +2490,15 @@ and rustc_attribute_kind_of_json (ctx : of_json_ctx) (js : json) :
         let* align = int_of_json ctx align in
         let* span = span_of_json ctx span in
         Ok (RustcAttributeKindRustcAlign (align, span))
+    | `String "RustcAllocator" -> Ok RustcAttributeKindRustcAllocator
+    | `String "RustcAllocatorZeroed" ->
+        Ok RustcAttributeKindRustcAllocatorZeroed
+    | `Assoc [ ("RustcAllocatorZeroedVariant", `Assoc [ ("name", name) ]) ] ->
+        let* name = string_of_json ctx name in
+        Ok (RustcAttributeKindRustcAllocatorZeroedVariant name)
+    | `String "RustcDeallocator" -> Ok RustcAttributeKindRustcDeallocator
     | `String "RustcIntrinsic" -> Ok RustcAttributeKindRustcIntrinsic
+    | `String "RustcReallocator" -> Ok RustcAttributeKindRustcReallocator
     | `Assoc [ ("ShouldPanic", `Assoc [ ("reason", reason) ]) ] ->
         let* reason = option_of_json string_of_json ctx reason in
         Ok (RustcAttributeKindShouldPanic reason)
@@ -2545,9 +2553,13 @@ and body_of_json (ctx : of_json_ctx) (js : json) : (body, string) result =
             _0
         in
         Ok (TargetDispatchBody _0)
-    | `Assoc [ ("Extern", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
-        Ok (ExternBody _0)
+    | `Assoc
+        [
+          ("Extern", `Assoc [ ("symbol", symbol); ("definition", definition) ]);
+        ] ->
+        let* symbol = string_of_json ctx symbol in
+        let* definition = linked_extern_of_json ctx definition in
+        Ok (ExternBody (symbol, definition))
     | `Assoc
         [
           ( "Intrinsic",
@@ -2632,6 +2644,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
           ("translate_all_methods", translate_all_methods);
           ("eager_vtables", eager_vtables);
           ("translate_assert_panic_fns", translate_assert_panic_fns);
+          ("link_extern_fns", link_extern_fns);
           ("duplicate_defaulted_methods", duplicate_defaulted_methods);
           ("lift_associated_types", lift_associated_types);
           ("hide_marker_traits", hide_marker_traits);
@@ -2710,6 +2723,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
         let* translate_assert_panic_fns =
           bool_of_json ctx translate_assert_panic_fns
         in
+        let* link_extern_fns = bool_of_json ctx link_extern_fns in
         let* duplicate_defaulted_methods =
           bool_of_json ctx duplicate_defaulted_methods
         in
@@ -2797,6 +2811,7 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
              translate_all_methods;
              eager_vtables;
              translate_assert_panic_fns;
+             link_extern_fns;
              duplicate_defaulted_methods;
              lift_associated_types;
              hide_marker_traits;
@@ -3770,6 +3785,22 @@ and rustc_linkage_of_json (ctx : of_json_ctx) (js : json) :
     | `String "LinkOnceODR" -> Ok RustcLinkageLinkOnceODR
     | `String "WeakAny" -> Ok RustcLinkageWeakAny
     | `String "WeakODR" -> Ok RustcLinkageWeakODR
+    | _ -> Error "")
+
+and linked_extern_of_json (ctx : of_json_ctx) (js : json) :
+    (linked_extern, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | `Assoc [ ("StronglyLinked", _0) ] ->
+        let* _0 = fun_decl_ref_of_json ctx _0 in
+        Ok (StronglyLinked _0)
+    | `Assoc [ ("WeaklyLinked", _0) ] ->
+        let* _0 = fun_decl_ref_of_json ctx _0 in
+        Ok (WeaklyLinked _0)
+    | `Assoc [ ("AllocatorShim", _0) ] ->
+        let* _0 = fun_decl_ref_of_json ctx _0 in
+        Ok (AllocatorShim _0)
+    | `String "Unlinked" -> Ok Unlinked
     | _ -> Error "")
 
 and local_of_json (ctx : of_json_ctx) (js : json) : (local, string) result =
