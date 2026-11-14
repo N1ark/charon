@@ -1,7 +1,9 @@
-pub fn core::num::{u32}::wrapping_add(_1: u32, _2: u32) -> u32
+// Full name: core::num::{u32}::wrapping_add
+pub fn wrapping_add(_1: u32, _2: u32) -> u32
 = <opaque>
 
-pub fn test_crate::mod_reduce(a: u32) -> u32
+// Full name: test_crate::mod_reduce
+pub fn mod_reduce(a: u32) -> u32
 {
     let _0: u32; // return
     let a: u32; // arg #1
@@ -20,7 +22,7 @@ pub fn test_crate::mod_reduce(a: u32) -> u32
     storage_dead(_2)
     storage_live(_4)
     _4 = copy a
-    _0 = core::num::{u32}::wrapping_add(move _4, const 1u32)
+    _0 = wrapping_add(move _4, const 1u32)
     ↳⚡ storage_dead(a)
         unwind_continue
     storage_dead(_4)
