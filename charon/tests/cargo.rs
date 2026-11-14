@@ -295,6 +295,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             Success,
         ),
         mktest(
+            "merge-crates",
+            root.join("merge-crates"),
+            &["--preset=aeneas".to_owned(), "--include=crate_a".to_owned()],
+            &["--package=crate_b".to_owned()],
+            Success,
+        ),
+        mktest(
             "multi-targets",
             root.join("multi-targets"),
             &[

@@ -1,0 +1,316 @@
+# Final LLBC before serialization:
+
+// Full name: core::mem::manually_drop::ManuallyDrop
+#[lang_item(ManuallyDrop)]
+pub opaque type ManuallyDrop<T>
+
+// Full name: core::mem::maybe_uninit::MaybeUninit
+#[lang_item(MaybeUninit)]
+pub opaque type MaybeUninit<T>
+
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T> {
+  None,
+  Some { _0: T },
+}
+
+// Full name: alloc::alloc::Global
+#[lang_item(GlobalAlloc)]
+pub struct Global {}
+
+// Full name: alloc::boxed::Box
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box<T>
+
+opaque type ()
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box<T>}::drop_glue
+unsafe fn impl_Destruct_for_Box::drop_glue<'_0, T, A>(_1: &'_0 mut Box<T>)
+where
+    Outlives0: (T: '_0),
+    Outlives1: (A: '_0),
+= <opaque>
+
+// Full name: alloc::boxed::{Box<T>}::new
+#[track_caller]
+#[diagnostic_item("box_new")]
+pub fn new<T>(_1: T) -> Box<T>
+= <opaque>
+
+// Full name: alloc::boxed::{Box<T>}::new_uninit
+#[track_caller]
+pub fn new_uninit<T>() -> Box<MaybeUninit<T>>
+= <opaque>
+
+// Full name: alloc::boxed::{Box<MaybeUninit<T>>}::assume_init
+pub unsafe fn assume_init<T, A>(_1: Box<MaybeUninit<T>>) -> Box<T>
+= <opaque>
+
+// Full name: alloc::vec::Vec
+#[diagnostic_item("Vec")]
+pub opaque type Vec<T>
+
+// Full name: alloc::slice::{[T]}::into_vec
+pub fn into_vec<T, A>(_1: Box<[T]>) -> Vec<T>
+= <opaque>
+
+// Full name: alloc::vec::Vec::{impl Destruct for Vec<T>}::drop_glue
+unsafe fn impl_Destruct_for_Vec::drop_glue<'_0, T, A>(_1: &'_0 mut Vec<T>)
+where
+    Outlives0: (T: '_0),
+    Outlives1: (A: '_0),
+= <opaque>
+
+// Full name: crate_a::Wrapper
+pub struct Wrapper {
+  v: Vec<u32>,
+}
+
+// Full name: crate_a::Wrapper::{impl Destruct for Wrapper}::drop_glue
+unsafe fn impl_Destruct_for_Wrapper::drop_glue<'_0>(_1: &'_0 mut Wrapper)
+{
+    let mut _0: (); // return
+    let _1: &'1 mut Wrapper; // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    drop[impl_Destruct_for_Vec::drop_glue<'2, u32, Global>] (*_1).v
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
+}
+
+// Full name: crate_a::make
+pub fn make() -> Wrapper
+{
+    let mut _0: Wrapper; // return
+    let mut _1: Vec<u32>; // anonymous local
+    let mut _2: Box<MaybeUninit<[u32; 3usize]>>; // anonymous local
+    let mut _3: Box<MaybeUninit<[u32; 3usize]>>; // anonymous local
+    let mut ret: Vec<u32>; // local
+    let mut b: Box<MaybeUninit<[u32; 3usize]>>; // local
+    let mut x: Box<[u32; 3usize]>; // local
+    let mut y: Box<[u32]>; // local
+
+    storage_live(_0)
+    storage_live(_1)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = new_uninit<[u32; 3usize]>()
+    ↳⚡ unwind_continue
+    (*_3).1.0 = [const 1u32, const 2u32, const 3u32]
+    _2 = move _3
+    storage_dead(_3)
+    storage_live(b)
+    b = move _2
+    storage_live(ret)
+    storage_live(x)
+    storage_live(y)
+    x = assume_init<[u32; 3usize], Global>(move b)
+    ↳⚡ storage_dead(y)
+        storage_dead(x)
+        storage_dead(b)
+        unwind_continue
+    y = unsize_cast<Box<[u32]>, 3usize>(move x)
+    ret = into_vec<u32, Global>(move y)
+    ↳⚡ storage_dead(y)
+        storage_dead(x)
+        storage_dead(b)
+        unwind_continue
+    storage_dead(y)
+    storage_dead(x)
+    storage_dead(b)
+    _1 = move ret
+    storage_dead(_2)
+    _0 = Wrapper { v: move _1 }
+    storage_dead(_1)
+    storage_dead(ret)
+    return
+}
+
+// Full name: crate_a::maybe_consume
+pub fn maybe_consume(w: Wrapper, b: bool)
+{
+    let mut _0: (); // return
+    let w: Wrapper; // arg #1
+    let b: bool; // arg #2
+    let mut _3: bool; // anonymous local
+    let _w: Wrapper; // local
+    let mut _5: bool; // anonymous local
+
+    storage_live(_0)
+    storage_live(_5)
+    _0 = ()
+    _5 = const false
+    _5 = const true
+    storage_live(_3)
+    _3 = copy b
+    if move _3 {
+        storage_live(_w)
+        _5 = const false
+        _w = move w
+        _0 = ()
+        drop[impl_Destruct_for_Wrapper::drop_glue<'0>] _w
+        ↳⚡ storage_dead(_5)
+            storage_dead(b)
+            storage_dead(w)
+            unwind_continue
+        storage_dead(_w)
+    } else {
+        _0 = ()
+    }
+    storage_dead(_3)
+    if copy _5 {
+    } else {
+        storage_dead(_5)
+        storage_dead(b)
+        storage_dead(w)
+        return
+    }
+    drop[impl_Destruct_for_Wrapper::drop_glue<'1>] w
+    ↳⚡ storage_dead(_5)
+        storage_dead(b)
+        storage_dead(w)
+        unwind_continue
+    storage_dead(_5)
+    storage_dead(b)
+    storage_dead(w)
+    return
+}
+
+// Full name: crate_a::unbox
+pub fn unbox(b: Box<Wrapper>) -> Wrapper
+{
+    let mut _0: Wrapper; // return
+    let b: Box<Wrapper>; // arg #1
+
+    storage_live(_0)
+    _0 = move (*b)
+    drop_empty_box b
+    ↳⚡ storage_dead(b)
+        unwind_continue
+    storage_dead(b)
+    return
+}
+
+// Full name: crate_a::classify
+pub fn classify(o: Option<u32>) -> u32
+{
+    let mut _0: u32; // return
+    let o: Option<u32>; // arg #1
+    let x_2: u32; // local
+    let x_3: &'3 u32; // local
+    let mut _4: bool; // anonymous local
+    let mut _5: u32; // anonymous local
+
+    storage_live(_0)
+    match o {
+        Option::None => {
+        },
+        Option::Some => {
+            storage_live(x_3)
+            x_3 = &(o as variant Option::Some)._0
+            storage_live(_4)
+            storage_live(_5)
+            _5 = copy (*x_3)
+            _4 = move _5 > const 10u32
+            if move _4 {
+            } else {
+                storage_dead(_5)
+                storage_dead(_4)
+                storage_dead(x_3)
+                _0 = const 1u32
+                storage_dead(o)
+                return
+            }
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_live(x_2)
+            x_2 = copy (o as variant Option::Some)._0
+            _0 = copy x_2
+            storage_dead(x_2)
+            storage_dead(x_3)
+            storage_dead(o)
+            return
+        },
+    }
+    _0 = const 0u32
+    storage_dead(o)
+    return
+}
+
+// Full name: crate_b::use_a
+pub fn use_a(b: bool) -> u32
+{
+    let mut _0: u32; // return
+    let b: bool; // arg #1
+    let w: Wrapper; // local
+    let mut _3: Box<Wrapper>; // anonymous local
+    let mut _4: Wrapper; // anonymous local
+    let _5: (); // anonymous local
+    let mut _6: Wrapper; // anonymous local
+    let mut _7: bool; // anonymous local
+    let mut _8: Option<u32>; // anonymous local
+
+    storage_live(_0)
+    storage_live(w)
+    storage_live(_3)
+    storage_live(_4)
+    _4 = make()
+    ↳⚡ storage_dead(b)
+        unwind_continue
+    _3 = new<Wrapper>(move _4)
+    ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'0>] _4
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_4)
+    w = unbox(move _3)
+    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'1, Wrapper, Global>] _3
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_3)
+    fake_read(w)
+    storage_live(_5)
+    storage_live(_6)
+    _6 = move w
+    storage_live(_7)
+    _7 = copy b
+    _5 = maybe_consume(move _6, move _7)
+    ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'2>] _6
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'3>] w
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_7)
+    storage_dead(_6)
+    storage_dead(_5)
+    storage_live(_8)
+    _8 = Option::Some { _0: const 1u32 }
+    _0 = classify(move _8)
+    ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'3>] w
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_8)
+    conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'4>] w
+    ↳⚡ storage_dead(b)
+        unwind_continue
+    storage_dead(w)
+    storage_dead(b)
+    return
+}
+
+
+
