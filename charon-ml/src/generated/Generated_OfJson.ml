@@ -2554,6 +2554,8 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
           ("mir", mir);
           ("rustc_args", rustc_args);
           ("targets", targets);
+          ("merge_crates", merge_crates);
+          ("merged_crate_name", merged_crate_name);
           ("sysroot", sysroot);
           ("monomorphize", monomorphize);
           ("monomorphize_mut", monomorphize_mut);
@@ -2619,6 +2621,10 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
         let* mir = option_of_json mir_level_of_json ctx mir in
         let* rustc_args = list_of_json string_of_json ctx rustc_args in
         let* targets = list_of_json string_of_json ctx targets in
+        let* merge_crates = bool_of_json ctx merge_crates in
+        let* merged_crate_name =
+          option_of_json string_of_json ctx merged_crate_name
+        in
         let* sysroot = option_of_json string_of_json ctx sysroot in
         let* monomorphize = bool_of_json ctx monomorphize in
         let* monomorphize_mut =
@@ -2709,6 +2715,8 @@ and cli_options_of_json (ctx : of_json_ctx) (js : json) :
              mir;
              rustc_args;
              targets;
+             merge_crates;
+             merged_crate_name;
              sysroot;
              monomorphize;
              monomorphize_mut;

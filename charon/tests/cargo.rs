@@ -297,8 +297,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         mktest(
             "merge-crates",
             root.join("merge-crates"),
-            &["--preset=aeneas".to_owned(), "--include=crate_a".to_owned()],
-            &["--package=crate_b".to_owned()],
+            &["--preset=aeneas".to_owned(), "--merge-crates".to_owned()],
+            &["--workspace".to_owned()],
             Success,
         ),
         mktest(

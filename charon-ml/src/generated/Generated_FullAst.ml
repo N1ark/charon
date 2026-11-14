@@ -178,6 +178,14 @@ and cli_options = {
           compiler once for each target and aggregate the results, which is
           useful if the code includes [#[cfg(..)]] filters. Warning: this is an
           initial implementation which is extremely slow. *)
+  merge_crates : bool;
+      (** When cargo builds several crates (e.g. with
+          [charon cargo -- --workspace]), translate each of them as the local
+          crate and merge the results into a single output, as if they were one
+          crate. Only supported with [charon cargo]. *)
+  merged_crate_name : string option;
+      (** The crate name to give the merged crate when using [--merge-crates].
+          Defaults to the first crate selected by cargo. *)
   sysroot : string option;
       (** Sysroot to use for rustc invocations. By default Charon builds a
           sysroot that has full MIR for the standard library. You can pass a
