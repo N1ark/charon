@@ -311,7 +311,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             &[
                 "--preset=aeneas".to_owned(),
                 "--merge-crates".to_owned(),
-                "--start-from-if-exists=crate_b::entry".to_owned(),
+                "--start-from=crate_b::entry".to_owned(),
             ],
             &["--workspace".to_owned()],
             Success,

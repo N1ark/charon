@@ -38,6 +38,9 @@ pub(super) trait MergeStrategy {
         krate: &mut TranslatedCrate,
         groups: Vec<SeqHashMap<Self::Key, ItemId>>,
     ) -> Remapping;
+
+    /// Edit the crate once the remapping is applied, before its cleanup.
+    fn finish(&mut self, _krate: &mut TranslatedCrate) {}
 }
 
 /// A remapping of item ids, used to redirect the references to some items to other items.
@@ -66,7 +69,7 @@ impl<'a> IntoIterator for &'a Remapping {
 /// 1. concatenate the crates together into one crate
 /// 2. group items that have the same name across several crates
 /// 3. call `MergeStrategy::link` with the groups from step 2
-/// 4. apply the remapping given by step 3
+/// 4. apply the remapping given by step 3, then call `MergeStrategy::finish`
 /// 5. clean up the result
 pub(super) fn merge<S: MergeStrategy>(
     options: CliOpts,
@@ -107,6 +110,8 @@ pub(super) fn merge<S: MergeStrategy>(
             .translated
             .drive_mut(&mut IdRefMapperVisitor::new(&remap));
     }
+
+    strategy.finish(&mut merged.translated);
 
     // step 5: cleanup!
     let mut ctx = TransformCtx {

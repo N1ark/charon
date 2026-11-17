@@ -774,6 +774,10 @@ pub enum StartFrom {
 pub struct TranslateOptions {
     /// Items from which to start translation.
     pub start_from: Vec<StartFrom>,
+    /// Translate every local item, for `--merge-crates` to keep those reachable from the
+    /// start-from items of any of the merged crates. A strict start-from pattern then only has to
+    /// resolve where the crate it starts with is available.
+    pub merge_crates: bool,
     /// The level at which to extract the MIR
     pub mir_level: MirLevel,
     /// Usually we skip the provided methods that aren't used. When this flag is on, we translate
@@ -995,6 +999,7 @@ impl TranslateOptions {
 
         TranslateOptions {
             start_from,
+            merge_crates: options.merge_crates,
             mir_level,
             monomorphize_mut: options.monomorphize_mut,
             hide_marker_traits: options.hide_marker_traits,

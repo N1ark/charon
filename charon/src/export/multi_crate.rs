@@ -1,6 +1,8 @@
 //! Merge several crates of the same build into one, ensuring each translated crate's local items
 //! are kept. Allows having many local crates, so that the MIR level is the same across crates (since
 //! foreign crates otherwise always use elaborated MIR).
+use std::collections::HashSet;
+
 use crate::{ast::*, options::CliOpts};
 
 use super::CrateData;
@@ -68,5 +70,50 @@ impl merge::MergeStrategy for MultiCrate {
             krate.remove_item(id);
         }
         remap
+    }
+
+    /// Keep the items reachable from the start-from items of any of the crates: each crate's
+    /// translation has all of its items, for the other crates to use.
+    fn finish(&mut self, krate: &mut TranslatedCrate) {
+        let mut reached: HashSet<ItemId> = krate
+            .all_items_with_ids()
+            .filter(|(_, item)| item.item_meta().started_from)
+            .map(|(id, _)| id)
+            .collect();
+        let mut todo: Vec<ItemId> = reached.iter().copied().collect();
+        while let Some(id) = todo.pop() {
+            let mut refs = ItemIds::default();
+            if let Some(item) = krate.get_item(id) {
+                let _ = item.drive(&mut refs);
+            }
+            todo.extend(refs.0.into_iter().filter(|&id| reached.insert(id)));
+        }
+        for id in krate.all_ids() {
+            if !reached.contains(&id) {
+                krate.remove_item(id);
+            }
+        }
+    }
+}
+
+/// The items an item refers to.
+#[derive(Default, Visitor)]
+struct ItemIds(Vec<ItemId>);
+
+impl VisitAst for ItemIds {
+    fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
+        self.0.push((*id).into());
+    }
+    fn enter_fun_decl_id(&mut self, id: &FunDeclId) {
+        self.0.push((*id).into());
+    }
+    fn enter_global_decl_id(&mut self, id: &GlobalDeclId) {
+        self.0.push((*id).into());
+    }
+    fn enter_trait_decl_id(&mut self, id: &TraitDeclId) {
+        self.0.push((*id).into());
+    }
+    fn enter_trait_impl_id(&mut self, id: &TraitImplId) {
+        self.0.push((*id).into());
     }
 }

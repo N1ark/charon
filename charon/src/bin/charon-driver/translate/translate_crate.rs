@@ -16,6 +16,7 @@
 //! signature) but not its contents.
 use itertools::Itertools;
 use petgraph::visit::{Dfs, Walker};
+use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::{def_id::DefId, sym};
 use std::cell::RefCell;
@@ -26,7 +27,7 @@ use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::SInto;
 use charon_lib::ast::*;
-use charon_lib::name_matcher::NamePattern;
+use charon_lib::name_matcher::{NamePattern, PatElem};
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
 use charon_lib::transform::TransformCtx;
 use macros::VariantIndexArity;
@@ -253,6 +254,22 @@ impl<'tcx> TranslateCtx<'tcx> {
         super::resolve_path::def_path_def_ids(&self.hax_state, pat, strict).map_err(|err| {
             register_error!(self, span, "failed to resolve item path `{pat}`: {err}")
         })
+    }
+
+    /// Whether the crate a pattern starts with (for a trait impl pattern, the trait's) is part of
+    /// this compilation.
+    fn names_available_crate(&self, pat: &NamePattern) -> bool {
+        match pat.elems.first() {
+            Some(PatElem::Impl(trait_pat)) => self.names_available_crate(trait_pat),
+            Some(first @ PatElem::Ident { .. }) => {
+                let head = NamePattern {
+                    elems: vec![first.clone()],
+                };
+                super::resolve_path::def_path_def_ids(&self.hax_state, &head, false)
+                    .is_ok_and(|ids| !ids.is_empty())
+            }
+            Some(PatElem::Glob) | None => true,
+        }
     }
 
     /// Resolve a path that is expected to name exactly one item.
@@ -1220,6 +1237,8 @@ pub fn translate<'tcx>(
     for start_from in ctx.options.start_from.clone() {
         match start_from {
             StartFrom::Pattern { pattern, strict } => {
+                let strict =
+                    strict && (!ctx.options.merge_crates || ctx.names_available_crate(&pattern));
                 if let Ok(def_ids) = ctx.resolve_path(Span::dummy(), &pattern, strict) {
                     for def_id in def_ids {
                         let def_id: hax::DefId = def_id.sinto(&ctx.hax_state);
@@ -1258,6 +1277,11 @@ pub fn translate<'tcx>(
                 }
             }
         }
+    }
+
+    if ctx.options.merge_crates {
+        let root: hax::DefId = LOCAL_CRATE.as_def_id().sinto(&ctx.hax_state);
+        ctx.enqueue_module_item(&root, ContainmentNode::WholeCrate);
     }
 
     if ctx.errors.borrow().has_errors() {

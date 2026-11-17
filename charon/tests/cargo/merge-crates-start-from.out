@@ -1,3 +1,7 @@
+// Full name: core::clone::impls::{impl Clone for u32}::clone
+pub fn impl_Clone_for_u32::clone<'_0>(_1: &'_0 u32) -> u32
+= <opaque>
+
 opaque type ()
 
 // Full name: crate_a::Pair
@@ -6,9 +10,84 @@ pub struct Pair {
   _1: u32,
 }
 
+// Full name: crate_a::{impl Clone for Pair}::clone
+#[inline(hint)]
+pub fn impl_Clone_for_Pair::clone<'_0>(self: &'_0 Pair) -> Pair
+{
+    let _0: Pair; // return
+    let self: &'1 Pair; // arg #1
+    let _2: u32; // anonymous local
+    let _3: &'3 u32; // anonymous local
+    let _4: &'4 u32; // anonymous local
+    let _5: u32; // anonymous local
+    let _6: &'5 u32; // anonymous local
+    let _7: &'6 u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    storage_live(_4)
+    _4 = &(*self)._0
+    _3 = &(*_4)
+    _2 = impl_Clone_for_u32::clone<'8>(move _3)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_3)
+    storage_live(_5)
+    storage_live(_6)
+    storage_live(_7)
+    _7 = &(*self)._1
+    _6 = &(*_7)
+    _5 = impl_Clone_for_u32::clone<'10>(move _6)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_6)
+    _0 = Pair { _0: move _2, _1: move _5 }
+    storage_dead(_7)
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_dead(_2)
+    storage_dead(self)
+    return
+}
+
 // Full name: crate_a::swap
-pub fn swap<'_0>(_1: &'_0 Pair) -> Pair
-= <opaque>
+pub fn swap<'_0>(p: &'_0 Pair) -> Pair
+{
+    let _0: Pair; // return
+    let p: &'1 Pair; // arg #1
+    let a: u32; // local
+    let b: u32; // local
+    let _4: Pair; // anonymous local
+    let _5: &'2 Pair; // anonymous local
+    let _6: u32; // anonymous local
+    let _7: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_5)
+    _5 = &(*p)
+    _4 = impl_Clone_for_Pair::clone<'4>(move _5)
+    ↳⚡ storage_dead(p)
+        unwind_continue
+    storage_dead(_5)
+    storage_live(a)
+    a = copy _4._0
+    storage_live(b)
+    b = copy _4._1
+    storage_dead(_4)
+    storage_live(_6)
+    _6 = copy b
+    storage_live(_7)
+    _7 = copy a
+    _0 = Pair { _0: move _6, _1: move _7 }
+    storage_dead(_7)
+    storage_dead(_6)
+    storage_dead(b)
+    storage_dead(a)
+    storage_dead(p)
+    return
+}
 
 // Full name: crate_b::entry
 pub fn entry(p: Pair) -> u32
