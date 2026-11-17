@@ -306,6 +306,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             Success,
         ),
         mktest(
+            "merge-crates-start-from",
+            root.join("merge-crates-start-from"),
+            &[
+                "--preset=aeneas".to_owned(),
+                "--merge-crates".to_owned(),
+                "--start-from-if-exists=crate_b::entry".to_owned(),
+            ],
+            &["--workspace".to_owned()],
+            Success,
+        ),
+        mktest(
             "multi-targets",
             root.join("multi-targets"),
             &[
