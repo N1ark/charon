@@ -57,7 +57,7 @@ pub struct Wrapper {
 // Full name: crate_a::Wrapper::{impl Destruct for Wrapper}::drop_glue
 unsafe fn impl_Destruct_for_Wrapper::drop_glue<'_0>(_1: &'_0 mut Wrapper)
 {
-    let mut _0: (); // return
+    let _0: (); // return
     let _1: &'1 mut Wrapper; // arg #1
 
     storage_live(_0)
@@ -72,14 +72,14 @@ unsafe fn impl_Destruct_for_Wrapper::drop_glue<'_0>(_1: &'_0 mut Wrapper)
 // Full name: crate_a::make
 pub fn make() -> Wrapper
 {
-    let mut _0: Wrapper; // return
-    let mut _1: Vec<u32>; // anonymous local
-    let mut _2: Box<MaybeUninit<[u32; 3usize]>>; // anonymous local
-    let mut ret: Vec<u32>; // local
-    let mut x: Box<[u32; 3usize]>; // local
-    let mut y: Box<[u32]>; // local
-    let mut _6: [u32; 3usize]; // anonymous local
-    let mut _7: Box<[u32; 3usize]>; // anonymous local
+    let _0: Wrapper; // return
+    let _1: Vec<u32>; // anonymous local
+    let _2: Box<MaybeUninit<[u32; 3usize]>>; // anonymous local
+    let ret: Vec<u32>; // local
+    let x: Box<[u32; 3usize]>; // local
+    let y: Box<[u32]>; // local
+    let _6: [u32; 3usize]; // anonymous local
+    let _7: Box<[u32; 3usize]>; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -121,10 +121,10 @@ pub fn make() -> Wrapper
 // Full name: crate_a::maybe_consume
 pub fn maybe_consume(w: Wrapper, b: bool)
 {
-    let mut _0: (); // return
+    let _0: (); // return
     let w: Wrapper; // arg #1
     let b: bool; // arg #2
-    let mut _3: bool; // anonymous local
+    let _3: bool; // anonymous local
     let _w: Wrapper; // local
 
     storage_live(_0)
@@ -161,7 +161,7 @@ pub fn maybe_consume(w: Wrapper, b: bool)
 // Full name: crate_a::unbox
 pub fn unbox(b: Box<Wrapper>) -> Wrapper
 {
-    let mut _0: Wrapper; // return
+    let _0: Wrapper; // return
     let b: Box<Wrapper>; // arg #1
 
     storage_live(_0)
@@ -176,13 +176,13 @@ pub fn unbox(b: Box<Wrapper>) -> Wrapper
 // Full name: crate_a::classify
 pub fn classify(o: Option<u32>) -> u32
 {
-    let mut _0: u32; // return
+    let _0: u32; // return
     let o: Option<u32>; // arg #1
-    let mut _2: &'1 Option<u32>; // anonymous local
+    let _2: &'1 Option<u32>; // anonymous local
     let x_3: u32; // local
     let x_4: &'3 u32; // local
-    let mut _5: bool; // anonymous local
-    let mut _6: u32; // anonymous local
+    let _5: bool; // anonymous local
+    let _6: u32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -230,15 +230,15 @@ pub fn classify(o: Option<u32>) -> u32
 // Full name: crate_b::use_a
 pub fn use_a(b: bool) -> u32
 {
-    let mut _0: u32; // return
+    let _0: u32; // return
     let b: bool; // arg #1
     let w: Wrapper; // local
-    let mut _3: Box<Wrapper>; // anonymous local
-    let mut _4: Wrapper; // anonymous local
+    let _3: Box<Wrapper>; // anonymous local
+    let _4: Wrapper; // anonymous local
     let _5: (); // anonymous local
-    let mut _6: Wrapper; // anonymous local
-    let mut _7: bool; // anonymous local
-    let mut _8: Option<u32>; // anonymous local
+    let _6: Wrapper; // anonymous local
+    let _7: bool; // anonymous local
+    let _8: Option<u32>; // anonymous local
 
     storage_live(_0)
     storage_live(w)

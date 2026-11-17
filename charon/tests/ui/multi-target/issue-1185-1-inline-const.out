@@ -1,23 +1,28 @@
+// Full name: core::marker::MetaSized
 #[fundamental]
 #[lang_item(MetaSized)]
-pub trait core::marker::MetaSized<Self>
+pub trait MetaSized<Self>
 
+// Full name: core::marker::Sized
 #[fundamental]
 #[lang_item(Sized)]
-pub trait core::marker::Sized<Self>
+pub trait Sized<Self>
 {
-    proof ImpliedClause0: (Self: core::marker::MetaSized)
+    proof ImpliedClause0: (Self: MetaSized)
     non-dyn-compatible
 }
 
-pub fn core::num::{u32}::MAX() -> u32
+// Full name: core::num::{u32}::MAX
+pub fn MAX() -> u32
 = <opaque>
 
 struct () {}
 
-pub const core::num::{u32}::MAX: u32 = core::num::{u32}::MAX()
+// Full name: core::num::{u32}::MAX
+pub const MAX: u32 = MAX()
 
-pub fn test_crate::const_time_array_copy_mwe<'_0, const N : usize>(_a: &'_0 mut [u8; N])
+// Full name: test_crate::const_time_array_copy_mwe
+pub fn const_time_array_copy_mwe<'_0, const N : usize>(_a: &'_0 mut [u8; N])
 {
     let _0: (); // return
     let _a: &'1 mut [u8; N]; // arg #1
@@ -26,7 +31,7 @@ pub fn test_crate::const_time_array_copy_mwe<'_0, const N : usize>(_a: &'_0 mut 
 
     storage_live(_2)
     storage_live(_3)
-    _3 = cast<usize>(copy core::num::{u32}::MAX)
+    _3 = cast<usize>(copy MAX)
     _2 = const N <= move _3
     assert(move _2 == true) else panic(core::panicking::panic)
     ↳⚡ unwind_continue
