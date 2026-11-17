@@ -52,6 +52,9 @@ pub trait ItemId: Clone + Debug + Hash + PartialEq + Eq {
     /// If this item is an associated item definition, and the given impl implements it, returns
     /// the implemented associated item.
     fn find_in_impl<'tcx>(&self, state: &Self::State<'tcx>, trait_impl: &Self) -> Option<Self>;
+
+    /// Whether this item is a trait associated item that has a default value.
+    fn has_default_value<'tcx>(&self, state: &Self::State<'tcx>) -> bool;
 }
 
 impl ItemId for DefId {
@@ -119,6 +122,10 @@ impl ItemId for DefId {
             .in_definition_order()
             .find(|item| item.trait_item_def_id() == Some(*self))
             .map(|item| item.def_id)
+    }
+
+    fn has_default_value<'tcx>(&self, tcx: &Self::State<'tcx>) -> bool {
+        tcx.def_kind(*self).is_assoc() && tcx.associated_item(*self).defaultness(*tcx).has_value()
     }
 }
 
@@ -247,6 +254,15 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
                 def_id = implemented_item;
                 generics = generics.rebase_onto(tcx, tinfo.pred.def_id(), impl_item_ref.generics());
             }
+            trait_info = None;
+        }
+        // Built-in impls never override provided items (e.g. `Clone::clone_from` for closures),
+        // so we point to the default item, like for concrete impls that don't override it.
+        if assoc_item_resolution == AssocItemResolution::ImplItem
+            && let Some((tinfo, _)) = &trait_info
+            && let TraitProofKind::Builtin { .. } = &tinfo.kind
+            && def_id.has_default_value(state)
+        {
             trait_info = None;
         }
 

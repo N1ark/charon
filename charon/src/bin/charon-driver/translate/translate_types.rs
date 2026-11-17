@@ -574,7 +574,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 hax::SyntheticItem::Str => Some(BuiltinAdt::Str),
                 hax::SyntheticItem::Array
                 | hax::SyntheticItem::Slice
-                | hax::SyntheticItem::FnPtr(_) => None,
+                | hax::SyntheticItem::FnPtr(_)
+                | hax::SyntheticItem::TupleClone(_) => None,
             })
             .or_else(|| {
                 (self.hax_def(item).ok()?.lang_item? == sym::owned_box).then_some(BuiltinAdt::Box)

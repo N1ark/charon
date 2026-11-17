@@ -232,10 +232,10 @@ impl<'tcx> TranslateCtx<'tcx> {
         let def_id = item.def_id();
         if let Some(synthetic) = def_id.as_synthetic(&self.hax_state) {
             return Ok(match synthetic {
-                hax::SyntheticItem::Tuple(n) => Some(PathElem::Builtin(
-                    BuiltinPathElem::Tuple(n),
-                    Disambiguator::ZERO,
-                )),
+                // The tuple `Clone` impl is named like the tuple, as for other impls.
+                hax::SyntheticItem::Tuple(n) | hax::SyntheticItem::TupleClone(n) => Some(
+                    PathElem::Builtin(BuiltinPathElem::Tuple(n), Disambiguator::ZERO),
+                ),
                 hax::SyntheticItem::Str => {
                     Some(PathElem::Builtin(BuiltinPathElem::Str, Disambiguator::ZERO))
                 }

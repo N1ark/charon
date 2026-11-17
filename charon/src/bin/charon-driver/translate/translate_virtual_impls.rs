@@ -1,6 +1,7 @@
 //! Virtual impls are trait impls that rustc provides without source code, e.g. `impl Destruct for
 //! T` for every type. We generate a trait impl with a single method of our own, whose body we
-//! get from rustc. The per-kind specifics are in the `match`es on [`VirtualImplKind`] below.
+//! get from rustc; the other methods of the trait use their default. The per-kind specifics are in
+//! the `match`es on [`VirtualImplKind`] below.
 use super::translate_ctx::*;
 use crate::hax;
 use crate::translate::translate_crate::{TransItemSourceKind, VirtualImplKind};
@@ -13,6 +14,7 @@ impl VirtualImplKind {
             VirtualImplKind::Callable(ClosureKind::FnOnce) => hax::VirtualTrait::FnOnce,
             VirtualImplKind::Callable(ClosureKind::FnMut) => hax::VirtualTrait::FnMut,
             VirtualImplKind::Callable(ClosureKind::Fn) => hax::VirtualTrait::Fn,
+            VirtualImplKind::Clone => hax::VirtualTrait::Clone,
         }
     }
 
@@ -31,6 +33,7 @@ impl VirtualImplKind {
             VirtualImplKind::Callable(kind) => {
                 PathElem::Ident(kind.method_name().to_string(), Disambiguator::ZERO)
             }
+            VirtualImplKind::Clone => PathElem::Ident("clone".to_string(), Disambiguator::ZERO),
         }
     }
 }
@@ -47,7 +50,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             VirtualImplKind::Destruct => {
                 self.translate_drop_glue_method_id(&vimpl.trait_pred.trait_ref.def_id, trait_id)
             }
-            VirtualImplKind::Callable(_) => {
+            // For `Clone`, `methods` are in definition order and `clone` comes first.
+            VirtualImplKind::Callable(_) | VirtualImplKind::Clone => {
                 self.translate_trait_method_id(trait_id, &vimpl.methods[0].def_id)
             }
         }
@@ -68,7 +72,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             VirtualImplKind::Destruct => {
                 self.drop_glue_method_sig(self_ty, self_borrow_region.unwrap())
             }
-            VirtualImplKind::Callable(_) => self
+            VirtualImplKind::Callable(_) | VirtualImplKind::Clone => self
                 .translate_poly_fun_sig(span, &vimpl.methods[0].sig)?
                 .apply(self_borrow_region.into_iter().collect()),
         })
@@ -79,12 +83,19 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         kind: VirtualImplKind,
         span: Span,
         def: &hax::FullDef<'tcx>,
+        vimpl: &hax::VirtualTraitImpl<'tcx>,
         signature: &FunSig,
     ) -> Result<Body, Error> {
         match kind {
             VirtualImplKind::Destruct => self.translate_drop_glue_method_body(span, def),
             VirtualImplKind::Callable(target_kind) => {
                 self.translate_callable_method_body(span, def, target_kind, signature)
+            }
+            VirtualImplKind::Clone => {
+                let body = vimpl
+                    .method_shim(self.hax_state(), &vimpl.methods[0].def_id)
+                    .expect("built-in `Clone` impls are implemented by a shim");
+                Ok(self.translate_body(span, body, &def.source_text))
             }
         }
     }
@@ -142,6 +153,34 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         };
         timpl.methods.set_slot_extend(method_id, method_binder);
 
+        // The other methods reuse the default method from the trait declaration, like in
+        // `translate_trait_impl`.
+        let self_predicate = TraitRef::new(
+            TraitRefKind::TraitImpl(TraitImplRef {
+                id: impl_id,
+                generics: Box::new(self.the_only_binder().params.identity_args()),
+            }),
+            timpl.impl_trait.clone(),
+        );
+        if let Ok(ItemRef::TraitDecl(tdecl)) = self.get_or_translate(trait_id.into()) {
+            let default_methods = tdecl
+                .methods
+                .iter_indexed()
+                .filter(|(id, _)| *id != method_id)
+                .map(|(id, bound_method)| {
+                    let bound_fn_ref = bound_method
+                        .clone()
+                        .substitute_with_tref(&self_predicate)
+                        .map(|method| method.default.expect("missing default method"));
+                    (id, bound_fn_ref)
+                })
+                .collect::<Vec<_>>();
+            for (id, bound_fn_ref) in default_methods {
+                self.register_method_impl(trait_id, id, bound_fn_ref.skip_binder.id);
+                timpl.methods.set_slot_extend(id, bound_fn_ref);
+            }
+        }
+
         Ok(timpl)
     }
 
@@ -189,7 +228,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let body = if item_meta.opacity.with_private_contents().is_opaque() {
             Body::Opaque
         } else {
-            self.virtual_method_body(kind, span, def, &signature)?
+            self.virtual_method_body(kind, span, def, vimpl, &signature)?
         };
 
         Ok(FunDecl {

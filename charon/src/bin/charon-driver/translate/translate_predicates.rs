@@ -87,6 +87,27 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 TransImplSource::Virtual(VirtualImplKind::Destruct),
             ));
         }
+        if let hax::TraitProofKind::Builtin {
+            trait_data: hax::BuiltinTraitData::Other(hax::SolverTraitLangItem::Clone),
+            ..
+        } = &trait_proof.kind
+            && let Some(hax::GenericArg::Type(ty)) =
+                trait_proof.pred.hax_skip_binder_ref().generic_args.first()
+        {
+            // We erase regions to avoid bound vars escaping.
+            let s = self.hax_state_with_id();
+            let item = match ty.kind() {
+                hax::TyKind::Closure(closure) => closure.item.erase(s),
+                hax::TyKind::Tuple(tuple) => {
+                    // This resolves the `Ti: Clone` clauses of the impl in the current context.
+                    let args = tuple.item.erase(s).rustc_args(s);
+                    let synthetic = hax::SyntheticItem::TupleClone(args.len());
+                    hax::ItemRef::translate_synthetic(s, synthetic, args)
+                }
+                _ => return None,
+            };
+            return Some((item, TransImplSource::Virtual(VirtualImplKind::Clone)));
+        }
         let (item, kind) = self.recognize_callable_impl_proof(trait_proof)?;
         Some((
             item,
