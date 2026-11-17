@@ -35,16 +35,30 @@ impl merge::MergeStrategy for MultiCrate {
                     .get_item(*id)
                     .is_some_and(|item| item.item_meta().is_local)
             };
-            let locals = group.values().copied().filter(is_local);
-            let kept = match *locals.collect::<Vec<_>>().as_slice() {
-                [id] => id,
+            let locals = group
+                .iter()
+                .filter(|(_, id)| is_local(id))
+                .collect::<Vec<_>>();
+            let kept = match *locals.as_slice() {
+                [(_, &id)] => id,
                 // no local version, take any version (ideally one that has an item)
                 [] => group
                     .values()
                     .copied()
                     .min_by_key(|&id| krate.get_item(id).is_none())
                     .unwrap(),
-                [_, _, ..] => unreachable!("item local to many crates?"),
+                // Allocations are local to every crate that uses them: keep the version of the
+                // crate their path starts with, if any.
+                [(_, &first), ..] => {
+                    let owner = match krate.item_name(first).name.first() {
+                        Some(PathElem::Ident(name, _)) => Some(name),
+                        _ => None,
+                    };
+                    locals
+                        .iter()
+                        .find(|(crate_name, _)| Some(*crate_name) == owner)
+                        .map_or(first, |&(_, &id)| id)
+                }
             };
             for &id in group.values() {
                 remap.add_remapping(id, kept);

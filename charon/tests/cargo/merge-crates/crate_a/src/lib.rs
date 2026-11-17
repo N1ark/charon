@@ -26,3 +26,9 @@ pub fn classify(o: Option<u32>) -> u32 {
         None => 0,
     }
 }
+
+/// The message of the assertion is an allocation, local to every crate that translates the body.
+pub fn check(n: u32) -> u32 {
+    assert!(n > 0, "n is zero");
+    n
+}

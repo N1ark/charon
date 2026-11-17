@@ -1,3 +1,15 @@
+// Full name: core::fmt::Arguments
+#[lang_item(FormatArguments)]
+pub opaque type Arguments<'a>
+
+struct str {
+  _0: [u8],
+}
+
+// Full name: core::fmt::{Arguments<'a>}::from_str
+pub fn from_str<'a>(_1: &'static str) -> Arguments<'a>
+= <opaque>
+
 // Full name: core::mem::maybe_uninit::MaybeUninit
 #[lang_item(MaybeUninit)]
 pub opaque type MaybeUninit<T>
@@ -227,6 +239,49 @@ pub fn classify(o: Option<u32>) -> u32
     return
 }
 
+// Full name: crate_a::check::{promoted_const}
+pub const {promoted_const}: str = "n is zero" with_metadata(9usize)
+
+// Full name: crate_a::check
+pub fn check(n: u32) -> u32
+{
+    let _0: u32; // return
+    let n: u32; // arg #1
+    let _2: bool; // anonymous local
+    let _3: u32; // anonymous local
+    let _4: Arguments<'1>; // anonymous local
+    let _5: &'4 str; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = copy n
+    _2 = move _3 > const 0u32
+    if move _2 {
+    } else {
+        storage_dead(_3)
+        storage_live(_4)
+        storage_live(_5)
+        _5 = &{promoted_const} with_metadata(const 9usize)
+        _4 = from_str<'2>(move _5)
+        ↳⚡ storage_dead(_4)
+            storage_dead(n)
+            unwind_continue
+        storage_dead(_5)
+        panic(core::panicking::panic_fmt)
+        ↳⚡ storage_dead(_4)
+            storage_dead(n)
+            unwind_continue
+    }
+    storage_dead(_3)
+    storage_dead(_2)
+    _0 = copy n
+    storage_dead(_4)
+    storage_dead(n)
+    storage_dead(_5)
+    return
+}
+
 // Full name: crate_b::use_a
 pub fn use_a(b: bool) -> u32
 {
@@ -238,7 +293,8 @@ pub fn use_a(b: bool) -> u32
     let _5: (); // anonymous local
     let _6: Wrapper; // anonymous local
     let _7: bool; // anonymous local
-    let _8: Option<u32>; // anonymous local
+    let _8: u32; // anonymous local
+    let _9: Option<u32>; // anonymous local
 
     storage_live(_0)
     storage_live(w)
@@ -280,8 +336,16 @@ pub fn use_a(b: bool) -> u32
     storage_dead(_6)
     storage_dead(_5)
     storage_live(_8)
-    _8 = Option::Some { _0: const 1u32 }
-    _0 = classify(move _8)
+    storage_live(_9)
+    _9 = Option::Some { _0: const 1u32 }
+    _8 = classify(move _9)
+    ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'3>] w
+        ↳⚡ storage_dead(b)
+            unwind_terminate
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_9)
+    _0 = check(move _8)
     ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'3>] w
         ↳⚡ storage_dead(b)
             unwind_terminate
