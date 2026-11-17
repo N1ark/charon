@@ -27,7 +27,7 @@ use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::SInto;
 use charon_lib::ast::*;
-use charon_lib::name_matcher::{NamePattern, PatElem};
+use charon_lib::name_matcher::{NamePattern, PatElem, PatTy};
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
 use charon_lib::transform::TransformCtx;
 use macros::VariantIndexArity;
@@ -256,11 +256,21 @@ impl<'tcx> TranslateCtx<'tcx> {
         })
     }
 
-    /// Whether the crate a pattern starts with (for a trait impl pattern, the trait's) is part of
-    /// this compilation.
-    fn names_available_crate(&self, pat: &NamePattern) -> bool {
+    /// Whether the paths a pattern resolves start with crates of this compilation: its own and, for
+    /// a trait impl pattern, those of the trait and of the implemented type.
+    fn names_available_crates(&self, pat: &NamePattern) -> bool {
         match pat.elems.first() {
-            Some(PatElem::Impl(trait_pat)) => self.names_available_crate(trait_pat),
+            Some(PatElem::Impl(trait_pat)) => {
+                let self_available = if let Some(PatElem::Ident { generics, .. }) =
+                    trait_pat.elems.last()
+                    && let [PatTy::Pat(self_pat)] = generics.as_slice()
+                {
+                    self.names_available_crates(self_pat)
+                } else {
+                    true
+                };
+                self_available && self.names_available_crates(trait_pat)
+            }
             Some(first @ PatElem::Ident { .. }) => {
                 let head = NamePattern {
                     elems: vec![first.clone()],
@@ -1238,7 +1248,7 @@ pub fn translate<'tcx>(
         match start_from {
             StartFrom::Pattern { pattern, strict } => {
                 let strict =
-                    strict && (!ctx.options.merge_crates || ctx.names_available_crate(&pattern));
+                    strict && (!ctx.options.merge_crates || ctx.names_available_crates(&pattern));
                 if let Ok(def_ids) = ctx.resolve_path(Span::dummy(), &pattern, strict) {
                     for def_id in def_ids {
                         let def_id: hax::DefId = def_id.sinto(&ctx.hax_state);

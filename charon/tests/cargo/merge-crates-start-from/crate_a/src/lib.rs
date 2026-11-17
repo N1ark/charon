@@ -11,3 +11,7 @@ pub fn swap(p: &Pair) -> Pair {
 pub fn unused() -> u32 {
     0
 }
+
+pub trait Describe {
+    fn describe(&self) -> u32;
+}
