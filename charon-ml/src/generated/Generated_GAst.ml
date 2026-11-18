@@ -696,13 +696,10 @@ and trait_impl_source =
   | NormalTraitImpl  (** A regular trait implementation. *)
   | TraitAliasTraitImpl
       (** The blanket implementation generated for a trait alias. *)
-  | ClosureTraitImpl of closure_kind
-      (** An implementation of one of the [Fn*] traits, generated for a closure.
-
-          Fields:
-          - [kind] *)
-  | DestructTraitImpl
-      (** The [Destruct] implementation generated for an ADT or closure. *)
+  | BuiltinTraitImpl
+      (** An implementation that rustc provides without source code, e.g. the
+          [Fn*] impls of closures. For [Destruct] impls, we add a [drop_glue]
+          method that contains the drop glue of the type. *)
 
 (** The virtual table instance for a trait implementation. *)
 and v_table_decl =

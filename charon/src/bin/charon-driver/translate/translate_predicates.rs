@@ -1,3 +1,4 @@
+use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::*;
 use crate::hax;
 use charon_lib::{ast::*, ids::IndexVec};
@@ -60,6 +61,39 @@ impl<'tcx> TranslateCtx<'tcx> {
 }
 
 impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
+    /// If this trait proof is a built-in impl for which we generate a trait impl (e.g. drop glue or
+    /// a `Fn*` impl), return the item the impl is attached to, with its regions erased, and the
+    /// kind of the impl.
+    pub fn recognize_generated_impl_proof(
+        &self,
+        trait_proof: &hax::TraitProof<'tcx>,
+    ) -> Option<(hax::ItemRef<'tcx>, TransImplSource)> {
+        if let hax::TraitProofKind::Builtin {
+            trait_data: hax::BuiltinTraitData::Destruct(hax::DestructData::Glue { ty }),
+            ..
+        } = &trait_proof.kind
+        {
+            // The type comes erased from hax.
+            let item = match ty.kind() {
+                hax::TyKind::Adt(adt) => &adt.item,
+                hax::TyKind::Closure(closure) => &closure.item,
+                hax::TyKind::Array(array) => &array.item,
+                hax::TyKind::Slice(slice) => &slice.item,
+                hax::TyKind::Tuple(tuple) => &tuple.item,
+                _ => return None,
+            };
+            return Some((
+                item.clone(),
+                TransImplSource::Virtual(VirtualImplKind::Destruct),
+            ));
+        }
+        let (item, kind) = self.recognize_callable_impl_proof(trait_proof)?;
+        Some((
+            item,
+            TransImplSource::Virtual(VirtualImplKind::Callable(kind)),
+        ))
+    }
+
     /// Translates the given predicates and stores them as resuired preciates of the innermost
     /// binder.
     ///
@@ -375,33 +409,15 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                             self.translate_trait_proofs(span, trait_proofs)?;
                         TraitRefKind::TraitImpl(impl_ref)
                     }
-                    hax::BuiltinTraitData::Destruct(DestructData::Glue { ty, .. }) => {
-                        let item = match ty.kind() {
-                            hax::TyKind::Adt(adt) => &adt.item,
-                            hax::TyKind::Closure(closure) => &closure.item,
-                            hax::TyKind::Array(array) => &array.item,
-                            hax::TyKind::Slice(slice) => &slice.item,
-                            hax::TyKind::Tuple(tuple) => &tuple.item,
-                            _ => raise_error!(
-                                self,
-                                span,
-                                "failed to translate drop glue for type {ty:?}"
-                            ),
-                        };
-                        TraitRefKind::TraitImpl(self.translate_trait_impl_ref(
-                            span,
-                            item,
-                            TransImplSource::ImplicitDestruct,
-                        )?)
-                    }
-                    _ if let Some((item, closure_kind)) =
-                        self.recognize_callable_impl_proof(impl_source) =>
+                    _ if let Some((item, impl_kind)) =
+                        self.recognize_generated_impl_proof(impl_source) =>
                     {
-                        TraitRefKind::TraitImpl(self.translate_callable_impl_ref(
-                            span,
-                            &item,
-                            closure_kind,
-                        )?)
+                        TraitRefKind::TraitImpl(
+                            self.translate_trait_impl_ref(span, &item, impl_kind)?,
+                        )
+                    }
+                    hax::BuiltinTraitData::Destruct(DestructData::Glue { ty, .. }) => {
+                        raise_error!(self, span, "failed to translate drop glue for type {ty:?}")
                     }
                     _ if let Some(builtin_data) = self.recognize_builtin_impl(trait_data) => {
                         let parent_trait_refs = self.translate_trait_proofs(span, trait_proofs)?;

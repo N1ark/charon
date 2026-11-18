@@ -5,7 +5,7 @@ use std::mem;
 
 use super::{
     translate_closures::{callable_virtual_impl, recognize_fn_trait_impl_proof},
-    translate_crate::TransItemSourceKind,
+    translate_crate::{TransItemSourceKind, VirtualImplKind},
     translate_ctx::*,
     translate_generics::BindingLevel,
 };
@@ -654,7 +654,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                                 else {
                                     unreachable!("builtin `Fn*` impl for {self_ty:?}")
                                 };
-                                (item, TransImplSource::Callable(kind))
+                                (
+                                    item,
+                                    TransImplSource::Virtual(VirtualImplKind::Callable(kind)),
+                                )
                             }
                             (_, None) => (tref, TransImplSource::Marker),
                         };
@@ -850,7 +853,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             ConstantExprKind::Opaque("VTable was chosen to be opaque".to_string())
         } else if matches!(
             impl_kind,
-            TransImplSource::Marker | TransImplSource::Normal | TransImplSource::Callable(..)
+            TransImplSource::Marker
+                | TransImplSource::Normal
+                | TransImplSource::Virtual(VirtualImplKind::Callable(..))
         ) {
             self.gen_vtable_value(span, impl_def, vtable_struct_ref, impl_kind)?
         } else {
@@ -880,7 +885,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
     ) -> VTableInstanceData<'tcx, 'a> {
         match (impl_kind, impl_def.kind()) {
             // The def is the closure or fn item; the impl is one of its virtual `Fn*` impls.
-            (TransImplSource::Callable(target_kind), _) => {
+            (TransImplSource::Virtual(VirtualImplKind::Callable(target_kind)), _) => {
                 let vimpl = callable_virtual_impl(self.hax_state(), impl_def, target_kind);
                 let vtable_sig = vimpl
                     .vtable_sig(self.hax_state(), 0)
@@ -1257,7 +1262,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         let (dyn_self, trait_pred) = match (impl_kind, impl_def.kind()) {
             // The def is the closure or fn item; the impl is one of its virtual `Fn*` impls.
-            (TransImplSource::Callable(target_kind), _) => {
+            (TransImplSource::Virtual(VirtualImplKind::Callable(target_kind)), _) => {
                 let vimpl = callable_virtual_impl(self.hax_state(), impl_def, target_kind);
                 (vimpl.dyn_self(self.hax_state()), &vimpl.trait_pred)
             }
@@ -1277,7 +1282,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             );
         };
 
-        let borrow_region = self.drop_glue_region();
+        let borrow_region = self.self_borrow_region();
 
         let dyn_self = self.translate_ty(span, &dyn_self)?;
         // `&mut dyn Trait -> ()`
@@ -1329,7 +1334,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         // the item that implements the method.
         let target_item: TransItemSourceKind;
 
-        if let TransImplSource::Callable(target_kind) = impl_kind {
+        if let TransImplSource::Virtual(VirtualImplKind::Callable(target_kind)) = impl_kind {
             let vimpl = callable_virtual_impl(self.hax_state(), def, target_kind);
             let vtable_sig = vimpl
                 .vtable_sig(self.hax_state(), 0)
@@ -1342,7 +1347,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 })?;
                 bound_sig.apply(
                     self.the_only_binder()
-                        .closure_call_method_region
+                        .self_borrow_region
                         .iter()
                         .map(|r| Region::Var(DeBruijnVar::new_at_zero(*r)))
                         .collect(),
@@ -1358,7 +1363,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 match target_kind {
                     ClosureKind::FnOnce => state_ty,
                     ClosureKind::Fn | ClosureKind::FnMut => {
-                        let rid = self.the_only_binder().closure_call_method_region.unwrap();
+                        let rid = self.the_only_binder().self_borrow_region.unwrap();
                         let region = Region::Var(DeBruijnVar::new_at_zero(rid));
                         let mutability = RefKind::mutable(target_kind == ClosureKind::FnMut);
                         TyKind::Ref(region, state_ty, mutability).into_ty()
@@ -1367,7 +1372,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             };
             receiver_is_by_value = target_kind == ClosureKind::FnOnce;
             receiver_path = vec![];
-            target_item = TransItemSourceKind::CallableMethod(target_kind);
+            target_item =
+                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(target_kind));
         } else {
             let hax::FullDefKind::AssocFn(f) = def.kind() else {
                 raise_error!(

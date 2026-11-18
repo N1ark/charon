@@ -170,11 +170,8 @@ impl<'tcx> TranslateCtx<'tcx> {
                     TransImplSource::TraitAlias => {
                         bt_ctx.translate_trait_alias_blanket_impl(id, item_meta, &def)?
                     }
-                    &TransImplSource::Callable(kind) => {
-                        bt_ctx.translate_closure_trait_impl(id, item_meta, &def, kind)?
-                    }
-                    TransImplSource::ImplicitDestruct => {
-                        bt_ctx.translate_implicit_destruct_impl(id, item_meta, &def)?
+                    &TransImplSource::Virtual(kind) => {
+                        bt_ctx.translate_virtual_impl(id, item_meta, &def, kind)?
                     }
                     TransImplSource::Marker => {
                         unreachable!("marker impls are only used as vtable item sources")
@@ -182,19 +179,14 @@ impl<'tcx> TranslateCtx<'tcx> {
                 };
                 self.translated.trait_impls.set_slot(id, trait_impl);
             }
-            &TransItemSourceKind::CallableMethod(kind) => {
-                let id = trans_id.expect_item();
-                let fun_decl = bt_ctx.translate_closure_method(id, item_meta, &def, kind)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
-            }
             TransItemSourceKind::ClosureAsFnCast => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_stateless_closure_as_fn(id, item_meta, &def)?;
                 self.translated.fun_decls.set_slot(id, fun_decl);
             }
-            &TransItemSourceKind::DropGlueMethod(impl_kind) => {
+            &TransItemSourceKind::VirtualMethod(kind) => {
                 let id = trans_id.expect_item();
-                let fun_decl = bt_ctx.translate_drop_glue_method(id, item_meta, &def, impl_kind)?;
+                let fun_decl = bt_ctx.translate_virtual_method(id, item_meta, &def, kind)?;
                 self.translated.fun_decls.set_slot(id, fun_decl);
             }
             TransItemSourceKind::VTable => {
@@ -920,7 +912,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                     self_ty,
                     Region::Var(DeBruijnVar::new_at_zero(RegionId::ZERO)),
                 );
-                let method_params = Self::drop_glue_params();
+                let method_params = Self::self_borrow_params();
                 Binder::new(
                     BinderKind::TraitMethod(trait_decl_id, method_id),
                     method_params,
@@ -1590,12 +1582,6 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         vimpl: &hax::VirtualTraitImpl<'tcx>,
     ) -> Result<TraitImpl, Error> {
         let span = item_meta.span;
-        let src = match impl_kind {
-            TransImplSource::Callable(kind) => TraitImplSource::Closure { kind },
-            TransImplSource::ImplicitDestruct => TraitImplSource::Destruct,
-            _ => unreachable!("not a virtual impl source: {impl_kind:?}"),
-        };
-
         let implemented_trait = self.translate_trait_predicate(span, &vimpl.trait_pred)?;
         let implied_trait_refs = self.translate_trait_proofs(span, &vimpl.implied_trait_proofs)?;
         let vtable = self.translate_trait_impl_vtable(
@@ -1632,7 +1618,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(TraitImpl {
             def_id,
             item_meta,
-            src,
+            src: TraitImplSource::Builtin,
             impl_trait: implemented_trait,
             is_negative: false,
             is_unsafe: false,
