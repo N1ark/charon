@@ -1373,7 +1373,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             receiver_is_by_value = target_kind == ClosureKind::FnOnce;
             receiver_path = vec![];
             target_item =
-                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(target_kind));
+                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(target_kind), 0);
         } else {
             let hax::FullDefKind::AssocFn(f) = def.kind() else {
                 raise_error!(

@@ -184,9 +184,10 @@ impl<'tcx> TranslateCtx<'tcx> {
                 let fun_decl = bt_ctx.translate_stateless_closure_as_fn(id, item_meta, &def)?;
                 self.translated.fun_decls.set_slot(id, fun_decl);
             }
-            &TransItemSourceKind::VirtualMethod(kind) => {
+            &TransItemSourceKind::VirtualMethod(kind, method_idx) => {
                 let id = trans_id.expect_item();
-                let fun_decl = bt_ctx.translate_virtual_method(id, item_meta, &def, kind)?;
+                let fun_decl =
+                    bt_ctx.translate_virtual_method(id, item_meta, &def, kind, method_idx)?;
                 self.translated.fun_decls.set_slot(id, fun_decl);
             }
             TransItemSourceKind::VTable => {

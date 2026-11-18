@@ -310,7 +310,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let closure_body = self.translate_item(
             span,
             def.this(),
-            TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(kind)),
+            TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(kind), 0),
         )?;
 
         let fn_once_impl = self.translate_closure_bound_impl_ref(span, def, FnOnce)?;
@@ -513,7 +513,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 let fun_id: FunDeclId = self.register_item(
                     span,
                     def.this(),
-                    TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(source_kind)),
+                    TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(source_kind), 0),
                 );
                 let impl_ref = self.translate_callable_impl_ref(span, closure, source_kind)?;
                 // TODO: make a trait call to avoid needing to concatenate things ourselves.
@@ -721,7 +721,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let fun_id: FunDeclId = self.register_item(
                 span,
                 def.this(),
-                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(ClosureKind::FnOnce)),
+                TransItemSourceKind::VirtualMethod(
+                    VirtualImplKind::Callable(ClosureKind::FnOnce),
+                    0,
+                ),
             );
             let impl_ref =
                 self.translate_callable_impl_ref(span, def.this(), ClosureKind::FnOnce)?;

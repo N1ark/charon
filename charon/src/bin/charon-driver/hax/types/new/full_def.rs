@@ -40,18 +40,20 @@ pub struct FullDef<'tcx> {
 pub enum VirtualTrait {
     Destruct,
     Clone,
+    FnPtr,
     FnOnce,
     FnMut,
     Fn,
 }
 
 impl VirtualTrait {
-    const COUNT: usize = 5;
+    const COUNT: usize = 6;
 
     pub fn lang_item(self) -> LangItem {
         match self {
             VirtualTrait::Destruct => LangItem::Destruct,
             VirtualTrait::Clone => LangItem::Clone,
+            VirtualTrait::FnPtr => LangItem::FnPtrTrait,
             VirtualTrait::FnOnce => LangItem::FnOnce,
             VirtualTrait::FnMut => LangItem::FnMut,
             VirtualTrait::Fn => LangItem::Fn,
@@ -1582,6 +1584,8 @@ pub struct VirtualTraitImpl<'tcx> {
 pub struct VirtualTraitMethod<'tcx> {
     pub def_id: DefId,
     pub sig: PolyFnSig<'tcx>,
+    /// Whether the trait provides a default implementation for this method.
+    pub has_default: bool,
 }
 
 impl<'tcx> VirtualTraitImpl<'tcx> {
@@ -1910,6 +1914,7 @@ where
             VirtualTraitMethod {
                 def_id: assoc.def_id.sinto(s),
                 sig: sig.sinto(s),
+                has_default: assoc.defaultness(tcx).has_value(),
             }
         })
         .collect();

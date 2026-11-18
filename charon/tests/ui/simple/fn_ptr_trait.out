@@ -56,6 +56,50 @@ pub trait FnPtr<Self>
 
 struct () {}
 
+// Full name: {impl FnPtr for fn() -> A}::from_ptr
+unsafe fn from_ptr<A>(_1: NonNull<Code>) -> fn() -> A
+where
+    TraitClause0: (A: Sized),
+{
+    let mut _0: fn() -> A; // return
+    let _1: NonNull<Code>; // arg #1
+
+    storage_live(_0)
+    _0 = transmute<fn() -> A>(move _1)
+    storage_dead(_1)
+    return
+}
+
+// Full name: {impl FnPtr for fn() -> A}::as_ptr
+fn as_ptr<A>(_1: fn() -> A) -> NonNull<Code>
+where
+    TraitClause0: (A: Sized),
+{
+    let mut _0: NonNull<Code>; // return
+    let _1: fn() -> A; // arg #1
+    let mut _2: *const (); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = cast<*const ()>(move _1)
+    _0 = transmute<NonNull<Code>>(move _2)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: {impl FnPtr for fn() -> A}
+impl<A> FnPtr for fn() -> A
+where
+    TraitClause0: (A: Sized),
+{
+    proof ImpliedClause0: (fn() -> A: MetaSized) = {built_in impl MetaSized for fn() -> A}
+    proof ImpliedClause1: (fn() -> A: Copy) = {built_in impl Copy for fn() -> A}
+    fn as_ptr = as_ptr<A>[TraitClause0]
+    fn from_ptr = from_ptr<A>[TraitClause0]
+    non-dyn-compatible
+}
+
 // Full name: test_crate::requires_fn_ptr
 fn requires_fn_ptr<F>()
 where
@@ -79,7 +123,7 @@ fn main()
     storage_live(_0)
     _0 = ()
     storage_live(_1)
-    _1 = requires_fn_ptr<fn()>[{built_in impl Sized for fn()}, {built_in impl FnPtr for fn()}]()
+    _1 = requires_fn_ptr<fn()>[{built_in impl Sized for fn()}, {impl FnPtr for fn() -> A}<()>[{built_in impl Sized for ()}]]()
     ↳⚡ unwind_continue
     storage_dead(_1)
     _0 = ()

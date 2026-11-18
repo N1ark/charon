@@ -446,8 +446,21 @@ impl<'tcx> TranslateCtx<'tcx> {
             TransItemSourceKind::TraitImpl(TransImplSource::Marker) => {
                 unreachable!("marker impls are only used as vtable item sources")
             }
-            TransItemSourceKind::VirtualMethod(kind) => {
-                name.name.push(kind.method_path_elem());
+            TransItemSourceKind::VirtualMethod(VirtualImplKind::Destruct, _) => {
+                name.name.push(PathElem::Builtin(
+                    BuiltinPathElem::DropGlue,
+                    Disambiguator::ZERO,
+                ));
+            }
+            &TransItemSourceKind::VirtualMethod(kind, method_idx) => {
+                // Name the method like the trait method it implements.
+                let def = self.hax_def_for_item(&src.item)?;
+                let vimpl = def.virtual_impl(&self.hax_state, kind.virtual_trait());
+                let method = RustcItem::Poly(vimpl.methods[method_idx].def_id.clone());
+                let span = self.def_span(src.def_id());
+                if let Some(path_elem) = self.path_elem_for_def(span, &method)? {
+                    name.name.push(path_elem);
+                }
             }
             TransItemSourceKind::ClosureAsFnCast => {
                 name.name.push(PathElem::Builtin(
@@ -643,11 +656,12 @@ impl<'tcx> TranslateCtx<'tcx> {
         } else {
             let kind = match target_def.kind() {
                 // Point at the method that contains the closure code.
-                hax::FullDefKind::Closure(c) => {
-                    TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(
-                        super::translate_closures::translate_closure_kind(c.kind()),
-                    ))
-                }
+                hax::FullDefKind::Closure(c) => TransItemSourceKind::VirtualMethod(
+                    VirtualImplKind::Callable(super::translate_closures::translate_closure_kind(
+                        c.kind(),
+                    )),
+                    0,
+                ),
                 _ => self
                     .base_kind_for_item(&target_def_id)
                     .ok_or_else(|| format!("`{target_def_id:?}` is not a translatable item"))?,
@@ -971,7 +985,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let (attr_info, lang_item, diagnostic_item) = if !item_src.is_derived_item()
             || matches!(
                 item_src.kind,
-                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(..))
+                TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(..), _)
             ) {
             let attr_info = self.translate_attr_info(def);
             let lang_item = def

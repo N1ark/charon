@@ -1,0 +1,191 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    fn clone<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for usize}::clone
+pub fn impl_Clone_for_usize::clone<'_0>(_1: &'_0 usize) -> usize
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for usize}
+impl "impl_Clone_for_usize" Clone for usize {
+    proof ImpliedClause0: (usize: Sized) = {built_in impl Sized for usize}
+    fn clone<'_0_1> = impl_Clone_for_usize::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Copy
+#[lang_item(Copy)]
+#[diagnostic_item("Copy")]
+pub trait Copy<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Clone)
+    non-dyn-compatible
+}
+
+// Full name: core::marker::{impl Copy for usize}
+impl "impl_Copy_for_usize" Copy for usize {
+    proof ImpliedClause0: (usize: MetaSized) = {built_in impl MetaSized for usize}
+    proof ImpliedClause1: (usize: Clone) = impl_Clone_for_usize
+    non-dyn-compatible
+}
+
+// Full name: core::num::niche_types::NonZeroUsizeInner
+pub opaque type NonZeroUsizeInner
+
+// Full name: core::num::niche_types::{impl Clone for NonZeroUsizeInner}::clone
+pub fn impl_Clone_for_NonZeroUsizeInner::clone<'_0>(_1: &'_0 NonZeroUsizeInner) -> NonZeroUsizeInner
+= <opaque>
+
+// Full name: core::num::niche_types::{impl Clone for NonZeroUsizeInner}
+impl "impl_Clone_for_NonZeroUsizeInner" Clone for NonZeroUsizeInner {
+    proof ImpliedClause0: (NonZeroUsizeInner: Sized) = {built_in impl Sized for NonZeroUsizeInner}
+    fn clone<'_0_1> = impl_Clone_for_NonZeroUsizeInner::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::num::niche_types::{impl Copy for NonZeroUsizeInner}
+impl "impl_Copy_for_NonZeroUsizeInner" Copy for NonZeroUsizeInner {
+    proof ImpliedClause0: (NonZeroUsizeInner: MetaSized) = {built_in impl MetaSized for NonZeroUsizeInner}
+    proof ImpliedClause1: (NonZeroUsizeInner: Clone) = impl_Clone_for_NonZeroUsizeInner
+    non-dyn-compatible
+}
+
+// Full name: core::num::nonzero::ZeroablePrimitive
+pub unsafe trait ZeroablePrimitive<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    proof ImpliedClause1: (Self: Copy)
+    proof ImpliedClause2: (Self::NonZeroInner: Sized)
+    proof ImpliedClause3: (Self::NonZeroInner: Copy)
+    type NonZeroInner
+    non-dyn-compatible
+}
+
+// Full name: core::num::nonzero::{impl ZeroablePrimitive for usize}
+unsafe impl "impl_ZeroablePrimitive_for_usize" ZeroablePrimitive for usize {
+    proof ImpliedClause0: (usize: Sized) = {built_in impl Sized for usize}
+    proof ImpliedClause1: (usize: Copy) = impl_Copy_for_usize
+    proof ImpliedClause2: (NonZeroUsizeInner: Sized) = {built_in impl Sized for NonZeroUsizeInner}
+    proof ImpliedClause3: (NonZeroUsizeInner: Copy) = impl_Copy_for_NonZeroUsizeInner
+    type NonZeroInner = NonZeroUsizeInner
+    non-dyn-compatible
+}
+
+// Full name: core::num::nonzero::NonZero
+#[diagnostic_item("NonZero")]
+pub opaque type NonZero<T>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: ZeroablePrimitive),
+
+pub fn core::num::nonzero::{NonZero<T>[TraitClause0, TraitClause1]}::get<T>(_1: NonZero<T>[TraitClause0, TraitClause1]) -> T
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: ZeroablePrimitive),
+= <opaque>
+
+// Full name: core::ops::function::Code
+#[lang_item(Code)]
+pub extern opaque type Code
+
+// Full name: core::ptr::non_null::NonNull
+#[lang_item(NonNull)]
+pub opaque type NonNull<T>
+
+pub fn core::ptr::non_null::{NonNull<T>}::addr<T>(_1: NonNull<T>) -> NonZero<usize>[{built_in impl Sized for usize}, impl_ZeroablePrimitive_for_usize]
+= <opaque>
+
+struct () {}
+
+// Full name: {impl FnPtr for fn() -> A}::as_ptr
+fn as_ptr<A>(_1: fn() -> A) -> NonNull<Code>
+where
+    TraitClause0: (A: Sized),
+{
+    let mut _0: NonNull<Code>; // return
+    let _1: fn() -> A; // arg #1
+    let mut _2: *const (); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = cast<*const ()>(move _1)
+    _0 = transmute<NonNull<Code>>(move _2)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: {impl FnPtr for fn() -> A}::addr
+pub fn {impl FnPtr for fn() -> A}::addr<A>(self: fn() -> A) -> usize
+where
+    TraitClause0: (A: Sized),
+{
+    let mut _0: usize; // return
+    let self: fn() -> A; // arg #1
+    let mut _2: NonZero<usize>[{built_in impl Sized for usize}, impl_ZeroablePrimitive_for_usize]; // anonymous local
+    let mut _3: NonNull<Code>; // anonymous local
+    let mut _4: fn() -> A; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    storage_live(_4)
+    _4 = copy self
+    _3 = as_ptr<A>[TraitClause0](move _4)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_4)
+    _2 = core::ptr::non_null::{NonNull<T>}::addr<Code>(move _3)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_3)
+    _0 = core::num::nonzero::{NonZero<T>[TraitClause0, TraitClause1]}::get<usize>[{built_in impl Sized for usize}, impl_ZeroablePrimitive_for_usize](move _2)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(self)
+    return
+}
+
+pub fn test_crate::addr(f: fn()) -> usize
+{
+    let mut _0: usize; // return
+    let f: fn(); // arg #1
+    let mut _2: fn(); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = copy f
+    _0 = {impl FnPtr for fn() -> A}::addr<()>[{built_in impl Sized for ()}](move _2)
+    ↳⚡ storage_dead(f)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(f)
+    return
+}
+
+
+

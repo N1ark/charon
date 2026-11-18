@@ -1,0 +1,126 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Copy
+#[lang_item(Copy)]
+#[diagnostic_item("Copy")]
+pub trait Copy<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Clone)
+    non-dyn-compatible
+}
+
+// Full name: core::num::nonzero::NonZero::<usize>
+#[diagnostic_item("NonZero")]
+pub opaque type NonZero::<usize>
+
+// Full name: core::num::nonzero::{NonZero::<usize>}::get::<usize>
+pub fn get::<usize>(_1: NonZero::<usize>) -> usize
+= <opaque>
+
+// Full name: core::ops::function::FnPtr
+#[fundamental]
+#[lang_item(FnPtrTrait)]
+pub trait FnPtr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Copy)
+    non-dyn-compatible
+}
+
+struct () {}
+
+// Full name: core::ptr::non_null::NonNull::<Code>
+#[lang_item(NonNull)]
+pub opaque type NonNull::<Code>
+
+// Full name: {impl FnPtr for fn()}::as_ptr::<()>
+fn as_ptr::<()>(_1: fn()) -> NonNull::<Code>
+{
+    let mut _0: NonNull::<Code>; // return
+    let _1: fn(); // arg #1
+    let mut _2: *const (); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = cast<*const ()>(move _1)
+    _0 = transmute<NonNull::<Code>>(move _2)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+pub fn core::ptr::non_null::{NonNull::<Code>}::addr::<Code>(_1: NonNull::<Code>) -> NonZero::<usize>
+= <opaque>
+
+pub fn core::ops::function::FnPtr::addr::<fn()>(self: fn()) -> usize
+{
+    let mut _0: usize; // return
+    let self: fn(); // arg #1
+    let mut _2: NonZero::<usize>; // anonymous local
+    let mut _3: NonNull::<Code>; // anonymous local
+    let mut _4: fn(); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    storage_live(_4)
+    _4 = copy self
+    _3 = as_ptr::<()>(move _4)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_4)
+    _2 = core::ptr::non_null::{NonNull::<Code>}::addr::<Code>(move _3)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_3)
+    _0 = get::<usize>(move _2)
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(self)
+    return
+}
+
+pub fn test_crate::addr(f: fn()) -> usize
+{
+    let mut _0: usize; // return
+    let f: fn(); // arg #1
+    let mut _2: fn(); // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = copy f
+    _0 = core::ops::function::FnPtr::addr::<fn()>(move _2)
+    ↳⚡ storage_dead(f)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(f)
+    return
+}
+
+
+

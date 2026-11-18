@@ -68,9 +68,11 @@ pub enum TransItemSourceKind {
     Module,
     /// A cast of a stateless closure to a function pointer.
     ClosureAsFnCast,
-    /// The method we generate for a [`TransImplSource::Virtual`] impl, e.g. the `drop_glue`
-    /// method of a `Destruct` impl. The `DefId` is the same as for the impl.
-    VirtualMethod(VirtualImplKind),
+    /// A method we generate for a [`TransImplSource::Virtual`] impl, e.g. the `drop_glue` method
+    /// of a `Destruct` impl. The `DefId` is the same as for the impl. The `usize` is the index of
+    /// the method in `hax::VirtualTraitImpl::methods`; it is 0 for `drop_glue`, which isn't a
+    /// method of the trait.
+    VirtualMethod(VirtualImplKind, usize),
     /// The virtual table struct definition for a trait. The `DefId` is that of the trait.
     VTable,
     /// The static vtable value for a specific impl.
@@ -112,6 +114,9 @@ pub enum VirtualImplKind {
     /// The `Clone` impl that rustc provides for closures and tuples. For tuples, the `DefId` is
     /// that of the synthetic `TupleClone(n)` impl, which has the `Ti: Clone` clauses.
     Clone,
+    /// The `FnPtr` impl that rustc provides for function pointers. The `DefId` is that of the
+    /// synthetic `FnPtr` item.
+    FnPtr,
 }
 
 impl<'tcx> TransItemSource<'tcx> {
@@ -180,7 +185,7 @@ impl<'tcx> TransItemSource<'tcx> {
             TransItemSourceKind::VTableMethod(impl_kind @ TransImplSource::Virtual(..)) => {
                 TransItemSourceKind::TraitImpl(impl_kind)
             }
-            TransItemSourceKind::VirtualMethod(kind) => {
+            TransItemSourceKind::VirtualMethod(kind, _) => {
                 TransItemSourceKind::TraitImpl(TransImplSource::Virtual(kind))
             }
             TransItemSourceKind::VTableInstance(TransImplSource::Marker)
@@ -228,7 +233,7 @@ impl TransItemSourceKind {
     /// Whether the item takes an extra lifetime parameter for the borrow of `self`.
     pub fn has_self_borrow_region(&self) -> bool {
         match self {
-            Self::VirtualMethod(kind) | Self::VTableMethod(TransImplSource::Virtual(kind)) => {
+            Self::VirtualMethod(kind, _) | Self::VTableMethod(TransImplSource::Virtual(kind)) => {
                 kind.has_self_borrow()
             }
             Self::VTableDropShim(..) => true,
@@ -244,7 +249,7 @@ impl TransItemSourceKind {
             Self::TraitImpl(TransImplSource::Virtual(VirtualImplKind::Callable(..)))
                 | Self::VTableInstance(TransImplSource::Virtual(VirtualImplKind::Callable(..)))
                 | Self::VTableDropShim(TransImplSource::Virtual(VirtualImplKind::Callable(..)))
-                | Self::VirtualMethod(VirtualImplKind::Callable(..))
+                | Self::VirtualMethod(VirtualImplKind::Callable(..), _)
                 | Self::VTableMethod(TransImplSource::Virtual(VirtualImplKind::Callable(..)))
                 | Self::ClosureAsFnCast
         )
@@ -1096,14 +1101,18 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         if self.monomorphize()
             && let Some(in_trait) = &item.in_trait
             && let Some((impl_item, impl_kind)) = self.recognize_generated_impl_proof(in_trait)
-            && let Some(method_kind) = match impl_kind {
-                TransImplSource::Virtual(kind) => Some(TransItemSourceKind::VirtualMethod(kind)),
-                _ => None,
-            }
+            && let TransImplSource::Virtual(kind) = impl_kind
             && let def = self.hax_def(item)?
             && let hax::FullDefKind::AssocFn(f) = def.kind()
             && !f.associated_item().has_value
+            && let impl_def = self.hax_def(&impl_item)?
+            && let Some(method_idx) = impl_def
+                .virtual_impl(self.hax_state(), kind.virtual_trait())
+                .methods
+                .iter()
+                .position(|method| method.def_id == item.def_id)
         {
+            let method_kind = TransItemSourceKind::VirtualMethod(kind, method_idx);
             let fn_ref: FunDeclRef = self.translate_item(span, &impl_item, method_kind)?;
             self.translate_region_binder(span, &f.param_env().late_bound, |ctx, _| {
                 let mut generics = fn_ref.generics.move_under_binder();

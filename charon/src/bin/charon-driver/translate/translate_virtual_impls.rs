@@ -1,7 +1,8 @@
 //! Virtual impls are trait impls that rustc provides without source code, e.g. `impl Destruct for
-//! T` for every type. We generate a trait impl with a single method of our own, whose body we
-//! get from rustc; the other methods of the trait use their default. The per-kind specifics are in
-//! the `match`es on [`VirtualImplKind`] below.
+//! T` for every type. We generate a trait impl whose required methods are methods of our own, with
+//! bodies we get from rustc; the other methods of the trait use their default. For `Destruct` we
+//! instead generate a single `drop_glue` method. The per-kind specifics are in the `match`es on
+//! [`VirtualImplKind`] below.
 use super::translate_ctx::*;
 use crate::hax;
 use crate::translate::translate_crate::{TransItemSourceKind, VirtualImplKind};
@@ -15,26 +16,18 @@ impl VirtualImplKind {
             VirtualImplKind::Callable(ClosureKind::FnMut) => hax::VirtualTrait::FnMut,
             VirtualImplKind::Callable(ClosureKind::Fn) => hax::VirtualTrait::Fn,
             VirtualImplKind::Clone => hax::VirtualTrait::Clone,
+            VirtualImplKind::FnPtr => hax::VirtualTrait::FnPtr,
         }
     }
 
-    /// Whether the method we generate takes `self` by reference. If so, it takes an extra lifetime
-    /// parameter for that borrow.
+    /// Whether the methods we generate take `self` by reference. If so, they take an extra
+    /// lifetime parameter for that borrow. This must hold of all the methods we generate for this
+    /// kind of impl.
     pub fn has_self_borrow(self) -> bool {
-        !matches!(self, VirtualImplKind::Callable(ClosureKind::FnOnce))
-    }
-
-    /// The name of the method we generate.
-    pub fn method_path_elem(self) -> PathElem {
-        match self {
-            VirtualImplKind::Destruct => {
-                PathElem::Builtin(BuiltinPathElem::DropGlue, Disambiguator::ZERO)
-            }
-            VirtualImplKind::Callable(kind) => {
-                PathElem::Ident(kind.method_name().to_string(), Disambiguator::ZERO)
-            }
-            VirtualImplKind::Clone => PathElem::Ident("clone".to_string(), Disambiguator::ZERO),
-        }
+        !matches!(
+            self,
+            VirtualImplKind::Callable(ClosureKind::FnOnce) | VirtualImplKind::FnPtr
+        )
     }
 }
 
@@ -45,14 +38,14 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         kind: VirtualImplKind,
         vimpl: &hax::VirtualTraitImpl<'tcx>,
         trait_id: TraitDeclId,
+        method_idx: usize,
     ) -> Result<TraitMethodId, Error> {
         match kind {
             VirtualImplKind::Destruct => {
                 self.translate_drop_glue_method_id(&vimpl.trait_pred.trait_ref.def_id, trait_id)
             }
-            // For `Clone`, `methods` are in definition order and `clone` comes first.
-            VirtualImplKind::Callable(_) | VirtualImplKind::Clone => {
-                self.translate_trait_method_id(trait_id, &vimpl.methods[0].def_id)
+            VirtualImplKind::Callable(_) | VirtualImplKind::Clone | VirtualImplKind::FnPtr => {
+                self.translate_trait_method_id(trait_id, &vimpl.methods[method_idx].def_id)
             }
         }
     }
@@ -62,6 +55,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         kind: VirtualImplKind,
         span: Span,
         vimpl: &hax::VirtualTraitImpl<'tcx>,
+        method_idx: usize,
         self_ty: Ty,
     ) -> Result<FunSig, Error> {
         let self_borrow_region = self
@@ -72,8 +66,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             VirtualImplKind::Destruct => {
                 self.drop_glue_method_sig(self_ty, self_borrow_region.unwrap())
             }
-            VirtualImplKind::Callable(_) | VirtualImplKind::Clone => self
-                .translate_poly_fun_sig(span, &vimpl.methods[0].sig)?
+            VirtualImplKind::Callable(_) | VirtualImplKind::Clone | VirtualImplKind::FnPtr => self
+                .translate_poly_fun_sig(span, &vimpl.methods[method_idx].sig)?
                 .apply(self_borrow_region.into_iter().collect()),
         })
     }
@@ -84,6 +78,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         span: Span,
         def: &hax::FullDef<'tcx>,
         vimpl: &hax::VirtualTraitImpl<'tcx>,
+        method_idx: usize,
         signature: &FunSig,
     ) -> Result<Body, Error> {
         match kind {
@@ -91,10 +86,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             VirtualImplKind::Callable(target_kind) => {
                 self.translate_callable_method_body(span, def, target_kind, signature)
             }
-            VirtualImplKind::Clone => {
+            VirtualImplKind::Clone | VirtualImplKind::FnPtr => {
                 let body = vimpl
-                    .method_shim(self.hax_state(), &vimpl.methods[0].def_id)
-                    .expect("built-in `Clone` impls are implemented by a shim");
+                    .method_shim(self.hax_state(), &vimpl.methods[method_idx].def_id)
+                    .expect("required methods of built-in impls are implemented by a shim");
                 Ok(self.translate_body(span, body, &def.source_text))
             }
         }
@@ -125,13 +120,23 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             return Ok(timpl);
         }
 
-        // Add the method we generate. It takes the impl generics, plus a lifetime for the borrow
-        // of `self` if it takes `self` by reference.
+        // Add the methods we generate: `drop_glue` for `Destruct`, the required methods of the
+        // trait otherwise. They take the impl generics, plus a lifetime for the borrow of `self` if
+        // they take `self` by reference.
         let trait_id = timpl.impl_trait.id;
-        let method_id = self.virtual_method_id(kind, vimpl, trait_id)?;
-        let method_binder = {
-            let fun_id =
-                self.register_item(span, def.this(), TransItemSourceKind::VirtualMethod(kind));
+        let generated_methods: Vec<usize> = match kind {
+            VirtualImplKind::Destruct => vec![0],
+            _ => (0..vimpl.methods.len())
+                .filter(|&i| !vimpl.methods[i].has_default)
+                .collect(),
+        };
+        for method_idx in generated_methods {
+            let method_id = self.virtual_method_id(kind, vimpl, trait_id, method_idx)?;
+            let fun_id = self.register_item(
+                span,
+                def.this(),
+                TransItemSourceKind::VirtualMethod(kind, method_idx),
+            );
             let method_params = if kind.has_self_borrow() {
                 Self::self_borrow_params()
             } else {
@@ -142,16 +147,16 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 .params
                 .identity_args_at_depth(DeBruijnId::one())
                 .concat(&method_params.identity_args());
-            Binder::new(
+            let method_binder = Binder::new(
                 BinderKind::TraitMethod(trait_id, method_id),
                 method_params,
                 FunDeclRef {
                     id: fun_id,
                     generics: Box::new(generics),
                 },
-            )
-        };
-        timpl.methods.set_slot_extend(method_id, method_binder);
+            );
+            timpl.methods.set_slot_extend(method_id, method_binder);
+        }
 
         // The other methods reuse the default method from the trait declaration, like in
         // `translate_trait_impl`.
@@ -166,7 +171,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let default_methods = tdecl
                 .methods
                 .iter_indexed()
-                .filter(|(id, _)| *id != method_id)
+                .filter(|(id, _)| timpl.methods.get(*id).is_none())
                 .map(|(id, bound_method)| {
                     let bound_fn_ref = bound_method
                         .clone()
@@ -184,7 +189,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(timpl)
     }
 
-    /// Translate the method we generate for a virtual impl.
+    /// Translate a method we generate for a virtual impl.
     #[tracing::instrument(skip(self, item_meta, def))]
     pub fn translate_virtual_method(
         mut self,
@@ -192,17 +197,18 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         item_meta: ItemMeta,
         def: &hax::FullDef<'tcx>,
         kind: VirtualImplKind,
+        method_idx: usize,
     ) -> Result<FunDecl, Error> {
         let span = item_meta.span;
         let vimpl = def.virtual_impl(self.hax_state(), kind.virtual_trait());
         let trait_pred = &vimpl.trait_pred;
         let implemented_trait = self.translate_trait_predicate(span, trait_pred)?;
-        let item_id = self.virtual_method_id(kind, vimpl, implemented_trait.id)?;
+        let item_id = self.virtual_method_id(kind, vimpl, implemented_trait.id, method_idx)?;
         let self_ty = implemented_trait
             .self_ty(&self.t_ctx.translated)
             .unwrap()
             .clone();
-        let signature = self.virtual_method_sig(kind, span, vimpl, self_ty)?;
+        let signature = self.virtual_method_sig(kind, span, vimpl, method_idx, self_ty)?;
 
         let src = {
             let mut impl_generics = self.the_only_binder().params.identity_args();
@@ -228,7 +234,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let body = if item_meta.opacity.with_private_contents().is_opaque() {
             Body::Opaque
         } else {
-            self.virtual_method_body(kind, span, def, vimpl, &signature)?
+            self.virtual_method_body(kind, span, def, vimpl, method_idx, &signature)?
         };
 
         Ok(FunDecl {

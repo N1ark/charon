@@ -108,6 +108,18 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             };
             return Some((item, TransImplSource::Virtual(VirtualImplKind::Clone)));
         }
+        if let hax::TraitProofKind::Builtin {
+            trait_data: hax::BuiltinTraitData::Other(hax::SolverTraitLangItem::FnPtrTrait),
+            ..
+        } = &trait_proof.kind
+            && let Some(hax::GenericArg::Type(ty)) =
+                trait_proof.pred.hax_skip_binder_ref().generic_args.first()
+            && let hax::TyKind::FnPtr(fn_ptr) = ty.kind()
+        {
+            // We erase regions to avoid bound vars escaping.
+            let item = fn_ptr.item.erase(self.hax_state_with_id());
+            return Some((item, TransImplSource::Virtual(VirtualImplKind::FnPtr)));
+        }
         let (item, kind) = self.recognize_callable_impl_proof(trait_proof)?;
         Some((
             item,
