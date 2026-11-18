@@ -869,9 +869,11 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                     ScalarTy::Float(_) => raise!(span, "float unexpected in a scalar cast"),
                 }))
             }
-            UnOp::Cast(CastKind::Transmute(target_ty) | CastKind::Subtype(target_ty)) => {
-                mini::UnOp::Cast(mini::CastOp::Transmute(self.ty(span, target_ty)?))
-            }
+            UnOp::Cast(
+                CastKind::Transmute(target_ty)
+                | CastKind::BoxDerefTransmute(target_ty)
+                | CastKind::Subtype(target_ty),
+            ) => mini::UnOp::Cast(mini::CastOp::Transmute(self.ty(span, target_ty)?)),
             UnOp::Cast(CastKind::RawPtr(target_ty)) => {
                 let source_ty = operand.ty();
                 if source_ty.kind().is_fn_ptr() || target_ty.kind().is_fn_ptr() {
