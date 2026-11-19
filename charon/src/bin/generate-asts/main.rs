@@ -6,6 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod generate_lean;
 mod generate_ml;
 mod generate_rust;
 
@@ -80,8 +81,9 @@ fn main() -> Result<()> {
     let mut crate_data = translate_charon_itself(&generated_dir, &rustc_datatypes)?;
     use_serialized_span(&mut crate_data)?;
 
-    let ml_output_dir = if std::env::var("IN_CI").as_deref() == Ok("1") {
-        generated_dir
+    let in_ci = std::env::var("IN_CI").as_deref() == Ok("1");
+    let ml_output_dir = if in_ci {
+        generated_dir.clone()
     } else {
         dir.join("../../../../charon-ml/src/generated")
     };
@@ -90,6 +92,12 @@ fn main() -> Result<()> {
         dir.join("generate_ml/templates"),
         ml_output_dir,
     )?;
+    let lean_output_dir = if in_ci {
+        generated_dir.join("lean")
+    } else {
+        dir.join("../../../../charon-lean/Charon/Generated")
+    };
+    generate_lean::generate(&crate_data, &lean_output_dir)?;
     generate_rust::generate(&crate_data, &rustc_datatypes)?;
     Ok(())
 }

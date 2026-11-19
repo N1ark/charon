@@ -1,0 +1,18 @@
+name = "charon"
+version = "0.1.0"
+defaultTargets = ["charon-lean", "TestDriver"]
+testDriver = "TestDriver"
+
+[leanOptions]
+autoImplicit = false
+
+[[lean_lib]]
+name = "Charon"
+
+[[lean_exe]]
+name = "charon-lean"
+root = "Main"
+
+[[lean_exe]]
+name = "TestDriver"
+root = "Test"

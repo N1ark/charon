@@ -51,6 +51,28 @@ jobs:
       - run: nix build -L .#charon-ml
       - run: nix flake check -L
 
+  charon-lean:
+    needs: [select-runner, charon]
+    runs-on: ${{ fromJSON(needs.select-runner.outputs.runs_on) }}
+    steps:
+      - *install_nix
+      - *setup_cachix_push
+      - uses: actions/checkout@v4
+      # Built by the `charon` job; provides the charon binary and the postcard files of the tests.
+      - run: nix build -L .#charon
+      # Installs the toolchain from `lean-toolchain` and builds the package, failing on warnings.
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: charon-lean
+          build-args: --wfail
+          test: false
+      - name: Run the charon-lean tests
+        working-directory: charon-lean
+        env:
+          CHARON_BIN: ${{ github.workspace }}/result/bin/charon
+          CHARON_TESTS_DIR: ${{ github.workspace }}/result/tests-llbc
+        run: lake test
+
   check-version-number:
     needs: [select-runner]
     runs-on: ${{ fromJSON(needs.select-runner.outputs.runs_on) }}

@@ -37,7 +37,8 @@ a `crate_name.llbc` file.
 
 The `charon-lib` crate can read this file and let you manipulate its contents. Parse the file using
 `serde_json::from_reader::<charon_lib::export::CrateData>(file)`. OCaml bindings are also available
-in the `charon-ml` folder.
+in the `charon-ml` folder, and Lean bindings (for files emitted with `--format postcard`) in the
+`charon-lean` folder.
 
 For more detailed usage instructions, see the [manual](https://aeneasverif.github.io/charon/manual/).
 

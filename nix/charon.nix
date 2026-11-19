@@ -67,6 +67,7 @@ craneLib.buildPackage (
       # Export the generated files to later check if they match the committed files.
       mkdir -p $out/generated-asts
       cp src/bin/generate-asts/generated/*.ml $out/generated-asts
+      cp -r src/bin/generate-asts/generated/lean $out/generated-asts/lean
     '';
 
     # Export the llbc files after Crane's post-install hook to avoid it looking

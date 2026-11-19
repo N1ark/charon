@@ -233,10 +233,17 @@
           jailNixLib = jail-nix.lib;
         };
 
-        # Check that the generated ocaml files match what is committed to the repo.
+        # Check that the generated ocaml and lean files match what is committed to the repo.
         check-generated-asts = pkgs.runCommand "check-generated-asts" { } ''
+          if diff -ru ${./charon-lean/Charon/Generated} ${charon}/generated-asts/lean; then
+            echo "Ok: the regenerated lean files are the same as the checked out files"
+          else
+            echo "Error: the regenerated lean files differ from the checked out files"
+            exit 1
+          fi
+
           mkdir generated
-          cp ${charon}/generated-asts/* generated
+          cp ${charon}/generated-asts/*.ml generated
           chmod u+w generated/*
           cp ${./charon-ml/.ocamlformat} .ocamlformat
           ${ocamlformat}/bin/ocamlformat --inplace --enable-outside-detected-project generated/*.ml

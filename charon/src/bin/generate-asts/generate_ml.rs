@@ -21,8 +21,8 @@ mod of_postcard;
 mod to_ocaml_ty;
 mod util;
 
-struct GenerateCtx<'a> {
-    crate_data: &'a TranslatedCrate,
+pub(crate) struct GenerateCtx<'a> {
+    pub(crate) crate_data: &'a TranslatedCrate,
     name_to_type: HashMap<String, &'a TypeDecl>,
     /// For each type, list the types it contains.
     type_tree: HashMap<TypeDeclId, HashSet<TypeDeclId>>,
@@ -36,7 +36,10 @@ struct GenerateCtx<'a> {
 }
 
 impl<'a> GenerateCtx<'a> {
-    fn new(crate_data: &'a TranslatedCrate, ambiguous_types: &[(&str, (&str, &str))]) -> Self {
+    pub(crate) fn new(
+        crate_data: &'a TranslatedCrate,
+        ambiguous_types: &[(&str, (&str, &str))],
+    ) -> Self {
         let mut name_to_type: HashMap<String, &TypeDecl> = Default::default();
         let mut type_tree = HashMap::default();
         for ty in &crate_data.type_decls {
