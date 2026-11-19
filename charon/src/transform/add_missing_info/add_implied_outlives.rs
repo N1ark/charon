@@ -1,6 +1,7 @@
 //! Make explicit the outlives predicates implied by the well-formedness of a type.
 use derive_generic_visitor::*;
 use itertools::Itertools;
+use std::collections::HashMap;
 use std::mem;
 
 use crate::ast::*;
@@ -38,6 +39,10 @@ struct OutlivesGatherer<'a> {
     trait_decls: &'a IndexMap<TraitDeclId, TraitDecl>,
     item_params: &'a mut GenericParams,
     binders: BindingStack<OutlivesAtBinder>,
+    /// When visiting bodies we discard the predicates that reach the outermost level, so the
+    /// effect of visiting a type at that level depends only on the type. We cache the results to
+    /// avoid re-interning every type found in bodies.
+    body_ty_cache: Option<&'a mut HashMap<Ty, Ty>>,
 }
 
 impl<'a> OutlivesGatherer<'a> {
@@ -51,6 +56,7 @@ impl<'a> OutlivesGatherer<'a> {
             trait_decls,
             item_params,
             binders: BindingStack::new(OutlivesAtBinder::default()),
+            body_ty_cache: None,
         }
     }
 
@@ -120,6 +126,22 @@ impl VisitAstMut for OutlivesGatherer<'_> {
     }
 
     fn visit_ty(&mut self, ty: &mut Ty) -> ControlFlow<Self::Break> {
+        // Take the cache out so that the visit of a type we haven't seen yet proceeds as normal.
+        if self.binders.len() == 1
+            && self.binders.innermost().shorter_region.is_none()
+            && let Some(cache) = self.body_ty_cache.take()
+        {
+            *ty = cache
+                .entry(ty.clone())
+                .or_insert_with(|| {
+                    let mut new_ty = ty.clone();
+                    let Continue(()) = self.visit_ty(&mut new_ty);
+                    new_ty
+                })
+                .clone();
+            self.body_ty_cache = Some(cache);
+            return Continue(());
+        }
         if let TyKind::TraitType(proof, type_id, args) = ty.kind()
             && let Some(decl) = self.trait_decls.get(proof.trait_id())
             && let Some(assoc) = decl.types.get(*type_id)
@@ -250,6 +272,7 @@ impl TransformPass for Transform {
         // the implementation much easier than having to deal with all ADTs.
         ClosureOutlivesComputer::new(type_decls, trait_decls).compute_all();
 
+        let mut body_ty_cache = HashMap::new();
         for fun_decl in &mut ctx.translated.fun_decls {
             let mut visitor =
                 OutlivesGatherer::new(&mut fun_decl.generics, type_decls, trait_decls);
@@ -270,8 +293,11 @@ impl TransformPass for Transform {
             // Also add implied bounds to the inner binders inside bodies. Implied bounds involving
             // only body or signature lifetimes must not be kept; they must be checked by
             // borrow-checking.
-            OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
-                .visit(&mut fun_decl.body);
+            OutlivesGatherer {
+                body_ty_cache: Some(&mut body_ty_cache),
+                ..OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
+            }
+            .visit(&mut fun_decl.body);
         }
 
         for timpl in &mut ctx.translated.trait_impls {
