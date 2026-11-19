@@ -158,6 +158,9 @@ pub enum UnOp {
     Neg(OverflowMode),
     /// Casts are rvalues in MIR, but we treat them as unops.
     Cast(CastKind),
+    /// Reads the entry `VTableField` of a VTable, which occurs when calling functions of a trait object.
+    /// This is the only way code is allowed to read VTables, as a plain read in user code is UB.
+    VTableLookup(TypeDeclRef, VTableField),
 }
 
 /// Cast the operand to a new type.
