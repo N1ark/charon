@@ -623,8 +623,9 @@ impl CliOpts {
                     self.desugar_drops = true;
                     self.extract_opaque_bodies = true;
                     self.mir = Some(MirLevel::Elaborated);
-                    self.reconstruct_fallible_operations = true;
-                    self.reconstruct_asserts = true;
+                    self.start_from_global_ctors = true;
+                    self.link_extern_fns = true;
+                    self.raw_consts = true;
                     self.monomorphize = true;
                     self.no_normalize = true;
                     self.no_typecheck = true;
