@@ -27,10 +27,28 @@ def Abi.ofPostcard : M Abi :=
     | 2 => do let x0 ← Postcard.string; return Abi.Other x0
     | n => Postcard.fail s!"unknown variant {n} of `Abi`"
 
-def TypeVarId.ofPostcard : M TypeVarId :=
-  return ⟨← Postcard.nat⟩
+def UnwindTerminateReason.ofPostcard : M UnwindTerminateReason :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return UnwindTerminateReason.Abi
+    | 1 => do return UnwindTerminateReason.InCleanup
+    | n => Postcard.fail s!"unknown variant {n} of `UnwindTerminateReason`"
+
+def AbortKind.ofPostcard : M AbortKind :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return AbortKind.Panic
+    | 1 => do return AbortKind.UndefinedBehavior
+    | 2 => do let x0 ← UnwindTerminateReason.ofPostcard; return AbortKind.UnwindTerminate x0
+    | n => Postcard.fail s!"unknown variant {n} of `AbortKind`"
 
 def VariantId.ofPostcard : M VariantId :=
+  return ⟨← Postcard.nat⟩
+
+def TypeDeclId.ofPostcard : M TypeDeclId :=
+  return ⟨← Postcard.nat⟩
+
+def TypeVarId.ofPostcard : M TypeVarId :=
   return ⟨← Postcard.nat⟩
 
 def TraitImplId.ofPostcard : M TraitImplId :=
@@ -51,9 +69,6 @@ def DeBruijnVar.ofPostcard {Id : Type} (dec_Id : M Id) : M (DeBruijnVar Id) :=
     | 0 => do let x0 ← DeBruijnId.ofPostcard; let x1 ← dec_Id; return DeBruijnVar.Bound x0 x1
     | 1 => do let x0 ← dec_Id; return DeBruijnVar.Free x0
     | n => Postcard.fail s!"unknown variant {n} of `DeBruijnVar`"
-
-def ConstGenericVarId.ofPostcard : M ConstGenericVarId :=
-  return ⟨← Postcard.nat⟩
 
 def GlobalDeclId.ofPostcard : M GlobalDeclId :=
   return ⟨← Postcard.nat⟩
@@ -117,17 +132,6 @@ def RegionParam.ofPostcard : M RegionParam :=
 def FieldId.ofPostcard : M FieldId :=
   return ⟨← Postcard.nat⟩
 
-def TypeDeclId.ofPostcard : M TypeDeclId :=
-  return ⟨← Postcard.nat⟩
-
-def BuiltinAdt.ofPostcard : M BuiltinAdt :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return BuiltinAdt.Tuple
-    | 1 => do return BuiltinAdt.Box
-    | 2 => do return BuiltinAdt.Str
-    | n => Postcard.fail s!"unknown variant {n} of `BuiltinAdt`"
-
 def RefKind.ofPostcard : M RefKind :=
   do
     match ← Postcard.variant with
@@ -181,6 +185,9 @@ def FloatTy.ofPostcard : M FloatTy :=
 
 def FloatValue.ofPostcard : M FloatValue :=
   do let x0 ← Postcard.string; let x1 ← Postcard.u128; let x2 ← FloatTy.ofPostcard; return FloatValue.mk x0 x1 x2
+
+def ConstGenericVarId.ofPostcard : M ConstGenericVarId :=
+  return ⟨← Postcard.nat⟩
 
 def IntegerTy.ofPostcard : M IntegerTy :=
   do
@@ -241,6 +248,14 @@ def BinderKind.ofPostcard : M BinderKind :=
     | 4 => do return BinderKind.Other
     | n => Postcard.fail s!"unknown variant {n} of `BinderKind`"
 
+def BuiltinAdt.ofPostcard : M BuiltinAdt :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return BuiltinAdt.Tuple
+    | 1 => do return BuiltinAdt.Box
+    | 2 => do return BuiltinAdt.Str
+    | n => Postcard.fail s!"unknown variant {n} of `BuiltinAdt`"
+
 def Binder.Gen.ofPostcard {GenericParams T : Type} (dec_GenericParams : M GenericParams) (dec_T : M T) : M (Binder.Gen GenericParams T) :=
   do let x0 ← dec_GenericParams; let x1 ← dec_T; let x2 ← BinderKind.ofPostcard; return Binder.Gen.mk x0 x1 x2
 
@@ -272,7 +287,8 @@ partial def CastKind.ofPostcard : M CastKind :=
     | 6 => do let x0 ← Ty.ofPostcard; return CastKind.Subtype x0
     | 7 => do let x0 ← Ty.ofPostcard; let x1 ← UnsizingMetadata.ofPostcard; let x2 ← Postcard.array FieldId.ofPostcard; return CastKind.Unsize x0 x1 x2
     | 8 => do let x0 ← Ty.ofPostcard; return CastKind.Transmute x0
-    | 9 => do let x0 ← Ty.ofPostcard; let x1 ← Postcard.array FieldId.ofPostcard; return CastKind.Concretize x0 x1
+    | 9 => do let x0 ← Ty.ofPostcard; return CastKind.BoxDerefTransmute x0
+    | 10 => do let x0 ← Ty.ofPostcard; let x1 ← Postcard.array FieldId.ofPostcard; return CastKind.Concretize x0 x1
     | n => Postcard.fail s!"unknown variant {n} of `CastKind`"
 
 partial def ConstGenericParam.ofPostcard : M ConstGenericParam :=
@@ -471,54 +487,6 @@ partial def UnsizingMetadata.ofPostcard : M UnsizingMetadata :=
 
 end
 
-def ImplElem.ofPostcard : M ImplElem :=
-  do
-    match ← Postcard.variant with
-    | 0 => do let x0 ← Binder.ofPostcard Ty.ofPostcard; return ImplElem.Ty x0
-    | 1 => do let x0 ← TraitImplId.ofPostcard; return ImplElem.Trait x0
-    | n => Postcard.fail s!"unknown variant {n} of `ImplElem`"
-
-def Disambiguator.ofPostcard : M Disambiguator :=
-  return ⟨← Postcard.nat⟩
-
-def BuiltinPathElem.ofPostcard : M BuiltinPathElem :=
-  do
-    match ← Postcard.variant with
-    | 0 => do let x0 ← Postcard.nat; return BuiltinPathElem.Tuple x0
-    | 1 => do return BuiltinPathElem.Str
-    | 2 => do return BuiltinPathElem.Closure
-    | 3 => do return BuiltinPathElem.Use
-    | 4 => do return BuiltinPathElem.AnonConst
-    | 5 => do return BuiltinPathElem.PromotedConst
-    | 6 => do return BuiltinPathElem.ClosureAsFn
-    | 7 => do return BuiltinPathElem.DropGlue
-    | 8 => do return BuiltinPathElem.VTable
-    | 9 => do return BuiltinPathElem.VTableMethod
-    | 10 => do return BuiltinPathElem.VTableDropShim
-    | 11 => do return BuiltinPathElem.IntrinsicFallback
-    | n => Postcard.fail s!"unknown variant {n} of `BuiltinPathElem`"
-
-def PathElem.ofPostcard : M PathElem :=
-  do
-    match ← Postcard.variant with
-    | 0 => do let x0 ← Postcard.string; let x1 ← Disambiguator.ofPostcard; return PathElem.Ident x0 x1
-    | 1 => do let x0 ← ImplElem.ofPostcard; return PathElem.Impl x0
-    | 2 => do let x0 ← Binder.ofPostcard GenericArgs.ofPostcard; return PathElem.Instantiated x0
-    | 3 => do let x0 ← Postcard.string; return PathElem.Target x0
-    | 4 => do let x0 ← BuiltinPathElem.ofPostcard; let x1 ← Disambiguator.ofPostcard; return PathElem.Builtin x0 x1
-    | n => Postcard.fail s!"unknown variant {n} of `PathElem`"
-
-def Name.ofPostcard : M Name :=
-  Postcard.array PathElem.ofPostcard
-
-def AbortKind.ofPostcard : M AbortKind :=
-  do
-    match ← Postcard.variant with
-    | 0 => do let x0 ← Postcard.option Name.ofPostcard; return AbortKind.Panic x0
-    | 1 => do return AbortKind.UndefinedBehavior
-    | 2 => do return AbortKind.UnwindTerminate
-    | n => Postcard.fail s!"unknown variant {n} of `AbortKind`"
-
 def AggregateKind.ofPostcard : M AggregateKind :=
   do
     match ← Postcard.variant with
@@ -650,6 +618,24 @@ def AsmTemplatePiece.ofPostcard : M AsmTemplatePiece :=
     | 1 => do let x0 ← AsmOperandId.ofPostcard; let x1 ← Postcard.option Postcard.char; let x2 ← Span.ofPostcard; return AsmTemplatePiece.Placeholder x0 x1 x2
     | n => Postcard.fail s!"unknown variant {n} of `AsmTemplatePiece`"
 
+def FnOperand.ofPostcard : M FnOperand :=
+  do
+    match ← Postcard.variant with
+    | 0 => do let x0 ← FnPtr.ofPostcard; return FnOperand.Regular x0
+    | 1 => do let x0 ← Operand.ofPostcard; let x1 ← RegionArgs.ofPostcard; return FnOperand.Dynamic x0 x1
+    | n => Postcard.fail s!"unknown variant {n} of `FnOperand`"
+
+def CallSafety.ofPostcard : M CallSafety :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return CallSafety.Inherit
+    | 1 => do return CallSafety.Safe
+    | 2 => do return CallSafety.Unsafe
+    | n => Postcard.fail s!"unknown variant {n} of `CallSafety`"
+
+def Call.ofPostcard : M Call :=
+  do let x0 ← FnOperand.ofPostcard; let x1 ← Postcard.array Operand.ofPostcard; let x2 ← CallSafety.ofPostcard; return Call.mk x0 x1 x2
+
 def OverflowMode.ofPostcard : M OverflowMode :=
   do
     match ← Postcard.variant with
@@ -698,7 +684,7 @@ def BuiltinAssertKind.ofPostcard : M BuiltinAssertKind :=
     | n => Postcard.fail s!"unknown variant {n} of `BuiltinAssertKind`"
 
 def Assert.ofPostcard : M Assert :=
-  do let x0 ← Operand.ofPostcard; let x1 ← Postcard.bool; let x2 ← Postcard.option BuiltinAssertKind.ofPostcard; return Assert.mk x0 x1 x2
+  do let x0 ← Operand.ofPostcard; let x1 ← Postcard.bool; let x2 ← Postcard.option BuiltinAssertKind.ofPostcard; let x3 ← Call.ofPostcard; return Assert.mk x0 x1 x2 x3
 
 def AssocItemId.ofPostcard : M AssocItemId :=
   do
@@ -813,10 +799,16 @@ def AttributeKind.ofPostcard : M AttributeKind :=
     | 13 => do let x0 ← Span.ofPostcard; return AttributeKind.NonExhaustive x0
     | 14 => do let x0 ← OptimizeAttr.ofPostcard; let x1 ← Span.ofPostcard; return AttributeKind.Optimize x0 x1
     | 15 => do let x0 ← Postcard.u64; let x1 ← Span.ofPostcard; return AttributeKind.RustcAlign x0 x1
-    | 16 => do return AttributeKind.RustcIntrinsic
-    | 17 => do let x0 ← Postcard.option Postcard.string; return AttributeKind.ShouldPanic x0
-    | 18 => do let x0 ← Postcard.array (Postcard.pair Postcard.string Span.ofPostcard); let x1 ← Span.ofPostcard; let x2 ← Postcard.bool; return AttributeKind.TargetFeature x0 x1 x2
-    | 19 => do let x0 ← Span.ofPostcard; return AttributeKind.TrackCaller x0
+    | 16 => do return AttributeKind.RustcAllocator
+    | 17 => do return AttributeKind.RustcAllocatorZeroed
+    | 18 => do let x0 ← Postcard.string; return AttributeKind.RustcAllocatorZeroedVariant x0
+    | 19 => do return AttributeKind.RustcDeallocator
+    | 20 => do return AttributeKind.RustcIntrinsic
+    | 21 => do return AttributeKind.RustcNoWritable
+    | 22 => do return AttributeKind.RustcReallocator
+    | 23 => do let x0 ← Postcard.option Postcard.string; return AttributeKind.ShouldPanic x0
+    | 24 => do let x0 ← Postcard.array (Postcard.pair Postcard.string Span.ofPostcard); let x1 ← Span.ofPostcard; let x2 ← Postcard.bool; return AttributeKind.TargetFeature x0 x1 x2
+    | 25 => do let x0 ← Span.ofPostcard; return AttributeKind.TrackCaller x0
     | n => Postcard.fail s!"unknown variant {n} of `AttributeKind`"
 
 def Attribute.ofPostcard : M Attribute :=
@@ -866,12 +858,23 @@ def WithRetag.ofPostcard : M WithRetag :=
     | 1 => do return WithRetag.Yes
     | n => Postcard.fail s!"unknown variant {n} of `WithRetag`"
 
+def VTableField.ofPostcard : M VTableField :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return VTableField.Size
+    | 1 => do return VTableField.Align
+    | 2 => do return VTableField.Drop
+    | 3 => do let x0 ← TraitMethodId.ofPostcard; let x1 ← Postcard.array FieldId.ofPostcard; return VTableField.Method x0 x1
+    | 4 => do let x0 ← TraitClauseId.ofPostcard; return VTableField.SuperTrait x0
+    | n => Postcard.fail s!"unknown variant {n} of `VTableField`"
+
 def UnOp.ofPostcard : M UnOp :=
   do
     match ← Postcard.variant with
     | 0 => do return UnOp.Not
     | 1 => do let x0 ← OverflowMode.ofPostcard; return UnOp.Neg x0
     | 2 => do let x0 ← CastKind.ofPostcard; return UnOp.Cast x0
+    | 3 => do let x0 ← TypeDeclRef.ofPostcard; let x1 ← VTableField.ofPostcard; return UnOp.VTableLookup x0 x1
     | n => Postcard.fail s!"unknown variant {n} of `UnOp`"
 
 def NullOp.ofPostcard : M NullOp :=
@@ -906,13 +909,15 @@ def Rvalue.ofPostcard : M Rvalue :=
     | 8 => do let x0 ← Operand.ofPostcard; let x1 ← ConstantExpr.ofPostcard; let x2 ← TraitRef.ofPostcard; let x3 ← Postcard.option TraitRef.ofPostcard; return Rvalue.Repeat x0 x1 x2 x3
     | n => Postcard.fail s!"unknown variant {n} of `Rvalue`"
 
+def PlaceTypeConstraint.ofPostcard : M PlaceTypeConstraint :=
+  do let x0 ← Place.ofPostcard; let x1 ← Ty.ofPostcard; let x2 ← Variance.ofPostcard; return PlaceTypeConstraint.mk x0 x1 x2
+
 def BorrowckStatement.ofPostcard : M BorrowckStatement :=
   do
     match ← Postcard.variant with
     | 0 => do let x0 ← Place.ofPostcard; return BorrowckStatement.FakeRead x0
-    | 1 => do let x0 ← Place.ofPostcard; let x1 ← Ty.ofPostcard; let x2 ← Variance.ofPostcard; return BorrowckStatement.SetType x0 x1 x2
-    | 2 => do let x0 ← Ty.ofPostcard; let x1 ← Region.ofPostcard; return BorrowckStatement.SetOutlives x0 x1
-    | 3 => do let x0 ← PolyTraitRef.ofPostcard; return BorrowckStatement.PredicateHolds x0
+    | 1 => do let x0 ← PlaceTypeConstraint.ofPostcard; return BorrowckStatement.SetType x0
+    | 2 => do let x0 ← OutlivesPred.ofPostcard; return BorrowckStatement.SetOutlives x0
     | n => Postcard.fail s!"unknown variant {n} of `BorrowckStatement`"
 
 def Ullbc.StatementKind.ofPostcard : M Ullbc.StatementKind :=
@@ -944,30 +949,15 @@ def SwitchData.ofPostcard : M SwitchData :=
 def InlineAsm.ofPostcard : M InlineAsm :=
   do let x0 ← AsmKind.ofPostcard; let x1 ← Postcard.array AsmTemplatePiece.ofPostcard; let x2 ← Postcard.indexVec AsmOperand.ofPostcard; let x3 ← AsmOptions.ofPostcard; return InlineAsm.mk x0 x1 x2 x3
 
+def FunDeclRef.ofPostcard : M FunDeclRef :=
+  do let x0 ← FunDeclId.ofPostcard; let x1 ← GenericArgs.ofPostcard; return FunDeclRef.mk x0 x1
+
 def DropKind.ofPostcard : M DropKind :=
   do
     match ← Postcard.variant with
     | 0 => do return DropKind.Precise
     | 1 => do return DropKind.Conditional
     | n => Postcard.fail s!"unknown variant {n} of `DropKind`"
-
-def FnOperand.ofPostcard : M FnOperand :=
-  do
-    match ← Postcard.variant with
-    | 0 => do let x0 ← FnPtr.ofPostcard; return FnOperand.Regular x0
-    | 1 => do let x0 ← Operand.ofPostcard; let x1 ← RegionArgs.ofPostcard; return FnOperand.Dynamic x0 x1
-    | n => Postcard.fail s!"unknown variant {n} of `FnOperand`"
-
-def CallSafety.ofPostcard : M CallSafety :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return CallSafety.Inherit
-    | 1 => do return CallSafety.Safe
-    | 2 => do return CallSafety.Unsafe
-    | n => Postcard.fail s!"unknown variant {n} of `CallSafety`"
-
-def Call.ofPostcard : M Call :=
-  do let x0 ← FnOperand.ofPostcard; let x1 ← Postcard.array Operand.ofPostcard; let x2 ← CallSafety.ofPostcard; return Call.mk x0 x1 x2
 
 def TerminatorKind.ofPostcard : M TerminatorKind :=
   do
@@ -979,8 +969,8 @@ def TerminatorKind.ofPostcard : M TerminatorKind :=
     | 4 => do let x0 ← Place.ofPostcard; let x1 ← Ullbc.BlockId.ofPostcard; let x2 ← Ullbc.BlockId.ofPostcard; return TerminatorKind.DropEmptyBox x0 x1 x2
     | 5 => do let x0 ← InlineAsm.ofPostcard; let x1 ← Postcard.option Ullbc.BlockId.ofPostcard; let x2 ← Postcard.indexVec Ullbc.BlockId.ofPostcard; let x3 ← Ullbc.BlockId.ofPostcard; return TerminatorKind.InlineAsm x0 x1 x2 x3
     | 6 => do let x0 ← Assert.ofPostcard; let x1 ← Ullbc.BlockId.ofPostcard; let x2 ← Ullbc.BlockId.ofPostcard; return TerminatorKind.Assert x0 x1 x2
-    | 7 => do let x0 ← Name.ofPostcard; let x1 ← Ullbc.BlockId.ofPostcard; return TerminatorKind.Panic x0 x1
-    | 8 => do return TerminatorKind.UnwindTerminate
+    | 7 => do let x0 ← Call.ofPostcard; let x1 ← Ullbc.BlockId.ofPostcard; return TerminatorKind.Panic x0 x1
+    | 8 => do let x0 ← UnwindTerminateReason.ofPostcard; let x1 ← FunDeclRef.ofPostcard; return TerminatorKind.UnwindTerminate x0 x1
     | 9 => do return TerminatorKind.UnwindResume
     | 10 => do return TerminatorKind.Return
     | 11 => do return TerminatorKind.UndefinedBehavior
@@ -1024,8 +1014,8 @@ partial def Llbc.StatementKind.ofPostcard : M Llbc.StatementKind :=
     | 12 => do let x0 ← Llbc.Block.ofPostcard; return Llbc.StatementKind.Loop x0
     | 13 => do let x0 ← Postcard.nat; return Llbc.StatementKind.Break x0
     | 14 => do let x0 ← Postcard.nat; return Llbc.StatementKind.Continue x0
-    | 15 => do let x0 ← Name.ofPostcard; let x1 ← Llbc.Block.ofPostcard; return Llbc.StatementKind.Panic x0 x1
-    | 16 => do return Llbc.StatementKind.UnwindTerminate
+    | 15 => do let x0 ← Call.ofPostcard; let x1 ← Llbc.Block.ofPostcard; return Llbc.StatementKind.Panic x0 x1
+    | 16 => do let x0 ← UnwindTerminateReason.ofPostcard; let x1 ← FunDeclRef.ofPostcard; return Llbc.StatementKind.UnwindTerminate x0 x1
     | 17 => do return Llbc.StatementKind.UnwindResume
     | 18 => do return Llbc.StatementKind.Return
     | 19 => do return Llbc.StatementKind.UndefinedBehavior
@@ -1034,17 +1024,23 @@ partial def Llbc.StatementKind.ofPostcard : M Llbc.StatementKind :=
 
 end
 
+def LinkedExtern.ofPostcard : M LinkedExtern :=
+  do
+    match ← Postcard.variant with
+    | 0 => do let x0 ← FunDeclRef.ofPostcard; return LinkedExtern.StronglyLinked x0
+    | 1 => do let x0 ← Postcard.array FunDeclRef.ofPostcard; return LinkedExtern.WeaklyLinked x0
+    | 2 => do let x0 ← FunDeclRef.ofPostcard; return LinkedExtern.AllocatorShim x0
+    | 3 => do return LinkedExtern.Unlinked
+    | n => Postcard.fail s!"unknown variant {n} of `LinkedExtern`"
+
 def Local.ofPostcard : M Local :=
-  do let x0 ← LocalId.ofPostcard; let x1 ← Postcard.option Postcard.string; let x2 ← Span.ofPostcard; let x3 ← Ty.ofPostcard; let x4 ← Postcard.bool; let x5 ← Postcard.option Place.ofPostcard; return Local.mk x0 x1 x2 x3 x4 x5
+  do let x0 ← LocalId.ofPostcard; let x1 ← Postcard.option Postcard.string; let x2 ← Span.ofPostcard; let x3 ← Ty.ofPostcard; let x4 ← Postcard.bool; let x5 ← Postcard.array PlaceTypeConstraint.ofPostcard; let x6 ← Postcard.option Place.ofPostcard; return Local.mk x0 x1 x2 x3 x4 x5 x6
 
 def Locals.ofPostcard : M Locals :=
   do let x0 ← Postcard.nat; let x1 ← Postcard.indexVec Local.ofPostcard; return Locals.mk x0 x1
 
 def GExprBody.ofPostcard {T : Type} (dec_T : M T) : M (GExprBody T) :=
   do let x0 ← Span.ofPostcard; let x1 ← Postcard.nat; let x2 ← Locals.ofPostcard; let x3 ← dec_T; let x4 ← Postcard.array (Postcard.pair Postcard.u32 (Postcard.array Postcard.string)); return GExprBody.mk x0 x1 x2 x3 x4
-
-def FunDeclRef.ofPostcard : M FunDeclRef :=
-  do let x0 ← FunDeclId.ofPostcard; let x1 ← GenericArgs.ofPostcard; return FunDeclRef.mk x0 x1
 
 def Error.ofPostcard : M Error :=
   do let x0 ← Span.ofPostcard; let x1 ← Postcard.string; return Error.mk x0 x1
@@ -1055,12 +1051,29 @@ def Body.ofPostcard : M Body :=
     | 0 => do let x0 ← GExprBody.ofPostcard (Postcard.indexVec Ullbc.BlockData.ofPostcard); return Body.Unstructured x0
     | 1 => do let x0 ← GExprBody.ofPostcard Llbc.Block.ofPostcard; return Body.Structured x0
     | 2 => do let x0 ← Postcard.array (Postcard.pair Postcard.string FunDeclRef.ofPostcard); return Body.TargetDispatch x0
-    | 3 => do let x0 ← Postcard.string; return Body.Extern x0
+    | 3 => do let x0 ← Postcard.string; let x1 ← LinkedExtern.ofPostcard; return Body.Extern x0 x1
     | 4 => do let x0 ← Postcard.string; let x1 ← Postcard.array (Postcard.option Postcard.string); let x2 ← Postcard.option FunDeclRef.ofPostcard; let x3 ← Postcard.bool; return Body.Intrinsic x0 x1 x2 x3
     | 5 => do return Body.Opaque
     | 6 => do return Body.Missing
     | 7 => do let x0 ← Error.ofPostcard; return Body.Error x0
     | n => Postcard.fail s!"unknown variant {n} of `Body`"
+
+def BuiltinPathElem.ofPostcard : M BuiltinPathElem :=
+  do
+    match ← Postcard.variant with
+    | 0 => do let x0 ← Postcard.nat; return BuiltinPathElem.Tuple x0
+    | 1 => do return BuiltinPathElem.Str
+    | 2 => do return BuiltinPathElem.Closure
+    | 3 => do return BuiltinPathElem.Use
+    | 4 => do return BuiltinPathElem.AnonConst
+    | 5 => do return BuiltinPathElem.PromotedConst
+    | 6 => do return BuiltinPathElem.ClosureAsFn
+    | 7 => do return BuiltinPathElem.DropGlue
+    | 8 => do return BuiltinPathElem.VTable
+    | 9 => do return BuiltinPathElem.VTableMethod
+    | 10 => do return BuiltinPathElem.VTableDropShim
+    | 11 => do return BuiltinPathElem.IntrinsicFallback
+    | n => Postcard.fail s!"unknown variant {n} of `BuiltinPathElem`"
 
 def CfgAbi.ofPostcard : M CfgAbi :=
   do
@@ -1090,54 +1103,6 @@ def CfgAbi.ofPostcard : M CfgAbi :=
     | 22 => do let x0 ← Postcard.string; return CfgAbi.Other x0
     | n => Postcard.fail s!"unknown variant {n} of `CfgAbi`"
 
-def SerializationFormatArg.ofPostcard : M SerializationFormatArg :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return SerializationFormatArg.Json
-    | 1 => do return SerializationFormatArg.Postcard
-    | 2 => do return SerializationFormatArg.MiniRust
-    | 3 => do return SerializationFormatArg.All
-    | n => Postcard.fail s!"unknown variant {n} of `SerializationFormatArg`"
-
-def Preset.ofPostcard : M Preset :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return Preset.OldDefaults
-    | 1 => do return Preset.RawMir
-    | 2 => do return Preset.Fast
-    | 3 => do return Preset.Aeneas
-    | 4 => do return Preset.Eurydice
-    | 5 => do return Preset.Soteria
-    | 6 => do return Preset.Tests
-    | n => Postcard.fail s!"unknown variant {n} of `Preset`"
-
-def MonomorphizeMut.ofPostcard : M MonomorphizeMut :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return MonomorphizeMut.All
-    | 1 => do return MonomorphizeMut.ExceptTypes
-    | n => Postcard.fail s!"unknown variant {n} of `MonomorphizeMut`"
-
-def MirLevel.ofPostcard : M MirLevel :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return MirLevel.Built
-    | 1 => do return MirLevel.Promoted
-    | 2 => do return MirLevel.Elaborated
-    | 3 => do return MirLevel.Optimized
-    | n => Postcard.fail s!"unknown variant {n} of `MirLevel`"
-
-def ConstHandling.ofPostcard : M ConstHandling :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return ConstHandling.Initializers
-    | 1 => do return ConstHandling.Values
-    | 2 => do return ConstHandling.Bytes
-    | n => Postcard.fail s!"unknown variant {n} of `ConstHandling`"
-
-def CliOpts.ofPostcard : M CliOpts :=
-  do let x0 ← Postcard.bool; let x1 ← Postcard.bool; let x2 ← Postcard.bool; let x3 ← Postcard.option MirLevel.ofPostcard; let x4 ← Postcard.array Postcard.string; let x5 ← Postcard.array Postcard.string; let x6 ← Postcard.option Postcard.string; let x7 ← Postcard.bool; let x8 ← Postcard.option MonomorphizeMut.ofPostcard; let x9 ← Postcard.array Postcard.string; let x10 ← Postcard.array Postcard.string; let x11 ← Postcard.array Postcard.string; let x12 ← Postcard.bool; let x13 ← Postcard.bool; let x14 ← Postcard.array Postcard.string; let x15 ← Postcard.array Postcard.string; let x16 ← Postcard.array Postcard.string; let x17 ← Postcard.bool; let x18 ← Postcard.bool; let x19 ← Postcard.bool; let x20 ← Postcard.bool; let x21 ← Postcard.array Postcard.string; let x22 ← Postcard.bool; let x23 ← Postcard.bool; let x24 ← Postcard.bool; let x25 ← Postcard.bool; let x26 ← Postcard.bool; let x27 ← Postcard.bool; let x28 ← Postcard.bool; let x29 ← Postcard.bool; let x30 ← Postcard.bool; let x31 ← Postcard.bool; let x32 ← Postcard.bool; let x33 ← Postcard.bool; let x34 ← Postcard.bool; let x35 ← Postcard.bool; let x36 ← Postcard.bool; let x37 ← Postcard.option ConstHandling.ofPostcard; let x38 ← Postcard.bool; let x39 ← Postcard.bool; let x40 ← Postcard.bool; let x41 ← Postcard.bool; let x42 ← Postcard.bool; let x43 ← Postcard.bool; let x44 ← Postcard.bool; let x45 ← Postcard.bool; let x46 ← Postcard.bool; let x47 ← Postcard.bool; let x48 ← Postcard.bool; let x49 ← Postcard.bool; let x50 ← Postcard.option Postcard.string; let x51 ← Postcard.option Postcard.string; let x52 ← Postcard.bool; let x53 ← Postcard.option SerializationFormatArg.ofPostcard; let x54 ← Postcard.bool; let x55 ← Postcard.bool; let x56 ← Postcard.bool; let x57 ← Postcard.bool; let x58 ← Postcard.bool; let x59 ← Postcard.bool; let x60 ← Postcard.bool; let x61 ← Postcard.bool; let x62 ← Postcard.bool; let x63 ← Postcard.bool; let x64 ← Postcard.option Preset.ofPostcard; return CliOpts.mk x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19 x20 x21 x22 x23 x24 x25 x26 x27 x28 x29 x30 x31 x32 x33 x34 x35 x36 x37 x38 x39 x40 x41 x42 x43 x44 x45 x46 x47 x48 x49 x50 x51 x52 x53 x54 x55 x56 x57 x58 x59 x60 x61 x62 x63 x64
-
 def ClosureKind.ofPostcard : M ClosureKind :=
   do
     match ← Postcard.variant with
@@ -1166,6 +1131,9 @@ def DeclarationGroup.ofPostcard : M DeclarationGroup :=
     | 4 => do let x0 ← GDeclarationGroup.ofPostcard TraitImplId.ofPostcard; return DeclarationGroup.TraitImpl x0
     | 5 => do let x0 ← GDeclarationGroup.ofPostcard ItemId.ofPostcard; return DeclarationGroup.Mixed x0
     | n => Postcard.fail s!"unknown variant {n} of `DeclarationGroup`"
+
+def Disambiguator.ofPostcard : M Disambiguator :=
+  return ⟨← Postcard.nat⟩
 
 def MetadataValue.ofPostcard : M MetadataValue :=
   do
@@ -1264,6 +1232,26 @@ def FileName.ofPostcard : M FileName :=
 
 def File.ofPostcard : M File :=
   do let x0 ← FileId.ofPostcard; let x1 ← FileName.ofPostcard; let x2 ← Postcard.string; let x3 ← Postcard.option Postcard.string; return File.mk x0 x1 x2 x3
+
+def ImplElem.ofPostcard : M ImplElem :=
+  do
+    match ← Postcard.variant with
+    | 0 => do let x0 ← Binder.ofPostcard Ty.ofPostcard; return ImplElem.Ty x0
+    | 1 => do let x0 ← TraitImplId.ofPostcard; return ImplElem.Trait x0
+    | n => Postcard.fail s!"unknown variant {n} of `ImplElem`"
+
+def PathElem.ofPostcard : M PathElem :=
+  do
+    match ← Postcard.variant with
+    | 0 => do let x0 ← Postcard.string; let x1 ← Disambiguator.ofPostcard; return PathElem.Ident x0 x1
+    | 1 => do let x0 ← ImplElem.ofPostcard; return PathElem.Impl x0
+    | 2 => do let x0 ← Binder.ofPostcard GenericArgs.ofPostcard; return PathElem.Instantiated x0
+    | 3 => do let x0 ← Postcard.string; return PathElem.Target x0
+    | 4 => do let x0 ← BuiltinPathElem.ofPostcard; let x1 ← Disambiguator.ofPostcard; return PathElem.Builtin x0 x1
+    | n => Postcard.fail s!"unknown variant {n} of `PathElem`"
+
+def Name.ofPostcard : M Name :=
+  Postcard.array PathElem.ofPostcard
 
 def LangItem.ofPostcard : M LangItem :=
   do
@@ -1531,7 +1519,7 @@ def GlobalSource.ofPostcard : M GlobalSource :=
     | 0 => do return GlobalSource.Normal
     | 1 => do let x0 ← TraitDeclRef.ofPostcard; let x1 ← AssocConstId.ofPostcard; return GlobalSource.TraitDefault x0 x1
     | 2 => do let x0 ← TraitImplRef.ofPostcard; let x1 ← TraitDeclRef.ofPostcard; let x2 ← AssocConstId.ofPostcard; let x3 ← Postcard.bool; return GlobalSource.TraitImpl x0 x1 x2 x3
-    | 3 => do let x0 ← Ty.ofPostcard; let x1 ← Postcard.option TraitImplRef.ofPostcard; return GlobalSource.VTableInstance x0 x1
+    | 3 => do let x0 ← Ty.ofPostcard; let x1 ← TraitDeclRef.ofPostcard; let x2 ← Postcard.option TraitImplRef.ofPostcard; return GlobalSource.VTableInstance x0 x1 x2
     | n => Postcard.fail s!"unknown variant {n} of `GlobalSource`"
 
 def GlobalKind.ofPostcard : M GlobalKind :=
@@ -1641,6 +1629,18 @@ def Os.ofPostcard : M Os :=
     | 51 => do let x0 ← Postcard.string; return Os.Other x0
     | n => Postcard.fail s!"unknown variant {n} of `Os`"
 
+def Preset.ofPostcard : M Preset :=
+  do
+    match ← Postcard.variant with
+    | 0 => do return Preset.OldDefaults
+    | 1 => do return Preset.RawMir
+    | 2 => do return Preset.Fast
+    | 3 => do return Preset.Aeneas
+    | 4 => do return Preset.Eurydice
+    | 5 => do return Preset.Soteria
+    | 6 => do return Preset.Tests
+    | n => Postcard.fail s!"unknown variant {n} of `Preset`"
+
 def PtrMetadata.ofPostcard : M PtrMetadata :=
   do
     match ← Postcard.variant with
@@ -1655,6 +1655,9 @@ def RuntimeChecks.ofPostcard : M RuntimeChecks :=
 
 def TargetInfo.ofPostcard : M TargetInfo :=
   do let x0 ← Arch.ofPostcard; let x1 ← Postcard.string; let x2 ← Os.ofPostcard; let x3 ← Env.ofPostcard; let x4 ← CfgAbi.ofPostcard; let x5 ← Postcard.array Postcard.string; let x6 ← BinaryFormat.ofPostcard; let x7 ← Postcard.u64; let x8 ← Postcard.bool; let x9 ← IntTy.ofPostcard; let x10 ← Postcard.array (Postcard.pair ScalarTy.ofPostcard Postcard.u64); return TargetInfo.mk x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10
+
+def TargetLayouts.ofPostcard : M TargetLayouts :=
+  Postcard.array (Postcard.pair Postcard.string Layout.ofPostcard)
 
 def TraitAssocConst.ofPostcard : M TraitAssocConst :=
   do let x0 ← TraitItemName.ofPostcard; let x1 ← AttrInfo.ofPostcard; let x2 ← Ty.ofPostcard; let x3 ← Postcard.option GlobalDeclRef.ofPostcard; return TraitAssocConst.mk x0 x1 x2 x3
@@ -1689,22 +1692,11 @@ def TraitImplSource.ofPostcard : M TraitImplSource :=
     match ← Postcard.variant with
     | 0 => do return TraitImplSource.Normal
     | 1 => do return TraitImplSource.TraitAlias
-    | 2 => do let x0 ← ClosureKind.ofPostcard; return TraitImplSource.Closure x0
-    | 3 => do return TraitImplSource.Destruct
+    | 2 => do return TraitImplSource.Builtin
     | n => Postcard.fail s!"unknown variant {n} of `TraitImplSource`"
 
 def TraitImpl.ofPostcard : M TraitImpl :=
   do let x0 ← TraitImplId.ofPostcard; let x1 ← ItemMeta.ofPostcard; let x2 ← TraitImplSource.ofPostcard; let x3 ← TraitDeclRef.ofPostcard; let x4 ← Postcard.bool; let x5 ← Postcard.bool; let x6 ← GenericParams.ofPostcard; let x7 ← Postcard.indexVec PolyTraitRef.ofPostcard; let x8 ← Postcard.indexMap GlobalDeclRef.ofPostcard; let x9 ← Postcard.indexMap (Binder.ofPostcard TraitAssocTyImpl.ofPostcard); let x10 ← Postcard.indexMap (Binder.ofPostcard FunDeclRef.ofPostcard); let x11 ← VTableDecl.ofPostcard; return TraitImpl.mk x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11
-
-def VTableField.ofPostcard : M VTableField :=
-  do
-    match ← Postcard.variant with
-    | 0 => do return VTableField.Size
-    | 1 => do return VTableField.Align
-    | 2 => do return VTableField.Drop
-    | 3 => do let x0 ← TraitMethodId.ofPostcard; let x1 ← Postcard.array FieldId.ofPostcard; return VTableField.Method x0 x1
-    | 4 => do let x0 ← TraitClauseId.ofPostcard; return VTableField.SuperTrait x0
-    | n => Postcard.fail s!"unknown variant {n} of `VTableField`"
 
 def TypeSource.ofPostcard : M TypeSource :=
   do
@@ -1730,9 +1722,9 @@ def TypeDeclKind.ofPostcard : M TypeDeclKind :=
     | n => Postcard.fail s!"unknown variant {n} of `TypeDeclKind`"
 
 def TypeDecl.ofPostcard : M TypeDecl :=
-  do let x0 ← TypeDeclId.ofPostcard; let x1 ← ItemMeta.ofPostcard; let x2 ← GenericParams.ofPostcard; let x3 ← TypeSource.ofPostcard; let x4 ← TypeDeclKind.ofPostcard; let x5 ← Postcard.array (Postcard.pair Postcard.string Layout.ofPostcard); let x6 ← PtrMetadata.ofPostcard; let x7 ← Postcard.option ImplementsMarkerTraits.ofPostcard; return TypeDecl.mk x0 x1 x2 x3 x4 x5 x6 x7
+  do let x0 ← TypeDeclId.ofPostcard; let x1 ← ItemMeta.ofPostcard; let x2 ← GenericParams.ofPostcard; let x3 ← TypeSource.ofPostcard; let x4 ← TypeDeclKind.ofPostcard; let x5 ← TargetLayouts.ofPostcard; let x6 ← Postcard.array (Postcard.pair GenericArgs.ofPostcard TargetLayouts.ofPostcard); let x7 ← PtrMetadata.ofPostcard; let x8 ← Postcard.option ImplementsMarkerTraits.ofPostcard; return TypeDecl.mk x0 x1 x2 x3 x4 x5 x6 x7 x8
 
 def TranslatedCrate.ofPostcard : M TranslatedCrate :=
-  do let x0 ← Postcard.string; let x1 ← CliOpts.ofPostcard; let x2 ← Postcard.array (Postcard.pair Postcard.string TargetInfo.ofPostcard); let x3 ← RuntimeChecks.ofPostcard; let x4 ← Postcard.indexVec File.ofPostcard; let x5 ← Postcard.array (Postcard.pair ItemId.ofPostcard Name.ofPostcard); let x6 ← Postcard.indexMap AssocItemNames.ofPostcard; let x7 ← Postcard.array (Postcard.pair ItemId.ofPostcard Name.ofPostcard); let x8 ← Postcard.indexMap TypeDecl.ofPostcard; let x9 ← Postcard.indexMap FunDecl.ofPostcard; let x10 ← Postcard.indexMap GlobalDecl.ofPostcard; let x11 ← Postcard.indexMap TraitDecl.ofPostcard; let x12 ← Postcard.indexMap TraitImpl.ofPostcard; let x13 ← Postcard.option (Postcard.array DeclarationGroup.ofPostcard); return TranslatedCrate.mk x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13
+  do let x0 ← Postcard.string; let x1 ← Postcard.option Preset.ofPostcard; let x2 ← Postcard.array (Postcard.pair Postcard.string TargetInfo.ofPostcard); let x3 ← RuntimeChecks.ofPostcard; let x4 ← Postcard.indexVec File.ofPostcard; let x5 ← Postcard.array (Postcard.pair ItemId.ofPostcard Name.ofPostcard); let x6 ← Postcard.indexMap AssocItemNames.ofPostcard; let x7 ← Postcard.array (Postcard.pair ItemId.ofPostcard Name.ofPostcard); let x8 ← Postcard.indexMap TypeDecl.ofPostcard; let x9 ← Postcard.indexMap FunDecl.ofPostcard; let x10 ← Postcard.indexMap GlobalDecl.ofPostcard; let x11 ← Postcard.indexMap TraitDecl.ofPostcard; let x12 ← Postcard.indexMap TraitImpl.ofPostcard; let x13 ← Postcard.option (Postcard.array DeclarationGroup.ofPostcard); return TranslatedCrate.mk x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13
 
 end Charon

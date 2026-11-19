@@ -8,13 +8,15 @@ import Charon.Generated.Ast
 namespace Charon
 
 deriving instance Hashable for Abi
-deriving instance Hashable for TypeVarId
+deriving instance Hashable for UnwindTerminateReason
+deriving instance Hashable for AbortKind
 deriving instance Hashable for VariantId
+deriving instance Hashable for TypeDeclId
+deriving instance Hashable for TypeVarId
 deriving instance Hashable for TraitImplId
 deriving instance Hashable for TraitClauseId
 deriving instance Hashable for RegionId
 deriving instance Hashable for DeBruijnVar
-deriving instance Hashable for ConstGenericVarId
 deriving instance Hashable for GlobalDeclId
 deriving instance Hashable for BuiltinImplData
 deriving instance Hashable for AssocTypeId
@@ -23,8 +25,6 @@ deriving instance Hashable for Variance
 deriving instance Hashable for LifetimeMutability
 deriving instance Hashable for RegionParam
 deriving instance Hashable for FieldId
-deriving instance Hashable for TypeDeclId
-deriving instance Hashable for BuiltinAdt
 deriving instance Hashable for RefKind
 deriving instance Hashable for UIntTy
 deriving instance Hashable for IntTy
@@ -33,6 +33,7 @@ deriving instance Hashable for TraitMethodId
 deriving instance Hashable for FunDeclId
 deriving instance Hashable for FloatTy
 deriving instance Hashable for FloatValue
+deriving instance Hashable for ConstGenericVarId
 deriving instance Hashable for IntegerTy
 deriving instance Hashable for ScalarTy
 deriving instance Hashable for AssocConstId
@@ -44,14 +45,10 @@ deriving instance Hashable for SpanData
 deriving instance Hashable for Span
 deriving instance Hashable for PredicateOrigin
 deriving instance Hashable for BinderKind
+deriving instance Hashable for BuiltinAdt
 deriving instance Hashable for Binder.Gen
 deriving instance Hashable for RegionBinder.Gen
 deriving instance Hashable for Byte, CastKind, ConstGenericParam, ConstProjectionElem, ConstantExpr, ConstantExprKind, DynPredicate, FnPtr, FnPtrKind, FunSig, GenericArgs, GenericParams, GlobalDeclRef, GlobalPlace, GlobalPlaceKind, GlobalProvenance, OutlivesPred, PolyOutlivesPred, Region, RegionArgs, TraitAssocTyImpl, TraitDeclRef, TraitImplRef, TraitParam, TraitRefContents, TraitRefKind, TraitTypeConstraint, TyKind, TypeDeclRef, TypePattern, UnsizingMetadata
-deriving instance Hashable for ImplElem
-deriving instance Hashable for Disambiguator
-deriving instance Hashable for BuiltinPathElem
-deriving instance Hashable for PathElem
-deriving instance Hashable for AbortKind
 deriving instance Hashable for AggregateKind
 deriving instance Hashable for AlignmentModifier
 deriving instance Hashable for Arch
@@ -64,6 +61,9 @@ deriving instance Hashable for AsmOperand
 deriving instance Hashable for AsmOperandId
 deriving instance Hashable for AsmOptions
 deriving instance Hashable for AsmTemplatePiece
+deriving instance Hashable for FnOperand
+deriving instance Hashable for CallSafety
+deriving instance Hashable for Call
 deriving instance Hashable for OverflowMode
 deriving instance Hashable for BinOp
 deriving instance Hashable for BuiltinAssertKind
@@ -88,43 +88,39 @@ deriving instance Hashable for BinaryFormat
 deriving instance Hashable for Ullbc.BlockId
 deriving instance Hashable for UnwindKind
 deriving instance Hashable for WithRetag
+deriving instance Hashable for VTableField
 deriving instance Hashable for UnOp
 deriving instance Hashable for NullOp
 deriving instance Hashable for BorrowKind
 deriving instance Hashable for Rvalue
+deriving instance Hashable for PlaceTypeConstraint
 deriving instance Hashable for BorrowckStatement
 deriving instance Hashable for Ullbc.StatementKind
 deriving instance Hashable for Ullbc.Statement
 deriving instance Hashable for SwitchScrutinee
 deriving instance Hashable for SwitchData
 deriving instance Hashable for InlineAsm
+deriving instance Hashable for FunDeclRef
 deriving instance Hashable for DropKind
-deriving instance Hashable for FnOperand
-deriving instance Hashable for CallSafety
-deriving instance Hashable for Call
 deriving instance Hashable for TerminatorKind
 deriving instance Hashable for Terminator
 deriving instance Hashable for Ullbc.BlockData
 deriving instance Hashable for StatementId
 deriving instance Hashable for Llbc.BlockId
 deriving instance Hashable for Llbc.Block, Llbc.Statement, Llbc.StatementKind
+deriving instance Hashable for LinkedExtern
 deriving instance Hashable for Local
 deriving instance Hashable for Locals
 deriving instance Hashable for GExprBody
-deriving instance Hashable for FunDeclRef
 deriving instance Hashable for Error
 deriving instance Hashable for Body
+deriving instance Hashable for BuiltinPathElem
 deriving instance Hashable for CfgAbi
-deriving instance Hashable for SerializationFormatArg
-deriving instance Hashable for Preset
-deriving instance Hashable for MonomorphizeMut
-deriving instance Hashable for MirLevel
-deriving instance Hashable for ConstHandling
-deriving instance Hashable for CliOpts
 deriving instance Hashable for ClosureKind
 deriving instance Hashable for ClosureInfo
 deriving instance Hashable for GDeclarationGroup
 deriving instance Hashable for DeclarationGroup
+deriving instance Hashable for Disambiguator
 deriving instance Hashable for MetadataValue
 deriving instance Hashable for SizeExprKind
 deriving instance Hashable for FieldPredecessor
@@ -135,6 +131,8 @@ deriving instance Hashable for Env
 deriving instance Hashable for Field
 deriving instance Hashable for FileName
 deriving instance Hashable for File
+deriving instance Hashable for ImplElem
+deriving instance Hashable for PathElem
 deriving instance Hashable for LangItem
 deriving instance Hashable for ItemOpacity
 deriving instance Hashable for ItemMeta
@@ -151,6 +149,7 @@ deriving instance Hashable for ReprAlgorithm
 deriving instance Hashable for ReprOptions
 deriving instance Hashable for Layout
 deriving instance Hashable for Os
+deriving instance Hashable for Preset
 deriving instance Hashable for PtrMetadata
 deriving instance Hashable for RuntimeChecks
 deriving instance Hashable for TargetInfo
@@ -162,7 +161,6 @@ deriving instance Hashable for TraitDecl
 deriving instance Hashable for VTableDecl
 deriving instance Hashable for TraitImplSource
 deriving instance Hashable for TraitImpl
-deriving instance Hashable for VTableField
 deriving instance Hashable for TypeSource
 deriving instance Hashable for Variant
 deriving instance Hashable for TypeDeclKind

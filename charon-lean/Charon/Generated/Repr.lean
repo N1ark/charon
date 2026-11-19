@@ -8,13 +8,15 @@ import Charon.Generated.Ast
 namespace Charon
 
 deriving instance Repr for Abi
-deriving instance Repr for TypeVarId
+deriving instance Repr for UnwindTerminateReason
+deriving instance Repr for AbortKind
 deriving instance Repr for VariantId
+deriving instance Repr for TypeDeclId
+deriving instance Repr for TypeVarId
 deriving instance Repr for TraitImplId
 deriving instance Repr for TraitClauseId
 deriving instance Repr for RegionId
 deriving instance Repr for DeBruijnVar
-deriving instance Repr for ConstGenericVarId
 deriving instance Repr for GlobalDeclId
 deriving instance Repr for BuiltinImplData
 deriving instance Repr for AssocTypeId
@@ -23,8 +25,6 @@ deriving instance Repr for Variance
 deriving instance Repr for LifetimeMutability
 deriving instance Repr for RegionParam
 deriving instance Repr for FieldId
-deriving instance Repr for TypeDeclId
-deriving instance Repr for BuiltinAdt
 deriving instance Repr for RefKind
 deriving instance Repr for UIntTy
 deriving instance Repr for IntTy
@@ -33,6 +33,7 @@ deriving instance Repr for TraitMethodId
 deriving instance Repr for FunDeclId
 deriving instance Repr for FloatTy
 deriving instance Repr for FloatValue
+deriving instance Repr for ConstGenericVarId
 deriving instance Repr for IntegerTy
 deriving instance Repr for ScalarTy
 deriving instance Repr for AssocConstId
@@ -44,14 +45,10 @@ deriving instance Repr for SpanData
 deriving instance Repr for Span
 deriving instance Repr for PredicateOrigin
 deriving instance Repr for BinderKind
+deriving instance Repr for BuiltinAdt
 deriving instance Repr for Binder.Gen
 deriving instance Repr for RegionBinder.Gen
 deriving instance Repr for Byte, CastKind, ConstGenericParam, ConstProjectionElem, ConstantExpr, ConstantExprKind, DynPredicate, FnPtr, FnPtrKind, FunSig, GenericArgs, GenericParams, GlobalDeclRef, GlobalPlace, GlobalPlaceKind, GlobalProvenance, OutlivesPred, PolyOutlivesPred, Region, RegionArgs, TraitAssocTyImpl, TraitDeclRef, TraitImplRef, TraitParam, TraitRefContents, TraitRefKind, TraitTypeConstraint, TyKind, TypeDeclRef, TypePattern, UnsizingMetadata
-deriving instance Repr for ImplElem
-deriving instance Repr for Disambiguator
-deriving instance Repr for BuiltinPathElem
-deriving instance Repr for PathElem
-deriving instance Repr for AbortKind
 deriving instance Repr for AggregateKind
 deriving instance Repr for AlignmentModifier
 deriving instance Repr for Arch
@@ -64,6 +61,9 @@ deriving instance Repr for AsmOperand
 deriving instance Repr for AsmOperandId
 deriving instance Repr for AsmOptions
 deriving instance Repr for AsmTemplatePiece
+deriving instance Repr for FnOperand
+deriving instance Repr for CallSafety
+deriving instance Repr for Call
 deriving instance Repr for OverflowMode
 deriving instance Repr for BinOp
 deriving instance Repr for BuiltinAssertKind
@@ -88,43 +88,39 @@ deriving instance Repr for BinaryFormat
 deriving instance Repr for Ullbc.BlockId
 deriving instance Repr for UnwindKind
 deriving instance Repr for WithRetag
+deriving instance Repr for VTableField
 deriving instance Repr for UnOp
 deriving instance Repr for NullOp
 deriving instance Repr for BorrowKind
 deriving instance Repr for Rvalue
+deriving instance Repr for PlaceTypeConstraint
 deriving instance Repr for BorrowckStatement
 deriving instance Repr for Ullbc.StatementKind
 deriving instance Repr for Ullbc.Statement
 deriving instance Repr for SwitchScrutinee
 deriving instance Repr for SwitchData
 deriving instance Repr for InlineAsm
+deriving instance Repr for FunDeclRef
 deriving instance Repr for DropKind
-deriving instance Repr for FnOperand
-deriving instance Repr for CallSafety
-deriving instance Repr for Call
 deriving instance Repr for TerminatorKind
 deriving instance Repr for Terminator
 deriving instance Repr for Ullbc.BlockData
 deriving instance Repr for StatementId
 deriving instance Repr for Llbc.BlockId
 deriving instance Repr for Llbc.Block, Llbc.Statement, Llbc.StatementKind
+deriving instance Repr for LinkedExtern
 deriving instance Repr for Local
 deriving instance Repr for Locals
 deriving instance Repr for GExprBody
-deriving instance Repr for FunDeclRef
 deriving instance Repr for Error
 deriving instance Repr for Body
+deriving instance Repr for BuiltinPathElem
 deriving instance Repr for CfgAbi
-deriving instance Repr for SerializationFormatArg
-deriving instance Repr for Preset
-deriving instance Repr for MonomorphizeMut
-deriving instance Repr for MirLevel
-deriving instance Repr for ConstHandling
-deriving instance Repr for CliOpts
 deriving instance Repr for ClosureKind
 deriving instance Repr for ClosureInfo
 deriving instance Repr for GDeclarationGroup
 deriving instance Repr for DeclarationGroup
+deriving instance Repr for Disambiguator
 deriving instance Repr for MetadataValue
 deriving instance Repr for SizeExprKind
 deriving instance Repr for FieldPredecessor
@@ -135,6 +131,8 @@ deriving instance Repr for Env
 deriving instance Repr for Field
 deriving instance Repr for FileName
 deriving instance Repr for File
+deriving instance Repr for ImplElem
+deriving instance Repr for PathElem
 deriving instance Repr for LangItem
 deriving instance Repr for ItemOpacity
 deriving instance Repr for ItemMeta
@@ -151,6 +149,7 @@ deriving instance Repr for ReprAlgorithm
 deriving instance Repr for ReprOptions
 deriving instance Repr for Layout
 deriving instance Repr for Os
+deriving instance Repr for Preset
 deriving instance Repr for PtrMetadata
 deriving instance Repr for RuntimeChecks
 deriving instance Repr for TargetInfo
@@ -162,7 +161,6 @@ deriving instance Repr for TraitDecl
 deriving instance Repr for VTableDecl
 deriving instance Repr for TraitImplSource
 deriving instance Repr for TraitImpl
-deriving instance Repr for VTableField
 deriving instance Repr for TypeSource
 deriving instance Repr for Variant
 deriving instance Repr for TypeDeclKind

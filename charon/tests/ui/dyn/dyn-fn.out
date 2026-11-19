@@ -115,6 +115,7 @@ fn takes_fn<'_0>(f: &'_0 (dyn for<'a> Fn<(&'a mut u32,), ImpliedClause1::Implied
     _8 = vtable_lookup<method_call>(read _4.metadata)
     _3 = (read _8)<'83>(move _4, move _5)
     ↳⚡ storage_dead(f)
+        storage_dead(_8)
         unwind_continue
     if move _3 {
     } else {

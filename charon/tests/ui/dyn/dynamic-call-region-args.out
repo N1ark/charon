@@ -49,6 +49,7 @@ where
     _3 = (read _6)<'37, '38>(move _4, move _5)
     ↳⚡ storage_dead(input)
         storage_dead(processor)
+        storage_dead(_6)
         unwind_continue
     _0 = &(*_3)
     storage_dead(_5)

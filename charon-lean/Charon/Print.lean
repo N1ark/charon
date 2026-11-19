@@ -644,6 +644,7 @@ partial def CastKind.fmt (ctx : Ctx) : CastKind → String
   | .RawPtr tgt => s!"cast<{Ty.fmt ctx tgt}>"
   | .Unsize tgt md _ => s!"unsize_cast<{Ty.fmt ctx tgt}, {UnsizingMetadata.fmt ctx md}>"
   | .Transmute tgt => s!"transmute<{Ty.fmt ctx tgt}>"
+  | .BoxDerefTransmute tgt => s!"box_deref_transmute<{Ty.fmt ctx tgt}>"
   | .Concretize tgt _ => s!"concretize<{Ty.fmt ctx tgt}>"
 
 partial def LocalId.fmt (ctx : Ctx) (id : LocalId) : String :=
@@ -679,6 +680,13 @@ partial def UnOp.fmt (ctx : Ctx) : UnOp → String
   | .Not => "~"
   | .Neg mode => s!"{mode.toString}.-"
   | .Cast kind => CastKind.fmt ctx kind
+  | .VTableLookup vtable field =>
+    -- Show the entry by the name of the vtable struct's field that holds it.
+    let name := match ctx.krate.type_decls.get? vtable.id with
+      | some { kind := .Struct fields, src := .VTable _ fieldMap _, .. } =>
+        fieldMap.vec.findIdx? (· == field) >>= fun i => fields[FieldId.mk i]?.map Field.name
+      | _ => none
+    s!"vtable_lookup<{name.getD (reprStr field)}>"
 
 /-- Formats `place`, followed by `ptr_metadata` unless it is unit. -/
 partial def fmtWithMetadata (ctx : Ctx) (place : Place) (md : Operand) : String :=
@@ -713,16 +721,17 @@ partial def Rvalue.fmt (ctx : Ctx) : Rvalue → String
       s!"*{kind} ({sep ", " opsStr})"
   | .Repeat op count _ _ => s!"[{Operand.fmt ctx op}; {ConstantExpr.fmt ctx count}]"
 
+partial def PlaceTypeConstraint.fmt (ctx : Ctx) (c : PlaceTypeConstraint) : String :=
+  let rel := match c.variance with
+    | .Covariant => ":<" | .Contravariant => ":>" | .Invariant => ":="
+    | .Bivariant => panic! "bivariant type constraint"
+    | .Unknown => panic! "type constraint with unknown variance"
+  s!"{Place.fmt ctx c.place} {rel} {Ty.fmt ctx c.ty}"
+
 partial def BorrowckStatement.fmt (ctx : Ctx) : BorrowckStatement → String
   | .FakeRead place => s!"fake_read({Place.fmt ctx place})"
-  | .SetType place ty variance =>
-    let rel := match variance with
-      | .Covariant => "<=" | .Contravariant => ">=" | .Invariant => "=="
-      | .Bivariant => panic! "bivariant SetType statement"
-      | .Unknown => panic! "SetType statement with unknown variance"
-    s!"set_type(typeof({Place.fmt ctx place}) {rel} {Ty.fmt ctx ty})"
-  | .SetOutlives ty r => s!"set_outlives({Ty.fmt ctx ty}, {Region.fmt ctx r})"
-  | .PredicateHolds pred => s!"predicate_holds({PolyTraitRef.fmt ctx pred})"
+  | .SetType c => s!"set {PlaceTypeConstraint.fmt ctx c}"
+  | .SetOutlives pred => s!"set {OutlivesPred.fmt ctx pred}"
 
 partial def BuiltinAssertKind.fmt : BuiltinAssertKind → String
   | .BoundsCheck .. => "bounds_check"
@@ -745,10 +754,15 @@ partial def Assert.fmt (ctx : Ctx) (a : Assert) : String :=
     | none => ""
 
 partial def AbortKind.fmt (ctx : Ctx) : AbortKind → String
-  | .Panic (some name) => s!"panic({Name.fmt ctx name})"
-  | .Panic none => "panic"
+  | .Panic => "panic"
   | .UndefinedBehavior => "undefined_behavior"
-  | .UnwindTerminate => "unwind_terminate"
+  | .UnwindTerminate .Abi => "unwind_terminate(abi)"
+  | .UnwindTerminate .InCleanup => "unwind_terminate(in_cleanup)"
+
+/-- What happens when an assert fails. A panic calls the assert's `call`. -/
+partial def Assert.fmtOnFailure (ctx : Ctx) (a : Assert) : AbortKind → String
+  | .Panic => s!"panic({Call.fmt ctx a.call})"
+  | k => AbortKind.fmt ctx k
 
 partial def FnOperand.fmt (ctx : Ctx) : FnOperand → String
   | .Regular f => FnPtr.fmt ctx f
@@ -801,7 +815,7 @@ partial def Ullbc.Statement.fmt (ctx : Ctx) (st : Ullbc.Statement) : String :=
     | .StorageLive id => s!"storage_live({LocalId.fmt ctx id})"
     | .StorageDead id => s!"storage_dead({LocalId.fmt ctx id})"
     | .PlaceMention place => s!"_ = {Place.fmt ctx place}"
-    | .Assert a onFailure => s!"{Assert.fmt ctx a} else {AbortKind.fmt ctx onFailure}"
+    | .Assert a onFailure => s!"{Assert.fmt ctx a} else {Assert.fmtOnFailure ctx a onFailure}"
     | .Nop => "nop"
   s!"{comments}{t}{body};\n"
 
@@ -836,9 +850,9 @@ partial def Terminator.fmt (ctx : Ctx) (term : Terminator) : String :=
           s!"label {b.index}: {bb target}") ++
         [s!"unwind: {bb onUnwind}"]
       s!"{InlineAsm.fmt ctx asm} -> {sep ", " targets}"
-    | .Panic name onUnwind => s!"{AbortKind.fmt ctx (.Panic (some name))} -> (unwind: {bb onUnwind})"
+    | .Panic call onUnwind => s!"panic({Call.fmt ctx call}) -> (unwind: {bb onUnwind})"
     | .UndefinedBehavior => AbortKind.fmt ctx .UndefinedBehavior
-    | .UnwindTerminate => AbortKind.fmt ctx .UnwindTerminate
+    | .UnwindTerminate reason _ => AbortKind.fmt ctx (.UnwindTerminate reason)
     | .Return => "return"
     | .UnwindResume => "unwind_continue"
   s!"{comments}{t}{body}"
@@ -889,7 +903,7 @@ partial def Llbc.Statement.fmt (ctx : Ctx) (st : Llbc.Statement) : String :=
       s!"{kind}[{FnPtr.fmt ctx fnPtr}] {Place.fmt ctx place}" ++ unwind onUnwind
     | .DropEmptyBox place onUnwind => s!"drop_empty_box {Place.fmt ctx place}" ++ unwind onUnwind
     | .Assert a onFailure onUnwind =>
-      s!"{Assert.fmt ctx a} else {AbortKind.fmt ctx onFailure}" ++ unwind onUnwind
+      s!"{Assert.fmt ctx a} else {Assert.fmtOnFailure ctx a onFailure}" ++ unwind onUnwind
     | .InlineAsm asm fallthrough labels onUnwind =>
       let ctx1 := ctx.increaseIndent
       let t1 := ctx1.indent
@@ -901,9 +915,9 @@ partial def Llbc.Statement.fmt (ctx : Ctx) (st : Llbc.Statement) : String :=
       InlineAsm.fmt ctx asm ++ (if branches.isEmpty then "" else
         " {" ++ String.join branches ++ s!"\n{t}}") ++ unwind onUnwind
     | .Call call dest onUnwind => s!"{Place.fmt ctx dest} = {Call.fmt ctx call}" ++ unwind onUnwind
-    | .Panic name onUnwind => AbortKind.fmt ctx (.Panic (some name)) ++ unwind onUnwind
+    | .Panic call onUnwind => s!"panic({Call.fmt ctx call})" ++ unwind onUnwind
     | .UndefinedBehavior => AbortKind.fmt ctx .UndefinedBehavior
-    | .UnwindTerminate => AbortKind.fmt ctx .UnwindTerminate
+    | .UnwindTerminate reason _ => AbortKind.fmt ctx (.UnwindTerminate reason)
     | .Return => "return"
     | .UnwindResume => "unwind_continue"
     | .Break i => s!"break {i}"
@@ -1032,7 +1046,13 @@ partial def AttributeKind.fmt : AttributeKind → String
     | .Default => "optimize(default)" | .DoNotOptimize => "optimize(none)"
     | .Speed => "optimize(speed)" | .Size => "optimize(size)"
   | .RustcAlign align _ => s!"rustc_align({align})"
+  | .RustcAllocator => "rustc_allocator"
+  | .RustcAllocatorZeroed => "rustc_allocator_zeroed"
+  | .RustcAllocatorZeroedVariant name => s!"rustc_allocator_zeroed_variant = \"{name}\""
+  | .RustcDeallocator => "rustc_deallocator"
   | .RustcIntrinsic => "rustc_intrinsic"
+  | .RustcNoWritable => "rustc_no_writable"
+  | .RustcReallocator => "rustc_reallocator"
   | .ShouldPanic reason => "should_panic" ++ ((reason.map (s!"(expected = \"{·}\")")).getD "")
   | .TargetFeature features _ forced =>
     let features := sep "," (features.toList.map (·.1))
@@ -1074,7 +1094,9 @@ partial def Local.fmtDecl (ctx : Ctx) (locals : Locals) (l : Local) : String :=
     else if l.index.index ≤ locals.arg_count then s!"arg #{l.index.index}"
     else if l.name.isSome then "local" else "anonymous local"
   let dropFlag := (l.drop_flag_for.map (s!"; drop flag for {Place.fmt ctx ·}")).getD ""
-  s!"{t}let {mut_}{LocalId.fmt ctx l.index}: {Ty.fmt ctx l.ty}; // {kind}{dropFlag}\n"
+  s!"{t}let {mut_}{LocalId.fmt ctx l.index}: {Ty.fmt ctx l.ty}; // {kind}{dropFlag}\n" ++
+    String.join (l.borrowck_constraints.toList.map
+      (s!"{t}    where {PlaceTypeConstraint.fmt ctx ·};\n"))
 
 partial def GExprBody.fmt {T : Type} (ctx : Ctx) (body : GExprBody T) (fmtBody : Ctx → T → String) :
     String :=
@@ -1088,7 +1110,12 @@ partial def Body.fmt (ctx : Ctx) (body : Body) : String :=
   | .Unstructured b => "{\n" ++ GExprBody.fmt ctx b fmtUllbcBlocks ++ t ++ "}"
   | .Structured b =>
     "{\n" ++ GExprBody.fmt ctx b (fun ctx b => "\n" ++ Llbc.Block.fmt ctx b) ++ t ++ "}"
-  | .Extern name => s!"= <extern:{name}>"
+  | .Extern symbol definition =>
+    s!"= <extern:{symbol}>" ++ match definition with
+      | .StronglyLinked f => s!" linked(strong) to {FunDeclRef.fmt ctx f}"
+      | .WeaklyLinked fs => s!" linked(weak) to {sep ", " (fs.toList.map (FunDeclRef.fmt ctx))}"
+      | .AllocatorShim f => s!" linked(alloc) to {FunDeclRef.fmt ctx f}"
+      | .Unlinked => ""
   | .Intrinsic name _ fallback isSpec =>
     s!"= <intrinsic:{name}>" ++ match fallback with
       | some f => s!" with fallback{if isSpec then " (spec)" else ""} {FunDeclRef.fmt ctx f}"
@@ -1116,7 +1143,7 @@ partial def FunDecl.fmt (ctx : Ctx) (decl : FunDecl) : String :=
     | .Structured b => argsOfLocals b.locals
     | .Intrinsic _ argNames .. => argNames.toList.zipIdx.map fun (name, i) =>
       s!"{name.getD ""}_{i + 1}"
-    | .Error _ | .Extern _ | .Missing | .Opaque | .TargetDispatch _ =>
+    | .Error _ | .Extern .. | .Missing | .Opaque | .TargetDispatch _ =>
       (List.range nArgs).map (s!"_{· + 1}")
   let args := (sig.inputs.toList.zip argNames).map fun (ty, name) => s!"{name}: {Ty.fmt ctx ty}"
   let args := if sig.is_variadic then args ++ ["..."] else args

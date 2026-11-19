@@ -14,17 +14,50 @@ inductive Abi where
   | Other (_0 : String)
   deriving Inhabited
 
-structure TypeVarId where
-  index : Nat
-  deriving Inhabited, Ord
+/-- Why unwinding had to stop. -/
+inductive UnwindTerminateReason where
+  /-- Unwinding out of a function that cannot unwind (e.g. an `extern "C"` function). -/
+  | Abi
+  /-- Cleanup code panicked again. -/
+  | InCleanup
+  deriving Inhabited
 
-instance : Idx TypeVarId := ⟨TypeVarId.index, TypeVarId.mk⟩
+/--
+(U)LLBC is a language with side-effects: a statement may abort in a way that isn't tracked by
+control-flow. The three kinds of abort are:
+- Panic
+- Undefined behavior (caused by an "assume")
+- Unwind termination
+-/
+inductive AbortKind where
+  /--
+  A built-in panicking function, or a panic due to a failed built-in check (e.g. for
+  out-of-bounds accesses).
+  -/
+  | Panic
+  /-- Undefined behavior in the rust abstract machine. -/
+  | UndefinedBehavior
+  /-- Unwind had to stop for ABI reasons or because cleanup code panicked again. -/
+  | UnwindTerminate (_0 : UnwindTerminateReason)
+  deriving Inhabited
 
 structure VariantId where
   index : Nat
   deriving Inhabited, Ord
 
 instance : Idx VariantId := ⟨VariantId.index, VariantId.mk⟩
+
+structure TypeDeclId where
+  index : Nat
+  deriving Inhabited, Ord
+
+instance : Idx TypeDeclId := ⟨TypeDeclId.index, TypeDeclId.mk⟩
+
+structure TypeVarId where
+  index : Nat
+  deriving Inhabited, Ord
+
+instance : Idx TypeVarId := ⟨TypeVarId.index, TypeVarId.mk⟩
 
 structure TraitImplId where
   index : Nat
@@ -94,12 +127,6 @@ inductive DeBruijnVar (Id : Type) where
   -/
   | Free (_0 : Id)
   deriving Inhabited
-
-structure ConstGenericVarId where
-  index : Nat
-  deriving Inhabited, Ord
-
-instance : Idx ConstGenericVarId := ⟨ConstGenericVarId.index, ConstGenericVarId.mk⟩
 
 structure GlobalDeclId where
   index : Nat
@@ -215,22 +242,6 @@ structure FieldId where
 
 instance : Idx FieldId := ⟨FieldId.index, FieldId.mk⟩
 
-structure TypeDeclId where
-  index : Nat
-  deriving Inhabited, Ord
-
-instance : Idx TypeDeclId := ⟨TypeDeclId.index, TypeDeclId.mk⟩
-
-/-- Builtin ADT identifiers. -/
-inductive BuiltinAdt where
-  /-- A tuple `(A, B, ...)`, including `unit`. -/
-  | Tuple
-  /-- Boxes; always detected, though they are only treated as primitives with `--treat-box-as-builtin` -/
-  | Box
-  /-- The `str` type, which corresponds to a `[u8]` that encodes a string with UTF-8. -/
-  | Str
-  deriving Inhabited
-
 inductive RefKind where
   | Mut
   | Shared
@@ -289,6 +300,12 @@ structure FloatValue where
   bits : Nat
   ty : FloatTy
   deriving Inhabited
+
+structure ConstGenericVarId where
+  index : Nat
+  deriving Inhabited, Ord
+
+instance : Idx ConstGenericVarId := ⟨ConstGenericVarId.index, ConstGenericVarId.mk⟩
 
 inductive IntegerTy where
   | Signed (_0 : IntTy)
@@ -405,6 +422,16 @@ inductive BinderKind where
   | Other
   deriving Inhabited
 
+/-- Builtin ADT identifiers. -/
+inductive BuiltinAdt where
+  /-- A tuple `(A, B, ...)`, including `unit`. -/
+  | Tuple
+  /-- Boxes; always detected, though they are only treated as primitives with `--treat-box-as-builtin` -/
+  | Box
+  /-- The `str` type, which corresponds to a `[u8]` that encodes a string with UTF-8. -/
+  | Str
+  deriving Inhabited
+
 /--
 A value of type `T` bound by generic parameters. Used in any context where we're adding generic
 parameters that aren't on the top-level item, e.g. `for<'a>` clauses (uses `RegionBinder` for
@@ -493,6 +520,11 @@ inductive CastKind where
   [`std::mem::transmute`] does.
   -/
   | Transmute (_0 : TyKind)
+  /--
+  Like `Transmute`, but only used for desugaring box derefs. This is almost equivalent to a regular
+  transmute except that if the input would not be valid as `Box<T>`, the cast is UB.
+  -/
+  | BoxDerefTransmute (_0 : TyKind)
   /--
   Converts a receiver type with `dyn Trait<...>` to a concrete type `T`, used in vtable method shims.
   Valid conversions are references, raw pointers, and (optionally) boxes:
@@ -1141,135 +1173,6 @@ This is an interned value; see `TyKind` for the actual contents.
 abbrev Ty := TyKind
 
 /--
-There are two kinds of `impl` blocks:
-- impl blocks linked to a type ("inherent" impl blocks following Rust terminology):
-  ```text
-  impl<T> List<T> { ...}
-  ```
-- trait impl blocks:
-  ```text
-  impl<T> PartialEq for List<T> { ...}
-  ```
-We distinguish the two.
--/
-inductive ImplElem where
-  | Ty (_0 : Binder Ty)
-  | Trait (_0 : TraitImplId)
-  deriving Inhabited
-
-structure Disambiguator where
-  index : Nat
-  deriving Inhabited, Ord
-
-instance : Idx Disambiguator := ⟨Disambiguator.index, Disambiguator.mk⟩
-
-/-- Used for builtin items, rather than hardcoding these as strings. -/
-inductive BuiltinPathElem where
-  /-- The tuple of the given arity. -/
-  | Tuple (_0 : Nat)
-  /--
-  `str`, which is a struct containing a `[u8]` the standard library expects
-  to be valid UTF-8.
-  -/
-  | Str
-  /-- A closure. -/
-  | Closure
-  /-- A `use` declaration. -/
-  | Use
-  /-- An anonymous constant. -/
-  | AnonConst
-  /-- A constant that rustc promoted out of a body. -/
-  | PromotedConst
-  /-- The function item we generate for a closure that is cast to a function pointer. -/
-  | ClosureAsFn
-  /-- The method we add to the `Destruct` trait to hold the drop glue. -/
-  | DropGlue
-  /-- The vtable struct of a trait, or the vtable global of a trait impl. -/
-  | VTable
-  /-- The version of a method that is stored in a vtable. -/
-  | VTableMethod
-  /-- The `drop_in_place` shim stored in a vtable. -/
-  | VTableDropShim
-  /-- The fallback body of an intrinsic. -/
-  | IntrinsicFallback
-  deriving Inhabited
-
-/-- See the comments for [Name] -/
-inductive PathElem where
-  | Ident (_0 : String) (_1 : Disambiguator)
-  | Impl (_0 : ImplElem)
-  /--
-  This item was obtained by instantiating its parent with the given args. The binder binds
-  the parameters of the new items. If the binder binds nothing then this is a
-  monomorphization.
-  -/
-  | Instantiated (_0 : Binder GenericArgs)
-  /-- This item is only available on the given target. Only appears in multi-target mode. -/
-  | Target (_0 : String)
-  /--
-  A path element that doesn't come from the source code: either a builtin type such as
-  tuples, or an item that has no name of its own such as a closure or a vtable.
-  -/
-  | Builtin (_0 : BuiltinPathElem) (_1 : Disambiguator)
-  deriving Inhabited
-
-/--
-An item name/path
-
-A name really is a list of strings. However, we sometimes need to
-introduce unique indices to disambiguate. This mostly happens because
-of "impl" blocks:
-  ```text
-  impl<T> List<T> {
-    ...
-  }
-  ```
-
-A type in Rust can have several "impl" blocks, and  those blocks can
-contain items with similar names. For this reason, we need to disambiguate
-them with unique indices. Rustc calls those "disambiguators". In rustc, this
-gives names like this:
-- `betree_main::betree::NodeIdCounter{impl#0}::new`
-- note that impl blocks can be nested, and macros sometimes generate
-  weird names (which require disambiguation):
-  `betree_main::betree_utils::_#1::{impl#0}::deserialize::{impl#0}`
-
-Finally, the paths used by rustc are a lot more precise and explicit than
-those we expose in LLBC: for instance, every identifier belongs to a specific
-namespace (value namespace, type namespace, etc.), and is coupled with a
-disambiguator.
-
-On our side, we want to stay high-level and simple: we use string identifiers
-as much as possible, insert disambiguators only when necessary (for instance
-when we find an "impl" block or when two loaded crates have the same name)
-and check that the disambiguator is useless in the other situations (i.e.,
-the disambiguator is always equal to 0).
-
-Moreover, the items are uniquely disambiguated by their (integer) ids
-(`TypeDeclId`, etc.), and when extracting the code we have to deal with
-name clashes anyway. Still, we might want to be more precise in the future.
-
-Also note that the first path element in the name is always the crate name.
--/
-abbrev Name := Array PathElem
-
-/--
-(U)LLBC is a language with side-effects: a statement may abort in a way that isn't tracked by
-control-flow. The three kinds of abort are:
-- Panic
-- Undefined behavior (caused by an "assume")
-- Unwind termination
--/
-inductive AbortKind where
-  /-- A built-in panicking function, or a panic due to a failed built-in check (e.g. for out-of-bounds accesses). -/
-  | Panic (_0 : Option Name)
-  /-- Undefined behavior in the rust abstract machine. -/
-  | UndefinedBehavior
-  /-- Unwind had to stop for ABI reasons or because cleanup code panicked again. -/
-  | UnwindTerminate
-  deriving Inhabited
-
-/--
 An aggregated ADT.
 
 Note that ADTs are desaggregated at some point in MIR. For instance, if
@@ -1551,6 +1454,43 @@ inductive AsmTemplatePiece where
   | Placeholder (operand_id : AsmOperandId) (modifier : Option Char) (span : Span)
   deriving Inhabited
 
+/--
+A function operand is used in function calls.
+It either designates a top-level function, or a place in case
+we are using function pointers stored in local variables.
+-/
+inductive FnOperand where
+  /-- Regular case: call to a top-level function, trait method, etc. -/
+  | Regular (_0 : FnPtr)
+  /-- Call through a function pointer, instantiated with the given regions. -/
+  | Dynamic (_0 : Operand) (_1 : RegionArgs)
+  deriving Inhabited
+
+/--
+Whether we statically know something about the safety of this call, that takes
+precedence over the safety of the callee's signature.
+-/
+inductive CallSafety where
+  /-- As safe as the callee's signature. -/
+  | Inherit
+  /--
+  Safe despite an unsafe signature: desugared drops, and calls to safe `#[target_feature]` functions
+  from contexts that enable the required features.
+  -/
+  | Safe
+  /--
+  Unsafe despite a safe signature: calls to `#[target_feature]` functions from contexts
+  that don't enable the required features, and explicit calls to `Drop` methods.
+  -/
+  | Unsafe
+  deriving Inhabited
+
+structure Call where
+  func : FnOperand
+  args : Array Operand
+  safety : CallSafety
+  deriving Inhabited
+
 inductive OverflowMode where
   /--
   If this operation overflows, it panics. Only exists in debug mode, for instance in
@@ -1633,6 +1573,8 @@ structure Assert where
   is actually performed by the instructions preceding the assert.
   -/
   check_kind : Option BuiltinAssertKind
+  /-- The call to a panicking function that happens when the check fails -/
+  call : Call
   deriving Inhabited
 
 /-- The id of an associated item within a trait. -/
@@ -1872,8 +1814,20 @@ inductive AttributeKind where
   | Optimize (_0 : OptimizeAttr) (_1 : Span)
   /-- Represents `#[align(N)]`. -/
   | RustcAlign (align : UInt64) (span : Span)
+  /-- Represents `#[rustc_allocator]` -/
+  | RustcAllocator
+  /-- Represents `#[rustc_allocator_zeroed]` -/
+  | RustcAllocatorZeroed
+  /-- Represents `#[rustc_allocator_zeroed_variant]` -/
+  | RustcAllocatorZeroedVariant (name : String)
+  /-- Represents `#[rustc_deallocator]` -/
+  | RustcDeallocator
   /-- Represents `#[rustc_intrinsic]` -/
   | RustcIntrinsic
+  /-- Represents `#[rustc_no_writable]` -/
+  | RustcNoWritable
+  /-- Represents `#[rustc_reallocator]` -/
+  | RustcReallocator
   /-- Represents `#[should_panic]` -/
   | ShouldPanic (reason : Option String)
   /--
@@ -2004,6 +1958,14 @@ inductive WithRetag where
   | Yes
   deriving Inhabited
 
+inductive VTableField where
+  | Size
+  | Align
+  | Drop
+  | Method (_0 : TraitMethodId) (_1 : Array FieldId)
+  | SuperTrait (_0 : TraitClauseId)
+  deriving Inhabited
+
 /-- Unary operation -/
 inductive UnOp where
   | Not
@@ -2011,6 +1973,11 @@ inductive UnOp where
   | Neg (_0 : OverflowMode)
   /-- Casts are rvalues in MIR, but we treat them as unops. -/
   | Cast (_0 : CastKind)
+  /--
+  Reads the entry `VTableField` of a VTable, which occurs when calling functions of a trait object.
+  This is the only way code is allowed to read VTables, as a plain read in user code is UB.
+  -/
+  | VTableLookup (_0 : TypeDeclRef) (_1 : VTableField)
   deriving Inhabited
 
 /-- Nullary operation -/
@@ -2114,25 +2081,27 @@ inductive Rvalue where
   | Repeat (operand : Operand) (count : ConstantExpr) (elem_is_copy : TraitRef) (elem_is_sized : Option TraitRef)
   deriving Inhabited
 
+/--
+Borrow-checking constraint that enforces a relation between the type of the given place and the
+provided type.
+-/
+structure PlaceTypeConstraint where
+  place : Place
+  ty : Ty
+  variance : Variance
+  deriving Inhabited
+
 /-- Statements that only affect borrow-checking. They are no-ops at runtime. -/
 inductive BorrowckStatement where
   /-- Acts like a read of the place. -/
   | FakeRead (_0 : Place)
   /--
-  Relate the type of a place to the provided type. For example, `let x: Self = value`
-  produces `SetType` for `x` and `Self`.
+  Apply a constraint to this place at this point in the function. For example, `x =
+  Option::<&'static u32>::None;` emits a `tmp := Option::<&'static u32>` constraint.
   -/
-  | SetType (place : Place) (ty : Ty) (variance : Variance)
-  /--
-  Require a type to outlive a region. For example, the `'a` bound in
-  `let x: impl Copy + 'a = value` produces `SetOutlives(typeof(x), 'a)`.
-  -/
-  | SetOutlives (_0 : Ty) (_1 : Region)
-  /--
-  Require a trait predicate to hold. For example, the `Copy` bound in
-  `let x: impl Copy = value` produces `PredicateHolds(typeof(x): Copy)`.
-  -/
-  | PredicateHolds (_0 : PolyTraitRef)
+  | SetType (_0 : PlaceTypeConstraint)
+  /-- Require an outlives predicate to hold. -/
+  | SetOutlives (_0 : OutlivesPred)
   deriving Inhabited
 
 inductive Ullbc.StatementKind where
@@ -2225,6 +2194,13 @@ structure InlineAsm where
   options : AsmOptions
   deriving Inhabited
 
+/-- Reference to a function declaration. -/
+structure FunDeclRef where
+  id : FunDeclId
+  /-- Generic arguments passed to the function. -/
+  generics : GenericArgs
+  deriving Inhabited
+
 /--
 A `Drop` statement/terminator can mean two things, depending on what MIR phase we retrieved
 from rustc: it could be a real drop, or it could be a "conditional drop", which is where drop
@@ -2257,43 +2233,6 @@ inductive DropKind where
   Drop are conditional in MIR `built` and `promoted`.
   -/
   | Conditional
-  deriving Inhabited
-
-/--
-A function operand is used in function calls.
-It either designates a top-level function, or a place in case
-we are using function pointers stored in local variables.
--/
-inductive FnOperand where
-  /-- Regular case: call to a top-level function, trait method, etc. -/
-  | Regular (_0 : FnPtr)
-  /-- Call through a function pointer, instantiated with the given regions. -/
-  | Dynamic (_0 : Operand) (_1 : RegionArgs)
-  deriving Inhabited
-
-/--
-Whether we statically know something about the safety of this call, that takes
-precedence over the safety of the callee's signature.
--/
-inductive CallSafety where
-  /-- As safe as the callee's signature. -/
-  | Inherit
-  /--
-  Safe despite an unsafe signature: desugared drops, and calls to safe `#[target_feature]` functions
-  from contexts that enable the required features.
-  -/
-  | Safe
-  /--
-  Unsafe despite a safe signature: calls to `#[target_feature]` functions from contexts
-  that don't enable the required features, and explicit calls to `Drop` methods.
-  -/
-  | Unsafe
-  deriving Inhabited
-
-structure Call where
-  func : FnOperand
-  args : Array Operand
-  safety : CallSafety
   deriving Inhabited
 
 inductive TerminatorKind where
@@ -2337,16 +2276,13 @@ inductive TerminatorKind where
   bounds checks, overflow checks, etc.
   -/
   | Assert (assert : Assert) (target : Ullbc.BlockId) (on_unwind : Ullbc.BlockId)
+  /-- Call to a built-in panicking function. Only if `--reconstruct-panic-calls` is passed. -/
+  | Panic (call : Call) (on_unwind : Ullbc.BlockId)
   /--
-  Call to a built-in panicking function. Only if `--reconstruct-panic-calls` is passed.
-
-  Fields:
-  - `name`: The name of the function that was called.
-  - `on_unwind`
+  Unwinding must stop for ABI reasons or because cleanup code panicked again. The function is
+  the lang item that rustc calls in that case.
   -/
-  | Panic (name : Name) (on_unwind : Ullbc.BlockId)
-  /-- Unwinding must stop for ABI reasons or because cleanup code panicked again. -/
-  | UnwindTerminate
+  | UnwindTerminate (_0 : UnwindTerminateReason) (_1 : FunDeclRef)
   /-- Unwind out of the current function into its caller. -/
   | UnwindResume
   | Return
@@ -2483,16 +2419,13 @@ inductive Llbc.StatementKind where
   * ...
   -/
   | Continue (_0 : Nat)
+  /-- Call to a built-in panicking function. Only if `--reconstruct-panic-calls` is passed. -/
+  | Panic (call : Call) (on_unwind : Llbc.Block)
   /--
-  Call to a built-in panicking function. Only if `--reconstruct-panic-calls` is passed.
-
-  Fields:
-  - `name`: The name of the function that was called.
-  - `on_unwind`
+  Unwinding must stop for ABI reasons or because cleanup code panicked again. The function is
+  the lang item that rustc calls in that case.
   -/
-  | Panic (name : Name) (on_unwind : Llbc.Block)
-  /-- Unwinding must stop for ABI reasons or because cleanup code panicked again. -/
-  | UnwindTerminate
+  | UnwindTerminate (_0 : UnwindTerminateReason) (_1 : FunDeclRef)
   /-- Unwind out of the current function into its caller. -/
   | UnwindResume
   | Return
@@ -2506,6 +2439,25 @@ end
 deriving instance Inhabited for Llbc.Block
 deriving instance Inhabited for Llbc.StatementKind
 deriving instance Inhabited for Llbc.Statement
+
+/-- The function that the linker binds an extern function's symbol to. -/
+inductive LinkedExtern where
+  /-- A strong definition, e.g. `#[no_mangle]` or `#[export_name]`. -/
+  | StronglyLinked (_0 : FunDeclRef)
+  /--
+  Weak definitions (`#[linkage = "weak"]`), which the linker only binds the symbol to if
+  there's no strong definition. If there are several, the linker may pick any of them.
+  -/
+  | WeaklyLinked (_0 : Array FunDeclRef)
+  /--
+  Linked to the default allocator through rustc's allocator shim. This needs to be handled
+  separately, as the signatures aren't ABI-compatible: the arguments need to be
+  transmuted (e.g. `Alignment` -> `usize`).
+  -/
+  | AllocatorShim (_0 : FunDeclRef)
+  /-- No function of the crate or its dependencies is exported under this symbol. -/
+  | Unlinked
+  deriving Inhabited
 
 /-- A variable -/
 structure Local where
@@ -2522,6 +2474,11 @@ structure Local where
   ty : Ty
   /-- Whether this local was declared `mut`. Anonymous locals are always mutable. -/
   mutable : Bool
+  /--
+  List of constraints that apply to this local throughout the function body. For example,
+  `let x: Self = ...;` produces a `x == Self` constraint.
+  -/
+  borrowck_constraints : Array PlaceTypeConstraint
   /-- If this local is a drop flag, this is the place whose initialization state it tracks. -/
   drop_flag_for : Option Place
   deriving Inhabited
@@ -2563,13 +2520,6 @@ structure GExprBody (T : Type) where
   comments : Array (UInt32 × (Array String))
   deriving Inhabited
 
-/-- Reference to a function declaration. -/
-structure FunDeclRef where
-  id : FunDeclId
-  /-- Generic arguments passed to the function. -/
-  generics : GenericArgs
-  deriving Inhabited
-
 /-- Common error used during the translation. -/
 structure Error where
   span : Span
@@ -2607,8 +2557,14 @@ inductive Body where
   implementation across targets.
   -/
   | TargetDispatch (_0 : Array (String × FunDeclRef))
-  /-- Function declared in an `extern { ... }` block. The string is the foreign symbol name. -/
-  | Extern (_0 : String)
+  /--
+  Function declared in an `extern { ... }` block.
+
+  Fields:
+  - `symbol`: The foreign symbol name.
+  - `definition`: The function that the linker binds this symbol to. Only computed with `--link-extern-fns`.
+  -/
+  | Extern (symbol : String) (definition : LinkedExtern)
   /--
   Rust intrinsic function. This describes a "built-in" operation that must be handled by the
   codegen backend.
@@ -2639,6 +2595,37 @@ inductive Body where
   | Missing
   /-- We encountered an error while translating this body. -/
   | Error (_0 : Error)
+  deriving Inhabited
+
+/-- Used for builtin items, rather than hardcoding these as strings. -/
+inductive BuiltinPathElem where
+  /-- The tuple of the given arity. -/
+  | Tuple (_0 : Nat)
+  /--
+  `str`, which is a struct containing a `[u8]` the standard library expects
+  to be valid UTF-8.
+  -/
+  | Str
+  /-- A closure. -/
+  | Closure
+  /-- A `use` declaration. -/
+  | Use
+  /-- An anonymous constant. -/
+  | AnonConst
+  /-- A constant that rustc promoted out of a body. -/
+  | PromotedConst
+  /-- The function item we generate for a closure that is cast to a function pointer. -/
+  | ClosureAsFn
+  /-- The method we add to the `Destruct` trait to hold the drop glue. -/
+  | DropGlue
+  /-- The vtable struct of a trait, or the vtable global of a trait impl. -/
+  | VTable
+  /-- The version of a method that is stored in a vtable. -/
+  | VTableMethod
+  /-- The `drop_in_place` shim stored in a vtable. -/
+  | VTableDropShim
+  /-- The fallback body of an intrinsic. -/
+  | IntrinsicFallback
   deriving Inhabited
 
 /--
@@ -2680,342 +2667,6 @@ inductive CfgAbi where
   an escape hatch for such cases.
   -/
   | Other (_0 : String)
-  deriving Inhabited
-
-inductive SerializationFormatArg where
-  | Json
-  | Postcard
-  | MiniRust
-  | All
-  deriving Inhabited
-
-/--
-Presets to make it easier to tweak options without breaking dependent projects. Eventually we
-should define semantically-meaningful presets instead of project-specific ones.
--/
-inductive Preset where
-  /--
-  The default translation used before May 2025. After that, many passes were made optional
-  and disabled by default.
-  -/
-  | OldDefaults
-  /--
-  Emit the MIR as unmodified as possible. This is very imperfect for now, we should make more
-  passes optional.
-  -/
-  | RawMir
-  /-- Skip as many optional transformations as possible. -/
-  | Fast
-  | Aeneas
-  | Eurydice
-  | Soteria
-  | Tests
-  deriving Inhabited
-
-inductive MonomorphizeMut where
-  /-- Monomorphize any item instantiated with `&mut`. -/
-  | All
-  /-- Monomorphize all non-typedecl items instantiated with `&mut`. -/
-  | ExceptTypes
-  deriving Inhabited
-
-/--
-The MIR stage to use. This is only relevant for the current crate: for dependencies, only mir
-optimized is available (or mir elaborated for consts).
--/
-inductive MirLevel where
-  /-- The MIR just after MIR lowering. -/
-  | Built
-  /-- The MIR after const promotion. This is the MIR used by the borrow-checker. -/
-  | Promoted
-  /--
-  The MIR after drop elaboration. This is the first MIR to include all the runtime
-  information.
-  -/
-  | Elaborated
-  /--
-  The MIR after optimizations. Charon disables all the optimizations it can, so this is
-  sensibly the same MIR as the elaborated MIR.
-  -/
-  | Optimized
-  deriving Inhabited
-
-/-- How to handle constants and statics. -/
-inductive ConstHandling where
-  /--
-  Keep consts as calls to their initializer with `ConstantExprKind::Call`, without attempting
-  to do any const-evaluation. This is the default.
-  -/
-  | Initializers
-  /--
-  Try evaluating consts and statics to their final value. If evaluation fails, we fall back to the
-  initializer call.
-  -/
-  | Values
-  /--
-  Try evaluating consts and statics to raw bytes, using `ConstantExprKind::RawMemory`. If
-  evaluation fails, we fall back to the initializer call.
-  -/
-  | Bytes
-  deriving Inhabited
-
-structure CliOpts where
-  /-- Extract the unstructured LLBC (i.e., don't reconstruct the control-flow) -/
-  ullbc : Bool
-  /--
-  Reconstruct the control-flow without duplicating blocks: a block reachable from several
-  branches is emitted once, and the branches `break` forward to it out of an enclosing
-  `loop`. This can shrink bodies a lot, at the cost of control-flow that is harder to read.
-  Note that consumers which expect `if`/`loop`-shaped bodies (e.g. aeneas) may not support
-  the result.
-  -/
-  no_code_duplication : Bool
-  /--
-  Whether to precisely translate drops and drop-related code. For this, we add explicit
-  `Destruct` bounds to all generic parameters and set the MIR level to at least `elaborated`.
-
-  Without this option, drops may be "conditional" and we may lack information about what code
-  is run on drop in a given polymorphic function body.
-  -/
-  precise_drops : Bool
-  /--
-  The MIR stage to extract. This is only relevant for the current crate; for dependencies only
-  MIR optimized is available.
-  -/
-  mir : Option MirLevel
-  /-- Extra flags to pass to rustc. -/
-  rustc_args : Array String
-  /--
-  A list of target architectures to translate for. Charon will run the compiler once for each
-  target and aggregate the results, which is useful if the code includes `#[cfg(..)]`
-  filters.
-  Warning: this is an initial implementation which is extremely slow.
-  -/
-  targets : Array String
-  /--
-  Sysroot to use for rustc invocations. By default Charon builds a sysroot that has full MIR
-  for the standard library. You can pass a custom sysroot to use instead, or pass "default"
-  to use the normal distributed sysroot, which lacks MIR bodies for many standard library
-  functions.
-  -/
-  sysroot : Option String
-  /--
-  Monomorphize the items encountered when possible. Generic items found in the crate are
-  skipped. To only translate a particular call graph, use `--start-from`. Note: this doesn't
-  currently support `dyn Trait`.
-  -/
-  monomorphize : Bool
-  /--
-  Partially monomorphize items to make it so that no item is ever monomorphized with a
-  mutable reference (or type containing one); said differently, so that the presence of
-  mutable references in a type is independent of its generics. This is used by Aeneas.
-  -/
-  monomorphize_mut : Option MonomorphizeMut
-  /--
-  A list of item paths to use as starting points for the translation. We will translate these
-  items and any items they refer to, according to the opacity rules. When absent, we start
-  from the path `crate` (which translates the whole crate).
-  -/
-  start_from : Array String
-  /--
-  Same as --start-from, but won't raise an error if a pattern doesn't match any item. This is useful
-  when the patterns are generated by a build script and may be out of sync with the code.
-  -/
-  start_from_if_exists : Array String
-  /--
-  Use all the items annotated with the given attribute(s) as starting points for translation
-  (except modules).
-  If an attribute name is not specified, `verify::start_from` is used.
-  -/
-  start_from_attribute : Array String
-  /-- Use all the `pub` items as starting points for translation (except modules). -/
-  start_from_pub : Bool
-  /--
-  Use global constructors as starting points for translation, i.e. the `#[used]` statics
-  placed in the linker section that the target runs at startup (e.g. `.init_array` on ELF).
-  -/
-  start_from_global_ctors : Bool
-  /-- Whitelist of items to translate. These use the name-matcher syntax. -/
-  «include» : Array String
-  /-- Blacklist of items to keep opaque. Works just like `--include`, see the doc there. -/
-  «opaque» : Array String
-  /-- Blacklist of items to not translate at all. Works just like `--include`, see the doc there. -/
-  exclude : Array String
-  /--
-  Usually we skip the bodies of foreign methods and structs with private fields. When this
-  flag is on, we don't.
-  -/
-  extract_opaque_bodies : Bool
-  /--
-  Usually we skip the provided methods that aren't used. When this flag is on, we translate
-  them all.
-  -/
-  translate_all_methods : Bool
-  /--
-  Usually we only translate the vtables that are used in an unsizing coercion, and leave the
-  `vtable` field of the other trait impls as `Lazy`. When this flag is on, we translate the
-  vtable of every trait impl of a dyn-compatible trait.
-  -/
-  eager_vtables : Bool
-  /--
-  Whenever an impl doesn't implement a method (because it has a default body), this creates a
-  duplicate method as if it had been implemented. This can simplify the call-graphs as
-  otherwise calls within the default body would be indirected through trait proofs.
-  -/
-  duplicate_defaulted_methods : Bool
-  /--
-  Transform the associate types of traits to be type parameters instead. This takes a list
-  of name patterns of the traits to transform, using the same syntax as `--include`.
-  -/
-  lift_associated_types : Array String
-  /--
-  Whether to hide various marker traits such as `Sized`, `Sync`, and `Send`
-  anywhere they show up. This can considerably speed up translation.
-  -/
-  hide_marker_traits : Bool
-  /-- Hide the `A` type parameter on standard library containers (`Box`, `Vec`, etc). -/
-  hide_allocator : Bool
-  /-- Don't translate doc comments. -/
-  no_doc_comments : Bool
-  /--
-  Remove trait clauses that aren't ultimately used anywhere. This is potentially incorrect as
-  sometimes the mere presence of a trait clause is used to justify an operation, e.g. copying
-  `Copy` data using `unsafe`.
-  -/
-  remove_unused_clauses : Bool
-  /--
-  Trait method default bodies take a `Self: Trait` clause as parameter, so that they can be
-  reused by multiple trait impls. This however causes trait definitions to be mutually
-  recursive with their default methods. This flag removes `Self` clauses that aren't used to
-  break this mutual recursion when possible.
-  -/
-  remove_unused_self_clauses : Bool
-  /--
-  Remove trait clauses from type declarations. Best combined with `--lift-associated-types`
-  for type declarations that use trait associated types in their fields.
-  -/
-  remove_adt_clauses : Bool
-  /-- Transform precise drops to the equivalent `drop_glue(&mut p)` call. -/
-  desugar_drops : Bool
-  /--
-  Reconstruct conditional drops from the drop-flags and precise drops introduced by rustc's
-  drop elaboration, when possible. This may leave drop flags if we couldn't identify a known
-  pattern.
-  -/
-  resugar_drops : Bool
-  /-- Detect the drop flags inserted by rustc, which are booleans that track initialedness of a place. -/
-  detect_drop_flags : Bool
-  /--
-  Transform array-to-slice unsizing and repeat expressions into standard library function
-  calls in LLBC.
-  -/
-  ops_to_function_calls : Bool
-  /--
-  Transform array/slice indexing into standard library function calls in LLBC. Note that this may
-  introduce UB since it creates references that were not normally created, including when
-  indexing behind a raw pointer.
-  -/
-  index_to_function_calls : Bool
-  /-- Treat `Box<T>` as if it was a built-in type. -/
-  treat_box_as_builtin : Bool
-  /--
-  Don't generate a type declaration per tuple arity. Instead, every tuple type refers to the
-  single opaque declaration with id `TypeDeclId::UNIT`, and stores its field types in its
-  generic arguments. This is meant for consumers that build tuples of arbitrary arity on the
-  fly and don't care about their declaration. Note that this makes tuple types ill-typed with
-  respect to their declaration; it is also incompatible with `--monomorphize`.
-  -/
-  no_gen_tuple_structs : Bool
-  /-- Do not inline or evaluate constants. -/
-  raw_consts : Bool
-  /--
-  Inline anonymous constants, including promoted constants and inline const blocks. This is
-  unsound for promoted constants if they're used with a `'static` lifetime, as this will move
-  the constant to a local variable.
-  -/
-  inline_anon_consts : Bool
-  /--
-  How to represent constants and statics: as a call to their initializer function, as an
-  evaluated value, or as raw bytes. This is always best-effort: in some cases we only get the
-  evaluated constant, and in others we cannot evaluate the constant and keep the initializer.
-  -/
-  consts : Option ConstHandling
-  /--
-  Replace "bound checks followed by UB-on-overflow operation" with the corresponding
-  panic-on-overflow operation. This loses unwinding information.
-  -/
-  reconstruct_fallible_operations : Bool
-  /-- Replace calls to built-in panic functions with a `Panic` terminator. -/
-  reconstruct_panic_calls : Bool
-  /-- Replace `if x { panic() }` with `assert(x)`. -/
-  reconstruct_asserts : Bool
-  /--
-  Recombine a `read_discriminant(place)` followed by a `switch` into a single operation that
-  uses enum variants instead of their discriminants.
-  -/
-  reconstruct_matches : Bool
-  /--
-  Ensure all local deallocations are made explicit with `StorageDead` statements. If this flag is not passed,
-  every non-return local is implicitly deallocated on function return.
-  Note this can add a lot of statements (quadratically-many, because of unwind paths).
-  -/
-  deallocate_all_locals : Bool
-  /--
-  Use `DeBruijnVar::Free` for the variables bound in item signatures, instead of
-  `DeBruijnVar::Bound` everywhere. This simplifies the management of generics for projects
-  that don't intend to manipulate them too much.
-  -/
-  unbind_item_vars : Bool
-  /-- Pretty-print the ULLBC immediately after extraction from MIR. -/
-  print_original_ullbc : Bool
-  /-- Pretty-print the ULLBC after applying the micro-passes (before serialization/control-flow reconstruction). -/
-  print_ullbc : Bool
-  /-- Pretty-print the LLBC just after we built it (i.e., immediately after loop reconstruction). -/
-  print_built_llbc : Bool
-  /-- Pretty-print the final LLBC (after all the cleaning micro-passes). -/
-  print_llbc : Bool
-  /-- When pretty-printing, also print the layout of every type declaration. -/
-  print_layouts : Bool
-  /-- When pretty-printing, add comments that indicate which items and statements are unsafe. -/
-  print_safety : Bool
-  /--
-  The destination directory. Files will be generated as
-  `<dest_dir>/<crate_name>.{u}llbc` for json and `<dest_dir>/<crate_name>.{u}llbc.postcard`
-  for postcard, unless `dest_file` is set. `dest_dir` defaults to the current directory.
-  -/
-  dest_dir : Option String
-  /--
-  The destination file. By default this depends on `format` and `ullbc`. If this is set we
-  ignore `dest_dir`. If used with `format=all`, will add an extension corresponding to the file format
-  at the end of the provided file name.
-  -/
-  dest_file : Option String
-  /-- Don't deduplicate values (types, trait refs) in the .(u)llbc file. This makes the file easier to inspect. -/
-  no_dedup_serialized_ast : Bool
-  /-- Serialization format for emitted files. Defaults to json. -/
-  format : Option SerializationFormatArg
-  /-- Run the translated program with MiniRust. -/
-  run_with_minirust : Bool
-  /-- Don't serialize the final (U)LLBC to a file. -/
-  no_serialize : Bool
-  /-- If activated, this skips borrow-checking of the crate. -/
-  skip_borrowck : Bool
-  /-- Don't generate distinct `Region::Body` lifetimes inside function bodies; use `Region::Erased` instead. -/
-  erase_body_lifetimes : Bool
-  /-- Skip the typecheck passes. -/
-  no_typecheck : Bool
-  /-- Don't normalize associated types. -/
-  no_normalize : Bool
-  /-- Don't compute a stable order for declarations. -/
-  no_reorder_decls : Bool
-  /-- Don't compute type layout guarantees. -/
-  no_compute_layout_guarantees : Bool
-  /-- Panic on the first error. This is useful for debugging. -/
-  abort_on_error : Bool
-  /-- Consider any warnings to be errors. -/
-  error_on_warnings : Bool
-  /-- Named builtin sets of options. -/
-  preset : Option Preset
   deriving Inhabited
 
 inductive ClosureKind where
@@ -3063,6 +2714,12 @@ inductive DeclarationGroup where
   /-- Anything that doesn't fit into these categories. -/
   | Mixed (_0 : GDeclarationGroup ItemId)
   deriving Inhabited
+
+structure Disambiguator where
+  index : Nat
+  deriving Inhabited, Ord
+
+instance : Idx Disambiguator := ⟨Disambiguator.index, Disambiguator.mk⟩
 
 /-- Layout information given by the metadata of an unsized type. -/
 inductive MetadataValue where
@@ -3222,6 +2879,82 @@ structure File where
   -/
   contents : Option String
   deriving Inhabited
+
+/--
+There are two kinds of `impl` blocks:
+- impl blocks linked to a type ("inherent" impl blocks following Rust terminology):
+  ```text
+  impl<T> List<T> { ...}
+  ```
+- trait impl blocks:
+  ```text
+  impl<T> PartialEq for List<T> { ...}
+  ```
+We distinguish the two.
+-/
+inductive ImplElem where
+  | Ty (_0 : Binder Ty)
+  | Trait (_0 : TraitImplId)
+  deriving Inhabited
+
+/-- See the comments for [Name] -/
+inductive PathElem where
+  | Ident (_0 : String) (_1 : Disambiguator)
+  | Impl (_0 : ImplElem)
+  /--
+  This item was obtained by instantiating its parent with the given args. The binder binds
+  the parameters of the new items. If the binder binds nothing then this is a
+  monomorphization.
+  -/
+  | Instantiated (_0 : Binder GenericArgs)
+  /-- This item is only available on the given target. Only appears in multi-target mode. -/
+  | Target (_0 : String)
+  /--
+  A path element that doesn't come from the source code: either a builtin type such as
+  tuples, or an item that has no name of its own such as a closure or a vtable.
+  -/
+  | Builtin (_0 : BuiltinPathElem) (_1 : Disambiguator)
+  deriving Inhabited
+
+/--
+An item name/path
+
+A name really is a list of strings. However, we sometimes need to
+introduce unique indices to disambiguate. This mostly happens because
+of "impl" blocks:
+  ```text
+  impl<T> List<T> {
+    ...
+  }
+  ```
+
+A type in Rust can have several "impl" blocks, and  those blocks can
+contain items with similar names. For this reason, we need to disambiguate
+them with unique indices. Rustc calls those "disambiguators". In rustc, this
+gives names like this:
+- `betree_main::betree::NodeIdCounter{impl#0}::new`
+- note that impl blocks can be nested, and macros sometimes generate
+  weird names (which require disambiguation):
+  `betree_main::betree_utils::_#1::{impl#0}::deserialize::{impl#0}`
+
+Finally, the paths used by rustc are a lot more precise and explicit than
+those we expose in LLBC: for instance, every identifier belongs to a specific
+namespace (value namespace, type namespace, etc.), and is coupled with a
+disambiguator.
+
+On our side, we want to stay high-level and simple: we use string identifiers
+as much as possible, insert disambiguators only when necessary (for instance
+when we find an "impl" block or when two loaded crates have the same name)
+and check that the disambiguator is useless in the other situations (i.e.,
+the disambiguator is always equal to 0).
+
+Moreover, the items are uniquely disambiguated by their (integer) ids
+(`TypeDeclId`, etc.), and when extracting the code we have to deal with
+name clashes anyway. Still, we might want to be more precise in the future.
+
+Also note that the first path element in the name is always the crate name.
+-/
+abbrev Name := Array PathElem
 
 /-- A representation of all the valid lang items in Rust. -/
 inductive LangItem where
@@ -3857,11 +3590,12 @@ inductive GlobalSource where
 
   Fields:
   - `self_ty`: The concrete type this vtable is for.
+  - `trait_ref`: The trait this vtable implements.
   - `impl_ref`: The originating impl. This is `None` in monomorphized mode: the vtable global itself
   identifies the concrete instantiation, so we don't translate an impl reference solely
   to record its provenance.
   -/
-  | VTableInstance (self_ty : Ty) (impl_ref : Option TraitImplRef)
+  | VTableInstance (self_ty : Ty) (trait_ref : TraitDeclRef) (impl_ref : Option TraitImplRef)
   deriving Inhabited
 
 inductive GlobalKind where
@@ -4115,6 +3849,29 @@ inductive Os where
   deriving Inhabited
 
 /--
+Presets to make it easier to tweak options without breaking dependent projects. Eventually we
+should define semantically-meaningful presets instead of project-specific ones.
+-/
+inductive Preset where
+  /--
+  The default translation used before May 2025. After that, many passes were made optional
+  and disabled by default.
+  -/
+  | OldDefaults
+  /--
+  Emit the MIR as unmodified as possible. This is very imperfect for now, we should make more
+  passes optional.
+  -/
+  | RawMir
+  /-- Skip as many optional transformations as possible. -/
+  | Fast
+  | Aeneas
+  | Eurydice
+  | Soteria
+  | Tests
+  deriving Inhabited
+
+/--
 The metadata stored in a pointer. That's the information stored in pointers alongside
 their address. It's empty for `Sized` types, and interesting for unsized
 aka dynamically-sized types.
@@ -4173,6 +3930,9 @@ structure TargetInfo where
   /-- Alignments for primitive types. -/
   primitive_alignments : Array (ScalarTy × UInt64)
   deriving Inhabited
+
+/-- The layouts of a type, for each target. -/
+abbrev TargetLayouts := Array (String × Layout)
 
 /-- An associated constant in a trait. -/
 structure TraitAssocConst where
@@ -4310,10 +4070,12 @@ inductive TraitImplSource where
   | Normal
   /-- The blanket implementation generated for a trait alias. -/
   | TraitAlias
-  /-- An implementation of one of the `Fn*` traits, generated for a closure. -/
-  | Closure (kind : ClosureKind)
-  /-- The `Destruct` implementation generated for an ADT or closure. -/
-  | Destruct
+  /--
+  An implementation that rustc provides without source code, e.g. the `Fn*` impls of
+  closures. For `Destruct` impls, we add a `drop_glue` method that contains the drop glue of
+  the type.
+  -/
+  | Builtin
   deriving Inhabited
 
 /--
@@ -4353,14 +4115,6 @@ structure TraitImpl where
   methods : IndexMap TraitMethodId (Binder FunDeclRef)
   /-- The virtual table instance for this trait implementation. -/
   vtable : VTableDecl
-  deriving Inhabited
-
-inductive VTableField where
-  | Size
-  | Align
-  | Drop
-  | Method (_0 : TraitMethodId) (_1 : Array FieldId)
-  | SuperTrait (_0 : TraitClauseId)
   deriving Inhabited
 
 /-- Where a given type came from. -/
@@ -4447,7 +4201,12 @@ structure TypeDecl where
   The layout of the type for each target. Information may be partial because of generics or
   dynamically-sized types. If we cannot compute a layout, the target has no entry.
   -/
-  layout : Array (String × Layout)
+  layout : TargetLayouts
+  /--
+  The layouts of the monomorphic instances of this type that were reached while translating.
+  This is empty in monomorphic mode, or when the type is already monomorphic; just use `layout` instead.
+  -/
+  monomorphic_layouts : Array (GenericArgs × TargetLayouts)
   /-- The metadata associated with a pointer to the type. -/
   ptr_metadata : PtrMetadata
   /--
@@ -4478,10 +4237,10 @@ structure TranslatedCrate where
   /-- The name of the crate. -/
   crate_name : String
   /--
-  The options used when calling Charon. Can be used to check that Charon was called with the
-  options that a given consumer requires.
+  The preset used when calling Charon. Can be used to check that Charon was called with the
+  preset that a given consumer requires.
   -/
-  options : CliOpts
+  preset : Option Preset
   /--
   Information about each target platform for which the crate was translated. When translating
   a crate normally this will have a single entry; when using `--targets` this will have one
