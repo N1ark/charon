@@ -36,6 +36,15 @@ extern crate rustc_trait_selection;
 #[macro_use]
 extern crate charon_lib;
 
+// Overrides `malloc` & co for the whole process, see the `jemalloc` feature.
+#[cfg(all(feature = "jemalloc", not(windows)))]
+use tikv_jemalloc_sys as _;
+// jemalloc's default configuration (`MALLOC_CONF` overrides it). By default each thread of rustc's
+// parallel front-end gets its own arena; a single arena lets them reuse each other's freed memory.
+#[cfg(all(feature = "jemalloc", not(windows), not(target_vendor = "apple")))]
+#[unsafe(export_name = "malloc_conf")]
+static MALLOC_CONF: &u8 = &b"narenas:1\0"[0];
+
 mod driver;
 #[macro_use]
 pub mod hax;
