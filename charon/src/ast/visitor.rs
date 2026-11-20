@@ -21,6 +21,7 @@ use crate::ast::from_rustc::{
 };
 use crate::ast::*;
 use crate::ids::{Idx, IndexVec};
+use crate::utils::type_map::{Mappable, Mapper, TypeMap};
 use derive_generic_visitor::*;
 
 /// An overrideable visitor trait that can be used to conveniently traverse the whole contents of
@@ -1298,5 +1299,78 @@ mod wrappers {
         fn binder_depth_mut(&mut self) -> &mut DeBruijnId {
             self.0.binder_depth_mut()
         }
+    }
+}
+
+/// Memoizes the result of mutably visiting hash-consed values (types, trait refs, constants...).
+/// These are massively shared, so a visitor that always rewrites a value the same way can reuse
+/// the result of the first visit. See [`VisitorWithMemo`] for how to opt in.
+///
+/// This is only correct if the visit has no side effects and its result only depends on the value
+/// and on [`VisitorWithMemo::memo_context`]. Closed values (see [`TypeInfo::is_closed`]) are
+/// memoized regardless of context: this assumes the context is only needed to interpret variables,
+/// `Self` clauses or size metadata.
+pub struct HashConsMemo<C> {
+    /// Maps each original value and the context it was visited in (`None` for closed values) to
+    /// its rewritten version.
+    map: TypeMap<MemoMapper<C>>,
+}
+
+pub struct MemoMapper<C>(std::marker::PhantomData<C>);
+impl<C: Hash + Eq + Mappable> Mapper for MemoMapper<C> {
+    type Value<T: Mappable> = rustc_hash::FxHashMap<(HashConsed<T>, Option<C>), HashConsed<T>>;
+}
+
+impl<C> Default for HashConsMemo<C> {
+    fn default() -> Self {
+        Self {
+            map: Default::default(),
+        }
+    }
+}
+
+/// To opt into [`HashConsMemo`], implement this and override `visit_with_cached_type_info` to call
+/// [`VisitorWithMemo::visit_memoized`].
+pub trait VisitorWithMemo: VisitAstMut {
+    /// What the rewrite of a value that mentions its environment depends on, e.g. the binder depth.
+    type MemoContext: Copy + Hash + Eq + Send + Sync + 'static;
+    fn memo(&mut self) -> &mut HashConsMemo<Self::MemoContext>;
+    /// The current context, or `None` if values that mention their environment should not be
+    /// memoized.
+    fn memo_context(&self) -> Option<Self::MemoContext>;
+    /// Whether the visit that just finished may be recorded. E.g. a visit that reported an error
+    /// shouldn't be, as reusing its result would not report the error again.
+    fn may_record(&self) -> bool {
+        true
+    }
+
+    /// Visit `x`, or reuse the result of a previous visit of the same value in the same context.
+    /// Call this from `visit_with_cached_type_info`.
+    fn visit_memoized<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        let context = if x.type_info().is_closed() {
+            None
+        } else {
+            match self.memo_context() {
+                Some(context) => Some(context),
+                None => return self.visit_inner(x),
+            }
+        };
+        let key = (x.clone(), context);
+        if let Some(new) = self.memo().map.or_default::<WithCachedTypeInfo<T>>().get(&key) {
+            *x = new.clone();
+            return Continue(());
+        }
+        // If the visit breaks, the value may be half-visited: don't record it.
+        self.visit_inner(x)?;
+        if self.may_record() {
+            self.memo()
+                .map
+                .or_default::<WithCachedTypeInfo<T>>()
+                .insert(key, x.clone());
+        }
+        Continue(())
     }
 }
