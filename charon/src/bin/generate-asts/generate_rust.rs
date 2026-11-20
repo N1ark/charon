@@ -202,7 +202,7 @@ impl RustcDatatypes {
             }
         }
 
-        let mut datatypes = SeqHashMap::new();
+        let mut datatypes = SeqHashMap::default();
         for (&path, datatype) in &self.datatypes {
             let ids = crate_data
                 .type_decls
@@ -248,9 +248,9 @@ impl<'a> Generator<'a> {
         let mut generator = Generator {
             crate_data,
             datatypes,
-            variant_filters: HashMap::new(),
+            variant_filters: HashMap::default(),
             queue: RefCell::new(VecDeque::new()),
-            generated: RefCell::new(HashSet::new()),
+            generated: RefCell::new(HashSet::default()),
             current_decl: Cell::new(None),
         };
         generator.variant_filters = generator.resolve_variant_filters()?;
@@ -292,7 +292,7 @@ impl<'a> Generator<'a> {
     }
 
     fn resolve_variant_filters(&self) -> Result<HashMap<TypeDeclId, HashSet<VariantId>>> {
-        let mut filters = HashMap::new();
+        let mut filters = HashMap::default();
         for (id, datatype) in &self.datatypes {
             let Some(selected_names) = datatype.selected_variants() else {
                 continue;

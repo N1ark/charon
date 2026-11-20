@@ -1,5 +1,4 @@
 use indexmap::map::Entry;
-use rustc_hash::FxBuildHasher;
 
 use crate::ast::*;
 
@@ -43,7 +42,7 @@ fn register_short_name_candidate<'a>(
 }
 
 /// Insertion-ordered so that the output doesn't depend on how `PathElem`s hash.
-type ShortNames<'a> = SeqHashMap<PathElem, FoundName<'a>, FxBuildHasher>;
+type ShortNames<'a> = SeqHashMap<PathElem, FoundName<'a>>;
 
 pub struct Transform;
 impl TransformPass for Transform {

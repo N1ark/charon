@@ -1,10 +1,8 @@
 //! The way to match on enums in MIR is in two steps: first read the discriminant, then switch on
 //! the resulting integer. This pass records the enum place as the switch scrutinee and replaces
 //! the integer cases with symbolic enum discriminants.
-use std::{
-    collections::{HashMap, HashSet},
-    mem,
-};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::mem;
 
 use crate::formatter::IntoFormatter;
 use crate::name_matcher::NamePattern;
