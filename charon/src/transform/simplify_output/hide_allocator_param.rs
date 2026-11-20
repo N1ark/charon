@@ -1,3 +1,4 @@
+use derive_generic_visitor::*;
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -8,9 +9,29 @@ use crate::transform::{TransformCtx, ctx::TransformPass};
 #[derive(Visitor)]
 struct RemoveLastParamVisitor {
     types: HashSet<TypeDeclId>,
+    /// The bloom filter of `types`, to skip values that can't mention them.
+    types_bloom: ItemBloom,
 }
 
 impl VisitAstMut for RemoveLastParamVisitor {
+    fn visit_ty(&mut self, x: &mut Ty) -> ControlFlow<Self::Break> {
+        if !x.type_info().items.intersects(self.types_bloom) {
+            return Continue(());
+        }
+        self.visit_inner(x)
+    }
+    fn visit_trait_ref(&mut self, x: &mut TraitRef) -> ControlFlow<Self::Break> {
+        if !x.type_info().items.intersects(self.types_bloom) {
+            return Continue(());
+        }
+        self.visit_inner(x)
+    }
+    fn visit_constant_expr(&mut self, x: &mut ConstantExpr) -> ControlFlow<Self::Break> {
+        if !x.type_info().items.intersects(self.types_bloom) {
+            return Continue(());
+        }
+        self.visit_inner(x)
+    }
     fn enter_type_decl_ref(&mut self, x: &mut TypeDeclRef) {
         if self.types.contains(&x.id) {
             // Remove the last param.
@@ -73,8 +94,9 @@ impl TransformPass for Transform {
             }
         }
 
-        let _ = ctx
-            .translated
-            .drive_mut(&mut RemoveLastParamVisitor { types });
+        let _ = ctx.translated.drive_mut(&mut RemoveLastParamVisitor {
+            types_bloom: types.iter().map(|&id| ItemBloom::of(id)).collect(),
+            types,
+        });
     }
 }
