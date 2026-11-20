@@ -10,6 +10,7 @@ use serde_state::{DeserializeState, SerializeState};
 use std::any::type_name;
 use std::cell::RefCell;
 use std::hash::Hash;
+use std::marker::PhantomData;
 
 use crate::utils::type_map::{Mappable, Mapper, TypeMap};
 
@@ -92,7 +93,7 @@ impl DedupSerializerState for DedupSerializer {
 }
 
 /// How we represent a deduplicated value in the serialized output. `T` is the serialized form of
-/// the value.
+/// the value. Human-readable formats use a more compact representation, see [`serialize_dedup`].
 #[derive(Serialize, Deserialize, SerializeState, DeserializeState)]
 #[serde_state(state_implements = DedupSerializerState)]
 pub enum SerDedup<T> {
@@ -126,7 +127,19 @@ where
         Some(Err(id)) => SerDedup::Deduplicated(id),
         None => SerDedup::Untagged(repr()),
     };
-    repr.serialize_state(state, serializer)
+    if serializer.is_human_readable() {
+        // In json, ids are numbers and values are arrays (or objects, for `Untagged`), so we can
+        // drop the enum tags: `Deduplicated(id)` becomes `id` and `Value(id, repr)` becomes
+        // `[id, repr]`.
+        match repr {
+            SerDedup::Value(id, repr) => (id, serde_state::WithState::new(repr, state))
+                .serialize(serializer),
+            SerDedup::Deduplicated(id) => id.serialize(serializer),
+            SerDedup::Untagged(_) => repr.serialize_state(state, serializer),
+        }
+    } else {
+        repr.serialize_state(state, serializer)
+    }
 }
 
 /// Deserialize a value that may have been deduplicated. `build` reconstructs the value from its
@@ -143,8 +156,13 @@ where
     D: serde::Deserializer<'de>,
 {
     use serde::de::Error;
+    let repr = if deserializer.is_human_readable() {
+        deserializer.deserialize_any(HumanReadableDedupVisitor(state, PhantomData))?
+    } else {
+        SerDedup::<R>::deserialize_state(state, deserializer)?
+    };
     Ok(
-        match SerDedup::<R>::deserialize_state(state, deserializer)? {
+        match repr {
             SerDedup::Value(id, repr) => {
                 let value = build(repr);
                 state.record_deserialized(id, value.clone());
@@ -161,6 +179,55 @@ where
             SerDedup::Untagged(repr) => build(repr),
         },
     )
+}
+
+/// Deserializes the human-readable representation emitted by [`serialize_dedup`].
+struct HumanReadableDedupVisitor<'a, State, R>(&'a State, PhantomData<R>);
+
+impl<'de, State, R> serde::de::Visitor<'de> for HumanReadableDedupVisitor<'_, State, R>
+where
+    R: DeserializeState<'de, State>,
+{
+    type Value = SerDedup<R>;
+
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("a deduplicated value")
+    }
+    fn visit_u64<E: serde::de::Error>(self, id: u64) -> Result<Self::Value, E> {
+        let id = id.try_into().map_err(E::custom)?;
+        Ok(SerDedup::Deduplicated(DedupId(id)))
+    }
+    fn visit_seq<A: serde::de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        use serde::de::Error;
+        let id = seq
+            .next_element()?
+            .ok_or_else(|| A::Error::invalid_length(0, &self))?;
+        let repr = seq
+            .next_element_seed(StateSeed(self.0, PhantomData))?
+            .ok_or_else(|| A::Error::invalid_length(1, &self))?;
+        Ok(SerDedup::Value(id, repr))
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        use serde::de::Error;
+        match map.next_key::<String>()?.as_deref() {
+            Some("Untagged") => {}
+            _ => return Err(A::Error::custom("expected `Untagged`")),
+        }
+        let repr = map.next_value_seed(StateSeed(self.0, PhantomData))?;
+        Ok(SerDedup::Untagged(repr))
+    }
+}
+
+struct StateSeed<'a, State, R>(&'a State, PhantomData<R>);
+
+impl<'de, State, R> serde::de::DeserializeSeed<'de> for StateSeed<'_, State, R>
+where
+    R: DeserializeState<'de, State>,
+{
+    type Value = R;
+    fn deserialize<D: serde::Deserializer<'de>>(self, deserializer: D) -> Result<R, D::Error> {
+        R::deserialize_state(self.0, deserializer)
+    }
 }
 
 /// The error we report when a deduplicated value is deserialized with serde's stateless

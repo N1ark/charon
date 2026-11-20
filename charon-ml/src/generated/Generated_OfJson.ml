@@ -35,11 +35,11 @@ let dedup_val_of_json (tbl : 'a DedupTbl.t)
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("Untagged", json) ] -> of_json ctx json
-    | `Assoc [ ("Value", `List [ `Int id; json ]) ] ->
+    | `List [ `Int id; json ] ->
         let* v = of_json ctx json in
         DedupTbl.replace tbl (DedupId.of_int id) v;
         Ok v
-    | `Assoc [ ("Deduplicated", `Int id) ] -> begin
+    | `Int id -> begin
         match DedupTbl.find_opt tbl (DedupId.of_int id) with
         | Some v -> Ok v
         | None ->
