@@ -7,7 +7,7 @@ use crate::ast::*;
 
 bitflags::bitflags! {
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct TypeFlags: u8 {
+    pub struct TypeFlags: u16 {
         const HAS_ERASED_OR_BODY_REGIONS = 1 << 0;
         const MENTIONS_SELF_CLAUSE = 1 << 1;
         const USES_SIZE_METADATA = 1 << 2;
@@ -16,6 +16,7 @@ bitflags::bitflags! {
         const HAS_STATIC_REGION = 1 << 5;
         const HAS_REGION_VAR = 1 << 6;
         const HAS_REGIONS = 1 << 7;
+        const HAS_DYN = 1 << 8;
     }
 }
 
@@ -95,6 +96,7 @@ impl TypeInfo {
                     TyKind::TraitType(..) | TyKind::PtrMetadata(..) => {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE);
                     }
+                    TyKind::DynTrait(..) => self.info.flags.insert(TypeFlags::HAS_DYN),
                     TyKind::TypeVar(..)
                     | TyKind::Scalar(..)
                     | TyKind::Array(..)
@@ -104,7 +106,6 @@ impl TypeInfo {
                     | TyKind::RawPtr(..)
                     | TyKind::FnDef(..)
                     | TyKind::FnPtr(..)
-                    | TyKind::DynTrait(..)
                     | TyKind::Pattern(..)
                     | TyKind::Never
                     | TyKind::Error(..) => {}
@@ -202,6 +203,10 @@ impl TypeInfo {
 
     pub fn has_region(&self) -> bool {
         self.flags.contains(TypeFlags::HAS_REGIONS)
+    }
+
+    pub fn has_dyn(&self) -> bool {
+        self.flags.contains(TypeFlags::HAS_DYN)
     }
 
     /// The largest `DeBruijnId` mentioned by this item, if any.

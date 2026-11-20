@@ -38,6 +38,11 @@ struct OutlivesGatherer<'a> {
     trait_decls: &'a IndexMap<TraitDeclId, TraitDecl>,
     item_params: &'a mut GenericParams,
     binders: BindingStack<OutlivesAtBinder>,
+    /// Whether the predicates that reach the outermost level are discarded (as is the case for
+    /// bodies). In that case we can skip values that cannot imply predicates at inner binders.
+    discard_outermost: bool,
+    /// How many of the binders we're under bind types (i.e. are `dyn Trait` binders).
+    type_binders: usize,
 }
 
 impl<'a> OutlivesGatherer<'a> {
@@ -51,7 +56,29 @@ impl<'a> OutlivesGatherer<'a> {
             trait_decls,
             item_params,
             binders: BindingStack::new(OutlivesAtBinder::default()),
+            discard_outermost: false,
+            type_binders: 0,
         }
+    }
+
+    /// Whether visiting a value with that type info can be skipped, i.e. whether all the predicates
+    /// it implies end up at the outermost level. The only binders inside types are region binders
+    /// and `dyn Trait` binders. A value with neither regions nor `dyn` contains no bound variables
+    /// of its own, and the predicates it gives rise to (from ADT and associated type declarations)
+    /// only mention its types and the regions of the declarations. These can only be placed at an
+    /// inner binder if they mention a type variable bound by an enclosing `dyn` binder, hence the
+    /// `type_binders` check. The exception is `T: 'a` for a type variable inside a reference with
+    /// a bound `'a`, hence the `shorter_region` check. Note that `dyn` types may not mention any
+    /// regions, e.g. those we build for vtable method signatures.
+    ///
+    /// This is checked before visiting the value, which avoids the cost of cloning and re-interning
+    /// hash-consed values.
+    fn can_skip(&self, info: TypeInfo) -> bool {
+        self.discard_outermost
+            && !info.has_region()
+            && !info.has_dyn()
+            && self.type_binders == 0
+            && self.binders.iter().all(|b| b.shorter_region.is_none())
     }
 
     fn finish(mut self) {
@@ -101,7 +128,9 @@ impl VisitAstMut for OutlivesGatherer<'_> {
         binder: &mut Binder<T>,
     ) -> ControlFlow<Self::Break> {
         self.binders.push(OutlivesAtBinder::default());
+        self.type_binders += 1;
         let result = self.visit_inner(binder);
+        self.type_binders -= 1;
         self.binders
             .pop()
             .unwrap()
@@ -119,7 +148,24 @@ impl VisitAstMut for OutlivesGatherer<'_> {
         result
     }
 
+    fn visit_trait_ref(&mut self, tref: &mut TraitRef) -> ControlFlow<Self::Break> {
+        if self.can_skip(tref.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(tref)
+    }
+
+    fn visit_constant_expr(&mut self, cexpr: &mut ConstantExpr) -> ControlFlow<Self::Break> {
+        if self.can_skip(cexpr.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(cexpr)
+    }
+
     fn visit_ty(&mut self, ty: &mut Ty) -> ControlFlow<Self::Break> {
+        if self.can_skip(ty.type_info()) {
+            return Continue(());
+        }
         if let TyKind::TraitType(proof, type_id, args) = ty.kind()
             && let Some(decl) = self.trait_decls.get(proof.trait_id())
             && let Some(assoc) = decl.types.get(*type_id)
@@ -270,8 +316,11 @@ impl TransformPass for Transform {
             // Also add implied bounds to the inner binders inside bodies. Implied bounds involving
             // only body or signature lifetimes must not be kept; they must be checked by
             // borrow-checking.
-            OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
-                .visit(&mut fun_decl.body);
+            OutlivesGatherer {
+                discard_outermost: true,
+                ..OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
+            }
+            .visit(&mut fun_decl.body);
         }
 
         for timpl in &mut ctx.translated.trait_impls {
