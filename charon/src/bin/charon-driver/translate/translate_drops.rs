@@ -47,7 +47,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         };
 
         let body = def.this().drop_glue_shim(self.hax_state());
-        Ok(self.translate_body(span, body, &def.source_text))
+        Ok(self.translate_body(span, body, &def.source_text(self.tcx)))
     }
 
     /// Translate the body of the fake `Destruct::drop_glue` method we're adding to the

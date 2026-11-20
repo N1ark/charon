@@ -196,7 +196,7 @@ impl RustcDatatypes {
                 match (elems.next(), parts.next()) {
                     (None, None) => return true,
                     (Some(PathElem::Ident(name, disambiguator)), Some(part))
-                        if disambiguator.is_zero() && name == part => {}
+                        if disambiguator.is_zero() && name.as_str() == part => {}
                     _ => return false,
                 }
             }

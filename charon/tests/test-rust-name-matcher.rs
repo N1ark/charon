@@ -82,7 +82,7 @@ fn test_partial_mono_name_matcher() -> anyhow::Result<()> {
         let name = &decl.item_meta.name.name;
         matches!(
             name.as_slice(),
-            [.., PathElem::Ident(ident, _), PathElem::Instantiated(_)] if ident == "identity"
+            [.., PathElem::Ident(ident, _), PathElem::Instantiated(_)] if ident.as_str() == "identity"
         )
     });
     let ref_pat = Pattern::parse("test_crate::identity<&mut _>").unwrap();
@@ -97,7 +97,7 @@ fn test_partial_mono_name_matcher() -> anyhow::Result<()> {
         else {
             return false;
         };
-        if ident != "identity" {
+        if ident.as_str() != "identity" {
             return false;
         }
         let Ok(ty) = instantiation.skip_binder.types.iter().exactly_one() else {

@@ -1,5 +1,6 @@
 //! User-visible names of items.
 use crate::ast::*;
+use crate::utils::ustr::Ustr;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use itertools::Itertools;
@@ -23,7 +24,7 @@ pub static BOX_WRITE_PATTERN: &str = "alloc::boxed::_::write"; // `_` matches an
 #[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("Pe"))]
 pub enum PathElem {
     #[serde_state(stateless)]
-    Ident(String, Disambiguator),
+    Ident(Ustr, Disambiguator),
     Impl(ImplElem),
     /// This item was obtained by instantiating its parent with the given args. The binder binds
     /// the parameters of the new items. If the binder binds nothing then this is a
@@ -137,7 +138,7 @@ pub struct Name {
 impl PathElem {
     fn equals_ident(&self, id: &str) -> bool {
         match self {
-            PathElem::Ident(s, d) => s == id && d.is_zero(),
+            PathElem::Ident(s, d) => s.as_str() == id && d.is_zero(),
             _ => false,
         }
     }
@@ -162,7 +163,7 @@ impl Name {
         Name {
             name: path
                 .iter()
-                .map(|elem| PathElem::Ident(elem.to_string(), Disambiguator::ZERO))
+                .map(|elem| PathElem::Ident(Ustr::from(*elem), Disambiguator::ZERO))
                 .collect(),
         }
     }
@@ -257,7 +258,7 @@ impl Name {
     pub fn short_str(&self) -> Option<&str> {
         match self.name.last()? {
             PathElem::Builtin(builtin, _) => Some(builtin.ident()),
-            PathElem::Ident(str, _) => Some(str),
+            PathElem::Ident(str, _) => Some(str.as_str()),
             _ => None,
         }
     }
@@ -283,7 +284,7 @@ impl Name {
         self.name
             .iter()
             .map(|path_elem| match path_elem {
-                PathElem::Ident(i, _) => i.clone(),
+                PathElem::Ident(i, _) => i.to_string(),
                 PathElem::Impl(elem) => match elem {
                     ImplElem::Trait(impl_id) => match trait_name(*impl_id) {
                         None => format!("<trait impl#{impl_id}>"),

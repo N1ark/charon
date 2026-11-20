@@ -130,30 +130,42 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     pub fn translate_span_data(&mut self, span: rustc_span::Span) -> meta::SpanData {
-        if let Some(data) = self.cached_spans.get(&span) {
+        if let Some(data) = self.cached_span_datas.get(&span) {
             return *data;
         }
         let data = self.translate_span_data_uncached(span);
-        self.cached_spans.insert(span, data);
+        self.cached_span_datas.insert(span, data);
         data
     }
 
     fn translate_span_data_uncached(&mut self, span: rustc_span::Span) -> meta::SpanData {
-        let smap: &rustc_span::source_map::SourceMap = self.tcx.sess.psess.source_map();
-        let source_file = smap.lookup_source_file(span.lo());
-        let file_id = match self.cached_file_ids.get(&source_file.stable_id) {
-            Some(id) => *id,
-            None => {
-                let filename = self.translate_filename(source_file.name.clone());
-                let file_id = match &filename {
-                    FileName::NotReal(_) => {
-                        // For now we forbid not real filenames
-                        unimplemented!();
+        let (source_file, file_id) = match &self.last_source_file {
+            // Consecutive spans usually come from the same file.
+            Some((source_file, file_id)) if source_file.contains(span.lo()) => {
+                (source_file.clone(), *file_id)
+            }
+            _ => {
+                let smap: &rustc_span::source_map::SourceMap = self.tcx.sess.psess.source_map();
+                let source_file = smap.lookup_source_file(span.lo());
+                let file_id = match self.cached_file_ids.get(&source_file.stable_id) {
+                    Some(id) => *id,
+                    None => {
+                        let filename = self.translate_filename(source_file.name.clone());
+                        let file_id = match &filename {
+                            FileName::NotReal(_) => {
+                                // For now we forbid not real filenames
+                                unimplemented!();
+                            }
+                            FileName::Virtual(_) | FileName::Local(_) => {
+                                self.register_file(filename, span)
+                            }
+                        };
+                        self.cached_file_ids.insert(source_file.stable_id, file_id);
+                        file_id
                     }
-                    FileName::Virtual(_) | FileName::Local(_) => self.register_file(filename, span),
                 };
-                self.cached_file_ids.insert(source_file.stable_id, file_id);
-                file_id
+                self.last_source_file = Some((source_file.clone(), file_id));
+                (source_file, file_id)
             }
         };
 
@@ -195,6 +207,15 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     pub(crate) fn translate_span(&mut self, span: &rustc_span::Span) -> Span {
+        if let Some(translated) = self.cached_spans.get(span) {
+            return *translated;
+        }
+        let translated = self.translate_span_uncached(span);
+        self.cached_spans.insert(*span, translated);
+        translated
+    }
+
+    fn translate_span_uncached(&mut self, span: &rustc_span::Span) -> Span {
         // If the span comes from a macro expansion, point to the outermost macro call and record
         // the span inside the macro as `generated_from_span`. We skip compiler desugarings
         // `ExpnKind::Desugaring` since their spans already point to user code.
@@ -254,14 +275,14 @@ impl<'tcx> TranslateCtx<'tcx> {
         // Match over the key data
         let path_elem = match path_elem.data {
             DefPathItem::CrateRoot { name, .. } => {
-                Some(PathElem::Ident(name.to_string(), disambiguator))
+                Some(PathElem::Ident(name.as_str().into(), disambiguator))
             }
             // We map the three namespaces onto a single one. We can always disambiguate by looking
             // at the definition.
             DefPathItem::TypeNs(symbol)
             | DefPathItem::ValueNs(symbol)
             | DefPathItem::MacroNs(symbol) => {
-                Some(PathElem::Ident(symbol.to_string(), disambiguator))
+                Some(PathElem::Ident(symbol.as_str().into(), disambiguator))
             }
             DefPathItem::Impl => {
                 // Two cases, depending on whether the impl block is
@@ -968,6 +989,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         if let Some(item_meta) = self.cached_item_metas.get(item_src) {
             return item_meta.clone();
         }
+        let error_count = self.errors.borrow().error_count;
         let span = def.source_span.as_ref().unwrap_or(&def.span);
         let span = self.translate_span(span);
         let is_local = def.def_id().is_local();
@@ -985,7 +1007,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                     // For weak lang items (e.g. `panic_impl`), rustc only maps the lang item to its
                     // definition, so we look at the `#[lang]` attribute of their `extern` declaration.
                     self.is_extern_item(def)
-                        .then(|| rustc_hir::attrs::find_attr!(&def.attributes, Lang(item) => *item))
+                        .then(|| rustc_hir::attrs::find_attr!(def.attributes, Lang(item) => *item))
                         .flatten()
                 })
                 .map(|lang_item| {
@@ -1018,7 +1040,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let item_meta = ItemMeta {
             name,
             span,
-            source_text: def.source_text.clone(),
+            source_text: def.source_text(self.tcx),
             attr_info,
             is_local,
             // Computed by `compute_started_from` after translation.
@@ -1029,8 +1051,11 @@ impl<'tcx> TranslateCtx<'tcx> {
             diagnostic_item,
             has_errors: false,
         };
-        self.cached_item_metas
-            .insert(item_src.clone(), item_meta.clone());
+        // Recomputing an `ItemMeta` gives the same result: we only cache it to report errors once.
+        if self.errors.borrow().error_count != error_count {
+            self.cached_item_metas
+                .insert(item_src.clone(), item_meta.clone());
+        }
         item_meta
     }
 }
