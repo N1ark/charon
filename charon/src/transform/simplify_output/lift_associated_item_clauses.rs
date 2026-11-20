@@ -75,6 +75,7 @@ impl TransformPass for Transform {
         // Update trait refs.
         let _ = ctx.translated.drive_mut(&mut UpdateTraitRefs {
             trait_item_clause_ids: &trait_item_clause_ids,
+            memo: Default::default(),
         });
     }
 }
@@ -83,9 +84,29 @@ impl TransformPass for Transform {
 struct UpdateTraitRefs<'a> {
     trait_item_clause_ids:
         &'a IndexMap<TraitDeclId, IndexMap<AssocTypeId, IndexVec<TraitClauseId, TraitClauseId>>>,
+    memo: HashConsMemo<()>,
+}
+
+// The rewrite only depends on `trait_item_clause_ids`, so it can be reused for every occurrence of
+// a value.
+impl VisitorWithMemo for UpdateTraitRefs<'_> {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        &mut self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        Some(())
+    }
 }
 
 impl VisitAstMut for UpdateTraitRefs<'_> {
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(x)
+    }
+
     fn enter_trait_ref_kind(&mut self, trkind: &mut TraitRefKind) {
         use TraitRefKind::*;
         match trkind {
