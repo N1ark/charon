@@ -112,6 +112,16 @@ impl VisitAstMut for ClauseExtractor<'_> {
         VisitWithBinderStack::new(self).visit(x)
     }
 
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        if !value.type_info().mentions_unknown_trait_ref() {
+            return ControlFlow::Continue(());
+        }
+        self.visit_inner(value)
+    }
+
     fn exit_trait_ref_contents(&mut self, tref: &mut TraitRefContents) {
         if matches!(tref.kind, TraitRefKind::Unknown(_))
             && let Some((trait_, region_args)) =

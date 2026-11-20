@@ -7,7 +7,7 @@ use crate::ast::*;
 
 bitflags::bitflags! {
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct TypeFlags: u8 {
+    pub struct TypeFlags: u16 {
         const HAS_ERASED_OR_BODY_REGIONS = 1 << 0;
         const MENTIONS_SELF_CLAUSE = 1 << 1;
         const USES_SIZE_METADATA = 1 << 2;
@@ -16,6 +16,10 @@ bitflags::bitflags! {
         const HAS_STATIC_REGION = 1 << 5;
         const HAS_REGION_VAR = 1 << 6;
         const HAS_REGIONS = 1 << 7;
+        const HAS_NON_EMPTY_BINDER = 1 << 8;
+        const MENTIONS_FN_PTR = 1 << 9;
+        const MENTIONS_UNKNOWN_TRAIT_REF = 1 << 10;
+        const MENTIONS_CONSTANT_REPEAT = 1 << 11;
     }
 }
 
@@ -138,6 +142,22 @@ impl TypeInfo {
                 }
             }
 
+            fn enter_region_binder<T: AstVisitable>(&mut self, binder: &RegionBinder<T>) {
+                if !binder.regions.is_empty() || !binder.outlives.is_empty() {
+                    self.info.flags.insert(TypeFlags::HAS_NON_EMPTY_BINDER);
+                }
+            }
+
+            fn enter_binder<T: AstVisitable>(&mut self, binder: &Binder<T>) {
+                if !binder.params.is_empty() {
+                    self.info.flags.insert(TypeFlags::HAS_NON_EMPTY_BINDER);
+                }
+            }
+
+            fn enter_fn_ptr(&mut self, _: &FnPtr) {
+                self.info.flags.insert(TypeFlags::MENTIONS_FN_PTR);
+            }
+
             fn enter_region(&mut self, region: &Region) {
                 self.info.flags.insert(TypeFlags::HAS_REGIONS);
                 match region {
@@ -178,11 +198,13 @@ impl TypeInfo {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE)
                     }
                     TraitRefKind::SelfId => self.info.flags.insert(TypeFlags::MENTIONS_SELF_CLAUSE),
+                    TraitRefKind::Unknown(_) => {
+                        self.info.flags.insert(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF)
+                    }
                     TraitRefKind::TraitImpl(..)
                     | TraitRefKind::Clause(..)
                     | TraitRefKind::BuiltinOrAuto { .. }
-                    | TraitRefKind::Dyn
-                    | TraitRefKind::Unknown(_) => {}
+                    | TraitRefKind::Dyn => {}
                 }
             }
 
@@ -198,6 +220,9 @@ impl TypeInfo {
                     | ConstantExprKind::OffsetOf(..) => {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE);
                     }
+                    ConstantExprKind::Repeat { .. } => {
+                        self.info.flags.insert(TypeFlags::MENTIONS_CONSTANT_REPEAT);
+                    }
                     ConstantExprKind::Var(..)
                     | ConstantExprKind::Bool(..)
                     | ConstantExprKind::Integer(..)
@@ -205,7 +230,6 @@ impl TypeInfo {
                     | ConstantExprKind::Float(..)
                     | ConstantExprKind::Adt(..)
                     | ConstantExprKind::Array(..)
-                    | ConstantExprKind::Repeat { .. }
                     | ConstantExprKind::Ref(..)
                     | ConstantExprKind::Ptr(..)
                     | ConstantExprKind::Str(..)
@@ -263,6 +287,26 @@ impl TypeInfo {
 
     pub fn has_region(&self) -> bool {
         self.flags.contains(TypeFlags::HAS_REGIONS)
+    }
+
+    /// Whether this value contains a binder that binds variables or has predicates.
+    pub fn has_non_empty_binder(&self) -> bool {
+        self.flags.contains(TypeFlags::HAS_NON_EMPTY_BINDER)
+    }
+
+    /// Whether this value contains a `FnPtr`.
+    pub fn mentions_fn_ptr(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_FN_PTR)
+    }
+
+    /// Whether this value contains a `TraitRefKind::Unknown`.
+    pub fn mentions_unknown_trait_ref(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF)
+    }
+
+    /// Whether this value contains a `ConstantExprKind::Repeat`.
+    pub fn mentions_constant_repeat(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_CONSTANT_REPEAT)
     }
 
     /// The largest `DeBruijnId` mentioned by this item, if any.
