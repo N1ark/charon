@@ -148,27 +148,6 @@ impl TransformCtx {
         errors.def_id_is_local = current_def_id_is_local;
     }
 
-    /// Mutably iterate over the bodies.
-    /// Warning: we replace each body with `Err(Opaque)` while inspecting it so we can keep access
-    /// to the rest of the crate.
-    pub(crate) fn for_each_body(&mut self, mut f: impl FnMut(&mut Self, &mut Body)) {
-        let fn_ids = self.translated.fun_decls.all_indices();
-        for id in fn_ids {
-            if let Some(decl) = self.translated.fun_decls.get_mut(id)
-                && decl.body.has_contents()
-            {
-                let mut body = mem::replace(&mut decl.body, Body::Opaque);
-                let fun_decl_id = decl.def_id;
-                let is_local = decl.item_meta.is_local;
-                let span = decl.item_meta.span;
-                self.with_def_id(fun_decl_id, is_local, span, |ctx| f(ctx, &mut body));
-                let decl = &mut self.translated.fun_decls[id];
-                decl.body = body;
-                decl.item_meta.has_errors |= self.errors.borrow().item_has_errors(fun_decl_id);
-            }
-        }
-    }
-
     /// Mutably iterate over the function declarations.
     /// Warning: each inspected function declaration becomes inaccessible from `ctx` during the
     /// course of this function.
