@@ -153,6 +153,9 @@ impl Transform {
 
         if insert_missing_storage_deads {
             let locals_with_missing_storage_deads = storage_visitor.locals_missing_storage_deads();
+            if locals_with_missing_storage_deads.is_empty() {
+                return;
+            }
             body.body.transform_sequences(|statements| {
                 if !matches!(
                     &statements[0].kind,

@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::ast::bodies::insert_statements;
 use crate::errors::{ErrorCtx, Level};
 use crate::formatter::{FmtCtx, IntoFormatter};
 use crate::llbc_ast;
@@ -592,13 +593,15 @@ impl FunDecl {
                 statements: Vec::new(),
             };
             body.body.iter_mut().for_each(|block| {
-                ctx.statements = Vec::with_capacity(block.statements.len());
-                for mut st in mem::take(&mut block.statements) {
+                let mut to_insert = Vec::new();
+                for (i, st) in block.statements.iter_mut().enumerate() {
                     ctx.span = st.span;
-                    f(&mut ctx, &mut st);
-                    ctx.statements.push(st);
+                    f(&mut ctx, st);
+                    if !ctx.statements.is_empty() {
+                        to_insert.push((i, mem::take(&mut ctx.statements)));
+                    }
                 }
-                block.statements = mem::take(&mut ctx.statements);
+                insert_statements(&mut block.statements, to_insert);
             });
         }
     }
@@ -653,13 +656,15 @@ impl FunDecl {
                 params: &self.generics,
             };
             body.body.visit_blocks_bwd(|block: &mut llbc_ast::Block| {
-                ctx.statements = Vec::with_capacity(block.statements.len());
-                for mut st in mem::take(&mut block.statements) {
+                let mut to_insert = Vec::new();
+                for (i, st) in block.statements.iter_mut().enumerate() {
                     ctx.span = st.span;
-                    f(&mut ctx, &mut st);
-                    ctx.statements.push(st);
+                    f(&mut ctx, st);
+                    if !ctx.statements.is_empty() {
+                        to_insert.push((i, mem::take(&mut ctx.statements)));
+                    }
                 }
-                block.statements = mem::take(&mut ctx.statements)
+                insert_statements(&mut block.statements, to_insert);
             })
         }
     }

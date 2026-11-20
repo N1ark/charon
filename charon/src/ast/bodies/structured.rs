@@ -5,10 +5,10 @@
 use derive_generic_visitor::*;
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
-use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::ast::*;
+use crate::ast::bodies::insert_statements;
 
 // Globally-unique identifier for each statement.
 generate_index_type!(StatementId);
@@ -222,30 +222,15 @@ impl Block {
     /// - return the sequence of statements to introduce before the current statements
     pub fn transform_sequences<F: FnMut(&mut [Statement]) -> Vec<Statement>>(&mut self, mut f: F) {
         self.visit_blocks_bwd(|blk: &mut Block| {
-            let mut final_len = blk.statements.len();
             let mut to_insert = vec![];
             for i in (0..blk.statements.len()).rev() {
                 let new_to_insert = f(&mut blk.statements[i..]);
-                final_len += new_to_insert.len();
-                to_insert.push((i, new_to_insert));
-            }
-            if !to_insert.is_empty() {
-                to_insert.sort_by_key(|(i, _)| *i);
-                // Make it so the first element is always at the end so we can pop it.
-                to_insert.reverse();
-                // Construct the merged list of statements.
-                let old_statements =
-                    mem::replace(&mut blk.statements, Vec::with_capacity(final_len));
-                for (i, stmt) in old_statements.into_iter().enumerate() {
-                    while let Some((j, _)) = to_insert.last()
-                        && *j == i
-                    {
-                        let (_, mut stmts) = to_insert.pop().unwrap();
-                        blk.statements.append(&mut stmts);
-                    }
-                    blk.statements.push(stmt);
+                if !new_to_insert.is_empty() {
+                    to_insert.push((i, new_to_insert));
                 }
             }
+            to_insert.reverse();
+            insert_statements(&mut blk.statements, to_insert);
         })
     }
 
@@ -254,31 +239,66 @@ impl Block {
         self.visit_helper(f, |_| {});
     }
 
-    /// Small visitor helper to visit statements and blocks.
+    /// Small visitor helper to visit statements and blocks. This only recurses into the
+    /// statements that contain blocks, which is much cheaper than a body visitor.
     fn visit_helper<F: FnMut(&mut Block), G: FnMut(&mut Statement)>(
         &mut self,
-        exit_blk: F,
-        enter_stmt: G,
+        mut exit_blk: F,
+        mut enter_stmt: G,
     ) {
-        #[derive(Visitor)]
-        pub struct BlockVisitor<F: FnMut(&mut Block), G: FnMut(&mut Statement)> {
-            exit_blk: F,
-            enter_stmt: G,
-        }
-
-        impl<F: FnMut(&mut Block), G: FnMut(&mut Statement)> VisitBodyMut for BlockVisitor<F, G> {
-            fn exit_llbc_block(&mut self, x: &mut Block) {
-                (self.exit_blk)(x)
+        fn visit_block(
+            blk: &mut Block,
+            exit_blk: &mut impl FnMut(&mut Block),
+            enter_stmt: &mut impl FnMut(&mut Statement),
+        ) {
+            for st in &mut blk.statements {
+                enter_stmt(st);
+                match &mut st.kind {
+                    StatementKind::Drop { on_unwind, .. }
+                    | StatementKind::DropEmptyBox { on_unwind, .. }
+                    | StatementKind::Assert { on_unwind, .. }
+                    | StatementKind::Call { on_unwind, .. }
+                    | StatementKind::Panic { on_unwind, .. } => {
+                        visit_block(on_unwind, exit_blk, enter_stmt)
+                    }
+                    StatementKind::InlineAsm {
+                        fallthrough,
+                        labels,
+                        on_unwind,
+                        ..
+                    } => {
+                        if let Some(fallthrough) = fallthrough {
+                            visit_block(fallthrough, exit_blk, enter_stmt);
+                        }
+                        for label in labels {
+                            visit_block(label, exit_blk, enter_stmt);
+                        }
+                        visit_block(on_unwind, exit_blk, enter_stmt);
+                    }
+                    StatementKind::Switch { branches, .. } => {
+                        for branch in branches {
+                            visit_block(branch, exit_blk, enter_stmt);
+                        }
+                    }
+                    StatementKind::Loop(body) => visit_block(body, exit_blk, enter_stmt),
+                    StatementKind::Assign(..)
+                    | StatementKind::SetDiscriminant(..)
+                    | StatementKind::StorageLive(..)
+                    | StatementKind::StorageDead(..)
+                    | StatementKind::PlaceMention(..)
+                    | StatementKind::Borrowck(..)
+                    | StatementKind::Break(..)
+                    | StatementKind::Continue(..)
+                    | StatementKind::UnwindTerminate(..)
+                    | StatementKind::UnwindResume
+                    | StatementKind::Return
+                    | StatementKind::UndefinedBehavior
+                    | StatementKind::Nop => {}
+                }
             }
-            fn enter_llbc_statement(&mut self, x: &mut Statement) {
-                (self.enter_stmt)(x)
-            }
+            exit_blk(blk);
         }
-        BlockVisitor {
-            exit_blk,
-            enter_stmt,
-        }
-        .visit_by_val_infallible(self);
+        visit_block(self, &mut exit_blk, &mut enter_stmt);
     }
 }
 

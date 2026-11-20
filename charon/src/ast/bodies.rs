@@ -17,6 +17,24 @@ pub mod structured;
 pub mod unstructured;
 pub mod values;
 
+/// Insert each `(i, new_statements)` of `to_insert` (sorted by `i`) before the `i`-th statement.
+/// This leaves no spare capacity in the vector, which matters for peak memory; reallocating does
+/// better than shrinking in place.
+pub(crate) fn insert_statements<S>(statements: &mut Vec<S>, to_insert: Vec<(usize, Vec<S>)>) {
+    if to_insert.is_empty() && statements.capacity() == statements.len() {
+        return;
+    }
+    let new_len = statements.len() + to_insert.iter().map(|(_, sts)| sts.len()).sum::<usize>();
+    let old_statements = std::mem::replace(statements, Vec::with_capacity(new_len));
+    let mut to_insert = to_insert.into_iter().peekable();
+    for (i, st) in old_statements.into_iter().enumerate() {
+        while let Some((_, mut new_statements)) = to_insert.next_if(|(j, _)| *j == i) {
+            statements.append(&mut new_statements);
+        }
+        statements.push(st);
+    }
+}
+
 pub use asm::*;
 pub use expressions::*;
 pub use places::*;
