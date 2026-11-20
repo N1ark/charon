@@ -6,6 +6,19 @@ use crate::transform::{TransformCtx, ctx::TransformPass};
 struct Infer<'a> {
     traits: &'a IndexMap<TraitDeclId, TraitDecl>,
     binders: BindingStack<GenericParams>,
+    memo: HashConsMemo<()>,
+}
+
+// The binder stack is only consulted for clause variables. `traits` lacks the item being visited
+// (see `for_each_item_mut`), so this visitor and its memo are created anew for each item.
+impl VisitorWithMemo for Infer<'_> {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        &mut self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        None
+    }
 }
 
 impl VisitorWithBinderStack for Infer<'_> {
@@ -100,7 +113,7 @@ impl VisitAstMut for Infer<'_> {
         value: &mut HashConsed<WithCachedTypeInfo<T>>,
     ) -> ControlFlow<Self::Break> {
         if value.type_info().has_erased_or_body_regions() {
-            self.visit_inner(value)
+            self.visit_memoized(value)
         } else {
             ControlFlow::Continue(())
         }
@@ -124,6 +137,7 @@ impl TransformPass for Transform {
             item.drive_mut(&mut Infer {
                 traits: &ctx.translated.trait_decls,
                 binders: BindingStack::default(),
+                memo: Default::default(),
             });
         });
     }
