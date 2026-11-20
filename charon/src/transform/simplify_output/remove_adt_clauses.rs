@@ -62,7 +62,17 @@ fn untouchable_adts(translated: &TranslatedCrate) -> HashSet<TypeDeclId> {
 struct RemoveAdtClausesVisitor<'a> {
     translated: &'a TranslatedCrate,
     untouchable_adts: &'a HashSet<TypeDeclId>,
+    /// The bloom filter of the ADTs whose clauses we remove. Outside of the declarations of these
+    /// ADTs, values that don't mention them are left unchanged and can be skipped.
+    cleared_adts_bloom: ItemBloom,
+    in_cleared_decl: bool,
     binder_stack: BindingStack<GenericParams>,
+}
+
+impl RemoveAdtClausesVisitor<'_> {
+    fn can_skip(&self, info: TypeInfo) -> bool {
+        !self.in_cleared_decl && !info.items.intersects(self.cleared_adts_bloom)
+    }
 }
 
 impl VisitorWithBinderStack for RemoveAdtClausesVisitor<'_> {
@@ -77,16 +87,42 @@ impl VisitAstMut for RemoveAdtClausesVisitor<'_> {
         ::std::ops::ControlFlow::Continue(())
     }
 
+    fn visit_ty(&mut self, x: &mut Ty) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return ControlFlow::Continue(());
+        }
+        self.visit_inner(x)
+    }
+    fn visit_trait_ref(&mut self, x: &mut TraitRef) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return ControlFlow::Continue(());
+        }
+        // Overriding `visit_trait_ref` bypasses the default call to `enter_trait_ref`.
+        self.enter_trait_ref(x);
+        self.visit_inner(x)
+    }
+    fn visit_constant_expr(&mut self, x: &mut ConstantExpr) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return ControlFlow::Continue(());
+        }
+        self.visit_inner(x)
+    }
+
     fn enter_type_decl(&mut self, decl: &mut TypeDecl) {
         if self.untouchable_adts.contains(&decl.def_id) {
             return;
         }
+        self.in_cleared_decl = true;
         decl.generics.trait_clauses.clear();
         decl.generics.trait_type_constraints.clear();
         // The wrapper has already pushed the (uncleared) generic params onto the binder stack.
         // Replace the top with the cleared version so dangling-clause detection works as we
         // descend into the body.
         *self.binder_stack.innermost_mut() = decl.generics.clone();
+    }
+
+    fn exit_type_decl(&mut self, _decl: &mut TypeDecl) {
+        self.in_cleared_decl = false;
     }
 
     fn enter_type_decl_ref(&mut self, tref: &mut TypeDeclRef) {
@@ -158,10 +194,29 @@ impl TransformPass for Transform {
             return;
         }
         let untouchable = untouchable_adts(&ctx.translated);
+        // The ADTs whose references may have trait refs to remove. We include ADTs without a
+        // declaration (e.g. because of errors) since we don't know their clauses.
+        let cleared_adts_bloom = ctx
+            .translated
+            .item_names
+            .keys()
+            .filter_map(|id| id.as_type())
+            .filter(|&&id| {
+                !untouchable.contains(&id)
+                    && ctx
+                        .translated
+                        .type_decls
+                        .get(id)
+                        .is_none_or(|d| !d.generics.trait_clauses.is_empty())
+            })
+            .map(|&id| ItemBloom::of(id))
+            .collect();
         ctx.for_each_item_mut(|ctx, mut item| {
             let _ = item.drive_mut(&mut RemoveAdtClausesVisitor {
                 translated: &ctx.translated,
                 untouchable_adts: &untouchable,
+                cleared_adts_bloom,
+                in_cleared_decl: false,
                 binder_stack: BindingStack::empty(),
             });
         });
