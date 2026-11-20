@@ -8,9 +8,28 @@ use crate::transform::{TransformCtx, ctx::TransformPass};
 #[derive(Visitor)]
 struct RemoveLastParamVisitor {
     types: HashSet<TypeDeclId>,
+    memo: HashConsMemo<()>,
+}
+
+// The rewrite only depends on `types`.
+impl VisitorWithMemo for RemoveLastParamVisitor {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        &mut self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        Some(())
+    }
 }
 
 impl VisitAstMut for RemoveLastParamVisitor {
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(x)
+    }
+
     fn enter_type_decl_ref(&mut self, x: &mut TypeDeclRef) {
         if self.types.contains(&x.id) {
             // Remove the last param.
@@ -73,8 +92,9 @@ impl TransformPass for Transform {
             }
         }
 
-        let _ = ctx
-            .translated
-            .drive_mut(&mut RemoveLastParamVisitor { types });
+        let _ = ctx.translated.drive_mut(&mut RemoveLastParamVisitor {
+            types,
+            memo: Default::default(),
+        });
     }
 }
