@@ -982,10 +982,29 @@ struct UpdateItemBody<'a> {
     item_modifications: &'a HashMap<GenericsSource, ItemModifications>,
     // It's a reversed stack, for when we go under binders.
     type_replacements: BindingStack<TypeConstraintSet>,
+    memo: &'a mut HashConsMemo<()>,
+    /// The error count when we started visiting this item.
+    initial_error_count: usize,
 }
 
 impl Visitor for UpdateItemBody<'_> {
     type Break = StackDepthLimitExceeded;
+}
+
+// We only use `type_replacements` for paths based on clause variables or `Self`, so closed values
+// are rewritten the same way everywhere. `span` and `is_type_alias` only affect error messages, and
+// we don't record visits once an error was reported.
+impl VisitorWithMemo for UpdateItemBody<'_> {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        None
+    }
+    fn may_record(&self) -> bool {
+        self.ctx.errors.borrow().error_count == self.initial_error_count
+    }
 }
 
 impl UpdateItemBody<'_> {
@@ -1431,6 +1450,13 @@ impl VisitAstMut for UpdateItemBody<'_> {
         self.update_item_generics(x.id, &mut x.generics);
     }
 
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(x)
+    }
+
     // Normalize associated types.
     fn visit_ty_kind(&mut self, kind: &mut TyKind) -> ControlFlow<Self::Break> {
         match try_ensure_sufficient_stack(|| {
@@ -1503,6 +1529,7 @@ impl TransformPass for Transform {
         };
 
         // Apply the computed modifications to each item.
+        let mut memo = HashConsMemo::default();
         ctx.for_each_item_mut(|ctx, mut item| {
             trace!(
                 "Processing {}",
@@ -1576,6 +1603,8 @@ impl TransformPass for Transform {
                 is_type_alias,
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
+                memo: &mut memo,
+                initial_error_count: ctx.errors.borrow().error_count,
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");
