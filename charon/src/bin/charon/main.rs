@@ -43,8 +43,14 @@ use clap::Parser;
 use cli::{Charon, Cli};
 use itertools::Itertools;
 use serde::Deserialize;
-use std::{env, path::PathBuf, process::ExitStatus};
-use toolchain::{CHARON_SYSROOT_VAR, setup_miri_sysroot, toolchain_path, toolchain_version};
+use std::{
+    env,
+    path::PathBuf,
+    process::{Command, ExitStatus},
+};
+use toolchain::{
+    CHARON_SYSROOT_VAR, HOST_TARGET, setup_miri_sysroot, toolchain_path, toolchain_version,
+};
 
 #[macro_use]
 extern crate charon_lib;
@@ -78,10 +84,10 @@ pub fn main() -> Result<()> {
             }
             options.apply_preset();
             options.validate()?;
-            let translate = if options.merge_crates {
+            let translate: fn(_, _) -> _ = if options.merge_crates {
                 translate_merged_crates
             } else {
-                translate_with_cargo
+                |options, cargo_args| Ok(translate_with_cargo(options, cargo_args)?.0)
             };
             let targets = std::mem::take(&mut options.targets);
             if targets.is_empty() {
@@ -120,12 +126,9 @@ pub fn main() -> Result<()> {
             ExitStatus::default()
         }
         Charon::PrintSysroot(args) => {
-            let target = match args.target {
-                Some(target) => target,
-                None => get_rustc_version()?.host,
-            };
+            let target = args.target.as_deref().unwrap_or(HOST_TARGET);
             // Mirrors how `charon-driver` picks a sysroot.
-            let sysroot = match miri_sysroot(args.sysroot.as_deref(), &target) {
+            let sysroot = match miri_sysroot(args.sysroot.as_deref(), target) {
                 Some(sysroot) => sysroot,
                 None => match args.sysroot.as_deref() {
                     None | Some("default" | "miri") => toolchain_path()?,
@@ -207,17 +210,14 @@ fn translate_merged_crates(
     // Each crate is written to `<temp_dir>/<crate_name>.<extension>`.
     opts.dest_dir = Some(temp_dir.path().to_owned());
     opts.dest_file = None;
-    let status = translate_with_cargo(opts, cargo_args.clone())?;
+    let (status, crate_names) = translate_with_cargo(opts, cargo_args)?;
     if !status.success() {
         return Ok(status);
     }
 
     // TODO: a lib and a bin of the same package have the same crate name and overwrite each
     // other's output.
-    let crate_names = cargo_targets(&cargo_args)?
-        .into_iter()
-        .unique()
-        .collect_vec();
+    let crate_names = crate_names.into_iter().unique().collect_vec();
     let krates: Vec<_> = crate_names
         .iter()
         .map(|crate_name| {
@@ -290,10 +290,12 @@ fn output_merged_crate(options: &CliOpts, merged: CrateData) -> anyhow::Result<E
     Ok(ExitStatus::default())
 }
 
+/// Run `cargo build` with `charon-driver` as the compiler. Also returns the names of the crates that
+/// were selected for translation.
 fn translate_with_cargo(
     mut options: CliOpts,
     mut cargo_args: Vec<String>,
-) -> anyhow::Result<ExitStatus> {
+) -> anyhow::Result<(ExitStatus, Vec<String>)> {
     ensure_rustup();
     // Cargo controls the directory where the driver is run, so we resolve these paths relative to
     // the current directory.
@@ -313,43 +315,52 @@ fn translate_with_cargo(
         [] => {
             // Make sure the build target is explicitly set. This is needed to detect which crates
             // are proc-macro/build-script in `charon-driver`.
-            let host = get_rustc_version()?.host;
             cargo_args.push("--target".to_owned());
-            cargo_args.push(host.clone());
-            host
+            cargo_args.push(HOST_TARGET.to_owned());
+            HOST_TARGET.to_owned()
         }
     };
 
-    let mut cmd = toolchain::in_toolchain("cargo")?;
-    cmd.env("RUSTC_WRAPPER", toolchain::driver_path());
-    cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
-    cmd.env("CHARON_USING_CARGO", "1");
-    cmd.env_remove("CARGO_PRIMARY_PACKAGE");
-    cmd.env(CHARON_ARGS, serde_json::to_string(&options).unwrap());
+    let sysroot = miri_sysroot(options.sysroot.as_deref(), &target);
+    // Cargo caches the output of the `rustc` invocations it uses to query the compiler, keyed by
+    // the compiler wrapper. We run all our cargo commands with the same environment so that they
+    // share that cache.
+    let cargo = || -> anyhow::Result<Command> {
+        let mut cmd = toolchain::in_toolchain("cargo")?;
+        cmd.env("RUSTC_WRAPPER", toolchain::driver_path());
+        cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
+        cmd.env("CHARON_USING_CARGO", "1");
+        cmd.env_remove("CARGO_PRIMARY_PACKAGE");
+        cmd.env(CHARON_ARGS, serde_json::to_string(&options).unwrap());
+        if let Some(sysroot) = &sysroot {
+            cmd.env(CHARON_SYSROOT_VAR, sysroot);
+        }
+        Ok(cmd)
+    };
+
+    let crate_names = cargo_targets(cargo()?, &cargo_args)?;
+    let mut cmd = cargo()?;
     // We control cargo caching as follows: `charon-driver` declares that if
     // `CHARON_SELECTED_CRATE_{crate_name}` changes, then cache should be invalidated and the
     // driver re-run. We then set it with a fresh value for all the crates that are targeted by the
     // current command (e.g. the workspace roots, or a crate selected with `-p`).
-    for crate_name in cargo_targets(&cargo_args)? {
+    for crate_name in &crate_names {
         let nonce = fresh_nonce();
-        cmd.env(selected_crate_var(&crate_name), &nonce);
+        cmd.env(selected_crate_var(crate_name), &nonce);
     }
     cmd.arg("build");
-
-    if let Some(sysroot) = miri_sysroot(options.sysroot.as_deref(), &target) {
-        cmd.env(CHARON_SYSROOT_VAR, sysroot);
-    }
     cmd.args(cargo_args);
     trace!("running {cmd:?}");
-    Ok(cmd
+    let status = cmd
         .spawn()
         .expect("could not run cargo")
         .wait()
-        .expect("failed to wait for cargo?"))
+        .expect("failed to wait for cargo?");
+    Ok((status, crate_names))
 }
 
 /// Returns the names of the crates that `cargo build <build_args>` selects.
-fn cargo_targets(build_args: &[String]) -> anyhow::Result<Vec<String>> {
+fn cargo_targets(mut cmd: Command, build_args: &[String]) -> anyhow::Result<Vec<String>> {
     /// The parts of cargo's `--unit-graph` output we use.
     #[derive(Deserialize)]
     struct UnitGraph {
@@ -365,7 +376,6 @@ fn cargo_targets(build_args: &[String]) -> anyhow::Result<Vec<String>> {
         name: String,
     }
 
-    let mut cmd = toolchain::in_toolchain("cargo")?;
     cmd.args(["build", "--unit-graph", "-Z", "unstable-options"]);
     cmd.args(build_args);
     trace!("running {cmd:?}");
@@ -394,10 +404,9 @@ fn translate_without_cargo(mut options: CliOpts) -> anyhow::Result<ExitStatus> {
         None => {
             // Make sure the build target is explicitly set. This is needed to detect which crates
             // are proc-macro/build-script in `charon-driver`.
-            let host = get_rustc_version()?.host;
             cmd.arg("--target");
-            cmd.arg(&host);
-            host
+            cmd.arg(HOST_TARGET);
+            HOST_TARGET.to_owned()
         }
     };
     if let Some(sysroot) = miri_sysroot(options.sysroot.as_deref(), &target) {
@@ -420,14 +429,6 @@ fn miri_sysroot(sysroot: Option<&str>, target: &str) -> Option<PathBuf> {
         None | Some("miri") => setup_miri_sysroot(target),
         Some(_) => None,
     }
-}
-
-fn get_rustc_version() -> anyhow::Result<rustc_version::VersionMeta> {
-    let cmd = toolchain::driver_cmd()?;
-    let rustc_version = rustc_version::VersionMeta::for_command(cmd).unwrap_or_else(|err| {
-        panic!("failed to determine underlying rustc version of Charon:\\n{err:?}",)
-    });
-    Ok(rustc_version)
 }
 
 /// A sufficiently unique string, used to control cargo caching.
