@@ -35,6 +35,9 @@ mod base {
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
         pub per_item: HashMap<DefId, ItemCache<'tcx>>,
+        /// Cache of parameter-free values, shared by the owners that translate these the same way.
+        /// See [`UnderOwnerState::with_cache_for`].
+        pub shared: ItemCache<'tcx>,
         /// Map rustc def ids to their hax counterpart.
         pub def_ids: HashMap<RDefId, DefId>,
         /// Data for synthetic items. See the `synthetic_items` module.
@@ -112,6 +115,9 @@ mod base {
         pub trait_proofs: HashMap<ty::PolyTraitRef<'tcx>, crate::hax::traits::TraitProof<'tcx>>,
         /// Generics for this item, if it is virtual.
         pub virtual_generics: Option<&'tcx ty::Generics>,
+        /// Whether this item uses the shared cache for parameter-free values, see
+        /// [`UnderOwnerState::with_cache_for`].
+        pub uses_shared_cache: Option<bool>,
     }
 
     #[derive(Clone)]
@@ -229,6 +235,37 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     /// this will likely result in `BorrowMut` panics.
     fn with_cache<T>(&self, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
         self.with_item_cache(&self.owner(), f)
+    }
+    /// Access the cache in which to store the translation of `value` in the current owner.
+    ///
+    /// The owner only influences the translation through the clauses in scope (for trait
+    /// resolution and normalization). These can't apply to a value without (non-lifetime)
+    /// parameters, unless they are themselves parameter-free (see
+    /// `PredicateSearcher::has_concrete_clauses`). Hence parameter-free values translate the same
+    /// in all the owners without such clauses, and we share a cache for them. This is the same
+    /// reasoning as for the concrete caches of `rustc_trait_elaboration`.
+    ///
+    /// You must not call `sinto` within this function as this will likely result in `BorrowMut`
+    /// panics.
+    fn with_cache_for<T>(
+        &self,
+        value: impl ty::TypeVisitable<TyCtxt<'tcx>>,
+        f: impl FnOnce(&mut ItemCache<'tcx>) -> T,
+    ) -> T {
+        let uses_shared_cache = match self.with_cache(|cache| cache.uses_shared_cache) {
+            Some(b) => b,
+            None => {
+                let b =
+                    self.with_predicate_searcher(|searcher, _| !searcher.has_concrete_clauses());
+                self.with_cache(|cache| cache.uses_shared_cache = Some(b));
+                b
+            }
+        };
+        if uses_shared_cache && !ty::TypeVisitableExt::has_non_region_param(&value) {
+            self.with_global_cache(|cache| f(&mut cache.shared))
+        } else {
+            self.with_cache(f)
+        }
     }
     fn with_predicate_searcher<T>(
         &self,
