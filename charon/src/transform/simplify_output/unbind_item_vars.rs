@@ -12,6 +12,18 @@ use crate::transform::{TransformCtx, ctx::TransformPass};
 pub(crate) struct UnbindVarVisitor {
     // Tracks the depth of binders we're inside of.
     binder_depth: DeBruijnId,
+    memo: HashConsMemo<DeBruijnId>,
+}
+
+// Which variables get unbound only depends on the binder depth.
+impl VisitorWithMemo for UnbindVarVisitor {
+    type MemoContext = DeBruijnId;
+    fn memo(&mut self) -> &mut HashConsMemo<DeBruijnId> {
+        &mut self.memo
+    }
+    fn memo_context(&self) -> Option<DeBruijnId> {
+        Some(self.binder_depth)
+    }
 }
 
 impl VisitorWithBinderDepth for UnbindVarVisitor {
@@ -34,7 +46,7 @@ impl VisitAstMut for UnbindVarVisitor {
             .is_some_and(|max| max >= self.binder_depth)
             || info.flags.contains(TypeFlags::MENTIONS_FREE_VAR)
         {
-            self.visit_inner(value)
+            self.visit_memoized(value)
         } else {
             ControlFlow::Continue(())
         }
