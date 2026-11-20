@@ -105,6 +105,8 @@ struct RemoveClausesVisitor<'a> {
     /// For each item, a map from old clause ids to new ones. The new ones are in the same order,
     /// just skipping some removed old ones.
     remaps: &'a HashMap<ItemId, IndexVec<TraitClauseId, Option<TraitClauseId>>>,
+    /// The bloom filter of the items in `remaps`.
+    remaps_bloom: ItemBloom,
     current_item: ItemId,
     binder_depth: DeBruijnId,
 }
@@ -127,9 +129,36 @@ impl VisitorWithItemRefMut for RemoveClausesVisitor<'_> {
     }
 }
 
+impl RemoveClausesVisitor<'_> {
+    /// If the current item keeps all its clauses, only values that mention a remapped item can
+    /// change.
+    fn can_skip(&self, info: TypeInfo) -> bool {
+        !self.remaps.contains_key(&self.current_item) && !info.items.intersects(self.remaps_bloom)
+    }
+}
+
 impl VisitAstMut for RemoveClausesVisitor<'_> {
     fn visit<T: AstVisitable>(&mut self, x: &mut T) -> ControlFlow<Self::Break> {
         VisitWithBinderDepth::new(VisitWithItemRef::new(self)).visit(x)
+    }
+
+    fn visit_ty(&mut self, x: &mut Ty) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(x)
+    }
+    fn visit_trait_ref(&mut self, x: &mut TraitRef) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(x)
+    }
+    fn visit_constant_expr(&mut self, x: &mut ConstantExpr) -> ControlFlow<Self::Break> {
+        if self.can_skip(x.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(x)
     }
 
     fn visit_trait_ref_kind(&mut self, x: &mut TraitRefKind) -> ControlFlow<Self::Break> {
@@ -221,9 +250,11 @@ impl TransformPass for Transform {
         };
 
         // Adjust references to clauses.
+        let remaps_bloom = remaps.keys().map(|&id| ItemBloom::of(id)).collect();
         for mut item in ctx.translated.all_items_mut() {
             let item_id = item.as_ref().id();
             item.drive_mut(&mut RemoveClausesVisitor {
+                remaps_bloom,
                 remaps: &remaps,
                 current_item: item_id,
                 binder_depth: DeBruijnId::ZERO,
