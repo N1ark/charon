@@ -63,6 +63,19 @@ struct RemoveAdtClausesVisitor<'a> {
     translated: &'a TranslatedCrate,
     untouchable_adts: &'a HashSet<TypeDeclId>,
     binder_stack: BindingStack<GenericParams>,
+    memo: &'a mut HashConsMemo<()>,
+}
+
+// The binder stack is only consulted for clause variables, so values that mention no variables
+// are rewritten the same way everywhere (`untouchable_adts` is fixed for the whole pass).
+impl VisitorWithMemo for RemoveAdtClausesVisitor<'_> {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        None
+    }
 }
 
 impl VisitorWithBinderStack for RemoveAdtClausesVisitor<'_> {
@@ -75,6 +88,13 @@ impl VisitAstMut for RemoveAdtClausesVisitor<'_> {
     fn visit<T: AstVisitable>(&mut self, x: &mut T) -> ::std::ops::ControlFlow<Self::Break> {
         VisitWithBinderStack::new(self).visit(x)?;
         ::std::ops::ControlFlow::Continue(())
+    }
+
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(x)
     }
 
     fn enter_type_decl(&mut self, decl: &mut TypeDecl) {
@@ -158,11 +178,13 @@ impl TransformPass for Transform {
             return;
         }
         let untouchable = untouchable_adts(&ctx.translated);
+        let mut memo = HashConsMemo::default();
         ctx.for_each_item_mut(|ctx, mut item| {
             let _ = item.drive_mut(&mut RemoveAdtClausesVisitor {
                 translated: &ctx.translated,
                 untouchable_adts: &untouchable,
                 binder_stack: BindingStack::empty(),
+                memo: &mut memo,
             });
         });
     }
