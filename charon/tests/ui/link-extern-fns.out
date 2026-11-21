@@ -63,6 +63,9 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
     storage_live(_2)
     _2 = const false
     if move _2 {
+        storage_live(_3)
+        _3 = abort()
+        ↳⚡ undefined_behavior
     } else {
         storage_dead(_2)
         storage_live(pi)
@@ -100,9 +103,6 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
             storage_dead(fmt)
             unwind_continue
     }
-    storage_live(_3)
-    _3 = abort()
-    ↳⚡ undefined_behavior
 }
 
 unsafe fn std::alloc::_::__rust_alloc_error_handler(_1: usize, _2: usize) -> !

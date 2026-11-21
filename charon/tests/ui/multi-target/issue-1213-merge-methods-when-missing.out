@@ -278,11 +278,11 @@ fn f<'_0>(blocks: &'_0 mut [u8])
                 break 0
             },
             Option::Some => {
+                storage_dead(_8)
+                storage_dead(_6)
+                continue 0
             },
         }
-        storage_dead(_8)
-        storage_dead(_6)
-        continue 0
     }
     _0 = ()
     storage_dead(_8)
@@ -349,11 +349,11 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
                 break 0
             },
             Option::Some => {
+                storage_dead(_12)
+                storage_dead(_10)
+                continue 0
             },
         }
-        storage_dead(_12)
-        storage_dead(_10)
-        continue 0
     }
     _0 = ()
     storage_dead(_12)

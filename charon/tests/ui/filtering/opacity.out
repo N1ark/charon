@@ -188,6 +188,9 @@ where
     _ = (*self)
     match (*self) {
         Option::Some => {
+            _0 = const true
+            storage_dead(self)
+            return
         },
         _ => {
             _0 = const false
@@ -195,9 +198,6 @@ where
             return
         },
     }
-    _0 = const true
-    storage_dead(self)
-    return
 }
 
 // Full name: test_crate::foo

@@ -1387,249 +1387,242 @@ fn main()
         ↳⚡ unwind_terminate(in_cleanup)
         goto cleanup1
     if move _10 {
-    } else {
         storage_dead(_11)
-        conditional_drop[drop_glue<'129>] _12
+        conditional_drop[drop_glue<'128>] _12
         ↳⚡ goto cleanup1
-        conditional_drop[drop_glue<'131>] _15
+        conditional_drop[drop_glue<'130>] _15
         ↳⚡ goto cleanup0
         storage_dead(_17)
         storage_dead(_15)
         storage_dead(_14)
         storage_dead(_12)
-        storage_dead(_10)
-        storage_live(_18)
-        storage_live(_19)
-        storage_live(_20)
-        storage_live(_21)
-        _21 = &two-phase-mut (*y) with_metadata(read y.metadata)
-        storage_live(_22)
-        storage_live(_23)
-        storage_live(_24)
-        _24 = const 100i32
-        _23 = &mut _24
-        _22 = &(*_23)
-        _20 = (read (*_21.metadata).method_modify)<'135, '136>(move _21, move _22)
+        storage_live(_114)
+        _114 = &test_crate::main::{promoted_const#21} with_metadata(const 71usize)
+        panic(panic(move _114))
         ↳⚡ goto cleanup0
-        storage_live(_87)
-        storage_live(_97)
-        storage_live(_98)
-        _98 = const 100i32
-        _97 = &_98
-        _87 = move _97
-        storage_dead(_22)
-        storage_dead(_21)
-        _19 = &_20
-        storage_live(_25)
-        _84 = move _87
-        _25 = &(*_84)
-        _18 = (move _19, move _25)
-        storage_dead(_25)
-        storage_dead(_19)
-        storage_live(left_val_26)
-        left_val_26 = copy _18._0
-        storage_live(right_val_27)
-        right_val_27 = copy _18._1
-        storage_live(_28)
-        storage_live(_29)
-        _29 = copy (*left_val_26)
-        storage_live(_30)
-        _30 = copy (*right_val_27)
-        _28 = move _29 == move _30
-        if move _28 {
-        } else {
-            storage_dead(_30)
-            storage_dead(_29)
-            storage_live(kind_31)
-            kind_31 = AssertKind::Eq {  }
-            fake_read(kind_31)
-            storage_live(_32)
-            _32 = move kind_31
-            storage_live(_33)
-            storage_live(_34)
-            _34 = &(*left_val_26)
-            _33 = &(*_34)
-            storage_live(_35)
-            storage_live(_36)
-            _36 = &(*right_val_27)
-            _35 = &(*_36)
-            storage_live(_37)
-            _37 = Option::None {  }
-            panic(assert_failed<'155, '156, '157, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#21}, {impl#21}](move _32, move _33, move _35, move _37))
-            ↳⚡ goto cleanup0
-        }
-        storage_live(_88)
-        storage_live(_99)
-        storage_live(_100)
-        _100 = const 42i32
-        _99 = &_100
-        _88 = move _99
+    } else {
+    }
+    storage_dead(_11)
+    conditional_drop[drop_glue<'129>] _12
+    ↳⚡ goto cleanup1
+    conditional_drop[drop_glue<'131>] _15
+    ↳⚡ goto cleanup0
+    storage_dead(_17)
+    storage_dead(_15)
+    storage_dead(_14)
+    storage_dead(_12)
+    storage_dead(_10)
+    storage_live(_18)
+    storage_live(_19)
+    storage_live(_20)
+    storage_live(_21)
+    _21 = &two-phase-mut (*y) with_metadata(read y.metadata)
+    storage_live(_22)
+    storage_live(_23)
+    storage_live(_24)
+    _24 = const 100i32
+    _23 = &mut _24
+    _22 = &(*_23)
+    _20 = (read (*_21.metadata).method_modify)<'135, '136>(move _21, move _22)
+    ↳⚡ goto cleanup0
+    storage_live(_87)
+    storage_live(_97)
+    storage_live(_98)
+    _98 = const 100i32
+    _97 = &_98
+    _87 = move _97
+    storage_dead(_22)
+    storage_dead(_21)
+    _19 = &_20
+    storage_live(_25)
+    _84 = move _87
+    _25 = &(*_84)
+    _18 = (move _19, move _25)
+    storage_dead(_25)
+    storage_dead(_19)
+    storage_live(left_val_26)
+    left_val_26 = copy _18._0
+    storage_live(right_val_27)
+    right_val_27 = copy _18._1
+    storage_live(_28)
+    storage_live(_29)
+    _29 = copy (*left_val_26)
+    storage_live(_30)
+    _30 = copy (*right_val_27)
+    _28 = move _29 == move _30
+    if move _28 {
+    } else {
         storage_dead(_30)
         storage_dead(_29)
-        storage_dead(_28)
-        storage_dead(right_val_27)
-        storage_dead(left_val_26)
-        storage_dead(_24)
-        storage_dead(_23)
-        storage_dead(_20)
-        storage_dead(_18)
-        storage_live(z)
-        storage_live(_39)
-        storage_live(_40)
-        storage_live(_41)
-        storage_live(_42)
-        _83 = move _88
-        _42 = &(*_83)
-        _41 = &(*_42)
-        _40 = to_dyn_obj<'150, i32>[{built_in impl Sized for i32}, impl_NoParam_for_i32](move _41)
+        storage_live(kind_31)
+        kind_31 = AssertKind::Eq {  }
+        fake_read(kind_31)
+        storage_live(_32)
+        _32 = move kind_31
+        storage_live(_33)
+        storage_live(_34)
+        _34 = &(*left_val_26)
+        _33 = &(*_34)
+        storage_live(_35)
+        storage_live(_36)
+        _36 = &(*right_val_27)
+        _35 = &(*_36)
+        storage_live(_37)
+        _37 = Option::None {  }
+        panic(assert_failed<'155, '156, '157, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#21}, {impl#21}](move _32, move _33, move _35, move _37))
         ↳⚡ goto cleanup0
-        _39 = &(*_40) with_metadata(read _40.metadata)
-        z = unsize_cast<&'159 (dyn NoParam + '160),  at []>(move _39)
-        storage_dead(_41)
-        storage_dead(_39)
-        fake_read(z)
-        storage_dead(_42)
-        storage_dead(_40)
-        storage_live(_43)
-        storage_live(_44)
-        _44 = &(*z) with_metadata(read z.metadata)
-        _43 = (read (*_44.metadata).method_dummy)<'163>(move _44)
-        ↳⚡ goto cleanup0
-        storage_live(_91)
-        storage_live(_105)
-        storage_live(_106)
-        _106 = const 200i64
-        _105 = &_106
-        _91 = move _105
-        storage_live(_90)
-        storage_live(_103)
-        storage_live(_104)
-        _104 = const 100i32
-        _103 = &_104
-        _90 = move _103
-        storage_live(_89)
-        storage_live(_101)
-        storage_live(_102)
-        _102 = const 42i32
-        _101 = &_102
-        _89 = move _101
-        storage_dead(_44)
-        storage_dead(_43)
-        storage_live(a)
-        storage_live(_46)
-        storage_live(_47)
-        _82 = move _89
-        _47 = &(*_82)
-        _46 = &(*_47)
-        a = unsize_cast<&'165 (dyn Both32And64 + '166), &impl_Both32And64_for_i32::{vtable}>(move _46)
-        storage_dead(_46)
-        fake_read(a)
-        storage_dead(_47)
-        storage_live(_48)
-        storage_live(_49)
-        _49 = &(*a) with_metadata(read a.metadata)
-        storage_live(_50)
-        storage_live(_51)
-        _81 = move _90
-        _51 = &(*_81)
-        _50 = &(*_51)
-        storage_live(_52)
-        storage_live(_53)
-        _80 = move _91
-        _53 = &(*_80)
-        _52 = &(*_53)
-        _48 = (read (*_49.metadata).method_both_operate)<'171, '172, '173>(move _49, move _50, move _52)
-        ↳⚡ goto cleanup0
-        storage_live(_93)
-        storage_live(_109)
-        storage_live(_110)
-        _110 = const 10i32
-        _109 = &_110
-        _93 = move _109
-        storage_live(_92)
-        storage_live(_107)
-        storage_live(_108)
-        _108 = const 42i32
-        _107 = &_108
-        _92 = move _107
-        storage_dead(_52)
-        storage_dead(_50)
-        storage_dead(_49)
-        storage_dead(_53)
-        storage_dead(_51)
-        storage_dead(_48)
-        storage_live(b)
-        storage_live(_55)
-        storage_live(_56)
-        _79 = move _92
-        _56 = &(*_79)
-        _55 = &(*_56)
-        b = unsize_cast<&'175 (dyn LifetimeTrait<Ty = i32> + '176), &impl_LifetimeTrait_for_i32::{vtable}>(move _55)
-        storage_dead(_55)
-        fake_read(b)
-        storage_dead(_56)
-        storage_live(_57)
-        storage_live(_58)
-        storage_live(_59)
-        storage_live(_60)
-        storage_live(_61)
-        _61 = &(*b) with_metadata(read b.metadata)
-        _60 = unsize_cast<&'178 (dyn LifetimeTrait<Ty = i32> + '179),  at []>(move _61)
-        storage_dead(_61)
-        storage_live(_62)
-        storage_live(_63)
-        _78 = move _93
-        _63 = &(*_78)
-        _62 = &(*_63)
-        _59 = use_lifetime_trait<'181, '182>(move _60, move _62)
-        ↳⚡ goto cleanup0
-        storage_live(_94)
-        storage_live(_111)
-        storage_live(_112)
-        _112 = const 10i32
-        _111 = &_112
-        _94 = move _111
-        storage_dead(_62)
-        storage_dead(_60)
-        _58 = &(*_59)
-        storage_live(_64)
-        _77 = move _94
-        _64 = &(*_77)
-        _57 = (move _58, move _64)
-        storage_dead(_64)
-        storage_dead(_58)
-        storage_live(left_val_65)
-        left_val_65 = copy _57._0
-        storage_live(right_val_66)
-        right_val_66 = copy _57._1
-        storage_live(_67)
-        storage_live(_68)
-        _68 = copy (*left_val_65)
-        storage_live(_69)
-        _69 = copy (*right_val_66)
-        _67 = move _68 == move _69
-        if move _67 {
-        } else {
-            storage_dead(_69)
-            storage_dead(_68)
-            storage_live(kind_70)
-            kind_70 = AssertKind::Eq {  }
-            fake_read(kind_70)
-            storage_live(_71)
-            _71 = move kind_70
-            storage_live(_72)
-            storage_live(_73)
-            _73 = &(*left_val_65)
-            _72 = &(*_73)
-            storage_live(_74)
-            storage_live(_75)
-            _75 = &(*right_val_66)
-            _74 = &(*_75)
-            storage_live(_76)
-            _76 = Option::None {  }
-            panic(assert_failed<'199, '200, '201, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#21}, {impl#21}](move _71, move _72, move _74, move _76))
-            ↳⚡ goto cleanup0
-        }
+    }
+    storage_live(_88)
+    storage_live(_99)
+    storage_live(_100)
+    _100 = const 42i32
+    _99 = &_100
+    _88 = move _99
+    storage_dead(_30)
+    storage_dead(_29)
+    storage_dead(_28)
+    storage_dead(right_val_27)
+    storage_dead(left_val_26)
+    storage_dead(_24)
+    storage_dead(_23)
+    storage_dead(_20)
+    storage_dead(_18)
+    storage_live(z)
+    storage_live(_39)
+    storage_live(_40)
+    storage_live(_41)
+    storage_live(_42)
+    _83 = move _88
+    _42 = &(*_83)
+    _41 = &(*_42)
+    _40 = to_dyn_obj<'150, i32>[{built_in impl Sized for i32}, impl_NoParam_for_i32](move _41)
+    ↳⚡ goto cleanup0
+    _39 = &(*_40) with_metadata(read _40.metadata)
+    z = unsize_cast<&'159 (dyn NoParam + '160),  at []>(move _39)
+    storage_dead(_41)
+    storage_dead(_39)
+    fake_read(z)
+    storage_dead(_42)
+    storage_dead(_40)
+    storage_live(_43)
+    storage_live(_44)
+    _44 = &(*z) with_metadata(read z.metadata)
+    _43 = (read (*_44.metadata).method_dummy)<'163>(move _44)
+    ↳⚡ goto cleanup0
+    storage_live(_91)
+    storage_live(_105)
+    storage_live(_106)
+    _106 = const 200i64
+    _105 = &_106
+    _91 = move _105
+    storage_live(_90)
+    storage_live(_103)
+    storage_live(_104)
+    _104 = const 100i32
+    _103 = &_104
+    _90 = move _103
+    storage_live(_89)
+    storage_live(_101)
+    storage_live(_102)
+    _102 = const 42i32
+    _101 = &_102
+    _89 = move _101
+    storage_dead(_44)
+    storage_dead(_43)
+    storage_live(a)
+    storage_live(_46)
+    storage_live(_47)
+    _82 = move _89
+    _47 = &(*_82)
+    _46 = &(*_47)
+    a = unsize_cast<&'165 (dyn Both32And64 + '166), &impl_Both32And64_for_i32::{vtable}>(move _46)
+    storage_dead(_46)
+    fake_read(a)
+    storage_dead(_47)
+    storage_live(_48)
+    storage_live(_49)
+    _49 = &(*a) with_metadata(read a.metadata)
+    storage_live(_50)
+    storage_live(_51)
+    _81 = move _90
+    _51 = &(*_81)
+    _50 = &(*_51)
+    storage_live(_52)
+    storage_live(_53)
+    _80 = move _91
+    _53 = &(*_80)
+    _52 = &(*_53)
+    _48 = (read (*_49.metadata).method_both_operate)<'171, '172, '173>(move _49, move _50, move _52)
+    ↳⚡ goto cleanup0
+    storage_live(_93)
+    storage_live(_109)
+    storage_live(_110)
+    _110 = const 10i32
+    _109 = &_110
+    _93 = move _109
+    storage_live(_92)
+    storage_live(_107)
+    storage_live(_108)
+    _108 = const 42i32
+    _107 = &_108
+    _92 = move _107
+    storage_dead(_52)
+    storage_dead(_50)
+    storage_dead(_49)
+    storage_dead(_53)
+    storage_dead(_51)
+    storage_dead(_48)
+    storage_live(b)
+    storage_live(_55)
+    storage_live(_56)
+    _79 = move _92
+    _56 = &(*_79)
+    _55 = &(*_56)
+    b = unsize_cast<&'175 (dyn LifetimeTrait<Ty = i32> + '176), &impl_LifetimeTrait_for_i32::{vtable}>(move _55)
+    storage_dead(_55)
+    fake_read(b)
+    storage_dead(_56)
+    storage_live(_57)
+    storage_live(_58)
+    storage_live(_59)
+    storage_live(_60)
+    storage_live(_61)
+    _61 = &(*b) with_metadata(read b.metadata)
+    _60 = unsize_cast<&'178 (dyn LifetimeTrait<Ty = i32> + '179),  at []>(move _61)
+    storage_dead(_61)
+    storage_live(_62)
+    storage_live(_63)
+    _78 = move _93
+    _63 = &(*_78)
+    _62 = &(*_63)
+    _59 = use_lifetime_trait<'181, '182>(move _60, move _62)
+    ↳⚡ goto cleanup0
+    storage_live(_94)
+    storage_live(_111)
+    storage_live(_112)
+    _112 = const 10i32
+    _111 = &_112
+    _94 = move _111
+    storage_dead(_62)
+    storage_dead(_60)
+    _58 = &(*_59)
+    storage_live(_64)
+    _77 = move _94
+    _64 = &(*_77)
+    _57 = (move _58, move _64)
+    storage_dead(_64)
+    storage_dead(_58)
+    storage_live(left_val_65)
+    left_val_65 = copy _57._0
+    storage_live(right_val_66)
+    right_val_66 = copy _57._1
+    storage_live(_67)
+    storage_live(_68)
+    _68 = copy (*left_val_65)
+    storage_live(_69)
+    _69 = copy (*right_val_66)
+    _67 = move _68 == move _69
+    if move _67 {
         storage_dead(_69)
         storage_dead(_68)
         storage_dead(_67)
@@ -1698,20 +1691,27 @@ fn main()
         storage_dead(_87)
         storage_dead(_86)
         return
+    } else {
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_live(kind_70)
+        kind_70 = AssertKind::Eq {  }
+        fake_read(kind_70)
+        storage_live(_71)
+        _71 = move kind_70
+        storage_live(_72)
+        storage_live(_73)
+        _73 = &(*left_val_65)
+        _72 = &(*_73)
+        storage_live(_74)
+        storage_live(_75)
+        _75 = &(*right_val_66)
+        _74 = &(*_75)
+        storage_live(_76)
+        _76 = Option::None {  }
+        panic(assert_failed<'199, '200, '201, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#21}, {impl#21}](move _71, move _72, move _74, move _76))
+        ↳⚡ goto cleanup0
     }
-    storage_dead(_11)
-    conditional_drop[drop_glue<'128>] _12
-    ↳⚡ goto cleanup1
-    conditional_drop[drop_glue<'130>] _15
-    ↳⚡ goto cleanup0
-    storage_dead(_17)
-    storage_dead(_15)
-    storage_dead(_14)
-    storage_dead(_12)
-    storage_live(_114)
-    _114 = &test_crate::main::{promoted_const#21} with_metadata(const 71usize)
-    panic(panic(move _114))
-    ↳⚡ goto cleanup0
 
     cleanup0: {
         storage_dead(_85)

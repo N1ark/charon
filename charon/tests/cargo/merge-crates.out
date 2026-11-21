@@ -82,6 +82,13 @@ pub fn check(n: u32) -> u32
     _3 = copy n
     _2 = move _3 > const 0u32
     if move _2 {
+        storage_dead(_3)
+        storage_dead(_2)
+        _0 = copy n
+        storage_dead(_4)
+        storage_dead(n)
+        storage_dead(_5)
+        return
     } else {
         storage_dead(_3)
         storage_live(_4)
@@ -98,13 +105,6 @@ pub fn check(n: u32) -> u32
             storage_dead(_5)
             unwind_continue
     }
-    storage_dead(_3)
-    storage_dead(_2)
-    _0 = copy n
-    storage_dead(_4)
-    storage_dead(n)
-    storage_dead(_5)
-    return
 }
 
 // Full name: crate_a::m::Alias

@@ -58,9 +58,9 @@ fn f() -> usize
                     storage_dead(_5)
                     return
                 } else {
+                    storage_dead(_9)
+                    storage_dead(_8)
                 }
-                storage_dead(_9)
-                storage_dead(_8)
             }
             storage_dead(_6)
             _10 = copy i panic.+ const 1i32

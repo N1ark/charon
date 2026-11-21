@@ -868,60 +868,60 @@ fn add_scalar<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
                 break 0
             },
             Option::Some => {
+                storage_live(i)
+                i = copy (_6 as variant Option::Some)._0
+                storage_live(_10)
+                storage_live(_11)
+                storage_live(_12)
+                _12 = copy i
+                fake_read((*a))
+                storage_live(_16)
+                _16 = &(*a)
+                storage_live(_17)
+                _17 = impl_Index_for_array::index<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_Index_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _16, copy _12)
+                ↳⚡ undefined_behavior
+                _11 = copy (*_17)
+                storage_live(_13)
+                storage_live(_14)
+                _14 = copy i
+                fake_read((*b))
+                storage_live(_18)
+                _18 = &(*b)
+                storage_live(_19)
+                _19 = impl_Index_for_array::index<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_Index_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _18, copy _14)
+                ↳⚡ undefined_behavior
+                _13 = copy (*_19)
+                _10 = wrapping_add(move _11, move _13)
+                ↳⚡ storage_dead(b)
+                    storage_dead(a)
+                    storage_dead(_21)
+                    storage_dead(_20)
+                    storage_dead(_19)
+                    storage_dead(_18)
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    unwind_continue
+                storage_dead(_13)
+                storage_dead(_11)
+                storage_live(_15)
+                _15 = copy i
+                fake_read((*a))
+                storage_live(_20)
+                _20 = &mut (*a)
+                storage_live(_21)
+                _21 = impl_IndexMut_for_array::index_mut<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _20, copy _15)
+                ↳⚡ undefined_behavior
+                (*_21) = move _10
+                storage_dead(_10)
+                storage_dead(_15)
+                storage_dead(_14)
+                storage_dead(_12)
+                storage_dead(i)
+                storage_dead(_8)
+                storage_dead(_6)
+                continue 0
             },
         }
-        storage_live(i)
-        i = copy (_6 as variant Option::Some)._0
-        storage_live(_10)
-        storage_live(_11)
-        storage_live(_12)
-        _12 = copy i
-        fake_read((*a))
-        storage_live(_16)
-        _16 = &(*a)
-        storage_live(_17)
-        _17 = impl_Index_for_array::index<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_Index_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _16, copy _12)
-        ↳⚡ undefined_behavior
-        _11 = copy (*_17)
-        storage_live(_13)
-        storage_live(_14)
-        _14 = copy i
-        fake_read((*b))
-        storage_live(_18)
-        _18 = &(*b)
-        storage_live(_19)
-        _19 = impl_Index_for_array::index<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_Index_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _18, copy _14)
-        ↳⚡ undefined_behavior
-        _13 = copy (*_19)
-        _10 = wrapping_add(move _11, move _13)
-        ↳⚡ storage_dead(b)
-            storage_dead(a)
-            storage_dead(_21)
-            storage_dead(_20)
-            storage_dead(_19)
-            storage_dead(_18)
-            storage_dead(_17)
-            storage_dead(_16)
-            unwind_continue
-        storage_dead(_13)
-        storage_dead(_11)
-        storage_live(_15)
-        _15 = copy i
-        fake_read((*a))
-        storage_live(_20)
-        _20 = &mut (*a)
-        storage_live(_21)
-        _21 = impl_IndexMut_for_array::index_mut<'_, u16, usize, 8usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<u16, usize>[{built_in impl Sized for u16}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u16>[{built_in impl Sized for u16}]]](move _20, copy _15)
-        ↳⚡ undefined_behavior
-        (*_21) = move _10
-        storage_dead(_10)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_12)
-        storage_dead(i)
-        storage_dead(_8)
-        storage_dead(_6)
-        continue 0
     }
     _0 = ()
     storage_dead(_8)
@@ -972,6 +972,23 @@ fn test_crate::add_dispatch::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8us
         storage_dead(a)
         unwind_continue
     if move _3 {
+        storage_live(_4)
+        storage_live(_5)
+        _5 = &two-phase-mut (*a)
+        storage_live(_6)
+        _6 = &(*b)
+        _4 = add_generic<'6, '7, Sse2>[{built_in impl Sized for Sse2}, impl_SimdOps_for_Sse2](move _5, move _6)
+        ↳⚡ storage_dead(b)
+            storage_dead(a)
+            unwind_continue
+        storage_dead(_6)
+        storage_dead(_5)
+        storage_dead(_4)
+        _0 = ()
+        storage_dead(_3)
+        storage_dead(b)
+        storage_dead(a)
+        return
     } else {
         storage_live(_7)
         storage_live(_8)
@@ -991,23 +1008,6 @@ fn test_crate::add_dispatch::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8us
         storage_dead(a)
         return
     }
-    storage_live(_4)
-    storage_live(_5)
-    _5 = &two-phase-mut (*a)
-    storage_live(_6)
-    _6 = &(*b)
-    _4 = add_generic<'6, '7, Sse2>[{built_in impl Sized for Sse2}, impl_SimdOps_for_Sse2](move _5, move _6)
-    ↳⚡ storage_dead(b)
-        storage_dead(a)
-        unwind_continue
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_4)
-    _0 = ()
-    storage_dead(_3)
-    storage_dead(b)
-    storage_dead(a)
-    return
 }
 
 fn test_crate::add_dispatch::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
@@ -1031,6 +1031,23 @@ fn test_crate::add_dispatch::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8u
         storage_dead(a)
         unwind_continue
     if move _3 {
+        storage_live(_4)
+        storage_live(_5)
+        _5 = &two-phase-mut (*a)
+        storage_live(_6)
+        _6 = &(*b)
+        _4 = add_generic<'6, '7, Neon>[{built_in impl Sized for Neon}, impl_SimdOps_for_Neon](move _5, move _6)
+        ↳⚡ storage_dead(b)
+            storage_dead(a)
+            unwind_continue
+        storage_dead(_6)
+        storage_dead(_5)
+        storage_dead(_4)
+        _0 = ()
+        storage_dead(_3)
+        storage_dead(b)
+        storage_dead(a)
+        return
     } else {
         storage_live(_7)
         storage_live(_8)
@@ -1050,23 +1067,6 @@ fn test_crate::add_dispatch::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8u
         storage_dead(a)
         return
     }
-    storage_live(_4)
-    storage_live(_5)
-    _5 = &two-phase-mut (*a)
-    storage_live(_6)
-    _6 = &(*b)
-    _4 = add_generic<'6, '7, Neon>[{built_in impl Sized for Neon}, impl_SimdOps_for_Neon](move _5, move _6)
-    ↳⚡ storage_dead(b)
-        storage_dead(a)
-        unwind_continue
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_4)
-    _0 = ()
-    storage_dead(_3)
-    storage_dead(b)
-    storage_dead(a)
-    return
 }
 
 // Full name: test_crate::add_dispatch

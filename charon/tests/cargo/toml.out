@@ -41,14 +41,14 @@ where
     _2 = @discriminant((*self))
     switch move _2 {
         1isize => {
+            _0 = const true
+            return
         },
         _ => {
             _0 = const false
             return
         },
     }
-    _0 = const true
-    return
 }
 
 struct () {}

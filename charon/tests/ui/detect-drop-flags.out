@@ -128,12 +128,12 @@ pub fn conditional(x: NeedsDrop, move_x: bool)
     }
     storage_dead(_3)
     if copy _6 {
+        drop[drop_glue<'0>] x
+        ↳⚡ unwind_continue
+        return
     } else {
         return
     }
-    drop[drop_glue<'0>] x
-    ↳⚡ unwind_continue
-    return
 }
 
 

@@ -329,6 +329,15 @@ fn main()
     _12 = copy (*right_val)
     _10 = move _11 == move _12
     if move _10 {
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(right_val)
+        storage_dead(left_val)
+        storage_dead(_5)
+        _0 = ()
+        storage_dead(x)
+        return
     } else {
         storage_dead(_12)
         storage_dead(_11)
@@ -351,15 +360,6 @@ fn main()
         _14 = assert_failed<'37, '38, '39, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, impl_Debug_for_u32, impl_Debug_for_u32](move _15, move _16, move _18, move _20)
         ↳⚡ unwind_continue
     }
-    storage_dead(_12)
-    storage_dead(_11)
-    storage_dead(_10)
-    storage_dead(right_val)
-    storage_dead(left_val)
-    storage_dead(_5)
-    _0 = ()
-    storage_dead(x)
-    return
 }
 
 

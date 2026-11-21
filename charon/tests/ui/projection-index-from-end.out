@@ -181,6 +181,26 @@ fn slice_pattern_end<'_0>(x: &'_0 [()])
     _4 = const 1usize
     _5 = move _2 >= move _4
     if move _5 {
+        storage_live(_named)
+        storage_live(_7)
+        _7 = &(*x) with_metadata(read x.metadata)
+        storage_live(_8)
+        _8 = read x.metadata ub.- const 1usize
+        storage_live(_9)
+        _9 = impl_SliceIndex_slice_for_usize::index<'_, ()>[{built_in impl Sized for ()}](read _8, move _7)
+        ↳⚡ undefined_behavior
+        _named = &(*_9)
+        _0 = ()
+        storage_dead(_named)
+        storage_dead(_5)
+        storage_dead(_4)
+        storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(x)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_7)
+        return
     } else {
         _0 = ()
         storage_dead(_5)
@@ -193,26 +213,6 @@ fn slice_pattern_end<'_0>(x: &'_0 [()])
         storage_dead(_7)
         return
     }
-    storage_live(_named)
-    storage_live(_7)
-    _7 = &(*x) with_metadata(read x.metadata)
-    storage_live(_8)
-    _8 = read x.metadata ub.- const 1usize
-    storage_live(_9)
-    _9 = impl_SliceIndex_slice_for_usize::index<'_, ()>[{built_in impl Sized for ()}](read _8, move _7)
-    ↳⚡ undefined_behavior
-    _named = &(*_9)
-    _0 = ()
-    storage_dead(_named)
-    storage_dead(_5)
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(x)
-    storage_dead(_9)
-    storage_dead(_8)
-    storage_dead(_7)
-    return
 }
 
 // Full name: test_crate::array_pattern_end
@@ -274,6 +274,27 @@ fn field_pattern_end<'_0>(x: &'_0 Tail) -> u32
     _5 = const 1usize
     _6 = move _2 >= move _5
     if move _6 {
+        storage_live(last)
+        storage_live(_8)
+        _8 = &(*x).values with_metadata(read x.metadata)
+        storage_live(_9)
+        _9 = read x.metadata ub.- const 1usize
+        storage_live(_10)
+        _10 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](read _9, move _8)
+        ↳⚡ undefined_behavior
+        last = copy (*_10)
+        _0 = copy last
+        storage_dead(last)
+        storage_dead(_6)
+        storage_dead(_5)
+        storage_dead(_4)
+        storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(x)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        return
     } else {
         _0 = const 0u32
         storage_dead(_6)
@@ -287,27 +308,6 @@ fn field_pattern_end<'_0>(x: &'_0 Tail) -> u32
         storage_dead(_8)
         return
     }
-    storage_live(last)
-    storage_live(_8)
-    _8 = &(*x).values with_metadata(read x.metadata)
-    storage_live(_9)
-    _9 = read x.metadata ub.- const 1usize
-    storage_live(_10)
-    _10 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](read _9, move _8)
-    ↳⚡ undefined_behavior
-    last = copy (*_10)
-    _0 = copy last
-    storage_dead(last)
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(x)
-    storage_dead(_10)
-    storage_dead(_9)
-    storage_dead(_8)
-    return
 }
 
 

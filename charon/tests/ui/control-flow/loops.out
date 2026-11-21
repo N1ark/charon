@@ -627,18 +627,18 @@ pub fn test_loop2(max: u32) -> u32
                 storage_dead(_7)
                 break 0
             } else {
+                storage_dead(_8)
+                storage_dead(_7)
+                storage_live(_9)
+                _9 = copy i
+                _10 = copy s panic.+ copy _9
+                s = move _10
+                storage_dead(_9)
+                _11 = copy i panic.+ const 1u32
+                i = move _11
+                storage_dead(_4)
+                continue 0
             }
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_live(_9)
-            _9 = copy i
-            _10 = copy s panic.+ copy _9
-            s = move _10
-            storage_dead(_9)
-            _11 = copy i panic.+ const 1u32
-            i = move _11
-            storage_dead(_4)
-            continue 0
         } else {
             storage_dead(_6)
             storage_dead(_5)
@@ -728,6 +728,10 @@ pub fn test_loop3(max: u32) -> u32
                     storage_dead(_13)
                     _11 = move _12 == const 17u32
                     if move _11 {
+                        storage_dead(_12)
+                        storage_dead(_11)
+                        storage_dead(_8)
+                        continue 0
                     } else {
                         storage_dead(_12)
                         storage_dead(_11)
@@ -742,10 +746,6 @@ pub fn test_loop3(max: u32) -> u32
                         storage_dead(_5)
                         continue 1
                     }
-                    storage_dead(_12)
-                    storage_dead(_11)
-                    storage_dead(_8)
-                    continue 0
                 } else {
                     break 0
                 }
@@ -857,6 +857,10 @@ pub fn test_loop4(max: u32) -> u32
                     storage_dead(_13)
                     _11 = move _12 == const 17u32
                     if move _11 {
+                        storage_dead(_12)
+                        storage_dead(_11)
+                        storage_dead(_8)
+                        continue 0
                     } else {
                         storage_dead(_12)
                         storage_dead(_11)
@@ -870,10 +874,6 @@ pub fn test_loop4(max: u32) -> u32
                         storage_dead(_8)
                         break 1
                     }
-                    storage_dead(_12)
-                    storage_dead(_11)
-                    storage_dead(_8)
-                    continue 0
                 } else {
                     break 0
                 }
@@ -1056,18 +1056,18 @@ pub fn test_loop6(max: u32) -> u32
                 storage_dead(_7)
                 break 0
             } else {
+                storage_dead(_8)
+                storage_dead(_7)
+                storage_live(_9)
+                _9 = copy i
+                _10 = copy s panic.+ copy _9
+                s = move _10
+                storage_dead(_9)
+                _11 = copy i panic.+ const 1u32
+                i = move _11
+                storage_dead(_4)
+                continue 0
             }
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_live(_9)
-            _9 = copy i
-            _10 = copy s panic.+ copy _9
-            s = move _10
-            storage_dead(_9)
-            _11 = copy i panic.+ const 1u32
-            i = move _11
-            storage_dead(_4)
-            continue 0
         } else {
             storage_dead(_6)
             storage_dead(_5)
@@ -1456,13 +1456,13 @@ pub fn nested_loops_enum(step_out: usize, step_in: usize) -> usize
                 break 0
             },
             Option::Some => {
+                _10 = copy s panic.+ const 1usize
+                s = move _10
+                storage_dead(_9)
+                storage_dead(_7)
+                continue 0
             },
         }
-        _10 = copy s panic.+ const 1usize
-        s = move _10
-        storage_dead(_9)
-        storage_dead(_7)
-        continue 0
     }
     storage_dead(_9)
     storage_dead(_7)
@@ -1520,13 +1520,13 @@ pub fn nested_loops_enum(step_out: usize, step_in: usize) -> usize
                     break 0
                 },
                 Option::Some => {
+                    _25 = copy s panic.+ const 1usize
+                    s = move _25
+                    storage_dead(_24)
+                    storage_dead(_22)
+                    continue 0
                 },
             }
-            _25 = copy s panic.+ const 1usize
-            s = move _25
-            storage_dead(_24)
-            storage_dead(_22)
-            continue 0
         }
         storage_dead(_24)
         storage_dead(_22)
@@ -1623,19 +1623,19 @@ pub fn loop_inside_if(b: bool, n: u32) -> u32
                 break 0
             },
             Option::Some => {
+                storage_live(i)
+                i = copy (_9 as variant Option::Some)._0
+                storage_live(_13)
+                _13 = copy i
+                _14 = copy s panic.+ copy _13
+                s = move _14
+                storage_dead(_13)
+                storage_dead(i)
+                storage_dead(_11)
+                storage_dead(_9)
+                continue 0
             },
         }
-        storage_live(i)
-        i = copy (_9 as variant Option::Some)._0
-        storage_live(_13)
-        _13 = copy i
-        _14 = copy s panic.+ copy _13
-        s = move _14
-        storage_dead(_13)
-        storage_dead(i)
-        storage_dead(_11)
-        storage_dead(_9)
-        continue 0
     }
     storage_dead(_11)
     storage_dead(_9)
@@ -1814,28 +1814,28 @@ pub fn clear<'_0>(v: &'_0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in 
         storage_dead(_6)
         _3 = move _4 < move _5
         if move _3 {
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_live(_7)
+            storage_live(_8)
+            _8 = &mut (*v)
+            storage_live(_9)
+            _9 = copy i
+            _7 = impl_IndexMut_for_Vec::index_mut<'5, u32, usize, Global>[{built_in impl Sized for u32}, {built_in impl Sized for usize}, {built_in impl Sized for Global}, impl_SliceIndex_slice_for_usize<u32>[{built_in impl Sized for u32}]](move _8, move _9)
+            ↳⚡ storage_dead(_10)
+                storage_dead(v)
+                unwind_continue
+            storage_dead(_9)
+            storage_dead(_8)
+            (*_7) = const 0u32
+            storage_dead(_7)
+            _10 = copy i panic.+ const 1usize
+            i = move _10
+            storage_dead(_3)
+            continue 0
         } else {
             break 0
         }
-        storage_dead(_5)
-        storage_dead(_4)
-        storage_live(_7)
-        storage_live(_8)
-        _8 = &mut (*v)
-        storage_live(_9)
-        _9 = copy i
-        _7 = impl_IndexMut_for_Vec::index_mut<'5, u32, usize, Global>[{built_in impl Sized for u32}, {built_in impl Sized for usize}, {built_in impl Sized for Global}, impl_SliceIndex_slice_for_usize<u32>[{built_in impl Sized for u32}]](move _8, move _9)
-        ↳⚡ storage_dead(_10)
-            storage_dead(v)
-            unwind_continue
-        storage_dead(_9)
-        storage_dead(_8)
-        (*_7) = const 0u32
-        storage_dead(_7)
-        _10 = copy i panic.+ const 1usize
-        i = move _10
-        storage_dead(_3)
-        continue 0
     }
     storage_dead(_5)
     storage_dead(_4)
@@ -1898,17 +1898,17 @@ pub fn get_elem_mut<'_0>(ls: &'_0 mut List<usize>[{built_in impl Sized for usize
                     storage_dead(_9)
                     return
                 } else {
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_live(_8)
+                    _8 = &mut (*(*tl))
+                    ls = move _8
+                    storage_dead(_8)
+                    storage_dead(_5)
+                    storage_dead(tl)
+                    storage_dead(y)
+                    continue 0
                 }
-                storage_dead(_7)
-                storage_dead(_6)
-                storage_live(_8)
-                _8 = &mut (*(*tl))
-                ls = move _8
-                storage_dead(_8)
-                storage_dead(_5)
-                storage_dead(tl)
-                storage_dead(y)
-                continue 0
             },
             List::Nil => {
                 break 0
@@ -1968,18 +1968,18 @@ where
                     storage_dead(_9)
                     return
                 } else {
+                    storage_dead(_6)
+                    storage_live(_7)
+                    _7 = &mut (*(*tl))
+                    ls = move _7
+                    storage_dead(_7)
+                    _8 = copy i panic.- const 1u32
+                    i = move _8
+                    storage_dead(_5)
+                    storage_dead(tl)
+                    storage_dead(x)
+                    continue 0
                 }
-                storage_dead(_6)
-                storage_live(_7)
-                _7 = &mut (*(*tl))
-                ls = move _7
-                storage_dead(_7)
-                _8 = copy i panic.- const 1u32
-                i = move _8
-                storage_dead(_5)
-                storage_dead(tl)
-                storage_dead(x)
-                continue 0
             },
             _ => {
                 break 0
@@ -2087,12 +2087,12 @@ pub fn interleaved_loops()
                 storage_live(_3)
                 _3 = const true
                 if move _3 {
+                    x = const 5i32
+                    storage_dead(_3)
+                    continue 0
                 } else {
                     break 1
                 }
-                x = const 5i32
-                storage_dead(_3)
-                continue 0
             }
         }
         x = const 3i32
@@ -2138,11 +2138,11 @@ pub fn interleaved_loops2()
                 if move _3 {
                     break 1
                 } else {
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    x = const 5i32
+                    continue 0
                 }
-                storage_dead(_3)
-                storage_dead(_2)
-                x = const 5i32
-                continue 0
             }
         }
         x = const 3i32

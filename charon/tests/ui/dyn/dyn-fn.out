@@ -114,6 +114,15 @@ fn takes_fn<'_0>(f: &'_0 (dyn for<'a> Fn<(&'a mut u32,), ImpliedClause1::Implied
     ↳⚡ storage_dead(f)
         unwind_continue
     if move _3 {
+        storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_5)
+        storage_dead(_4)
+        _0 = ()
+        storage_dead(_3)
+        storage_dead(counter)
+        storage_dead(f)
+        return
     } else {
         storage_dead(_7)
         storage_dead(_6)
@@ -125,15 +134,6 @@ fn takes_fn<'_0>(f: &'_0 (dyn for<'a> Fn<(&'a mut u32,), ImpliedClause1::Implied
         storage_dead(f)
         return
     }
-    storage_dead(_7)
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(_4)
-    _0 = ()
-    storage_dead(_3)
-    storage_dead(counter)
-    storage_dead(f)
-    return
 }
 
 // Full name: test_crate::gives_fn::{closure}

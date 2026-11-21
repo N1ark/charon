@@ -85,13 +85,13 @@ where
             return
         },
         _ => {
+            drop[{built_in impl Destruct for T}::drop_glue<'1>] ((*_1) as variant Option::Some)._0
+            ↳⚡ storage_dead(_1)
+                unwind_continue
+            storage_dead(_1)
+            return
         },
     }
-    drop[{built_in impl Destruct for T}::drop_glue<'1>] ((*_1) as variant Option::Some)._0
-    ↳⚡ storage_dead(_1)
-        unwind_continue
-    storage_dead(_1)
-    return
 }
 
 // Full name: core::panic::location::{Location<'a>}::caller
@@ -189,6 +189,9 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
     storage_live(_3)
     _3 = const false
     if move _3 {
+        storage_live(_4)
+        _4 = abort()
+        ↳⚡ undefined_behavior
     } else {
         storage_dead(_3)
         storage_live(pi)
@@ -232,9 +235,6 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
             storage_dead(fmt)
             unwind_continue
     }
-    storage_live(_4)
-    _4 = abort()
-    ↳⚡ undefined_behavior
 }
 
 // Full name: core::panicking::panic_nounwind_fmt

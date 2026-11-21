@@ -134,6 +134,20 @@ pub fn example(x: Result<u32, String>[{built_in impl Sized for u32}, {built_in i
     storage_dead(_4)
     match _3 {
         ControlFlow::Continue => {
+            storage_live(val)
+            val = copy (_3 as variant ControlFlow::Continue)._0
+            _2 = copy val
+            storage_dead(val)
+            _0 = Result::Ok { _0: move _2 }
+            storage_dead(_2)
+            conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'2, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
+            ↳⚡ goto cleanup0
+            storage_dead(_3)
+            conditional_drop[impl_Destruct_for_Result::drop_glue<'3, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x
+            ↳⚡ storage_dead(x)
+                unwind_continue
+            storage_dead(x)
+            return
         },
         ControlFlow::Break => {
             storage_live(residual)
@@ -165,20 +179,6 @@ pub fn example(x: Result<u32, String>[{built_in impl Sized for u32}, {built_in i
             return
         },
     }
-    storage_live(val)
-    val = copy (_3 as variant ControlFlow::Continue)._0
-    _2 = copy val
-    storage_dead(val)
-    _0 = Result::Ok { _0: move _2 }
-    storage_dead(_2)
-    conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'2, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
-    ↳⚡ goto cleanup0
-    storage_dead(_3)
-    conditional_drop[impl_Destruct_for_Result::drop_glue<'3, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
-    storage_dead(x)
-    return
 
     cleanup0: {
         conditional_drop[impl_Destruct_for_Result::drop_glue<'1, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x

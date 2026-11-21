@@ -82,6 +82,19 @@ where
     storage_live(_4)
     _4 = copy b
     if move _4 {
+        storage_live(_5)
+        _7 = const false
+        _5 = move false_val
+        storage_dead(_5)
+        _8 = const false
+        _0 = move true_val
+        storage_dead(_4)
+        storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(false_val)
+        storage_dead(true_val)
+        storage_dead(b)
+        return
     } else {
         storage_live(_6)
         _8 = const false
@@ -97,19 +110,6 @@ where
         storage_dead(b)
         return
     }
-    storage_live(_5)
-    _7 = const false
-    _5 = move false_val
-    storage_dead(_5)
-    _8 = const false
-    _0 = move true_val
-    storage_dead(_4)
-    storage_dead(_8)
-    storage_dead(_7)
-    storage_dead(false_val)
-    storage_dead(true_val)
-    storage_dead(b)
-    return
 }
 
 // Full name: core::intrinsics::select_unpredictable

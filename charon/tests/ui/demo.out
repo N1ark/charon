@@ -271,6 +271,16 @@ where
     _6 = copy i
     _5 = move _6 == const 0u32
     if move _5 {
+        storage_dead(_6)
+        _0 = &(*x)
+        storage_dead(_5)
+        storage_dead(tl)
+        storage_dead(x)
+        storage_dead(_11)
+        storage_dead(i)
+        storage_dead(l)
+        storage_dead(_12)
+        return
     } else {
         storage_dead(_6)
         storage_live(_7)
@@ -301,16 +311,6 @@ where
         storage_dead(_12)
         return
     }
-    storage_dead(_6)
-    _0 = &(*x)
-    storage_dead(_5)
-    storage_dead(tl)
-    storage_dead(x)
-    storage_dead(_11)
-    storage_dead(i)
-    storage_dead(l)
-    storage_dead(_12)
-    return
 }
 
 pub const test_crate::list_nth_mut::{promoted_const}: str = "explicit panic" with_metadata(14usize)
@@ -458,18 +458,18 @@ where
                     storage_dead(_9)
                     return
                 } else {
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    _7 = copy i panic.- const 1u32
+                    i = move _7
+                    storage_live(_8)
+                    _8 = &mut (*(*tl))
+                    l = move _8
+                    storage_dead(_8)
+                    storage_dead(tl)
+                    storage_dead(x)
+                    continue 0
                 }
-                storage_dead(_6)
-                storage_dead(_5)
-                _7 = copy i panic.- const 1u32
-                i = move _7
-                storage_live(_8)
-                _8 = &mut (*(*tl))
-                l = move _8
-                storage_dead(_8)
-                storage_dead(tl)
-                storage_dead(x)
-                continue 0
             },
             _ => {
                 break 0
@@ -507,6 +507,13 @@ pub fn i32_id(i: i32) -> i32
     _3 = copy i
     _2 = move _3 == const 0i32
     if move _2 {
+        storage_dead(_3)
+        _0 = const 0i32
+        storage_dead(_2)
+        storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(i)
+        return
     } else {
         storage_dead(_3)
         storage_live(_4)
@@ -531,13 +538,6 @@ pub fn i32_id(i: i32) -> i32
         storage_dead(i)
         return
     }
-    storage_dead(_3)
-    _0 = const 0i32
-    storage_dead(_2)
-    storage_dead(_8)
-    storage_dead(_7)
-    storage_dead(i)
-    return
 }
 
 // Full name: test_crate::list_tail

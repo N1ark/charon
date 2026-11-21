@@ -472,19 +472,19 @@ pub fn desugarings(x: Option<u32>[{built_in impl Sized for u32}]) -> Option<u32>
                 break 0
             },
             Option::Some => {
+                storage_live(i)
+                i = copy (_12 as variant Option::Some)._0
+                storage_live(_16)
+                _16 = copy i
+                _17 = copy sum panic.+ copy _16
+                sum = move _17
+                storage_dead(_16)
+                storage_dead(i)
+                storage_dead(_14)
+                storage_dead(_12)
+                continue 0
             },
         }
-        storage_live(i)
-        i = copy (_12 as variant Option::Some)._0
-        storage_live(_16)
-        _16 = copy i
-        _17 = copy sum panic.+ copy _16
-        sum = move _17
-        storage_dead(_16)
-        storage_dead(i)
-        storage_dead(_14)
-        storage_dead(_12)
-        continue 0
     }
     storage_dead(_14)
     storage_dead(_12)

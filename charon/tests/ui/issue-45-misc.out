@@ -606,27 +606,27 @@ fn cbd(prf_input: [u8; 33usize])
                 break 0
             },
             Option::Some => {
+                storage_live(i)
+                i = copy (_5 as variant Option::Some)._0
+                storage_live(_9)
+                _9 = copy i
+                storage_live(_10)
+                _10 = const 0usize
+                fake_read(prf_input)
+                storage_live(_11)
+                _11 = &mut prf_input
+                storage_live(_12)
+                _12 = impl_IndexMut_for_array::index_mut<'_, u8, usize, 33usize>[{built_in impl Sized for u8}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<u8, usize>[{built_in impl Sized for u8}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u8>[{built_in impl Sized for u8}]]](move _11, copy _10)
+                ↳⚡ undefined_behavior
+                (*_12) = move _9
+                storage_dead(_9)
+                storage_dead(_10)
+                storage_dead(i)
+                storage_dead(_7)
+                storage_dead(_5)
+                continue 0
             },
         }
-        storage_live(i)
-        i = copy (_5 as variant Option::Some)._0
-        storage_live(_9)
-        _9 = copy i
-        storage_live(_10)
-        _10 = const 0usize
-        fake_read(prf_input)
-        storage_live(_11)
-        _11 = &mut prf_input
-        storage_live(_12)
-        _12 = impl_IndexMut_for_array::index_mut<'_, u8, usize, 33usize>[{built_in impl Sized for u8}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<u8, usize>[{built_in impl Sized for u8}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<u8>[{built_in impl Sized for u8}]]](move _11, copy _10)
-        ↳⚡ undefined_behavior
-        (*_12) = move _9
-        storage_dead(_9)
-        storage_dead(_10)
-        storage_dead(i)
-        storage_dead(_7)
-        storage_dead(_5)
-        continue 0
     }
     _0 = ()
     storage_dead(_7)
@@ -702,6 +702,14 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
         _15 = copy (*right_val)
         _13 = move _14 == move _15
         if move _13 {
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(right_val)
+            storage_dead(left_val)
+            storage_dead(_9)
+            storage_dead(_6)
+            storage_dead(_4)
         } else {
             storage_dead(_15)
             storage_dead(_14)
@@ -723,14 +731,6 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
             panic(assert_failed<'38, '39, '40, usize, usize>[{built_in impl MetaSized for usize}, {built_in impl MetaSized for usize}, {impl#15}, {impl#15}](move _17, move _18, move _20, move _22))
             ↳⚡ goto cleanup0
         }
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(right_val)
-        storage_dead(left_val)
-        storage_dead(_9)
-        storage_dead(_6)
-        storage_dead(_4)
     } else {
     }
     storage_dead(_3)

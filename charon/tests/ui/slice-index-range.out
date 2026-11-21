@@ -682,77 +682,41 @@ fn slice_index_fail(start: usize, end: usize, len: usize) -> !
     _6 = copy len
     _4 = move _5 > move _6
     if move _4 {
-    } else {
         storage_dead(_6)
         storage_dead(_5)
-        storage_dead(_4)
-        storage_live(_10)
-        storage_live(_11)
-        _11 = copy end
-        storage_live(_12)
-        _12 = copy len
-        _10 = move _11 > move _12
-        if move _10 {
-        } else {
-            storage_dead(_12)
-            storage_dead(_11)
-            storage_dead(_10)
-            storage_live(_16)
-            storage_live(_17)
-            _17 = copy start
-            storage_live(_18)
-            _18 = copy end
-            _16 = move _17 > move _18
-            if move _16 {
-            } else {
-                storage_dead(_18)
-                storage_dead(_17)
-                storage_dead(_16)
-                storage_live(_22)
-                _22 = copy end
-                storage_live(_23)
-                _23 = copy len
-                _0 = core::slice::index::slice_index_fail::do_panic#3(move _22, move _23)
-                ↳⚡ storage_dead(_23)
-                    storage_dead(_22)
-                    storage_dead(_21)
-                    storage_dead(_20)
-                    storage_dead(_19)
-                    storage_dead(_15)
-                    storage_dead(_14)
-                    storage_dead(_13)
-                    storage_dead(_9)
-                    storage_dead(_8)
-                    storage_dead(_7)
-                    storage_dead(len)
-                    storage_dead(end)
-                    storage_dead(start)
-                    unwind_continue
-            }
-            storage_dead(_18)
-            storage_dead(_17)
-            storage_live(_19)
-            storage_live(_20)
-            _20 = copy start
-            storage_live(_21)
-            _21 = copy end
-            _19 = core::slice::index::slice_index_fail::do_panic#2(move _20, move _21)
-            ↳⚡ storage_dead(_23)
-                storage_dead(_22)
-                storage_dead(_21)
-                storage_dead(_20)
-                storage_dead(_19)
-                storage_dead(_15)
-                storage_dead(_14)
-                storage_dead(_13)
-                storage_dead(_9)
-                storage_dead(_8)
-                storage_dead(_7)
-                storage_dead(len)
-                storage_dead(end)
-                storage_dead(start)
-                unwind_continue
-        }
+        storage_live(_7)
+        storage_live(_8)
+        _8 = copy start
+        storage_live(_9)
+        _9 = copy len
+        _7 = core::slice::index::slice_index_fail::do_panic(move _8, move _9)
+        ↳⚡ storage_dead(_23)
+            storage_dead(_22)
+            storage_dead(_21)
+            storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(len)
+            storage_dead(end)
+            storage_dead(start)
+            unwind_continue
+    } else {
+    }
+    storage_dead(_6)
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_live(_10)
+    storage_live(_11)
+    _11 = copy end
+    storage_live(_12)
+    _12 = copy len
+    _10 = move _11 > move _12
+    if move _10 {
         storage_dead(_12)
         storage_dead(_11)
         storage_live(_13)
@@ -776,30 +740,66 @@ fn slice_index_fail(start: usize, end: usize, len: usize) -> !
             storage_dead(end)
             storage_dead(start)
             unwind_continue
+    } else {
     }
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_live(_7)
-    storage_live(_8)
-    _8 = copy start
-    storage_live(_9)
-    _9 = copy len
-    _7 = core::slice::index::slice_index_fail::do_panic(move _8, move _9)
-    ↳⚡ storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(_21)
-        storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(len)
-        storage_dead(end)
-        storage_dead(start)
-        unwind_continue
+    storage_dead(_12)
+    storage_dead(_11)
+    storage_dead(_10)
+    storage_live(_16)
+    storage_live(_17)
+    _17 = copy start
+    storage_live(_18)
+    _18 = copy end
+    _16 = move _17 > move _18
+    if move _16 {
+        storage_dead(_18)
+        storage_dead(_17)
+        storage_live(_19)
+        storage_live(_20)
+        _20 = copy start
+        storage_live(_21)
+        _21 = copy end
+        _19 = core::slice::index::slice_index_fail::do_panic#2(move _20, move _21)
+        ↳⚡ storage_dead(_23)
+            storage_dead(_22)
+            storage_dead(_21)
+            storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(len)
+            storage_dead(end)
+            storage_dead(start)
+            unwind_continue
+    } else {
+        storage_dead(_18)
+        storage_dead(_17)
+        storage_dead(_16)
+        storage_live(_22)
+        _22 = copy end
+        storage_live(_23)
+        _23 = copy len
+        _0 = core::slice::index::slice_index_fail::do_panic#3(move _22, move _23)
+        ↳⚡ storage_dead(_23)
+            storage_dead(_22)
+            storage_dead(_21)
+            storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(len)
+            storage_dead(end)
+            storage_dead(start)
+            unwind_continue
+    }
 }
 
 // Full name: core::slice::index::get_offset_len_noubcheck

@@ -5688,19 +5688,19 @@ fn main()
                 break 0
             },
             Option::Some => {
+                storage_live(v_10)
+                v_10 = copy (_7 as variant Option::Some)._0
+                storage_live(_11)
+                _11 = copy v_10
+                _12 = copy i panic.+ copy _11
+                i = move _12
+                storage_dead(_11)
+                storage_dead(v_10)
+                storage_dead(_9)
+                storage_dead(_7)
+                continue 0
             },
         }
-        storage_live(v_10)
-        v_10 = copy (_7 as variant Option::Some)._0
-        storage_live(_11)
-        _11 = copy v_10
-        _12 = copy i panic.+ copy _11
-        i = move _12
-        storage_dead(_11)
-        storage_dead(v_10)
-        storage_dead(_9)
-        storage_dead(_7)
-        continue 0
     }
     storage_dead(_9)
     storage_dead(_7)
@@ -5742,24 +5742,24 @@ fn main()
                 break 0
             },
             Option::Some => {
+                storage_live(v_21)
+                v_21 = copy (_18 as variant Option::Some)._0
+                storage_live(_22)
+                storage_live(_23)
+                _23 = &two-phase-mut i
+                storage_live(_24)
+                _24 = copy v_21
+                _22 = add_assign<'87, '88>(move _23, move _24)
+                ↳⚡ goto cleanup0
+                storage_dead(_24)
+                storage_dead(_23)
+                storage_dead(_22)
+                storage_dead(v_21)
+                storage_dead(_20)
+                storage_dead(_18)
+                continue 0
             },
         }
-        storage_live(v_21)
-        v_21 = copy (_18 as variant Option::Some)._0
-        storage_live(_22)
-        storage_live(_23)
-        _23 = &two-phase-mut i
-        storage_live(_24)
-        _24 = copy v_21
-        _22 = add_assign<'87, '88>(move _23, move _24)
-        ↳⚡ goto cleanup0
-        storage_dead(_24)
-        storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(v_21)
-        storage_dead(_20)
-        storage_dead(_18)
-        continue 0
     }
     storage_dead(_20)
     storage_dead(_18)
@@ -5795,13 +5795,13 @@ fn main()
                 break 0
             },
             Option::Some => {
+                _33 = copy i panic.+ const 1i32
+                i = move _33
+                storage_dead(_32)
+                storage_dead(_30)
+                continue 0
             },
         }
-        _33 = copy i panic.+ const 1i32
-        i = move _33
-        storage_dead(_32)
-        storage_dead(_30)
-        continue 0
     }
     storage_dead(_32)
     storage_dead(_30)
@@ -5837,13 +5837,13 @@ fn main()
                 break 0
             },
             Option::Some => {
+                _42 = copy i panic.+ const 1i32
+                i = move _42
+                storage_dead(_41)
+                storage_dead(_39)
+                continue 0
             },
         }
-        _42 = copy i panic.+ const 1i32
-        i = move _42
-        storage_dead(_41)
-        storage_dead(_39)
-        continue 0
     }
     storage_dead(_41)
     storage_dead(_39)
@@ -5871,6 +5871,27 @@ fn main()
     _51 = copy (*right_val)
     _49 = move _50 == move _51
     if move _49 {
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(right_val)
+        storage_dead(left_val)
+        storage_dead(_44)
+        _0 = ()
+        storage_dead(expected)
+        storage_dead(i)
+        storage_dead(a)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(kind)
+        storage_dead(_42)
+        storage_dead(_33)
+        storage_dead(_12)
+        return
     } else {
         storage_dead(_51)
         storage_dead(_50)
@@ -5892,27 +5913,6 @@ fn main()
         panic(assert_failed<'126, '127, '128, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#17}, {impl#17}](move _53, move _54, move _56, move _58))
         ↳⚡ goto cleanup0
     }
-    storage_dead(_51)
-    storage_dead(_50)
-    storage_dead(_49)
-    storage_dead(right_val)
-    storage_dead(left_val)
-    storage_dead(_44)
-    _0 = ()
-    storage_dead(expected)
-    storage_dead(i)
-    storage_dead(a)
-    storage_dead(_58)
-    storage_dead(_57)
-    storage_dead(_56)
-    storage_dead(_55)
-    storage_dead(_54)
-    storage_dead(_53)
-    storage_dead(kind)
-    storage_dead(_42)
-    storage_dead(_33)
-    storage_dead(_12)
-    return
 
     cleanup0: {
         storage_dead(_58)

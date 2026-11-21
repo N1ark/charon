@@ -247,6 +247,13 @@ where
     storage_live(_5)
     _5 = copy y
     if move _5 {
+        _0 = copy x
+        storage_dead(_5)
+        storage_dead(y)
+        storage_dead(x)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        return
     } else {
         _0 = copy (*(*_1)._0)
         storage_dead(_5)
@@ -256,13 +263,6 @@ where
         storage_dead(_1)
         return
     }
-    _0 = copy x
-    storage_dead(_5)
-    storage_dead(y)
-    storage_dead(x)
-    storage_dead(tupled_args)
-    storage_dead(_1)
-    return
 }
 
 // Full name: test_crate::use_closure::{impl FnMut<(u32, bool)> for {closure}<'_0>}::call_mut

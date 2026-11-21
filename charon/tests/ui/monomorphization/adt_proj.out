@@ -52,6 +52,13 @@ fn main()
     fake_read(res)
     match res {
         Result::<u32, u32>::Ok => {
+            storage_live(n)
+            n = copy (res as variant Result::<u32, u32>::Ok)._0
+            _0 = ()
+            storage_dead(n)
+            storage_dead(res)
+            storage_dead(_3)
+            return
         },
         _ => {
             storage_live(_3)
@@ -61,13 +68,6 @@ fn main()
                 unwind_continue
         },
     }
-    storage_live(n)
-    n = copy (res as variant Result::<u32, u32>::Ok)._0
-    _0 = ()
-    storage_dead(n)
-    storage_dead(res)
-    storage_dead(_3)
-    return
 }
 
 

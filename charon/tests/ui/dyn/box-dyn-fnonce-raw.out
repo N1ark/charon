@@ -326,6 +326,33 @@ where
     storage_dead(_9)
     _7 = move _8 != const 0usize
     if move _7 {
+        storage_dead(_8)
+        storage_live(_10)
+        storage_live(_11)
+        _11 = &(*self)._1
+        storage_live(_12)
+        storage_live(_13)
+        storage_live(_14)
+        _14 = copy ptr
+        _13 = cast<T, u8>[{built_in impl Sized for u8}](move _14)
+        ↳⚡ unwind_continue
+        storage_dead(_14)
+        _12 = from<u8>(move _13)
+        ↳⚡ unwind_continue
+        storage_dead(_13)
+        storage_live(_15)
+        _15 = copy layout
+        _10 = TraitClause2::deallocate<'4>(move _11, move _12, move _15)
+        ↳⚡ unwind_continue
+        storage_dead(_15)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        _0 = ()
+        storage_dead(_7)
+        storage_dead(layout)
+        storage_dead(ptr)
+        return
     } else {
         storage_dead(_8)
         _0 = ()
@@ -334,33 +361,6 @@ where
         storage_dead(ptr)
         return
     }
-    storage_dead(_8)
-    storage_live(_10)
-    storage_live(_11)
-    _11 = &(*self)._1
-    storage_live(_12)
-    storage_live(_13)
-    storage_live(_14)
-    _14 = copy ptr
-    _13 = cast<T, u8>[{built_in impl Sized for u8}](move _14)
-    ↳⚡ unwind_continue
-    storage_dead(_14)
-    _12 = from<u8>(move _13)
-    ↳⚡ unwind_continue
-    storage_dead(_13)
-    storage_live(_15)
-    _15 = copy layout
-    _10 = TraitClause2::deallocate<'4>(move _11, move _12, move _15)
-    ↳⚡ unwind_continue
-    storage_dead(_15)
-    storage_dead(_12)
-    storage_dead(_11)
-    storage_dead(_10)
-    _0 = ()
-    storage_dead(_7)
-    storage_dead(layout)
-    storage_dead(ptr)
-    return
 }
 
 // Full name: alloc::boxed::Box::{impl Destruct for Box<T, A>[TraitClause0, TraitClause1, TraitClause2]}::drop_glue
@@ -453,6 +453,16 @@ fn box_new_uninit(layout: Layout) -> *mut u8
     _5 = @discriminant(_2)
     switch move _5 {
         0isize => {
+            storage_live(ptr)
+            ptr = copy (_2 as variant Result::Ok)._0
+            storage_live(_7)
+            _7 = copy ptr
+            _0 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _7)
+            ↳⚡ unwind_continue
+            storage_dead(_7)
+            storage_dead(ptr)
+            storage_dead(_2)
+            return
         },
         1isize => {
             storage_live(_8)
@@ -465,16 +475,6 @@ fn box_new_uninit(layout: Layout) -> *mut u8
             undefined_behavior
         },
     }
-    storage_live(ptr)
-    ptr = copy (_2 as variant Result::Ok)._0
-    storage_live(_7)
-    _7 = copy ptr
-    _0 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _7)
-    ↳⚡ unwind_continue
-    storage_dead(_7)
-    storage_dead(ptr)
-    storage_dead(_2)
-    return
 }
 
 // Full name: alloc::boxed::{Box<T, Global>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}, impl_Allocator_for_Global]}::new

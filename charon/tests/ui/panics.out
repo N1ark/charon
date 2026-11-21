@@ -198,6 +198,11 @@ fn panic5()
     storage_live(_1)
     _1 = const false
     if move _1 {
+        storage_dead(_1)
+        _0 = ()
+        storage_dead(_2)
+        storage_dead(_3)
+        return
     } else {
         storage_live(_2)
         storage_live(_3)
@@ -211,11 +216,6 @@ fn panic5()
             storage_dead(_3)
             unwind_continue
     }
-    storage_dead(_1)
-    _0 = ()
-    storage_dead(_2)
-    storage_dead(_3)
-    return
 }
 
 pub const test_crate::panic6::{promoted_const}: str = "internal error: entered unreachable code" with_metadata(40usize)

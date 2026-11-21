@@ -174,14 +174,14 @@ pub fn {impl HasDefaultLen<N> for [bool; N]}::LEN<const N : usize>() -> usize
     storage_live(_1)
     _1 = const true
     if move _1 {
+        _0 = const N
+        storage_dead(_1)
+        return
     } else {
         _0 = read {impl HasDefaultLen<N> for [bool; N]}::LEN<N>
         storage_dead(_1)
         return
     }
-    _0 = const N
-    storage_dead(_1)
-    return
 }
 
 // Full name: test_crate::{impl HasDefaultLen<N> for [bool; N]}

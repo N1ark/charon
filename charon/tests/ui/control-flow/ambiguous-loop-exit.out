@@ -51,6 +51,8 @@ pub fn f(x: u32) -> u32
                 storage_dead(_5)
                 switch copy _4 {
                     0i32 => {
+                        storage_dead(_4)
+                        continue 0
                     },
                     1i32 => {
                         storage_dead(_4)
@@ -63,8 +65,6 @@ pub fn f(x: u32) -> u32
                         return
                     },
                 }
-                storage_dead(_4)
-                continue 0
             }
         }
     }

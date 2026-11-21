@@ -181,6 +181,41 @@ extern "rust-call" fn impl_Fn_for_closure::call<'_0>(_1: &'_0 test_crate::BAR::{
     _11 = copy (*right_val)
     _9 = move _10 == move _11
     if move _9 {
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_live(kind)
+        kind = AssertKind::Ne {  }
+        fake_read(kind)
+        storage_live(_13)
+        storage_live(_14)
+        _14 = move kind
+        storage_live(_15)
+        storage_live(_16)
+        _16 = &(*left_val)
+        _15 = &(*_16)
+        storage_live(_17)
+        storage_live(_18)
+        _18 = &(*right_val)
+        _17 = &(*_18)
+        storage_live(_19)
+        _19 = Option::<Arguments::<'_>>::None {  }
+        _13 = assert_failed::<i32, i32><'15, '16, '17>(move _14, move _15, move _17, move _19)
+        ↳⚡ storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_18)
+            storage_dead(_17)
+            storage_dead(_16)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(kind)
+            storage_dead(a)
+            storage_dead(tupled_args)
+            storage_dead(_1)
+            storage_dead(_23)
+            storage_dead(_22)
+            storage_dead(_21)
+            unwind_continue
     } else {
         storage_dead(_11)
         storage_dead(_10)
@@ -206,41 +241,6 @@ extern "rust-call" fn impl_Fn_for_closure::call<'_0>(_1: &'_0 test_crate::BAR::{
         storage_dead(_21)
         return
     }
-    storage_dead(_11)
-    storage_dead(_10)
-    storage_live(kind)
-    kind = AssertKind::Ne {  }
-    fake_read(kind)
-    storage_live(_13)
-    storage_live(_14)
-    _14 = move kind
-    storage_live(_15)
-    storage_live(_16)
-    _16 = &(*left_val)
-    _15 = &(*_16)
-    storage_live(_17)
-    storage_live(_18)
-    _18 = &(*right_val)
-    _17 = &(*_18)
-    storage_live(_19)
-    _19 = Option::<Arguments::<'_>>::None {  }
-    _13 = assert_failed::<i32, i32><'15, '16, '17>(move _14, move _15, move _17, move _19)
-    ↳⚡ storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(kind)
-        storage_dead(a)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(_21)
-        unwind_continue
 }
 
 // Full name: test_crate::BAR::{impl FnMut<(i32,)> for test_crate::BAR::{closure}}::call_mut
@@ -392,6 +392,41 @@ extern "rust-call" fn {impl Fn<(i32,)> for test_crate::foo::{closure}::<u8>}::ca
     _11 = copy (*right_val)
     _9 = move _10 == move _11
     if move _9 {
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_live(kind)
+        kind = AssertKind::Ne {  }
+        fake_read(kind)
+        storage_live(_13)
+        storage_live(_14)
+        _14 = move kind
+        storage_live(_15)
+        storage_live(_16)
+        _16 = &(*left_val)
+        _15 = &(*_16)
+        storage_live(_17)
+        storage_live(_18)
+        _18 = &(*right_val)
+        _17 = &(*_18)
+        storage_live(_19)
+        _19 = Option::<Arguments::<'_>>::None {  }
+        _13 = assert_failed::<i32, i32><'15, '16, '17>(move _14, move _15, move _17, move _19)
+        ↳⚡ storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_18)
+            storage_dead(_17)
+            storage_dead(_16)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(kind)
+            storage_dead(a)
+            storage_dead(tupled_args)
+            storage_dead(_1)
+            storage_dead(_23)
+            storage_dead(_22)
+            storage_dead(_21)
+            unwind_continue
     } else {
         storage_dead(_11)
         storage_dead(_10)
@@ -417,41 +452,6 @@ extern "rust-call" fn {impl Fn<(i32,)> for test_crate::foo::{closure}::<u8>}::ca
         storage_dead(_21)
         return
     }
-    storage_dead(_11)
-    storage_dead(_10)
-    storage_live(kind)
-    kind = AssertKind::Ne {  }
-    fake_read(kind)
-    storage_live(_13)
-    storage_live(_14)
-    _14 = move kind
-    storage_live(_15)
-    storage_live(_16)
-    _16 = &(*left_val)
-    _15 = &(*_16)
-    storage_live(_17)
-    storage_live(_18)
-    _18 = &(*right_val)
-    _17 = &(*_18)
-    storage_live(_19)
-    _19 = Option::<Arguments::<'_>>::None {  }
-    _13 = assert_failed::<i32, i32><'15, '16, '17>(move _14, move _15, move _17, move _19)
-    ↳⚡ storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(kind)
-        storage_dead(a)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(_21)
-        unwind_continue
 }
 
 // Full name: test_crate::foo::<u8>

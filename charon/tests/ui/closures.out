@@ -468,6 +468,10 @@ where
     storage_live(_0)
     match (*x_1) {
         Option::None => {
+            _0 = Option::None {  }
+            storage_dead(f)
+            storage_dead(x_1)
+            return
         },
         Option::Some => {
             storage_live(x_3)
@@ -495,10 +499,6 @@ where
             return
         },
     }
-    _0 = Option::None {  }
-    storage_dead(f)
-    storage_dead(x_1)
-    return
 }
 
 // Full name: test_crate::test_map_option1

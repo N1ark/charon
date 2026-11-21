@@ -2122,28 +2122,28 @@ pub fn sum<'_0>(s: &'_0 [u32]) -> u32
         storage_dead(_7)
         _4 = move _5 < move _6
         if move _4 {
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_live(_8)
+            storage_live(_9)
+            _9 = copy i
+            storage_live(_12)
+            _12 = &(*s) with_metadata(read s.metadata)
+            storage_live(_13)
+            _13 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _9, move _12)
+            ↳⚡ undefined_behavior
+            _8 = copy (*_13)
+            _10 = copy sum panic.+ copy _8
+            sum = move _10
+            storage_dead(_8)
+            storage_dead(_9)
+            _11 = copy i panic.+ const 1usize
+            i = move _11
+            storage_dead(_4)
+            continue 0
         } else {
             break 0
         }
-        storage_dead(_6)
-        storage_dead(_5)
-        storage_live(_8)
-        storage_live(_9)
-        _9 = copy i
-        storage_live(_12)
-        _12 = &(*s) with_metadata(read s.metadata)
-        storage_live(_13)
-        _13 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _9, move _12)
-        ↳⚡ undefined_behavior
-        _8 = copy (*_13)
-        _10 = copy sum panic.+ copy _8
-        sum = move _10
-        storage_dead(_8)
-        storage_dead(_9)
-        _11 = copy i panic.+ const 1usize
-        i = move _11
-        storage_dead(_4)
-        continue 0
     }
     storage_dead(_6)
     storage_dead(_5)
@@ -2240,43 +2240,43 @@ pub fn sum2<'_0, '_1>(s: &'_0 [u32], s2: &'_1 [u32]) -> u32
         storage_dead(_13)
         _10 = move _11 < move _12
         if move _10 {
+            storage_dead(_12)
+            storage_dead(_11)
+            storage_live(_14)
+            storage_live(_15)
+            storage_live(_16)
+            _16 = copy i
+            storage_live(_23)
+            _23 = &(*s) with_metadata(read s.metadata)
+            storage_live(_24)
+            _24 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _16, move _23)
+            ↳⚡ undefined_behavior
+            _15 = copy (*_24)
+            storage_live(_17)
+            storage_live(_18)
+            _18 = copy i
+            storage_live(_25)
+            _25 = &(*s2) with_metadata(read s2.metadata)
+            storage_live(_26)
+            _26 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _18, move _25)
+            ↳⚡ undefined_behavior
+            _17 = copy (*_26)
+            _19 = copy _15 panic.+ copy _17
+            _14 = move _19
+            storage_dead(_17)
+            storage_dead(_15)
+            _20 = copy sum panic.+ copy _14
+            sum = move _20
+            storage_dead(_14)
+            storage_dead(_18)
+            storage_dead(_16)
+            _21 = copy i panic.+ const 1usize
+            i = move _21
+            storage_dead(_10)
+            continue 0
         } else {
             break 0
         }
-        storage_dead(_12)
-        storage_dead(_11)
-        storage_live(_14)
-        storage_live(_15)
-        storage_live(_16)
-        _16 = copy i
-        storage_live(_23)
-        _23 = &(*s) with_metadata(read s.metadata)
-        storage_live(_24)
-        _24 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _16, move _23)
-        ↳⚡ undefined_behavior
-        _15 = copy (*_24)
-        storage_live(_17)
-        storage_live(_18)
-        _18 = copy i
-        storage_live(_25)
-        _25 = &(*s2) with_metadata(read s2.metadata)
-        storage_live(_26)
-        _26 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _18, move _25)
-        ↳⚡ undefined_behavior
-        _17 = copy (*_26)
-        _19 = copy _15 panic.+ copy _17
-        _14 = move _19
-        storage_dead(_17)
-        storage_dead(_15)
-        _20 = copy sum panic.+ copy _14
-        sum = move _20
-        storage_dead(_14)
-        storage_dead(_18)
-        storage_dead(_16)
-        _21 = copy i panic.+ const 1usize
-        i = move _21
-        storage_dead(_10)
-        continue 0
     }
     storage_dead(_12)
     storage_dead(_11)
@@ -2597,49 +2597,49 @@ pub fn ite()
     storage_live(_2)
     _2 = const true
     if move _2 {
+        storage_live(y)
+        y = repeat<u32, 2usize>[{built_in impl Sized for u32}, impl_Clone_for_u32](const 0u32)
+        ↳⚡ undefined_behavior
+        fake_read(y)
+        storage_live(_4)
+        storage_live(_5)
+        storage_live(_6)
+        storage_live(_7)
+        _7 = &mut x
+        _6 = &mut (*_7)
+        _5 = as_mut_slice<'_, u32, 2usize>[{built_in impl Sized for u32}](move _6)
+        ↳⚡ undefined_behavior
+        storage_dead(_6)
+        _4 = index_mut_slice_u32_0<'7>(move _5)
+        ↳⚡ unwind_continue
+        storage_dead(_5)
+        storage_dead(_7)
+        storage_dead(_4)
+        storage_live(_8)
+        storage_live(_9)
+        storage_live(_10)
+        storage_live(_11)
+        _11 = &mut y
+        _10 = &mut (*_11)
+        _9 = as_mut_slice<'_, u32, 2usize>[{built_in impl Sized for u32}](move _10)
+        ↳⚡ undefined_behavior
+        storage_dead(_10)
+        _8 = index_mut_slice_u32_0<'9>(move _9)
+        ↳⚡ unwind_continue
+        storage_dead(_9)
+        storage_dead(_11)
+        storage_dead(_8)
+        _0 = ()
+        storage_dead(y)
+        storage_dead(_2)
+        storage_dead(x)
+        return
     } else {
         _0 = ()
         storage_dead(_2)
         storage_dead(x)
         return
     }
-    storage_live(y)
-    y = repeat<u32, 2usize>[{built_in impl Sized for u32}, impl_Clone_for_u32](const 0u32)
-    ↳⚡ undefined_behavior
-    fake_read(y)
-    storage_live(_4)
-    storage_live(_5)
-    storage_live(_6)
-    storage_live(_7)
-    _7 = &mut x
-    _6 = &mut (*_7)
-    _5 = as_mut_slice<'_, u32, 2usize>[{built_in impl Sized for u32}](move _6)
-    ↳⚡ undefined_behavior
-    storage_dead(_6)
-    _4 = index_mut_slice_u32_0<'7>(move _5)
-    ↳⚡ unwind_continue
-    storage_dead(_5)
-    storage_dead(_7)
-    storage_dead(_4)
-    storage_live(_8)
-    storage_live(_9)
-    storage_live(_10)
-    storage_live(_11)
-    _11 = &mut y
-    _10 = &mut (*_11)
-    _9 = as_mut_slice<'_, u32, 2usize>[{built_in impl Sized for u32}](move _10)
-    ↳⚡ undefined_behavior
-    storage_dead(_10)
-    _8 = index_mut_slice_u32_0<'9>(move _9)
-    ↳⚡ unwind_continue
-    storage_dead(_9)
-    storage_dead(_11)
-    storage_dead(_8)
-    _0 = ()
-    storage_dead(y)
-    storage_dead(_2)
-    storage_dead(x)
-    return
 }
 
 // Full name: test_crate::zero_slice
@@ -2818,28 +2818,28 @@ pub fn sum_mut_slice<'_0>(a: &'_0 mut [u32]) -> u32
         storage_dead(_7)
         _4 = move _5 < move _6
         if move _4 {
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_live(_8)
+            storage_live(_9)
+            _9 = copy i
+            storage_live(_12)
+            _12 = &(*a) with_metadata(read a.metadata)
+            storage_live(_13)
+            _13 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _9, move _12)
+            ↳⚡ undefined_behavior
+            _8 = copy (*_13)
+            _10 = copy s panic.+ copy _8
+            s = move _10
+            storage_dead(_8)
+            storage_dead(_9)
+            _11 = copy i panic.+ const 1usize
+            i = move _11
+            storage_dead(_4)
+            continue 0
         } else {
             break 0
         }
-        storage_dead(_6)
-        storage_dead(_5)
-        storage_live(_8)
-        storage_live(_9)
-        _9 = copy i
-        storage_live(_12)
-        _12 = &(*a) with_metadata(read a.metadata)
-        storage_live(_13)
-        _13 = impl_SliceIndex_slice_for_usize::index<'_, u32>[{built_in impl Sized for u32}](copy _9, move _12)
-        ↳⚡ undefined_behavior
-        _8 = copy (*_13)
-        _10 = copy s panic.+ copy _8
-        s = move _10
-        storage_dead(_8)
-        storage_dead(_9)
-        _11 = copy i panic.+ const 1usize
-        i = move _11
-        storage_dead(_4)
-        continue 0
     }
     storage_dead(_6)
     storage_dead(_5)
@@ -2986,6 +2986,23 @@ fn slice_pattern_4<'_0>(x: &'_0 [()])
     _4 = const 1usize
     _5 = move _2 == move _4
     if move _5 {
+        storage_live(_named)
+        storage_live(_7)
+        _7 = &(*x) with_metadata(read x.metadata)
+        storage_live(_8)
+        _8 = impl_SliceIndex_slice_for_usize::index<'_, ()>[{built_in impl Sized for ()}](const 0usize, move _7)
+        ↳⚡ undefined_behavior
+        _named = &(*_8)
+        _0 = ()
+        storage_dead(_named)
+        storage_dead(_5)
+        storage_dead(_4)
+        storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(x)
+        storage_dead(_8)
+        storage_dead(_7)
+        return
     } else {
         _0 = ()
         storage_dead(_5)
@@ -2997,23 +3014,6 @@ fn slice_pattern_4<'_0>(x: &'_0 [()])
         storage_dead(_7)
         return
     }
-    storage_live(_named)
-    storage_live(_7)
-    _7 = &(*x) with_metadata(read x.metadata)
-    storage_live(_8)
-    _8 = impl_SliceIndex_slice_for_usize::index<'_, ()>[{built_in impl Sized for ()}](const 0usize, move _7)
-    ↳⚡ undefined_behavior
-    _named = &(*_8)
-    _0 = ()
-    storage_dead(_named)
-    storage_dead(_5)
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(x)
-    storage_dead(_8)
-    storage_dead(_7)
-    return
 }
 
 

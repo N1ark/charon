@@ -219,14 +219,14 @@ fn iter(n: usize)
                 break 0
             },
             Option::Some => {
+                storage_live(i)
+                i = copy (_6 as variant Option::Some)._0
+                storage_dead(i)
+                storage_dead(_8)
+                storage_dead(_6)
+                continue 0
             },
         }
-        storage_live(i)
-        i = copy (_6 as variant Option::Some)._0
-        storage_dead(i)
-        storage_dead(_8)
-        storage_dead(_6)
-        continue 0
     }
     _0 = ()
     storage_dead(_8)

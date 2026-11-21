@@ -159,19 +159,19 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     continue 0
                 },
                 Result::Err => {
-                    storage_live(e_16)
-                    e_16 = copy (_11 as variant Result::Err)._0
-                    storage_live(_17)
-                    storage_live(_18)
-                    _18 = copy e_16
-                    _17 = Option::Some { _0: move _18 }
-                    storage_dead(_18)
-                    err = move _17
-                    storage_dead(_17)
-                    storage_dead(e_16)
-                    storage_dead(_11)
                 },
             }
+            storage_live(e_16)
+            e_16 = copy (_11 as variant Result::Err)._0
+            storage_live(_17)
+            storage_live(_18)
+            _18 = copy e_16
+            _17 = Option::Some { _0: move _18 }
+            storage_dead(_18)
+            err = move _17
+            storage_dead(_17)
+            storage_dead(e_16)
+            storage_dead(_11)
         }
         storage_dead(_10)
         storage_live(_19)
@@ -203,19 +203,19 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     continue 0
                 },
                 Result::Err => {
-                    storage_live(e_25)
-                    e_25 = copy (_20 as variant Result::Err)._0
-                    storage_live(_26)
-                    storage_live(_27)
-                    _27 = copy e_25
-                    _26 = Option::Some { _0: move _27 }
-                    storage_dead(_27)
-                    err = move _26
-                    storage_dead(_26)
-                    storage_dead(e_25)
-                    storage_dead(_20)
                 },
             }
+            storage_live(e_25)
+            e_25 = copy (_20 as variant Result::Err)._0
+            storage_live(_26)
+            storage_live(_27)
+            _27 = copy e_25
+            _26 = Option::Some { _0: move _27 }
+            storage_dead(_27)
+            err = move _26
+            storage_dead(_26)
+            storage_dead(e_25)
+            storage_dead(_20)
         }
         storage_dead(_19)
         storage_live(_28)
@@ -247,19 +247,19 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     continue 0
                 },
                 Result::Err => {
-                    storage_live(e_34)
-                    e_34 = copy (_29 as variant Result::Err)._0
-                    storage_live(_35)
-                    storage_live(_36)
-                    _36 = copy e_34
-                    _35 = Option::Some { _0: move _36 }
-                    storage_dead(_36)
-                    err = move _35
-                    storage_dead(_35)
-                    storage_dead(e_34)
-                    storage_dead(_29)
                 },
             }
+            storage_live(e_34)
+            e_34 = copy (_29 as variant Result::Err)._0
+            storage_live(_35)
+            storage_live(_36)
+            _36 = copy e_34
+            _35 = Option::Some { _0: move _36 }
+            storage_dead(_36)
+            err = move _35
+            storage_dead(_35)
+            storage_dead(e_34)
+            storage_dead(_29)
         }
         storage_dead(_28)
         storage_live(_37)
@@ -291,19 +291,19 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     continue 0
                 },
                 Result::Err => {
-                    storage_live(e_43)
-                    e_43 = copy (_38 as variant Result::Err)._0
-                    storage_live(_44)
-                    storage_live(_45)
-                    _45 = copy e_43
-                    _44 = Option::Some { _0: move _45 }
-                    storage_dead(_45)
-                    err = move _44
-                    storage_dead(_44)
-                    storage_dead(e_43)
-                    storage_dead(_38)
                 },
             }
+            storage_live(e_43)
+            e_43 = copy (_38 as variant Result::Err)._0
+            storage_live(_44)
+            storage_live(_45)
+            _45 = copy e_43
+            _44 = Option::Some { _0: move _45 }
+            storage_dead(_45)
+            err = move _44
+            storage_dead(_44)
+            storage_dead(e_43)
+            storage_dead(_38)
         }
         storage_dead(_37)
         storage_live(_46)
@@ -335,19 +335,19 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     continue 0
                 },
                 Result::Err => {
-                    storage_live(e_52)
-                    e_52 = copy (_47 as variant Result::Err)._0
-                    storage_live(_53)
-                    storage_live(_54)
-                    _54 = copy e_52
-                    _53 = Option::Some { _0: move _54 }
-                    storage_dead(_54)
-                    err = move _53
-                    storage_dead(_53)
-                    storage_dead(e_52)
-                    storage_dead(_47)
                 },
             }
+            storage_live(e_52)
+            e_52 = copy (_47 as variant Result::Err)._0
+            storage_live(_53)
+            storage_live(_54)
+            _54 = copy e_52
+            _53 = Option::Some { _0: move _54 }
+            storage_dead(_54)
+            err = move _53
+            storage_dead(_53)
+            storage_dead(e_52)
+            storage_dead(_47)
         }
         storage_dead(_46)
         storage_live(_55)
@@ -367,6 +367,18 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
         storage_dead(_57)
         match _56 {
             Result::Ok => {
+                storage_live(i_59)
+                i_59 = copy (_56 as variant Result::Ok)._0
+                storage_live(_60)
+                _60 = copy i_59
+                input = move _60
+                storage_dead(_60)
+                done_f = const true
+                storage_dead(i_59)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(err)
+                continue 0
             },
             Result::Err => {
                 storage_live(e_61)
@@ -383,22 +395,24 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                 break 0
             },
         }
-        storage_live(i_59)
-        i_59 = copy (_56 as variant Result::Ok)._0
-        storage_live(_60)
-        _60 = copy i_59
-        input = move _60
-        storage_dead(_60)
-        done_f = const true
-        storage_dead(i_59)
-        storage_dead(_56)
-        storage_dead(_55)
-        storage_dead(err)
-        continue 0
     }
     storage_dead(_55)
     match err {
         Option::None => {
+            storage_live(_66)
+            _66 = copy input
+            _0 = Result::Ok { _0: move _66 }
+            storage_dead(_66)
+            storage_dead(err)
+            storage_dead(done_f)
+            storage_dead(done_e)
+            storage_dead(done_d)
+            storage_dead(done_c)
+            storage_dead(done_b)
+            storage_dead(done_a)
+            storage_dead(input)
+            storage_dead(parse)
+            return
         },
         Option::Some => {
             storage_live(e_64)
@@ -420,20 +434,6 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             return
         },
     }
-    storage_live(_66)
-    _66 = copy input
-    _0 = Result::Ok { _0: move _66 }
-    storage_dead(_66)
-    storage_dead(err)
-    storage_dead(done_f)
-    storage_dead(done_e)
-    storage_dead(done_d)
-    storage_dead(done_c)
-    storage_dead(done_b)
-    storage_dead(done_a)
-    storage_dead(input)
-    storage_dead(parse)
-    return
 
     cleanup0: {
         storage_dead(input)

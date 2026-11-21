@@ -14,6 +14,9 @@ fn main()
     _1 = const 'x'
     switch copy _1 {
         'a' => {
+            _0 = ()
+            storage_dead(_1)
+            return
         },
         _ => {
             _0 = ()
@@ -21,9 +24,6 @@ fn main()
             return
         },
     }
-    _0 = ()
-    storage_dead(_1)
-    return
 }
 
 

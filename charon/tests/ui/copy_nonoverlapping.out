@@ -355,18 +355,18 @@ fn check_language_ub() -> bool
     ↳⚡ storage_dead(_2)
         unwind_continue
     if move _1 {
+        storage_live(_2)
+        _2 = ub_checks
+        _0 = move _2
+        storage_dead(_1)
+        storage_dead(_2)
+        return
     } else {
         _0 = const false
         storage_dead(_1)
         storage_dead(_2)
         return
     }
-    storage_live(_2)
-    _2 = ub_checks
-    _0 = move _2
-    storage_dead(_1)
-    storage_dead(_2)
-    return
 }
 
 pub const core::mem::alignment::{Alignment}::new_unchecked::precondition_check::{promoted_const}: str = "unsafe precondition(s) violated: Alignment::new_unchecked requires a power of two\n\nThis indicates a bug in the program. This Undefined Behavior check is optional, and cannot be relied on for safety." with_metadata(198usize)
@@ -464,6 +464,9 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
     storage_live(_3)
     _3 = const false
     if move _3 {
+        storage_live(_4)
+        _4 = abort()
+        ↳⚡ undefined_behavior
     } else {
         storage_dead(_3)
         storage_live(pi)
@@ -507,9 +510,6 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
             storage_dead(fmt)
             unwind_continue
     }
-    storage_live(_4)
-    _4 = abort()
-    ↳⚡ undefined_behavior
 }
 
 // Full name: core::panicking::panic_nounwind_fmt
@@ -592,6 +592,14 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
     _2 = is_power_of_two(move _3)
     ↳⚡ unwind_terminate(abi)
     if move _2 {
+        storage_dead(_3)
+        _0 = ()
+        storage_dead(_2)
+        storage_dead(_6)
+        storage_dead(_5)
+        storage_dead(msg)
+        storage_dead(align)
+        return
     } else {
         storage_dead(_3)
         storage_live(msg)
@@ -606,14 +614,6 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
         _5 = panic_nounwind_fmt<'5>(move _6, const false)
         ↳⚡ undefined_behavior
     }
-    storage_dead(_3)
-    _0 = ()
-    storage_dead(_2)
-    storage_dead(_6)
-    storage_dead(_5)
-    storage_dead(msg)
-    storage_dead(align)
-    return
 }
 
 // Full name: core::mem::alignment::{Alignment}::new_unchecked
@@ -668,6 +668,19 @@ pub fn core::mem::alignment::{Alignment}::new(align: usize) -> Option<Alignment>
     ↳⚡ storage_dead(align)
         unwind_continue
     if move _2 {
+        storage_dead(_3)
+        storage_live(_4)
+        storage_live(_5)
+        _5 = copy align
+        _4 = new_unchecked(move _5)
+        ↳⚡ storage_dead(align)
+            unwind_continue
+        storage_dead(_5)
+        _0 = Option::Some { _0: move _4 }
+        storage_dead(_4)
+        storage_dead(_2)
+        storage_dead(align)
+        return
     } else {
         storage_dead(_3)
         _0 = Option::None {  }
@@ -675,19 +688,6 @@ pub fn core::mem::alignment::{Alignment}::new(align: usize) -> Option<Alignment>
         storage_dead(align)
         return
     }
-    storage_dead(_3)
-    storage_live(_4)
-    storage_live(_5)
-    _5 = copy align
-    _4 = new_unchecked(move _5)
-    ↳⚡ storage_dead(align)
-        unwind_continue
-    storage_dead(_5)
-    _0 = Option::Some { _0: move _4 }
-    storage_dead(_4)
-    storage_dead(_2)
-    storage_dead(align)
-    return
 }
 
 pub fn core::num::{usize}::MAX() -> usize
@@ -745,6 +745,9 @@ where
     _1 = const TraitClause0::SIZE
     switch copy _1 {
         0usize => {
+            _0 = read core::num::{usize}::MAX
+            storage_dead(_1)
+            return
         },
         _ => {
             storage_live(n)
@@ -761,9 +764,6 @@ where
             return
         },
     }
-    _0 = read core::num::{usize}::MAX
-    storage_dead(_1)
-    return
 }
 
 // Full name: core::mem::SizedTypeProperties::MAX_SLICE_LEN
@@ -837,6 +837,9 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
     storage_live(_2)
     _2 = const false
     if move _2 {
+        storage_live(_3)
+        _3 = abort()
+        ↳⚡ undefined_behavior
     } else {
         storage_dead(_2)
         storage_live(pi)
@@ -874,9 +877,6 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
             storage_dead(fmt)
             unwind_continue
     }
-    storage_live(_3)
-    _3 = abort()
-    ↳⚡ undefined_behavior
 }
 
 // Full name: core::panicking::panic
@@ -934,6 +934,11 @@ where
     storage_live(_0)
     match self {
         Option::None => {
+            storage_live(_3)
+            _3 = unwrap_failed()
+            ↳⚡ storage_dead(_3)
+                storage_dead(self)
+                unwind_continue
         },
         Option::Some => {
             storage_live(val)
@@ -945,11 +950,6 @@ where
             return
         },
     }
-    storage_live(_3)
-    _3 = unwrap_failed()
-    ↳⚡ storage_dead(_3)
-        storage_dead(self)
-        unwind_continue
 }
 
 // Full name: core::mem::SizedTypeProperties::ALIGNMENT

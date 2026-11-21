@@ -204,6 +204,12 @@ fn core::ptr::write_bytes::precondition_check(addr: *const (), align: usize, zer
     _4 = maybe_is_aligned_and_not_null(move _5, move _6, move _7)
     ↳⚡ unwind_terminate(abi)
     if move _4 {
+        storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_5)
+        _0 = ()
+        storage_dead(_4)
+        return
     } else {
         storage_dead(_7)
         storage_dead(_6)
@@ -220,12 +226,6 @@ fn core::ptr::write_bytes::precondition_check(addr: *const (), align: usize, zer
         _9 = panic_nounwind_fmt<'5>(move _10, const false)
         ↳⚡ undefined_behavior
     }
-    storage_dead(_7)
-    storage_dead(_6)
-    storage_dead(_5)
-    _0 = ()
-    storage_dead(_4)
-    return
 }
 
 // Full name: core::mem::alignment::AlignmentEnum
@@ -332,6 +332,9 @@ where
     _1 = const TraitClause0::SIZE
     switch copy _1 {
         0usize => {
+            _0 = read core::num::{usize}::MAX
+            storage_dead(_1)
+            return
         },
         _ => {
             storage_live(n)
@@ -351,9 +354,6 @@ where
             return
         },
     }
-    _0 = read core::num::{usize}::MAX
-    storage_dead(_1)
-    return
 }
 
 // Full name: core::mem::SizedTypeProperties::MAX_SLICE_LEN
@@ -432,6 +432,10 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
     _2 = is_power_of_two(move _3)
     ↳⚡ unwind_terminate(abi)
     if move _2 {
+        storage_dead(_3)
+        _0 = ()
+        storage_dead(_2)
+        return
     } else {
         storage_dead(_3)
         storage_live(msg)
@@ -446,10 +450,6 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
         _5 = panic_nounwind_fmt<'5>(move _6, const false)
         ↳⚡ undefined_behavior
     }
-    storage_dead(_3)
-    _0 = ()
-    storage_dead(_2)
-    return
 }
 
 #[track_caller]
@@ -500,23 +500,23 @@ pub fn core::mem::alignment::{Alignment}::new(align: usize) -> Option<Alignment>
     _2 = is_power_of_two(move _3)
     ↳⚡ unwind_continue
     if move _2 {
+        storage_dead(_3)
+        storage_live(_4)
+        storage_live(_5)
+        _5 = copy align
+        _4 = core::mem::alignment::{Alignment}::new_unchecked(move _5)
+        ↳⚡ unwind_continue
+        storage_dead(_5)
+        _0 = Option::Some { _0: move _4 }
+        storage_dead(_4)
+        storage_dead(_2)
+        return
     } else {
         storage_dead(_3)
         _0 = Option::None {  }
         storage_dead(_2)
         return
     }
-    storage_dead(_3)
-    storage_live(_4)
-    storage_live(_5)
-    _5 = copy align
-    _4 = core::mem::alignment::{Alignment}::new_unchecked(move _5)
-    ↳⚡ unwind_continue
-    storage_dead(_5)
-    _0 = Option::Some { _0: move _4 }
-    storage_dead(_4)
-    storage_dead(_2)
-    return
 }
 
 // Full name: core::mem::SizedTypeProperties::ALIGNMENT
@@ -769,6 +769,39 @@ where
     _8 = @discriminant(_4)
     switch move _8 {
         0isize => {
+            storage_live(val)
+            val = copy (_4 as variant ControlFlow::Continue)._0
+            ptr = copy val
+            storage_dead(val)
+            storage_dead(_4)
+            storage_live(_12)
+            storage_live(_13)
+            storage_live(_14)
+            storage_live(_15)
+            _15 = copy ptr
+            _14 = core::ptr::non_null::{NonNull<[T]>}::as_non_null_ptr<u8>[{built_in impl Sized for u8}](move _15)
+            ↳⚡ unwind_continue
+            storage_dead(_15)
+            _13 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _14)
+            ↳⚡ unwind_continue
+            storage_dead(_14)
+            storage_live(_16)
+            storage_live(_17)
+            _17 = copy ptr
+            _16 = core::ptr::non_null::{NonNull<[T]>}::len<u8>[{built_in impl Sized for u8}](move _17)
+            ↳⚡ unwind_continue
+            storage_dead(_17)
+            _12 = core::ptr::mut_ptr::{*mut T}::write_bytes<u8>[{built_in impl Sized for u8}](move _13, const 0u8, move _16)
+            ↳⚡ unwind_continue
+            storage_dead(_16)
+            storage_dead(_13)
+            storage_dead(_12)
+            storage_live(_18)
+            _18 = copy ptr
+            _0 = Result::Ok { _0: move _18 }
+            storage_dead(_18)
+            storage_dead(ptr)
+            return
         },
         1isize => {
             storage_live(residual)
@@ -787,39 +820,6 @@ where
             undefined_behavior
         },
     }
-    storage_live(val)
-    val = copy (_4 as variant ControlFlow::Continue)._0
-    ptr = copy val
-    storage_dead(val)
-    storage_dead(_4)
-    storage_live(_12)
-    storage_live(_13)
-    storage_live(_14)
-    storage_live(_15)
-    _15 = copy ptr
-    _14 = core::ptr::non_null::{NonNull<[T]>}::as_non_null_ptr<u8>[{built_in impl Sized for u8}](move _15)
-    ↳⚡ unwind_continue
-    storage_dead(_15)
-    _13 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _14)
-    ↳⚡ unwind_continue
-    storage_dead(_14)
-    storage_live(_16)
-    storage_live(_17)
-    _17 = copy ptr
-    _16 = core::ptr::non_null::{NonNull<[T]>}::len<u8>[{built_in impl Sized for u8}](move _17)
-    ↳⚡ unwind_continue
-    storage_dead(_17)
-    _12 = core::ptr::mut_ptr::{*mut T}::write_bytes<u8>[{built_in impl Sized for u8}](move _13, const 0u8, move _16)
-    ↳⚡ unwind_continue
-    storage_dead(_16)
-    storage_dead(_13)
-    storage_dead(_12)
-    storage_live(_18)
-    _18 = copy ptr
-    _0 = Result::Ok { _0: move _18 }
-    storage_dead(_18)
-    storage_dead(ptr)
-    return
 }
 
 pub const core::alloc::Allocator::grow::{promoted_const}: str = "`new_layout.size()` must be greater than or equal to `old_layout.size()`" with_metadata(72usize)
@@ -963,6 +963,9 @@ fn core::ptr::copy_nonoverlapping::precondition_check(src: *const (), dst: *mut 
     storage_dead(_11)
     storage_dead(zero_size)
     if move _6 {
+        _0 = ()
+        storage_dead(_6)
+        return
     } else {
         storage_live(msg)
         msg = &core::ptr::copy_nonoverlapping::precondition_check::{promoted_const} with_metadata(const 283usize)
@@ -976,9 +979,6 @@ fn core::ptr::copy_nonoverlapping::precondition_check(src: *const (), dst: *mut 
         _26 = panic_nounwind_fmt<'5>(move _27, const false)
         ↳⚡ undefined_behavior
     }
-    _0 = ()
-    storage_dead(_6)
-    return
 }
 
 #[diagnostic_item("mem_size_of")]
@@ -1166,6 +1166,58 @@ where
     _18 = @discriminant(_14)
     switch move _18 {
         0isize => {
+            storage_live(val)
+            val = copy (_14 as variant ControlFlow::Continue)._0
+            new_ptr = copy val
+            storage_dead(val)
+            storage_dead(_14)
+            storage_live(_22)
+            storage_live(_23)
+            storage_live(_24)
+            storage_live(_25)
+            _25 = copy ptr
+            _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
+            ↳⚡ unwind_continue
+            _23 = cast<*const u8>(move _24)
+            storage_dead(_25)
+            storage_dead(_24)
+            storage_live(_26)
+            storage_live(_27)
+            _27 = copy new_ptr
+            _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
+            ↳⚡ unwind_continue
+            storage_dead(_27)
+            storage_live(_28)
+            storage_live(_29)
+            _29 = &old_layout
+            _28 = size<'13>(move _29)
+            ↳⚡ unwind_continue
+            storage_dead(_29)
+            _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
+            ↳⚡ unwind_continue
+            storage_dead(_28)
+            storage_dead(_26)
+            storage_dead(_23)
+            storage_dead(_22)
+            storage_live(_30)
+            storage_live(_31)
+            _31 = &(*self) with_metadata(read self.metadata)
+            storage_live(_32)
+            _32 = copy ptr
+            storage_live(_33)
+            _33 = copy old_layout
+            _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
+            ↳⚡ unwind_continue
+            storage_dead(_33)
+            storage_dead(_32)
+            storage_dead(_31)
+            storage_dead(_30)
+            storage_live(_34)
+            _34 = copy new_ptr
+            _0 = Result::Ok { _0: move _34 }
+            storage_dead(_34)
+            storage_dead(new_ptr)
+            return
         },
         1isize => {
             storage_live(residual)
@@ -1184,58 +1236,6 @@ where
             undefined_behavior
         },
     }
-    storage_live(val)
-    val = copy (_14 as variant ControlFlow::Continue)._0
-    new_ptr = copy val
-    storage_dead(val)
-    storage_dead(_14)
-    storage_live(_22)
-    storage_live(_23)
-    storage_live(_24)
-    storage_live(_25)
-    _25 = copy ptr
-    _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
-    ↳⚡ unwind_continue
-    _23 = cast<*const u8>(move _24)
-    storage_dead(_25)
-    storage_dead(_24)
-    storage_live(_26)
-    storage_live(_27)
-    _27 = copy new_ptr
-    _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
-    ↳⚡ unwind_continue
-    storage_dead(_27)
-    storage_live(_28)
-    storage_live(_29)
-    _29 = &old_layout
-    _28 = size<'13>(move _29)
-    ↳⚡ unwind_continue
-    storage_dead(_29)
-    _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
-    ↳⚡ unwind_continue
-    storage_dead(_28)
-    storage_dead(_26)
-    storage_dead(_23)
-    storage_dead(_22)
-    storage_live(_30)
-    storage_live(_31)
-    _31 = &(*self) with_metadata(read self.metadata)
-    storage_live(_32)
-    _32 = copy ptr
-    storage_live(_33)
-    _33 = copy old_layout
-    _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
-    ↳⚡ unwind_continue
-    storage_dead(_33)
-    storage_dead(_32)
-    storage_dead(_31)
-    storage_dead(_30)
-    storage_live(_34)
-    _34 = copy new_ptr
-    _0 = Result::Ok { _0: move _34 }
-    storage_dead(_34)
-    storage_dead(new_ptr)
-    return
 }
 
 pub const core::alloc::Allocator::grow_zeroed::{promoted_const}: str = "`new_layout.size()` must be greater than or equal to `old_layout.size()`" with_metadata(72usize)
@@ -1338,6 +1338,58 @@ where
     _18 = @discriminant(_14)
     switch move _18 {
         0isize => {
+            storage_live(val)
+            val = copy (_14 as variant ControlFlow::Continue)._0
+            new_ptr = copy val
+            storage_dead(val)
+            storage_dead(_14)
+            storage_live(_22)
+            storage_live(_23)
+            storage_live(_24)
+            storage_live(_25)
+            _25 = copy ptr
+            _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
+            ↳⚡ unwind_continue
+            _23 = cast<*const u8>(move _24)
+            storage_dead(_25)
+            storage_dead(_24)
+            storage_live(_26)
+            storage_live(_27)
+            _27 = copy new_ptr
+            _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
+            ↳⚡ unwind_continue
+            storage_dead(_27)
+            storage_live(_28)
+            storage_live(_29)
+            _29 = &old_layout
+            _28 = size<'13>(move _29)
+            ↳⚡ unwind_continue
+            storage_dead(_29)
+            _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
+            ↳⚡ unwind_continue
+            storage_dead(_28)
+            storage_dead(_26)
+            storage_dead(_23)
+            storage_dead(_22)
+            storage_live(_30)
+            storage_live(_31)
+            _31 = &(*self) with_metadata(read self.metadata)
+            storage_live(_32)
+            _32 = copy ptr
+            storage_live(_33)
+            _33 = copy old_layout
+            _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
+            ↳⚡ unwind_continue
+            storage_dead(_33)
+            storage_dead(_32)
+            storage_dead(_31)
+            storage_dead(_30)
+            storage_live(_34)
+            _34 = copy new_ptr
+            _0 = Result::Ok { _0: move _34 }
+            storage_dead(_34)
+            storage_dead(new_ptr)
+            return
         },
         1isize => {
             storage_live(residual)
@@ -1356,58 +1408,6 @@ where
             undefined_behavior
         },
     }
-    storage_live(val)
-    val = copy (_14 as variant ControlFlow::Continue)._0
-    new_ptr = copy val
-    storage_dead(val)
-    storage_dead(_14)
-    storage_live(_22)
-    storage_live(_23)
-    storage_live(_24)
-    storage_live(_25)
-    _25 = copy ptr
-    _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
-    ↳⚡ unwind_continue
-    _23 = cast<*const u8>(move _24)
-    storage_dead(_25)
-    storage_dead(_24)
-    storage_live(_26)
-    storage_live(_27)
-    _27 = copy new_ptr
-    _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
-    ↳⚡ unwind_continue
-    storage_dead(_27)
-    storage_live(_28)
-    storage_live(_29)
-    _29 = &old_layout
-    _28 = size<'13>(move _29)
-    ↳⚡ unwind_continue
-    storage_dead(_29)
-    _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
-    ↳⚡ unwind_continue
-    storage_dead(_28)
-    storage_dead(_26)
-    storage_dead(_23)
-    storage_dead(_22)
-    storage_live(_30)
-    storage_live(_31)
-    _31 = &(*self) with_metadata(read self.metadata)
-    storage_live(_32)
-    _32 = copy ptr
-    storage_live(_33)
-    _33 = copy old_layout
-    _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
-    ↳⚡ unwind_continue
-    storage_dead(_33)
-    storage_dead(_32)
-    storage_dead(_31)
-    storage_dead(_30)
-    storage_live(_34)
-    _34 = copy new_ptr
-    _0 = Result::Ok { _0: move _34 }
-    storage_dead(_34)
-    storage_dead(new_ptr)
-    return
 }
 
 pub const core::alloc::Allocator::shrink::{promoted_const}: str = "`new_layout.size()` must be smaller than or equal to `old_layout.size()`" with_metadata(72usize)
@@ -1510,6 +1510,58 @@ where
     _18 = @discriminant(_14)
     switch move _18 {
         0isize => {
+            storage_live(val)
+            val = copy (_14 as variant ControlFlow::Continue)._0
+            new_ptr = copy val
+            storage_dead(val)
+            storage_dead(_14)
+            storage_live(_22)
+            storage_live(_23)
+            storage_live(_24)
+            storage_live(_25)
+            _25 = copy ptr
+            _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
+            ↳⚡ unwind_continue
+            _23 = cast<*const u8>(move _24)
+            storage_dead(_25)
+            storage_dead(_24)
+            storage_live(_26)
+            storage_live(_27)
+            _27 = copy new_ptr
+            _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
+            ↳⚡ unwind_continue
+            storage_dead(_27)
+            storage_live(_28)
+            storage_live(_29)
+            _29 = &new_layout
+            _28 = size<'13>(move _29)
+            ↳⚡ unwind_continue
+            storage_dead(_29)
+            _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
+            ↳⚡ unwind_continue
+            storage_dead(_28)
+            storage_dead(_26)
+            storage_dead(_23)
+            storage_dead(_22)
+            storage_live(_30)
+            storage_live(_31)
+            _31 = &(*self) with_metadata(read self.metadata)
+            storage_live(_32)
+            _32 = copy ptr
+            storage_live(_33)
+            _33 = copy old_layout
+            _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
+            ↳⚡ unwind_continue
+            storage_dead(_33)
+            storage_dead(_32)
+            storage_dead(_31)
+            storage_dead(_30)
+            storage_live(_34)
+            _34 = copy new_ptr
+            _0 = Result::Ok { _0: move _34 }
+            storage_dead(_34)
+            storage_dead(new_ptr)
+            return
         },
         1isize => {
             storage_live(residual)
@@ -1528,58 +1580,6 @@ where
             undefined_behavior
         },
     }
-    storage_live(val)
-    val = copy (_14 as variant ControlFlow::Continue)._0
-    new_ptr = copy val
-    storage_dead(val)
-    storage_dead(_14)
-    storage_live(_22)
-    storage_live(_23)
-    storage_live(_24)
-    storage_live(_25)
-    _25 = copy ptr
-    _24 = core::ptr::non_null::{NonNull<T>}::as_ptr<u8>(move _25)
-    ↳⚡ unwind_continue
-    _23 = cast<*const u8>(move _24)
-    storage_dead(_25)
-    storage_dead(_24)
-    storage_live(_26)
-    storage_live(_27)
-    _27 = copy new_ptr
-    _26 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _27)
-    ↳⚡ unwind_continue
-    storage_dead(_27)
-    storage_live(_28)
-    storage_live(_29)
-    _29 = &new_layout
-    _28 = size<'13>(move _29)
-    ↳⚡ unwind_continue
-    storage_dead(_29)
-    _22 = core::ptr::copy_nonoverlapping<u8>[{built_in impl Sized for u8}](move _23, move _26, move _28)
-    ↳⚡ unwind_continue
-    storage_dead(_28)
-    storage_dead(_26)
-    storage_dead(_23)
-    storage_dead(_22)
-    storage_live(_30)
-    storage_live(_31)
-    _31 = &(*self) with_metadata(read self.metadata)
-    storage_live(_32)
-    _32 = copy ptr
-    storage_live(_33)
-    _33 = copy old_layout
-    _30 = TraitClause0::deallocate<'14>(move _31, move _32, move _33)
-    ↳⚡ unwind_continue
-    storage_dead(_33)
-    storage_dead(_32)
-    storage_dead(_31)
-    storage_dead(_30)
-    storage_live(_34)
-    _34 = copy new_ptr
-    _0 = Result::Ok { _0: move _34 }
-    storage_dead(_34)
-    storage_dead(new_ptr)
-    return
 }
 
 // Full name: core::marker::Destruct
@@ -1860,24 +1860,24 @@ fn core::ptr::non_null::{NonNull<T>}::new_unchecked::precondition_check(ptr: *mu
     _2 = core::ptr::mut_ptr::{*mut T}::is_null<()>(move _3)
     ↳⚡ unwind_terminate(abi)
     if move _2 {
+        storage_dead(_3)
+        storage_live(msg)
+        msg = &core::ptr::non_null::{NonNull<T>}::new_unchecked::precondition_check::{promoted_const} with_metadata(const 210usize)
+        storage_live(_5)
+        storage_live(_6)
+        storage_live(_7)
+        _7 = &(*msg) with_metadata(read msg.metadata)
+        _6 = from_str<'4>(move _7)
+        ↳⚡ unwind_terminate(abi)
+        storage_dead(_7)
+        _5 = panic_nounwind_fmt<'5>(move _6, const false)
+        ↳⚡ undefined_behavior
     } else {
         storage_dead(_3)
         _0 = ()
         storage_dead(_2)
         return
     }
-    storage_dead(_3)
-    storage_live(msg)
-    msg = &core::ptr::non_null::{NonNull<T>}::new_unchecked::precondition_check::{promoted_const} with_metadata(const 210usize)
-    storage_live(_5)
-    storage_live(_6)
-    storage_live(_7)
-    _7 = &(*msg) with_metadata(read msg.metadata)
-    _6 = from_str<'4>(move _7)
-    ↳⚡ unwind_terminate(abi)
-    storage_dead(_7)
-    _5 = panic_nounwind_fmt<'5>(move _6, const false)
-    ↳⚡ undefined_behavior
 }
 
 #[track_caller]
@@ -2076,6 +2076,33 @@ where
     storage_dead(_9)
     _7 = move _8 != const 0usize
     if move _7 {
+        storage_dead(_8)
+        storage_live(_10)
+        storage_live(_11)
+        _11 = &(*self)._1 with_metadata(read self.metadata)
+        storage_live(_12)
+        storage_live(_13)
+        storage_live(_14)
+        _14 = copy ptr
+        _13 = core::ptr::unique::{Unique<T>}::cast<T, u8>[{built_in impl Sized for u8}](move _14)
+        ↳⚡ unwind_continue
+        storage_dead(_14)
+        _12 = from<u8>(move _13)
+        ↳⚡ unwind_continue
+        storage_dead(_13)
+        storage_live(_15)
+        _15 = copy layout
+        _10 = TraitClause2::deallocate<'4>(move _11, move _12, move _15)
+        ↳⚡ unwind_continue
+        storage_dead(_15)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        _0 = ()
+        storage_dead(_7)
+        storage_dead(layout)
+        storage_dead(ptr)
+        return
     } else {
         storage_dead(_8)
         _0 = ()
@@ -2084,33 +2111,6 @@ where
         storage_dead(ptr)
         return
     }
-    storage_dead(_8)
-    storage_live(_10)
-    storage_live(_11)
-    _11 = &(*self)._1 with_metadata(read self.metadata)
-    storage_live(_12)
-    storage_live(_13)
-    storage_live(_14)
-    _14 = copy ptr
-    _13 = core::ptr::unique::{Unique<T>}::cast<T, u8>[{built_in impl Sized for u8}](move _14)
-    ↳⚡ unwind_continue
-    storage_dead(_14)
-    _12 = from<u8>(move _13)
-    ↳⚡ unwind_continue
-    storage_dead(_13)
-    storage_live(_15)
-    _15 = copy layout
-    _10 = TraitClause2::deallocate<'4>(move _11, move _12, move _15)
-    ↳⚡ unwind_continue
-    storage_dead(_15)
-    storage_dead(_12)
-    storage_dead(_11)
-    storage_dead(_10)
-    _0 = ()
-    storage_dead(_7)
-    storage_dead(layout)
-    storage_dead(ptr)
-    return
 }
 
 // Full name: alloc::boxed::Box::{impl Destruct for Box<T, A>[TraitClause0, TraitClause1, TraitClause2]}::drop_glue
@@ -2203,6 +2203,16 @@ fn box_new_uninit(layout: Layout) -> *mut u8
     _5 = @discriminant(_2)
     switch move _5 {
         0isize => {
+            storage_live(ptr)
+            ptr = copy (_2 as variant Result::Ok)._0
+            storage_live(_7)
+            _7 = copy ptr
+            _0 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _7)
+            ↳⚡ unwind_continue
+            storage_dead(_7)
+            storage_dead(ptr)
+            storage_dead(_2)
+            return
         },
         1isize => {
             storage_live(_8)
@@ -2215,16 +2225,6 @@ fn box_new_uninit(layout: Layout) -> *mut u8
             undefined_behavior
         },
     }
-    storage_live(ptr)
-    ptr = copy (_2 as variant Result::Ok)._0
-    storage_live(_7)
-    _7 = copy ptr
-    _0 = as_mut_ptr<u8>[{built_in impl Sized for u8}](move _7)
-    ↳⚡ unwind_continue
-    storage_dead(_7)
-    storage_dead(ptr)
-    storage_dead(_2)
-    return
 }
 
 #[track_caller]

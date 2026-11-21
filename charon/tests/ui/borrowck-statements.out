@@ -293,6 +293,14 @@ pub fn destructure<'a>(input: &'a Either<(u32, u64)>[{built_in impl Sized for (u
     _3 = &(*input)
     match (*_3) {
         Either::Left => {
+            storage_live(x)
+            x = &((*_3) as variant Either::Left)._0._0
+            storage_dead(_3)
+            _0 = &(*x)
+            storage_dead(x)
+            storage_dead(input)
+            storage_dead(_4)
+            return
         },
         _ => {
             storage_dead(_3)
@@ -304,14 +312,6 @@ pub fn destructure<'a>(input: &'a Either<(u32, u64)>[{built_in impl Sized for (u
                 unwind_continue
         },
     }
-    storage_live(x)
-    x = &((*_3) as variant Either::Left)._0._0
-    storage_dead(_3)
-    _0 = &(*x)
-    storage_dead(x)
-    storage_dead(input)
-    storage_dead(_4)
-    return
 }
 
 pub fn test_crate::index<'_0>(xs: &'_0 [u32; 4usize], i: usize) -> u32

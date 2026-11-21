@@ -229,6 +229,16 @@ pub fn test_bool_trait_bool(x: bool) -> bool
     ↳⚡ storage_dead(x)
         unwind_continue
     if move _2 {
+        storage_dead(_3)
+        storage_live(_4)
+        _4 = &x
+        _0 = impl_BoolTrait_for_bool::ret_true<'3>(move _4)
+        ↳⚡ storage_dead(x)
+            unwind_continue
+        storage_dead(_4)
+        storage_dead(_2)
+        storage_dead(x)
+        return
     } else {
         storage_dead(_3)
         _0 = const false
@@ -236,16 +246,6 @@ pub fn test_bool_trait_bool(x: bool) -> bool
         storage_dead(x)
         return
     }
-    storage_dead(_3)
-    storage_live(_4)
-    _4 = &x
-    _0 = impl_BoolTrait_for_bool::ret_true<'3>(move _4)
-    ↳⚡ storage_dead(x)
-        unwind_continue
-    storage_dead(_4)
-    storage_dead(_2)
-    storage_dead(x)
-    return
 }
 
 // Full name: test_crate::{impl BoolTrait for Option<T>[TraitClause0]}::get_bool
@@ -260,6 +260,9 @@ where
     storage_live(_0)
     match (*self) {
         Option::None => {
+            _0 = const false
+            storage_dead(self)
+            return
         },
         Option::Some => {
             _0 = const true
@@ -267,9 +270,6 @@ where
             return
         },
     }
-    _0 = const false
-    storage_dead(self)
-    return
 }
 
 // Full name: test_crate::{impl BoolTrait for Option<T>[TraitClause0]}::ret_true

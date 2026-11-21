@@ -59,12 +59,9 @@ fn absorb_full()
         _3 = condition(const 2u32)
         ↳⚡ unwind_continue
         if move _3 {
-            // bb7
-            _1 = foo()
-            ↳⚡ unwind_continue
-            // bb8
-            storage_dead(_3)
         } else {
+            // bb7
+            // bb8
             storage_dead(_3)
             // bb10
             storage_dead(_2)
@@ -77,6 +74,9 @@ fn absorb_full()
             ↳⚡ unwind_continue
             return
         }
+        _1 = foo()
+        ↳⚡ unwind_continue
+        storage_dead(_3)
     } else {
         _1 = ()
     }
@@ -86,15 +86,15 @@ fn absorb_full()
     _4 = condition(const 3u32)
     ↳⚡ unwind_continue
     if move _4 {
+        _0 = ()
+        storage_dead(_4)
+        return
     } else {
         storage_dead(_4)
         _0 = bar()
         ↳⚡ unwind_continue
         return
     }
-    _0 = ()
-    storage_dead(_4)
-    return
 }
 
 

@@ -40,6 +40,9 @@ pub fn test1(x: E1) -> bool
     storage_live(_0)
     match x {
         E1::V1 | E1::V2 => {
+            _0 = const true
+            storage_dead(x)
+            return
         },
         E1::V3 => {
             _0 = const false
@@ -47,9 +50,6 @@ pub fn test1(x: E1) -> bool
             return
         },
     }
-    _0 = const true
-    storage_dead(x)
-    return
 }
 
 // Full name: test_crate::id

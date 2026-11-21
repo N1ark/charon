@@ -21,6 +21,9 @@ fn main()
     _1 = Ordering::Less {  }
     match _1 {
         Ordering::Less => {
+            _0 = ()
+            storage_dead(_1)
+            return
         },
         Ordering::Equal => {
             _0 = ()
@@ -33,9 +36,6 @@ fn main()
             return
         },
     }
-    _0 = ()
-    storage_dead(_1)
-    return
 }
 
 
