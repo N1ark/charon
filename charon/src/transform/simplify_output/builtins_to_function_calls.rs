@@ -123,7 +123,7 @@ fn transform_operation(std_items: &Transform, ctx: &TransformCtx, statement: &mu
                         safety: CallSafety::Inherit,
                     },
                     dest: place.clone(),
-                    on_unwind: Block::new_unreachable(statement.span),
+                    on_unwind: Box::new(Block::new_unreachable(statement.span)),
                 };
             }
         }
@@ -169,7 +169,7 @@ fn transform_operation(std_items: &Transform, ctx: &TransformCtx, statement: &mu
                     safety: CallSafety::Inherit,
                 },
                 dest: place.clone(),
-                on_unwind: Block::new_unreachable(statement.span),
+                on_unwind: Box::new(Block::new_unreachable(statement.span)),
             };
         }
         _ => {}
@@ -407,7 +407,7 @@ impl<'a, 'b> IndexVisitor<'a, 'b> {
             let kind = StatementKind::Call {
                 call: index_call,
                 dest: output_var.clone(),
-                on_unwind: Block::new_unreachable(self.ctx.span),
+                on_unwind: Box::new(Block::new_unreachable(self.ctx.span)),
             };
             self.ctx
                 .statements
@@ -425,7 +425,7 @@ impl<'a, 'b> IndexVisitor<'a, 'b> {
                 self.ctx.insert_assn_stmt(
                     array_ref_var.clone(),
                     Rvalue::UnaryOp(
-                        UnOp::Cast(CastKind::Concretize(array_ref_ty, vec![])),
+                        UnOp::Cast(CastKind::Concretize(array_ref_ty, MetadataPath::new())),
                         Operand::Move(output_var),
                     ),
                 );

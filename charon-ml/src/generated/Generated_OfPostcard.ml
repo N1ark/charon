@@ -1038,11 +1038,11 @@ and place_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = local_id_of_postcard ctx st in
          Ok (PlaceLocal _0)
      | 1 ->
-         let* _0 = box_of_postcard place_of_postcard ctx st in
+         let* _0 = place_of_postcard ctx st in
          let* _1 = projection_elem_of_postcard ctx st in
          Ok (PlaceProjection (_0, _1))
      | 2 ->
-         let* _0 = global_decl_ref_of_postcard ctx st in
+         let* _0 = box_of_postcard global_decl_ref_of_postcard ctx st in
          Ok (PlaceGlobal _0)
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
 
@@ -1785,16 +1785,16 @@ module Llbc = struct
            let* place = place_of_postcard ctx st in
            let* fn_ptr = fn_ptr_of_postcard ctx st in
            let* kind = drop_kind_of_postcard ctx st in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Drop (place, fn_ptr, kind, on_unwind))
        | 7 ->
            let* place = place_of_postcard ctx st in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (DropEmptyBox (place, on_unwind))
        | 8 ->
            let* assert_ = assertion_of_postcard ctx st in
            let* on_failure = abort_kind_of_postcard ctx st in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Assert (assert_, on_failure, on_unwind))
        | 9 ->
            let* asm = box_of_postcard inline_asm_of_postcard ctx st in
@@ -1803,12 +1803,12 @@ module Llbc = struct
              index_vec_of_postcard branch_id_of_postcard block_of_postcard ctx
                st
            in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (InlineAsm (asm, fallthrough, labels, on_unwind))
        | 10 ->
            let* call = call_of_postcard ctx st in
            let* dest = place_of_postcard ctx st in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Call (call, dest, on_unwind))
        | 11 ->
            let* data = switch_data_of_postcard ctx st in
@@ -1828,7 +1828,7 @@ module Llbc = struct
            Ok (Continue _0)
        | 15 ->
            let* call = call_of_postcard ctx st in
-           let* on_unwind = block_of_postcard ctx st in
+           let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Panic (call, on_unwind))
        | 16 ->
            let* _0 = unwind_terminate_reason_of_postcard ctx st in

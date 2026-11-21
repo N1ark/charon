@@ -80,7 +80,7 @@ pub enum StatementKind {
         /// Reference to the `drop_glue` code to call on drop.
         fn_ptr: FnPtr,
         kind: DropKind,
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     /// Deallocate a `Box` whose pointee has already been moved out/dropped.
     ///
@@ -88,12 +88,12 @@ pub enum StatementKind {
     /// and `--desugar-drops` isn't.
     DropEmptyBox {
         place: Place,
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     Assert {
         assert: Assert,
         on_failure: AbortKind,
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     /// An inline assembly block.
     InlineAsm {
@@ -103,12 +103,12 @@ pub enum StatementKind {
         /// Targets of [`AsmOperand::Label`] operands.
         labels: IndexVec<BranchId, Block>,
         /// Action to be taken if the inline assembly unwinds.
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     Call {
         call: Call,
         dest: Place,
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     Switch {
         data: SwitchData,
@@ -132,7 +132,7 @@ pub enum StatementKind {
     /// Call to a built-in panicking function. Only if `--reconstruct-panic-calls` is passed.
     Panic {
         call: Call,
-        on_unwind: Block,
+        on_unwind: Box<Block>,
     },
     /// Unwinding must stop for ABI reasons or because cleanup code panicked again. The function is
     /// the lang item that rustc calls in that case.

@@ -935,7 +935,9 @@ impl<'a> ReconstructCtx<'a> {
             src::StatementKind::Assert { assert, on_failure } => tgt::StatementKind::Assert {
                 assert,
                 on_failure: on_failure.clone(),
-                on_unwind: tgt::Statement::new(span, tgt::StatementKind::UnwindResume).into_block(),
+                on_unwind: Box::new(
+                    tgt::Statement::new(span, tgt::StatementKind::UnwindResume).into_block(),
+                ),
             },
             src::StatementKind::PlaceMention(place) => tgt::StatementKind::PlaceMention(place),
             src::StatementKind::Borrowck(statement) => tgt::StatementKind::Borrowck(statement),
@@ -989,7 +991,7 @@ impl<'a> ReconstructCtx<'a> {
 
         match &terminator.kind {
             src::TerminatorKind::Panic { call, on_unwind } => {
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Panic {
@@ -1019,7 +1021,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Call {
@@ -1039,7 +1041,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Drop {
@@ -1058,7 +1060,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::DropEmptyBox {
@@ -1075,7 +1077,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::StatementKind::Assert {
                     assert: assert.clone(),
                     on_failure: AbortKind::Panic,
@@ -1093,7 +1095,7 @@ impl<'a> ReconstructCtx<'a> {
                 let fallthrough =
                     fallthrough.map(|target| self.translate_jump(terminator.span, target));
                 let labels = labels.map_ref(|target| self.translate_jump(terminator.span, *target));
-                let on_unwind = self.translate_block(*on_unwind);
+                let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::StatementKind::InlineAsm {
                     asm: asm.clone(),
                     fallthrough,
