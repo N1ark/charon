@@ -1,6 +1,6 @@
 use crate::ast::bodies::insert_statements;
 use crate::ast::*;
-use crate::errors::{ErrorCtx, Level};
+use crate::errors::{ErrorCtx, Level, PANIC_NOTE_SHOWN, PANIC_NOTE_SHOWN_BY_US};
 use crate::formatter::{FmtCtx, IntoFormatter};
 use crate::llbc_ast;
 use crate::llbc_ast::FreshIds;
@@ -13,7 +13,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::cell::RefCell;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::{fmt, mem};
 
@@ -55,12 +55,6 @@ struct ItemEffects {
     /// The message of the panic that interrupted the transformation of this item, if any.
     panic_message: Option<String>,
 }
-
-/// Whether the note about `RUST_BACKTRACE` that comes with the first panic message was printed.
-static PANIC_NOTE_SHOWN: AtomicBool = AtomicBool::new(false);
-/// Whether we printed that note ourselves, in which case the default panic hook would print it a
-/// second time.
-static PANIC_NOTE_SHOWN_BY_US: AtomicBool = AtomicBool::new(false);
 
 /// Make the panics of items transformed in parallel record their message in the item's effects,
 /// instead of printing it right away, so that we print it in order with the item's errors. Call
@@ -118,15 +112,6 @@ pub fn without_panic_messages<R>(f: impl FnOnce() -> R) -> R {
     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
     SILENT_PANICS.set(old);
     res.unwrap_or_else(|payload| std::panic::resume_unwind(payload))
-}
-
-/// The message of a panic captured by our hook, ready to print.
-fn captured_panic_message(mut msg: String) -> String {
-    if !PANIC_NOTE_SHOWN.swap(true, Ordering::Relaxed) {
-        PANIC_NOTE_SHOWN_BY_US.store(true, Ordering::Relaxed);
-        msg += "\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace";
-    }
-    msg
 }
 
 /// What remains to do for an item after a parallel loop.
@@ -371,10 +356,14 @@ impl TransformCtx {
         let current_def_id_is_local = mem::replace(&mut errors.def_id_is_local, def_id_is_local);
         drop(errors); // important: release the lock
         if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self))).is_err() {
+            let name = self
+                .translated
+                .item_name(def_id)
+                .to_string_with_ctx(&self.into_fmt());
             register_error!(
                 self,
                 span,
-                "Thread panicked while transforming item `{def_id:?}`."
+                "Thread panicked while transforming item `{name}`."
             );
         }
         let mut errors = self.error_ctx();
@@ -441,11 +430,12 @@ impl TransformCtx {
                         }
                     }
                     if panicked {
-                        if let Some(msg) = effects.panic_message {
-                            errors.emit(captured_panic_message(msg));
-                        }
-                        let msg = format!("Thread panicked while transforming item `{def_id:?}`.");
-                        errors.span_err(&self.translated, span, &msg, Level::WARNING);
+                        let name = self
+                            .translated
+                            .item_name(def_id)
+                            .to_string_with_ctx(&self.into_fmt());
+                        let msg = format!("Thread panicked while transforming item `{name}`.");
+                        errors.report_panic(&self.translated, span, &msg, effects.panic_message);
                     }
                     errors.def_id = current_def_id;
                     errors.def_id_is_local = current_def_id_is_local;

@@ -160,6 +160,7 @@ impl<'a> TypeCheckVisitor<'a> {
             failed.set(true);
             return;
         }
+        let fmt = &self.ctx.into_fmt();
         let msg = format!(
             "Type error {}:\n{message}\n\
             Visitor stack:\n  {}\n\
@@ -169,7 +170,7 @@ impl<'a> TypeCheckVisitor<'a> {
             self.binder_stack.len(),
             self.binder_stack
                 .iter_enumerated()
-                .map(|(i, params)| format!("{i}: {params}"))
+                .map(|(i, params)| format!("{i}: {}", params.fmt_with_ctx_single_line(fmt)))
                 .join("\n  "),
         );
         // This is a fatal error: the output llbc is inconsistent and should not be used.

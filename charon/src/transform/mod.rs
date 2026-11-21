@@ -348,7 +348,21 @@ pub enum Pass {
 }
 
 impl TransformCtx {
-    pub fn run_pass(&mut self, mut pass: Pass) {
+    pub fn run_pass(&mut self, pass: Pass) {
+        // We report the errors of each pass by location rather than in the order of the items.
+        let record_errors = self.error_ctx().continue_on_failure();
+        if record_errors {
+            self.error_ctx().start_recording();
+        }
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.apply(pass)));
+        if record_errors {
+            self.error_ctx().finish_recording(&self.translated);
+        }
+        if let Err(payload) = result {
+            std::panic::resume_unwind(payload)
+        }
+    }
+    fn apply(&mut self, mut pass: Pass) {
         match &mut pass {
             Pass::NonBody(pass) => {
                 if pass.should_run(&self.options) {

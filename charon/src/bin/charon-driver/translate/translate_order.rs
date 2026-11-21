@@ -182,16 +182,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         for (from, to) in recording.dep_edges {
             errors.insert_dep_edge(from, to);
         }
-        let mut recorded = recording.errors;
-        let files = &self.translated.files;
-        recorded.sort_by_cached_key(|error| {
-            let span = error.span.data();
-            let file = files.get(span.file_id).map(|file| file.name.clone());
-            (file, span.beg, span.end, error.msg.clone())
-        });
-        for error in recorded {
-            errors.replay_error(&self.translated, error);
-        }
+        errors.replay_errors(&self.translated, recording.errors);
         errors.def_id = None;
         errors.def_id_is_local = false;
     }

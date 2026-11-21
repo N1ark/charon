@@ -13,6 +13,7 @@ use std::cmp::{Ord, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::ops::Range;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, PoisonError, mpsc};
 use std::thread::JoinHandle;
 
@@ -395,7 +396,7 @@ pub struct ErrorCtx {
     /// once: passes can run into the same problem many times at the same place.
     displayed: HashSet<u64>,
     /// If set, errors and dependencies are recorded here instead of being reported, to be replayed
-    /// later in another order with [`ErrorCtx::replay_error`] and [`ErrorCtx::insert_dep_edge`].
+    /// later in another order with [`ErrorCtx::replay_errors`] and [`ErrorCtx::insert_dep_edge`].
     pub recording: Option<ErrorRecording>,
 }
 
@@ -406,6 +407,8 @@ pub struct ErrorRecording {
     pub dep_edges: Vec<(ItemId, DepNode)>,
     /// The number of errors recorded, which `error_count` counts too.
     pub count: usize,
+    /// The items that got their first errors while recording.
+    pub new_items_with_errors: Vec<ItemId>,
 }
 
 /// An error, with the context it was raised in.
@@ -415,6 +418,25 @@ pub struct RecordedError {
     pub level: Level<'static>,
     pub def_id: Option<ItemId>,
     pub def_id_is_local: bool,
+    /// The `display_key` and the rendering of the error, if already known.
+    pub rendered: Option<(u64, String)>,
+    /// The message of the panic this error reports, which we print before it.
+    pub panic_message: Option<String>,
+}
+
+/// Whether the note about `RUST_BACKTRACE` that comes with the first panic message was printed.
+pub(crate) static PANIC_NOTE_SHOWN: AtomicBool = AtomicBool::new(false);
+/// Whether we printed that note ourselves, in which case the default panic hook would print it a
+/// second time.
+pub(crate) static PANIC_NOTE_SHOWN_BY_US: AtomicBool = AtomicBool::new(false);
+
+/// The message of a panic captured by our hook, ready to print.
+fn captured_panic_message(mut msg: String) -> String {
+    if !PANIC_NOTE_SHOWN.swap(true, Ordering::Relaxed) {
+        PANIC_NOTE_SHOWN_BY_US.store(true, Ordering::Relaxed);
+        msg += "\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace";
+    }
+    msg
 }
 
 /// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes
@@ -584,21 +606,6 @@ impl ErrorCtx {
         msg: &str,
         level: Level<'static>,
     ) -> Error {
-        if let Some(recording) = &mut self.recording {
-            recording.errors.push(RecordedError {
-                span,
-                msg: msg.to_string(),
-                level,
-                def_id: self.def_id,
-                def_id_is_local: self.def_id_is_local,
-            });
-            recording.count += 1;
-            self.error_count += 1;
-            if let Some(id) = self.def_id {
-                self.items_with_errors.insert(id);
-            }
-            return Error::new(span, msg.to_string());
-        }
         self.span_err_rendered(krate, span, msg, level, None)
     }
 
@@ -609,9 +616,72 @@ impl ErrorCtx {
         krate: &TranslatedCrate,
         span: Span,
         msg: &str,
-        level: Level,
+        level: Level<'static>,
         rendered: Option<(u64, String)>,
     ) -> Error {
+        self.report(
+            krate,
+            RecordedError {
+                span,
+                msg: msg.to_string(),
+                level,
+                def_id: self.def_id,
+                def_id_is_local: self.def_id_is_local,
+                rendered,
+                panic_message: None,
+            },
+        )
+    }
+
+    /// Report that transforming the current item panicked, with the message of the panic if we
+    /// captured it.
+    pub(crate) fn report_panic(
+        &mut self,
+        krate: &TranslatedCrate,
+        span: Span,
+        msg: &str,
+        panic_message: Option<String>,
+    ) {
+        self.report(
+            krate,
+            RecordedError {
+                span,
+                msg: msg.to_string(),
+                level: Level::WARNING,
+                def_id: self.def_id,
+                def_id_is_local: self.def_id_is_local,
+                rendered: None,
+                panic_message,
+            },
+        );
+    }
+
+    /// Report and register an error, or record it.
+    fn report(&mut self, krate: &TranslatedCrate, error: RecordedError) -> Error {
+        if let Some(recording) = &mut self.recording {
+            recording.count += 1;
+            self.error_count += 1;
+            if let Some(id) = error.def_id
+                && self.items_with_errors.insert(id)
+            {
+                recording.new_items_with_errors.push(id);
+            }
+            let err = Error::new(error.span, error.msg.clone());
+            recording.errors.push(error);
+            return err;
+        }
+        let RecordedError {
+            span,
+            msg,
+            level,
+            def_id,
+            def_id_is_local,
+            rendered,
+            panic_message,
+        } = error;
+        if let Some(panic_message) = panic_message {
+            self.emit(captured_panic_message(panic_message));
+        }
         let (level, rendered) = if level == Level::WARNING && self.error_on_warnings {
             (Level::ERROR, None)
         } else {
@@ -619,17 +689,17 @@ impl ErrorCtx {
         };
         let (key, rendered) = match rendered {
             Some((key, rendered)) => (key, Some(rendered)),
-            None => (Self::display_key(span, msg, &level), None),
+            None => (Self::display_key(span, &msg, &level), None),
         };
         let err = if self.displayed.insert(key) {
-            self.display_error(krate, span, level, msg.to_string(), rendered)
+            self.display_error(krate, span, level, msg.clone(), rendered)
         } else {
-            Error::new(span, msg.to_string())
+            Error::new(span, msg.clone())
         };
         self.error_count += 1;
-        if let Some(id) = self.def_id
+        if let Some(id) = def_id
             && self.items_with_errors.insert(id)
-            && !self.def_id_is_local
+            && !def_id_is_local
         {
             // If this item comes from an external crate, after the first error for that item
             // we display where in the local crate that item was reached from.
@@ -663,11 +733,52 @@ impl ErrorCtx {
         }
     }
 
-    /// Report a recorded error, as if it was raised now.
-    pub fn replay_error(&mut self, krate: &TranslatedCrate, error: RecordedError) {
-        self.def_id = error.def_id;
-        self.def_id_is_local = error.def_id_is_local;
-        self.span_err(krate, error.span, &error.msg, error.level);
+    /// Record errors instead of reporting them, until `finish_recording`.
+    pub fn start_recording(&mut self) {
+        assert!(self.recording.is_none());
+        self.recording = Some(ErrorRecording::default());
+    }
+
+    /// Report the errors recorded since `start_recording`, see `replay_errors`.
+    pub fn finish_recording(&mut self, krate: &TranslatedCrate) {
+        let recording = self.recording.take().unwrap();
+        // We count and register them again as we report them.
+        self.error_count -= recording.count;
+        for id in &recording.new_items_with_errors {
+            self.items_with_errors.remove(id);
+        }
+        for (from, to) in recording.dep_edges {
+            self.insert_dep_edge(from, to);
+        }
+        self.replay_errors(krate, recording.errors);
+    }
+
+    /// Report recorded errors in an order that doesn't depend on the order we raised them in: by
+    /// location, then message.
+    pub fn replay_errors(&mut self, krate: &TranslatedCrate, errors: Vec<RecordedError>) {
+        let mut errors = errors
+            .into_iter()
+            .map(|error| {
+                let span = error.span.data();
+                let file = krate.files.get(span.file_id).map(|file| &file.name);
+                ((file, span.beg, span.end), error)
+            })
+            .collect_vec();
+        let fmt = &krate.into_fmt();
+        errors.sort_by(|(loc_a, a), (loc_b, b)| {
+            let item = |error: &RecordedError| {
+                let name = krate.item_names.get(&error.def_id?)?;
+                Some(name.with_ctx(fmt).to_string())
+            };
+            loc_a
+                .cmp(loc_b)
+                .then_with(|| a.msg.cmp(&b.msg))
+                .then_with(|| format!("{:?}", a.level).cmp(&format!("{:?}", b.level)))
+                .then_with(|| item(a).cmp(&item(b)))
+        });
+        for (_, error) in errors {
+            self.report(krate, error);
+        }
     }
 
     /// Insert a recorded dependency edge.
@@ -718,8 +829,8 @@ impl ErrorCtx {
                 Some((file_id, file_name, source, spans))
             })
             .collect();
-        // Sort by file id to avoid output instability.
-        by_file.sort_by_key(|(file_id, ..)| *file_id);
+        // Sort by file name to avoid output instability.
+        by_file.sort_by(|(_, a, ..), (_, b, ..)| a.cmp(b));
 
         let level = Level::NOTE;
         let snippets =
