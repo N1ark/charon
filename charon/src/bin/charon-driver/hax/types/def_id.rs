@@ -216,10 +216,14 @@ impl rustc_trait_elaboration::ItemId for DefId {
         }
     }
 
+    // We check `self.kind` before calling into rustc, which would query the `DefKind` again.
+
     fn self_pred<'tcx>(&self, s: &Self::State<'tcx>) -> Option<ty::PolyTraitRef<'tcx>> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) => def_id.self_pred(&tcx),
+            DefIdBase::Real(def_id) if matches!(self.kind, DefKind::Trait | DefKind::TraitAlias) => {
+                Some(self_predicate(tcx, def_id))
+            }
             _ => None,
         }
     }
@@ -227,7 +231,9 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn as_identity_assoc_ty<'tcx>(&self, s: &Self::State<'tcx>) -> Option<ty::Ty<'tcx>> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) => def_id.as_identity_assoc_ty(&tcx),
+            DefIdBase::Real(def_id) if self.kind == DefKind::AssocTy => {
+                def_id.as_identity_assoc_ty(&tcx)
+            }
             _ => None,
         }
     }
@@ -235,7 +241,9 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn typeck_parent<'tcx>(&self, s: &Self::State<'tcx>) -> Option<Self> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) => def_id.typeck_parent(&tcx).map(|def_id| def_id.sinto(s)),
+            DefIdBase::Real(def_id) => self
+                .is_typeck_child(s)
+                .then(|| tcx.typeck_root_def_id(def_id).sinto(s)),
             DefIdBase::Promoted(def_id, ..) => Some(tcx.typeck_root_def_id(def_id).sinto(s)),
             DefIdBase::ImplAssocItem(..) | DefIdBase::Synthetic(..) | DefIdBase::Alloc(..) => None,
         }
@@ -244,7 +252,14 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn parent_of_assoc<'tcx>(&self, s: &Self::State<'tcx>) -> Option<Self> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) => def_id.parent_of_assoc(&tcx).map(|def_id| def_id.sinto(s)),
+            DefIdBase::Real(def_id)
+                if matches!(
+                    self.kind,
+                    DefKind::AssocTy | DefKind::AssocFn | DefKind::AssocConst
+                ) =>
+            {
+                Some(tcx.parent(def_id).sinto(s))
+            }
             DefIdBase::ImplAssocItem(id) => Some(id.trait_impl_id.sinto(s)),
             _ => None,
         }
@@ -253,9 +268,21 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn parent_for_clauses<'tcx>(&self, s: &Self::State<'tcx>) -> Option<Self> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) => def_id
-                .parent_for_clauses(&tcx)
-                .map(|def_id| def_id.sinto(s)),
+            DefIdBase::Real(def_id)
+                if matches!(
+                    self.kind,
+                    DefKind::AnonConst
+                        | DefKind::AssocConst
+                        | DefKind::AssocFn
+                        | DefKind::AssocTy
+                        | DefKind::Closure
+                        | DefKind::Ctor(..)
+                        | DefKind::Variant
+                ) =>
+            {
+                Some(tcx.parent(def_id).sinto(s))
+            }
+            DefIdBase::Real(_) => None,
             DefIdBase::ImplAssocItem(id) => Some(id.trait_impl_id.sinto(s)),
             DefIdBase::Promoted(def_id, _) => Some(def_id.sinto(s)),
             DefIdBase::Synthetic(..) | DefIdBase::Alloc(..) => None,
@@ -265,9 +292,8 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn takes_explicit_self_clause<'tcx>(&self, s: &Self::State<'tcx>) -> bool {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                def_id.takes_explicit_self_clause(&tcx)
-            }
+            DefIdBase::Real(_) => matches!(self.kind, DefKind::AssocFn | DefKind::AssocConst),
+            DefIdBase::Promoted(def_id, ..) => def_id.takes_explicit_self_clause(&tcx),
             DefIdBase::ImplAssocItem(id) => id.item_decl_id.takes_explicit_self_clause(&tcx),
             DefIdBase::Synthetic(..) | DefIdBase::Alloc(..) => false,
         }
@@ -334,8 +360,10 @@ impl DefId {
         }
     }
     pub fn is_typeck_child<'tcx>(&self, s: &impl BaseState<'tcx>) -> bool {
-        match self.base {
-            DefIdBase::Real(did) => s.base().tcx.is_typeck_child(did),
+        // Same as `tcx.is_typeck_child`, without querying the `DefKind` again.
+        match (self.base, &self.kind) {
+            (DefIdBase::Real(_), DefKind::Closure | DefKind::SyntheticCoroutineBody) => true,
+            (DefIdBase::Real(did), DefKind::AnonConst) => s.base().tcx.is_typeck_child(did),
             _ => false,
         }
     }

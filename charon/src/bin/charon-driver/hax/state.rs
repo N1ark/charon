@@ -1,6 +1,7 @@
 use crate::hax::prelude::*;
 use annotate_snippets::Level;
 use rustc_middle::ty::{self, TyCtxt};
+use std::cell::RefCell;
 
 mod base {
     use crate::hax::prelude::*;
@@ -12,29 +13,13 @@ mod base {
     use rustc_trait_elaboration::{ElaborationCtx, ItemRefKey, intern::Interner};
     use std::{cell::RefCell, sync::Arc};
 
-    pub struct LocalContextS {
-        pub vars: HashMap<rustc_middle::thir::LocalVarId, String>,
-    }
-
-    impl Default for LocalContextS {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    impl LocalContextS {
-        pub fn new() -> LocalContextS {
-            LocalContextS {
-                vars: HashMap::default(),
-            }
-        }
-    }
-
     /// Global caches
     #[derive(Default)]
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
-        pub per_item: HashMap<DefId, ItemCache<'tcx>>,
+        pub per_item: HashMap<DefId, Rc<RefCell<ItemCache<'tcx>>>>,
+        /// The translated definitions, optionally instantiated with generic arguments.
+        pub full_defs: HashMap<(DefId, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Cache of parameter-free values, shared by the owners that translate these the same way.
         /// See [`UnderOwnerState::with_cache_for`].
         pub shared: ItemCache<'tcx>,
@@ -101,12 +86,6 @@ mod base {
     /// Per-item cache
     #[derive(Default)]
     pub struct ItemCache<'tcx> {
-        /// The translated definitions, generic in the Body kind.
-        /// Each rustc `DefId` gives several hax `DefId`s: one for each promoted constant (if any),
-        /// and the base one represented by `None`. Moreover we can instantiate definitions with
-        /// generic arguments.
-        pub full_defs:
-            HashMap<(Option<PromotedId>, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Cache the `Ty` translations.
         pub tys: HashMap<ty::Ty<'tcx>, Ty<'tcx>>,
         /// Cache the `ItemRef` translations. This is fast because `GenericArgsRef` is interned.
@@ -126,8 +105,6 @@ mod base {
         pub trait_proof_interner: &'tcx Interner<'tcx, TraitProofContents<'tcx>>,
         pub item_ref_interner: &'tcx Interner<'tcx, ItemRefContents<'tcx>>,
         pub options: Rc<crate::hax::options::Options>,
-        pub local_ctx: Rc<RefCell<LocalContextS>>,
-        pub opt_def_id: Option<rustc_hir::def_id::DefId>,
         pub cache: Rc<RefCell<GlobalCache<'tcx>>>,
         pub elab_ctx: crate::hax::traits::ElaborationCtx<'tcx, DefId>,
         pub tcx: ty::TyCtxt<'tcx>,
@@ -146,10 +123,6 @@ mod base {
                 item_ref_interner: Box::leak(Box::default()),
                 cache: Default::default(),
                 options: Rc::new(options),
-                // Always prefer `s.owner_id()` to `s.base().opt_def_id`.
-                // `opt_def_id` is used in `utils` for error reporting
-                opt_def_id: None,
-                local_ctx: Rc::new(RefCell::new(LocalContextS::new())),
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
@@ -159,7 +132,7 @@ mod base {
 pub use self::base::*;
 
 pub trait BaseState<'tcx>: Sized {
-    fn base(&self) -> Base<'tcx>;
+    fn base(&self) -> &Base<'tcx>;
 
     fn tcx(&self) -> TyCtxt<'tcx> {
         self.base().tcx
@@ -179,11 +152,12 @@ pub trait BaseState<'tcx>: Sized {
 
     /// Create a state with the given owner.
     fn with_hax_owner(&self, owner: &DefId) -> StateWithOwner<'tcx> {
-        let mut base = self.base();
-        base.opt_def_id = owner.as_real_or_promoted();
         State {
-            owner: owner.clone(),
-            base,
+            owner: Owner {
+                def_id: owner.clone(),
+                cache: self.item_cache(owner),
+            },
+            base: self.base().clone(),
         }
     }
     /// Create a state with the given owner.
@@ -195,7 +169,7 @@ pub trait BaseState<'tcx>: Sized {
     /// State with only access to the global state.
     fn base_state(&self) -> StateWithBase<'tcx> {
         State {
-            base: self.base(),
+            base: self.base().clone(),
             owner: (),
         }
     }
@@ -203,19 +177,23 @@ pub trait BaseState<'tcx>: Sized {
     /// Access the global cache. You must not call `sinto` within this function as this will likely
     /// result in `BorrowMut` panics.
     fn with_global_cache<T>(&self, f: impl FnOnce(&mut GlobalCache<'tcx>) -> T) -> T {
-        let base = self.base();
-        let mut cache = base.cache.borrow_mut();
-        f(&mut cache)
+        f(&mut self.base().cache.borrow_mut())
+    }
+    /// The cache for a given item.
+    fn item_cache(&self, def_id: &DefId) -> Rc<RefCell<ItemCache<'tcx>>> {
+        self.with_global_cache(|cache| cache.per_item.entry(def_id.clone()).or_default().clone())
     }
     /// Access the cache for a given item. You must not call `sinto` within this function as this
     /// will likely result in `BorrowMut` panics.
     fn with_item_cache<T>(&self, def_id: &DefId, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        self.with_global_cache(|cache| f(cache.per_item.entry(def_id.clone()).or_default()))
+        f(&mut self.item_cache(def_id).borrow_mut())
     }
 }
 
 pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner(&self) -> DefId;
+    /// The cache of the current owner.
+    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>>;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
         self.owner().param_env(self)
@@ -226,15 +204,18 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
 
     fn as_state_with_owner(&self) -> StateWithOwner<'tcx> {
         State {
-            base: self.base(),
-            owner: self.owner(),
+            base: self.base().clone(),
+            owner: Owner {
+                def_id: self.owner(),
+                cache: self.owner_cache().clone(),
+            },
         }
     }
 
     /// Access the cache for the current item. You must not call `sinto` within this function as
     /// this will likely result in `BorrowMut` panics.
     fn with_cache<T>(&self, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        self.with_item_cache(&self.owner(), f)
+        f(&mut self.owner_cache().borrow_mut())
     }
     /// Access the cache in which to store the translation of `value` in the current owner.
     ///
@@ -271,11 +252,11 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
         &self,
         f: impl FnOnce(&mut PredicateSearcher<'tcx>, &StateWithBase<'tcx>) -> T,
     ) -> T {
-        let s = self;
-        let base = s.base();
-        let owner = s.owner();
-        let base_state = s.base_state();
-        let mut predicate_searcher = base.elab_ctx.predicate_searcher_for(&base_state, owner);
+        let base_state = self.base_state();
+        let mut predicate_searcher = self
+            .base()
+            .elab_ctx
+            .predicate_searcher_for(&base_state, self.owner());
         f(&mut predicate_searcher, &base_state)
     }
 }
@@ -286,8 +267,15 @@ pub struct State<'tcx, Owner> {
     pub owner: Owner,
 }
 
+/// The item whose context we are in, along with its cache.
+#[derive(Clone)]
+pub struct Owner<'tcx> {
+    def_id: DefId,
+    cache: Rc<RefCell<ItemCache<'tcx>>>,
+}
+
 pub type StateWithBase<'tcx> = State<'tcx, ()>;
-pub type StateWithOwner<'tcx> = State<'tcx, DefId>;
+pub type StateWithOwner<'tcx> = State<'tcx, Owner<'tcx>>;
 
 impl<'tcx> StateWithBase<'tcx> {
     pub fn new(
@@ -302,23 +290,29 @@ impl<'tcx> StateWithBase<'tcx> {
     }
 }
 impl<'tcx, O> BaseState<'tcx> for State<'tcx, O> {
-    fn base(&self) -> Base<'tcx> {
-        self.base.clone()
+    fn base(&self) -> &Base<'tcx> {
+        &self.base
     }
 }
 impl<'tcx> UnderOwnerState<'tcx> for StateWithOwner<'tcx> {
     fn owner(&self) -> DefId {
-        self.owner.clone()
+        self.owner.def_id.clone()
+    }
+    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+        &self.owner.cache
     }
 }
 
 impl<'tcx, A: BaseState<'tcx>, B> BaseState<'tcx> for (A, B) {
-    fn base(&self) -> Base<'tcx> {
+    fn base(&self) -> &Base<'tcx> {
         self.0.base()
     }
 }
 impl<'tcx, A: UnderOwnerState<'tcx>, B> UnderOwnerState<'tcx> for (A, B) {
     fn owner(&self) -> DefId {
         self.0.owner()
+    }
+    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+        self.0.owner_cache()
     }
 }
