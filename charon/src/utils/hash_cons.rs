@@ -63,23 +63,34 @@ impl<T> HashConsable for T where T: Hash + PartialEq + Eq + Clone + Mappable {}
 // direct dependency and as a dylib, then the static will be duplicated, causing hashing and
 // equality on `HashCons` to be broken.
 mod intern_table {
+    use hashbrown::HashTable;
     use rustc_hash::FxBuildHasher;
+    use std::cell::RefCell;
+    use std::hash::BuildHasher;
     use std::sync::{LazyLock, RwLock};
 
     use super::{HashConsable, HashConsed};
     use crate::utils::type_map::{Mappable, Mapper, TypeMap};
 
-    // This is a static mutable `HashSet<&'static T>` that records for each `T` value a unique
-    // allocation that contains the same value. Values inside the set are hashed/compared as is
-    // normal for `T`. Once we've gotten a reference out of the set however, we're sure that
-    // "T-equality" implies address-equality.
-    struct InternMapper;
-    impl Mapper for InternMapper {
-        type Value<T: Mappable> = Table<T>;
+    // For each `T`, this records for each `T` value a unique allocation that contains the same
+    // value. Values inside the table are hashed/compared as is normal for `T`. Once we've gotten a
+    // reference out of the table however, we're sure that "T-equality" implies address-equality.
+    //
+    // The table of each type is split into shards, each with its own lock, so that threads don't
+    // contend.
+    struct Shards<T: 'static>(Box<[RwLock<Table<T>>]>);
+
+    const SHARDS: usize = 64;
+
+    impl<T> Shards<T> {
+        fn shard(&self, hash: u64) -> &RwLock<Table<T>> {
+            // Avoid the bits that the tables use.
+            &self.0[(hash >> 32) as usize % SHARDS]
+        }
     }
 
     struct Table<T: 'static> {
-        set: hashbrown::HashSet<&'static T, FxBuildHasher>,
+        set: HashTable<&'static T>,
         /// Storage for new values. Values are never freed, and this is never reallocated: when
         /// it's full we leak it and start a new one.
         chunk: Vec<T>,
@@ -106,24 +117,47 @@ mod intern_table {
             unsafe { &*std::ptr::from_ref(self.chunk.last().unwrap()) }
         }
     }
+
+    struct InternMapper;
+    impl Mapper for InternMapper {
+        type Value<T: Mappable> = &'static Shards<T>;
+    }
     static INTERNED: LazyLock<RwLock<TypeMap<InternMapper>>> = LazyLock::new(Default::default);
+    thread_local! {
+        /// Copy of `INTERNED` to avoid locking it each time.
+        static INTERNED_CACHE: RefCell<TypeMap<InternMapper>> = Default::default();
+    }
+
+    fn shards<T: HashConsable>() -> &'static Shards<T> {
+        INTERNED_CACHE.with_borrow_mut(|cache| {
+            *cache.or_insert_with(|| {
+                *INTERNED.write().unwrap().or_insert_with(|| {
+                    Box::leak(Box::new(Shards(
+                        (0..SHARDS).map(|_| Default::default()).collect(),
+                    )))
+                })
+            })
+        })
+    }
+
+    fn hash<T: std::hash::Hash>(x: &T) -> u64 {
+        FxBuildHasher.hash_one(x)
+    }
 
     pub(super) fn intern<T: HashConsable>(inner: T) -> HashConsed<T> {
+        let hash = hash(&inner);
+        let shard = shards::<T>().shard(hash);
         // Fast read-only check.
-        if let read_guard = INTERNED.read().unwrap()
-            && let Some(table) = read_guard.get::<T>()
-            && let Some(&interned) = table.set.get(&inner)
-        {
+        if let Some(&interned) = shard.read().unwrap().set.find(hash, |x| **x == inner) {
             return HashConsed(interned.into());
         }
-        // Concurrent access is possible right here, so we have to check everything again.
-        let mut write_guard = INTERNED.write().unwrap();
-        let table = write_guard.or_default::<T>();
-        if let Some(&interned) = table.set.get(&inner) {
+        // Concurrent access is possible right here, so we have to check again.
+        let mut table = shard.write().unwrap();
+        if let Some(&interned) = table.set.find(hash, |x| **x == inner) {
             HashConsed(interned.into())
         } else {
             let interned = table.alloc(inner);
-            table.set.insert(interned);
+            table.set.insert_unique(hash, interned, |x| self::hash(*x));
             HashConsed(interned.into())
         }
     }

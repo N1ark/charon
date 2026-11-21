@@ -8,8 +8,8 @@ use std::{
     sync::LazyLock,
 };
 
-use super::translate_crate::{RustcItem, VirtualImplKind};
 use super::translate_cache::MemoKey;
+use super::translate_crate::{RustcItem, VirtualImplKind};
 use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{BaseState, DefPathItem, SInto};

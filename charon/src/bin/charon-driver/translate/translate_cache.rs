@@ -40,8 +40,8 @@ use rustc_span::{
     SyntaxContext,
 };
 use serde::{Deserialize, Serialize};
-use serde_state_perfect_derive as serde_state;
 use serde_state::{DeserializeState, SerializeState};
+use serde_state_perfect_derive as serde_state;
 
 use super::translate_crate::{RustcItem, VirtualImplKind};
 use super::translate_ctx::*;
@@ -726,7 +726,12 @@ impl<'tcx> TranslationCache<'tcx> {
         // The charon binary.
         let exe = std::env::current_exe().ok()?;
         let meta = std::fs::metadata(&exe).ok()?;
-        hash_str(&format!("{} {} {:?}", exe.display(), meta.len(), meta.modified().ok()));
+        hash_str(&format!(
+            "{} {} {:?}",
+            exe.display(),
+            meta.len(),
+            meta.modified().ok()
+        ));
         hash_str(charon_lib::VERSION);
         // The options, except those that only affect outputs or the choice of items.
         let mut opts = serde_json::to_value(options).ok()?;
@@ -820,7 +825,8 @@ impl<'tcx> TranslationCache<'tcx> {
     fn store(&mut self, hash: u128, bytes: &[u8], has_body: bool) {
         let start = self.new_pack.len() as u64;
         self.new_pack.extend_from_slice(bytes);
-        self.new_index.push((hash, start, bytes.len() as u64, has_body));
+        self.new_index
+            .push((hash, start, bytes.len() as u64, has_body));
         self.stored.insert(hash);
         self.stats.stored += 1;
     }
@@ -1441,36 +1447,37 @@ impl<'tcx> TranslateCtx<'tcx> {
         let all_recorded = collect.items.iter().all(|i| is_known(*i));
         let mut files = collect.files;
         files.shift_remove(&FileId::ZERO);
-        let serialized = all_recorded.then(|| {
-            let mut store_files = StoreFileIds { files: &files };
-            macro_rules! renumber {
-                ($variant:ident, $d:expr) => {{
-                    let mut d = $d.clone();
-                    let _ = d.drive_mut(&mut store_files);
-                    CachedItem::$variant(d)
-                }};
-            }
-            let item = match item {
-                ItemRef::Type(d) => renumber!(Type, d),
-                ItemRef::Fun(d) => renumber!(Fun, d),
-                ItemRef::Global(d) => renumber!(Global, d),
-                ItemRef::TraitDecl(d) => renumber!(TraitDecl, d),
-                ItemRef::TraitImpl(d) => renumber!(TraitImpl, d),
-            };
-            let only_stored_files = match &item {
-                CachedItem::Type(d) => cache.only_stored_files(d),
-                CachedItem::Fun(d) => cache.only_stored_files(d),
-                CachedItem::Global(d) => cache.only_stored_files(d),
-                CachedItem::TraitDecl(d) => cache.only_stored_files(d),
-                CachedItem::TraitImpl(d) => cache.only_stored_files(d),
-            };
-            // Effects only mention vtable refs, which have no spans.
-            only_stored_files.then(|| CachedBody {
-                item,
-                effects: recorder.effects.clone(),
+        let serialized = all_recorded
+            .then(|| {
+                let mut store_files = StoreFileIds { files: &files };
+                macro_rules! renumber {
+                    ($variant:ident, $d:expr) => {{
+                        let mut d = $d.clone();
+                        let _ = d.drive_mut(&mut store_files);
+                        CachedItem::$variant(d)
+                    }};
+                }
+                let item = match item {
+                    ItemRef::Type(d) => renumber!(Type, d),
+                    ItemRef::Fun(d) => renumber!(Fun, d),
+                    ItemRef::Global(d) => renumber!(Global, d),
+                    ItemRef::TraitDecl(d) => renumber!(TraitDecl, d),
+                    ItemRef::TraitImpl(d) => renumber!(TraitImpl, d),
+                };
+                let only_stored_files = match &item {
+                    CachedItem::Type(d) => cache.only_stored_files(d),
+                    CachedItem::Fun(d) => cache.only_stored_files(d),
+                    CachedItem::Global(d) => cache.only_stored_files(d),
+                    CachedItem::TraitDecl(d) => cache.only_stored_files(d),
+                    CachedItem::TraitImpl(d) => cache.only_stored_files(d),
+                };
+                // Effects only mention vtable refs, which have no spans.
+                only_stored_files.then(|| CachedBody {
+                    item,
+                    effects: recorder.effects.clone(),
+                })
             })
-        })
-        .flatten();
+            .flatten();
         self.translated.get_item_mut(id).unwrap().item_meta().name = name;
         let bytes = serialized.and_then(|body| {
             // The name section may add files.
@@ -1495,7 +1502,13 @@ impl<'tcx> TranslateCtx<'tcx> {
         let cache = self.cache.as_mut().unwrap();
         match bytes {
             Some(bytes) => cache.store(key.hash, &bytes, true),
-            None => *cache.stats.tainted.entry("unrecorded id or local file").or_default() += 1,
+            None => {
+                *cache
+                    .stats
+                    .tainted
+                    .entry("unrecorded id or local file")
+                    .or_default() += 1
+            }
         }
     }
 
@@ -1510,10 +1523,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             .keys()
             .copied()
             .filter(|id| {
-                cache
-                    .keys
-                    .get(id)
-                    .is_some_and(|key| !cache.stored.contains(&key.hash) && !cache.index.contains_key(&key.hash))
+                cache.keys.get(id).is_some_and(|key| {
+                    !cache.stored.contains(&key.hash) && !cache.index.contains_key(&key.hash)
+                })
             })
             .collect();
         ids.sort();
@@ -1619,7 +1631,10 @@ struct CheckStoredFiles {
 impl VisitAst for CheckStoredFiles {
     fn enter_span(&mut self, span: &charon_lib::ast::Span) {
         let span = span.unpack();
-        for data in [Some(span.data), span.generated_from_span].into_iter().flatten() {
+        for data in [Some(span.data), span.generated_from_span]
+            .into_iter()
+            .flatten()
+        {
             if data.file_id.index() < STORED_FILE_IDS_START {
                 let placeholder = matches!(
                     (data.beg.line, data.beg.col, data.end.line, data.end.col),
