@@ -9,6 +9,7 @@ use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, PartialOrd};
+use std::sync::{Arc, Mutex};
 
 const BACKTRACE_ON_ERR: bool = false;
 
@@ -218,6 +219,26 @@ pub struct ErrorCtx {
     pub def_id_is_local: bool,
     /// The number of errors encountered so far.
     pub error_count: usize,
+    /// If set, our messages are held back here instead of printed.
+    pub deferred_output: Option<Arc<Mutex<DeferredOutput>>>,
+}
+
+/// Messages held back until `release` is called. We use this when translating in parallel with
+/// rustc's own checks, so as to report nothing if rustc rejects the crate.
+#[derive(Default)]
+pub struct DeferredOutput {
+    released: bool,
+    messages: Vec<String>,
+}
+
+impl DeferredOutput {
+    /// Print the held-back messages, and let subsequent ones through.
+    pub fn release(&mut self) {
+        self.released = true;
+        for msg in self.messages.drain(..) {
+            anstream::eprintln!("{msg}");
+        }
+    }
 }
 
 impl ErrorCtx {
@@ -230,6 +251,7 @@ impl ErrorCtx {
             def_id: None,
             def_id_is_local: false,
             error_count: 0,
+            deferred_output: None,
         }
     }
 
@@ -243,6 +265,17 @@ impl ErrorCtx {
         self.items_with_errors.contains(&id.into())
     }
 
+    fn emit(&self, msg: String) {
+        if let Some(deferred) = &self.deferred_output {
+            let mut deferred = deferred.lock().unwrap();
+            if !deferred.released {
+                deferred.messages.push(msg);
+                return;
+            }
+        }
+        anstream::eprintln!("{msg}");
+    }
+
     /// Report an error without registering anything.
     pub fn display_error(
         &self,
@@ -252,7 +285,7 @@ impl ErrorCtx {
         msg: String,
     ) -> Error {
         let error = Error { span, msg };
-        anstream::eprintln!("{}\n", error.render(krate, level));
+        self.emit(format!("{}\n", error.render(krate, level)));
         if BACKTRACE_ON_ERR {
             let backtrace = std::backtrace::Backtrace::force_capture();
             eprintln!("{backtrace}\n");
@@ -363,6 +396,6 @@ impl ErrorCtx {
         );
         let message = Group::with_title(level.primary_title(&msg)).elements(snippets);
         let out = Renderer::styled().render(&[message]).to_string();
-        anstream::eprintln!("{}", out);
+        self.emit(out);
     }
 }

@@ -2,11 +2,12 @@
 use crate::CharonFailure;
 use crate::toolchain::CHARON_SYSROOT_VAR;
 use crate::translate::translate_crate;
-use charon_lib::errors::ErrorCtx;
+use charon_lib::errors::{DeferredOutput, ErrorCtx};
 use charon_lib::options::{self, CliOpts, MirLevel, selected_crate_var};
 use charon_lib::transform::TransformCtx;
 use charon_lib::utils::arg_value;
 use itertools::Itertools;
+use rustc_data_structures::sync::IntoDynSyncSend;
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::Config;
 use rustc_interface::interface::Compiler;
@@ -15,7 +16,9 @@ use rustc_middle::util::Providers;
 use rustc_session::config::{OutputType, OutputTypes};
 use rustc_span::{ErrorGuaranteed, Symbol};
 use std::num::NonZero;
+use std::panic;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::{env, fmt};
 
 /// Helper that runs the compiler and catches its fatal errors.
@@ -312,22 +315,52 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         rustc_hir::def_id::DEF_ID_DEBUG
             .swap(&(def_id_debug as fn(_, &mut fmt::Formatter<'_>) -> _));
 
-        if charon_lib::timing::time("rustc-precheck-errors", || precheck_rustc_errors(tcx)) {
-            return Compilation::Continue;
-        }
-        charon_lib::timing::time("rustc-prefetch-mir", || {
-            prefetch_local_mir(tcx, self.options.mir_level())
-        });
+        let options = self.options;
+        let mut error_ctx = self.error_ctx.take().unwrap();
+        let sysroot = compiler.sess.opts.sysroot.path().to_owned();
+        // We don't translate crates that rustc rejects. Our errors are held back until rustc's
+        // checks pass; if they fail, we discard the translation, panics included.
+        let deferred_output = Arc::new(Mutex::new(DeferredOutput::default()));
+        error_ctx.deferred_output = Some(deferred_output.clone());
+        let rustc_checks = move || {
+            let _done = rustc_data_structures::defer(|| {
+                let _ = rustc_const_uneval::RUSTC_CHECKS_DONE.set(());
+            });
+            if charon_lib::timing::time("rustc-precheck-errors", || precheck_rustc_errors(tcx)) {
+                return Err(());
+            }
+            deferred_output.lock().unwrap().release();
+            charon_lib::timing::time("rustc-prefetch-mir", || {
+                prefetch_local_mir(tcx, options.mir_level())
+            });
+            Ok(())
+        };
+        let translate = move || {
+            charon_lib::timing::time("translate-crate", || {
+                translate_crate::translate(tcx, options, error_ctx, sysroot)
+            })
+        };
 
-        self.transform_ctx = charon_lib::timing::time("translate-crate", || {
-            translate_crate::translate(
-                tcx,
-                self.options,
-                self.error_ctx.take().unwrap(),
-                compiler.sess.opts.sysroot.path().to_owned(),
-            )
-        })
-        .ok();
+        // Rather than waiting for rustc's checks, we run them on rustc's other threads while we
+        // translate on this one (the first closure of a join runs on the current thread). This
+        // relies on `wait_for_rustc_checks`, which doesn't cover built MIR: borrowck (e.g. for
+        // opaque types) steals the built MIR of plain functions.
+        if rustc_data_structures::sync::is_dyn_thread_safe()
+            && options.mir_level() != MirLevel::Built
+        {
+            let (translated, checks) = rustc_data_structures::sync::par_join(
+                move || IntoDynSyncSend(panic::catch_unwind(panic::AssertUnwindSafe(translate))),
+                rustc_checks,
+            );
+            if checks.is_ok() {
+                match translated.0 {
+                    Ok(translated) => self.transform_ctx = translated.ok(),
+                    Err(panic) => panic::resume_unwind(panic),
+                }
+            }
+        } else if rustc_checks().is_ok() {
+            self.transform_ctx = translate().ok();
+        }
 
         Compilation::Continue
     }

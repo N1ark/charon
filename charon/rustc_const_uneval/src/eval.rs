@@ -87,6 +87,30 @@ impl<'tcx> AllocTarget<'tcx> {
     }
 }
 
+/// Set once rustc's own checks are done. Charon may run them in parallel with the translation.
+/// Since they can steal MIR bodies (const-eval steals those of the consts, statics and const fns
+/// it evaluates), we wait for them before reading such a body: this way we read the same body as
+/// if the checks had run first.
+pub static RUSTC_CHECKS_DONE: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+
+/// Call before reading a MIR body that may get stolen, see [`RUSTC_CHECKS_DONE`].
+pub fn wait_for_rustc_checks(tcx: TyCtxt<'_>, def_id: DefId) {
+    use rustc_hir::def::DefKind;
+    let may_be_const_evaluated = match tcx.def_kind(def_id) {
+        DefKind::Fn | DefKind::AssocFn | DefKind::Closure => tcx.is_const_fn(def_id),
+        _ => true,
+    };
+    if def_id.is_local() && may_be_const_evaluated {
+        while RUSTC_CHECKS_DONE.get().is_none() {
+            // Rather than blocking, help with pending work (which may be the checks themselves):
+            // the other threads may not get to run, e.g. for lack of jobserver tokens.
+            if rustc_thread_pool::yield_now() != Some(rustc_thread_pool::Yield::Executed) {
+                std::thread::sleep(std::time::Duration::from_micros(100));
+            }
+        }
+    }
+}
+
 /// Call `f` on the MIR of the given promoted constant.
 pub fn promoted_body<'tcx, R>(
     tcx: TyCtxt<'tcx>,
@@ -96,6 +120,7 @@ pub fn promoted_body<'tcx, R>(
 ) -> R {
     // The promoteds of a local item are stolen once its MIR is optimized.
     if let Some(local_def_id) = def_id.as_local() {
+        wait_for_rustc_checks(tcx, def_id);
         let (_, promoteds) = tcx.mir_promoted(local_def_id);
         if !promoteds.is_stolen() {
             return f(&promoteds.borrow()[promoted]);

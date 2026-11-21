@@ -10,13 +10,14 @@ extern crate rustc_const_eval;
 extern crate rustc_hir;
 extern crate rustc_middle;
 extern crate rustc_span;
+extern crate rustc_thread_pool;
 
 mod eval;
 mod memory;
 mod pointer;
 mod valtree;
 
-pub use eval::promoted_body;
+pub use eval::{RUSTC_CHECKS_DONE, promoted_body, wait_for_rustc_checks};
 
 use rustc_abi::{ExternAbi, FieldIdx, Size, VariantIdx};
 use rustc_hash::FxHashMap;
