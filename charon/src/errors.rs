@@ -79,10 +79,55 @@ impl Error {
     }
 
     pub fn render(&self, krate: &TranslatedCrate, level: Level) -> String {
+        // The renderer takes a lot of time on long titles: it styles and normalizes them
+        // character by character. Unless the title has characters it would normalize, we render
+        // the diagnostic with a two-line placeholder title instead and splice the real title in,
+        // laid out like the renderer lays out titles: the lines after the first are indented to
+        // align with the text of the first, after the level label.
+        let needs_normalizing = |c: char| match c {
+            '\n' => false,
+            '\0'..='\u{1f}' | '\u{7f}' | '\u{200d}' => true,
+            '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' => true,
+            _ => false,
+        };
+        if self.msg.contains(needs_normalizing) {
+            return self.render_with_title(krate, level, &self.msg);
+        }
+        let rendered = self.render_with_title(krate, level, "\u{E000}\n\u{E001}");
+        let mut lines = rendered.splitn(3, '\n');
+        // The first line is `<label><text style>\u{E000}<style end>`, the second
+        // `<padding><text style>\u{E001}<style end>`.
+        let (label, end) = lines.next().unwrap().split_once('\u{E000}').unwrap();
+        let (indent, _) = lines.next().unwrap().split_once('\u{E001}').unwrap();
+        let padding = indent.trim_end_matches(|c| c != ' ');
+        let mut out = String::with_capacity(rendered.len() + 2 * self.msg.len());
+        for (i, line) in self.msg.split('\n').enumerate() {
+            if i == 0 {
+                out += label;
+            } else {
+                out.push('\n');
+                if line.is_empty() {
+                    // The renderer styles nothing on this line.
+                    out += padding;
+                    continue;
+                }
+                out += indent;
+            }
+            out += line;
+            out += end;
+        }
+        if let Some(rest) = lines.next() {
+            out.push('\n');
+            out += rest;
+        }
+        out
+    }
+
+    fn render_with_title(&self, krate: &TranslatedCrate, level: Level, title: &str) -> String {
         use annotate_snippets::*;
         let span = self.span.data();
 
-        let mut group = Group::with_title(level.primary_title(&self.msg));
+        let mut group = Group::with_title(level.primary_title(title));
         let origin;
         if let Some(file) = krate.files.get(span.file_id) {
             origin = format!("{}", file.name);
