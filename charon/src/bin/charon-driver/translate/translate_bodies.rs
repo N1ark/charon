@@ -153,7 +153,8 @@ impl<'tcx, 'tctx, 'ictx, 'bctx> BlockTransCtx<'tcx, 'tctx, 'ictx, 'bctx> {
         }
     }
 
-    fn finish_current_block(self, terminator: Terminator) {
+    fn finish_current_block(mut self, terminator: Terminator) {
+        self.statements.shrink_to_fit();
         let block = BlockData {
             statements: self.statements,
             terminator,
