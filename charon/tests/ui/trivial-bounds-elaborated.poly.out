@@ -1,0 +1,207 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::iter::sources::empty::Empty
+#[diagnostic_item("IterEmpty")]
+pub opaque type Empty<T>
+where
+    TraitClause0: (T: Sized),
+
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T>
+where
+    TraitClause0: (T: Sized),
+{
+  None,
+  Some { _0: T },
+}
+
+// Full name: core::iter::traits::iterator::Iterator
+#[lang_item(Iterator)]
+#[diagnostic_item("Iterator")]
+pub trait Iterator<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self::Item: Sized)
+    type Item
+    fn next<'_0_1, Outlives0: (Self: '_0_1)>;
+    vtable: core::iter::traits::iterator::Iterator::{vtable}<Self::Item>
+}
+
+// Full name: core::iter::sources::empty::{impl Iterator for Empty<T>[TraitClause0]}::next
+pub fn next<'_0, T>(_1: &'_0 mut Empty<T>[TraitClause0]) -> Option<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::iter::sources::empty::{impl Iterator for Empty<T>[TraitClause0]}
+impl<T> "impl_Iterator_for_Empty" Iterator for Empty<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (Empty<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for Empty<T>[TraitClause0]}
+    proof ImpliedClause1: (T: Sized) = TraitClause0
+    type Item = T
+    fn next<'_0_1> = next<'_0_1, T>[TraitClause0]
+    vtable: lazy
+}
+
+// Full name: test_crate::Env
+pub struct Env {}
+
+// Full name: test_crate::Unix
+pub trait Unix<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn name;
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Unix for Env}::name
+pub fn name() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 1u32
+    return
+}
+
+// Full name: test_crate::{impl Unix for Env}
+impl "impl_Unix_for_Env" Unix for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    fn name = name
+    non-dyn-compatible
+}
+
+// Full name: test_crate::Sub
+pub trait Sub<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Unix)
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Sub for Env}
+impl "impl_Sub_for_Env" Sub for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    proof ImpliedClause1: (Env: Unix) = impl_Unix_for_Env
+    non-dyn-compatible
+}
+
+// Full name: test_crate::foo
+pub fn foo() -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = TraitClause0::name()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_crate::via_supertrait
+pub fn via_supertrait() -> u32
+where
+    TraitClause0: (Env: Sub),
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo[TraitClause0::ImpliedClause1]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = TraitClause0::ImpliedClause1::name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::via_projection
+pub fn via_projection<T>() -> u32
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Iterator),
+    TraitClause2: (Env: Unix),
+    TypeConstraint0: TraitClause1::Item = Env,
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo[TraitClause2]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = TraitClause2::name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::user
+pub fn user() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = via_supertrait[impl_Sub_for_Env]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = via_projection<Empty<Env>[{built_in impl Sized for Env}]>[{built_in impl Sized for Empty<Env>[{built_in impl Sized for Env}]}, impl_Iterator_for_Empty<Env>[{built_in impl Sized for Env}], impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+
+

@@ -1,0 +1,357 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    fn clone<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u8}::clone
+pub fn impl_Clone_for_u8::clone<'_0>(_1: &'_0 u8) -> u8
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u8}
+impl "impl_Clone_for_u8" Clone for u8 {
+    proof ImpliedClause0: (u8: Sized) = {built_in impl Sized for u8}
+    fn clone<'_0_1> = impl_Clone_for_u8::clone<'_0_1>
+    non-dyn-compatible
+}
+
+struct () {}
+
+// Full name: core::marker::Destruct
+#[lang_item(Destruct)]
+pub trait Destruct<Self>
+{
+    fn drop_glue<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::panicking::panic_in_cleanup
+#[lang_item(PanicInCleanup)]
+fn panic_in_cleanup() -> !
+= <opaque>
+
+// Full name: test_crate::Env
+pub struct Env {}
+
+// Full name: test_crate::Unix
+pub trait Unix<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn name;
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Unix for Env}::name
+pub fn name() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 1u32
+    return
+}
+
+// Full name: test_crate::{impl Unix for Env}
+impl "impl_Unix_for_Env" Unix for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    fn name = name
+    non-dyn-compatible
+}
+
+// Full name: test_crate::W
+pub struct W<'a> {
+  _0: &'a u32,
+}
+
+// Full name: test_crate::Lt
+pub trait Lt<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn lt;
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Lt for W<'a>}::lt
+pub fn lt<'a>() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 2u32
+    return
+}
+
+// Full name: test_crate::{impl Lt for W<'a>}
+impl<'a> "impl_Lt_for_W" Lt for W<'a> {
+    proof ImpliedClause0: (W<'a>: MetaSized) = {built_in impl MetaSized for W<'a>}
+    fn lt = lt<'a>
+    non-dyn-compatible
+}
+
+// Full name: test_crate::foo
+pub fn foo() -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = TraitClause0::name()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_crate::bar
+pub fn bar() -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo[TraitClause0]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = TraitClause0::name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::lt_user
+pub fn lt_user<'a>(x: W<'a>) -> u32
+where
+    TraitClause0: (W<'a>: Lt),
+{
+    let mut _0: u32; // return
+    let x: W<'0>; // arg #1
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_2)
+    _2 = TraitClause0::lt()
+    ↳⚡ storage_dead(_4)
+        storage_dead(x)
+        unwind_continue
+    storage_live(_3)
+    _3 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_4)
+        storage_dead(x)
+        unwind_continue
+    _4 = copy _2 panic.+ copy _3
+    _0 = move _4
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_4)
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::plain
+pub fn plain() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::generic
+pub fn generic<T>(t: T) -> u32
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Clone),
+    TraitClause2: (Env: Unix),
+{
+    let mut _0: u32; // return
+    let t: T; // arg #1
+    let mut _2: T; // anonymous local
+    let mut _3: &'0 T; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = &t
+    _2 = TraitClause1::clone<'1>(move _3)
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] t
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(t)
+        unwind_continue
+    storage_dead(_3)
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] _2
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] t
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(t)
+        unwind_continue
+    storage_dead(_2)
+    _0 = foo[TraitClause2]()
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] t
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(t)
+        unwind_continue
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] t
+    ↳⚡ storage_dead(t)
+        unwind_continue
+    storage_dead(t)
+    return
+}
+
+// Full name: test_crate::main_like
+pub fn main_like() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+    let mut _5: u32; // anonymous local
+    let mut _6: u32; // anonymous local
+    let mut _7: u32; // anonymous local
+    let mut _8: u32; // anonymous local
+    let mut _9: W<'0>; // anonymous local
+    let mut _10: &'1 u32; // anonymous local
+    let _11: &'2 u32; // anonymous local
+    let mut _12: u32; // anonymous local
+    let mut _13: &'3 u32; // anonymous local
+    let mut _14: &'4 u32; // anonymous local
+    let mut _15: &'9 u32; // anonymous local
+    let mut _16: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_5)
+    storage_live(_7)
+    storage_live(_12)
+    storage_live(_13)
+    storage_live(_1)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = bar[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_7)
+        storage_dead(_5)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        unwind_continue
+    storage_live(_4)
+    _4 = plain()
+    ↳⚡ storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_7)
+        storage_dead(_5)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        unwind_continue
+    _5 = copy _3 panic.+ copy _4
+    _2 = move _5
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_live(_6)
+    _6 = generic<u8>[{built_in impl Sized for u8}, impl_Clone_for_u8, impl_Unix_for_Env](const 3u8)
+    ↳⚡ storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_7)
+        storage_dead(_5)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        unwind_continue
+    _7 = copy _2 panic.+ copy _6
+    storage_live(_14)
+    storage_live(_15)
+    storage_live(_16)
+    _16 = const 0u32
+    _15 = &_16
+    _14 = move _15
+    _1 = move _7
+    storage_dead(_6)
+    storage_dead(_2)
+    storage_live(_8)
+    storage_live(_9)
+    storage_live(_10)
+    storage_live(_11)
+    _13 = move _14
+    _11 = &(*_13)
+    _10 = &(*_11)
+    _9 = W { _0: move _10 }
+    storage_dead(_10)
+    _8 = lt_user<'6>[impl_Lt_for_W<'6>](move _9)
+    ↳⚡ storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_7)
+        storage_dead(_5)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        unwind_continue
+    storage_dead(_9)
+    _12 = copy _1 panic.+ copy _8
+    _0 = move _12
+    storage_dead(_8)
+    storage_dead(_1)
+    storage_dead(_11)
+    storage_dead(_13)
+    storage_dead(_12)
+    storage_dead(_7)
+    storage_dead(_5)
+    storage_dead(_16)
+    storage_dead(_15)
+    storage_dead(_14)
+    return
+}
+
+
+

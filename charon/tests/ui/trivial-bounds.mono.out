@@ -1,0 +1,7 @@
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds.rs:18:5
+   |
+18 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Charon failed to translate this code (3 errors)
