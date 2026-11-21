@@ -21,8 +21,26 @@ pub struct Toolchain {
 }
 
 impl Toolchain {
+    /// The directory where rustup installs this toolchain, if it is installed there.
+    fn rustup_dir(&self) -> Option<PathBuf> {
+        let rustup_home = match env::var_os("RUSTUP_HOME") {
+            Some(dir) => PathBuf::from(dir),
+            None => env::home_dir()?.join(".rustup"),
+        };
+        let dir = rustup_home
+            .join("toolchains")
+            .join(format!("{}-{HOST_TARGET}", self.channel));
+        dir.join("bin")
+            .join(format!("rustc{}", env::consts::EXE_SUFFIX))
+            .is_file()
+            .then_some(dir)
+    }
+
     fn is_installed(&self) -> Result<bool> {
         // FIXME: check if the right components are installed.
+        if self.rustup_dir().is_some() {
+            return Ok(true);
+        }
         let output = self.run("rustc").arg("--version").output()?;
         Ok(output.status.success())
     }
@@ -113,8 +131,23 @@ pub fn in_toolchain(program: impl AsRef<OsStr>) -> Result<Command> {
 }
 
 pub fn driver_cmd() -> Result<Command> {
-    // We need `in_toolchain` to get the right library paths.
-    let mut cmd = in_toolchain(driver_path())?;
+    // On Linux, the toolchain's libraries are all the driver needs from `rustup run`: setting their
+    // path ourselves saves running rustup.
+    let toolchain = get_pinned_toolchain();
+    let mut cmd = if cfg!(target_os = "linux")
+        && env::var_os("CHARON_TOOLCHAIN_IS_IN_PATH").is_none()
+        && let Some(dir) = toolchain.rustup_dir()
+    {
+        let mut lib_path = vec![dir.join("lib")];
+        lib_path.extend(env::var_os("LD_LIBRARY_PATH").iter().flat_map(env::split_paths));
+        let mut cmd = Command::new(driver_path());
+        cmd.env("LD_LIBRARY_PATH", env::join_paths(lib_path)?);
+        cmd.env("RUSTUP_TOOLCHAIN", dir.file_name().unwrap());
+        cmd
+    } else {
+        // We need `in_toolchain` to get the right library paths.
+        in_toolchain(driver_path())?
+    };
     // The driver expects the first arg to be "rustc" because that's how cargo calls it.
     cmd.arg("rustc");
     Ok(cmd)
