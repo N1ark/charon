@@ -6,7 +6,7 @@ use serde_state::{DeserializeState, SerializeState};
 use std::sync::{LazyLock, Mutex};
 use std::{borrow::Cow, cmp::Ordering, ops::Range, path::PathBuf};
 
-generate_index_type!(FileId);
+generate_index_type!(FileId, "FileId", remap = crate::ast::id_remap::remap_file_id);
 
 /// A filename.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

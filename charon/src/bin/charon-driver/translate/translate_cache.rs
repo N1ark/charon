@@ -20,7 +20,7 @@
 //! Entries live in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else the
 //! translation depends on: the charon binary, the options and the upstream crates.
 use std::borrow::Cow;
-use std::ops::ControlFlow;
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -47,6 +47,7 @@ use super::translate_crate::{RustcItem, VirtualImplKind};
 use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{AssocItemResolution, BaseState, DefIdBase, SInto, SyntheticItem};
+use charon_lib::ast::id_remap::{IdRemap, with_id_remap};
 use charon_lib::ast::*;
 use charon_lib::options::CliOpts;
 
@@ -1048,9 +1049,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
         let name_refs = head.name_refs?;
         let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
-        let state = DedupSerializer::default();
-        let mut de = postcard::Deserializer::from_bytes(rest.get(4..4 + name_len)?);
-        let mut name = Name::deserialize_state(&state, &mut de).ok()?;
+        let name_bytes = rest.get(4..4 + name_len)?;
         let kind = decode_kind(&mut KeyDecoder {
             tcx: self.tcx,
             opaque: MemDecoder::new(&r.encoded, 0).ok()?,
@@ -1068,19 +1067,27 @@ impl<'tcx> TranslateCtx<'tcx> {
         let mut id_map: HashMap<ItemId, ItemId> = HashMap::default();
         id_map.insert(head.self_id, id);
         id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
-        for name_ref in &name_refs {
-            let Some(new_id) = self.cache_register_ref(&None, name_ref) else {
-                // Compute the name normally.
+        let name = 'name: {
+            for name_ref in &name_refs {
+                let Some(new_id) = self.cache_register_ref(&None, name_ref) else {
+                    break 'name None;
+                };
+                id_map.insert(name_ref.old_id, new_id);
+            }
+            let files = self.cache_register_files(head.files);
+            decode_entry_value::<Name>(name_bytes, &id_map, &files)
+        };
+        let name = match name {
+            Some(name) => name,
+            // Compute the name normally.
+            None => {
                 let src = self.source_of(id);
-                if let Ok(name) = self.translate_name(&src) {
-                    self.translated.item_names.insert(id, name);
-                }
-                return Some(id);
-            };
-            id_map.insert(name_ref.old_id, new_id);
-        }
-        let file_map = self.cache_register_files(head.files);
-        let _ = name.drive_mut(&mut RemapIds::new(&id_map, &file_map));
+                let Ok(name) = self.translate_name(&src) else {
+                    return Some(id);
+                };
+                name
+            }
+        };
         self.translated.item_names.insert(id, name);
         Some(id)
     }
@@ -1121,20 +1128,17 @@ impl<'tcx> TranslateCtx<'tcx> {
             return false;
         };
         let _guard = charon_lib::timing::scope("cache-load");
-        let parsed = std::panic::catch_unwind(|| {
+        let parsed = (|| {
             let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
             if !head.has_body {
-                return Some((head, None));
+                return None;
             }
             let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
             let rest = rest.get(4 + name_len..)?;
-            let (refs, rest) = postcard::take_from_bytes::<Vec<CachedRef>>(rest).ok()?;
-            let state = DedupSerializer::default();
-            let mut de = postcard::Deserializer::from_bytes(rest);
-            let body = CachedBody::deserialize_state(&state, &mut de).ok()?;
-            Some((head, Some((refs, body))))
-        });
-        let Ok(Some((head, Some((refs, CachedBody { item, effects }))))) = parsed else {
+            let (refs, body) = postcard::take_from_bytes::<Vec<CachedRef>>(rest).ok()?;
+            Some((head, refs, body))
+        })();
+        let Some((head, refs, body)) = parsed else {
             cache.stats.misses += 1;
             return false;
         };
@@ -1156,14 +1160,16 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         id_map.insert(head.self_id, id);
         id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
-        let file_map = self.cache_register_files(head.files);
+        let files = self.cache_register_files(head.files);
+        let Some(CachedBody { item, effects }) = decode_entry_value(body, &id_map, &files) else {
+            self.cache.as_mut().unwrap().recorders.pop();
+            self.cache.as_mut().unwrap().stats.misses += 1;
+            return false;
+        };
 
-        // Rename the ids.
-        let mut remap = RemapIds::new(&id_map, &file_map);
         macro_rules! finish {
             ($decl:expr, $slots:ident) => {{
                 let mut decl = $decl;
-                let _ = decl.drive_mut(&mut remap);
                 decl.item_meta.name = name;
                 self.translated
                     .$slots
@@ -1178,14 +1184,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             CachedItem::TraitImpl(decl) => finish!(decl, trait_impls),
         }
 
-        for mut effect in effects {
-            match &mut effect {
-                Effect::RegisterAssocItems(t) | Effect::MarkMethodUsed(t, _) => remap.map(t),
-                Effect::ImplVTable(i, vtable) | Effect::FillLazyVTable(i, vtable) => {
-                    remap.map(i);
-                    let _ = vtable.drive_mut(&mut remap);
-                }
-            }
+        for effect in effects {
             match effect {
                 Effect::RegisterAssocItems(trait_id) => {
                     let trait_def_id = self.source_of(trait_id.into()).def_id().clone();
@@ -1544,38 +1543,57 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 }
 
+/// Decode a value of an entry, with the ids of this session: `items` maps the item ids of the entry
+/// to ours, and its k-th file is `files[k]`.
+fn decode_entry_value<T: for<'de> DeserializeState<'de, DedupSerializer>>(
+    bytes: &[u8],
+    items: &HashMap<ItemId, ItemId>,
+    files: &[FileId],
+) -> Option<T> {
+    struct EntryIdRemap<'a> {
+        items: &'a HashMap<ItemId, ItemId>,
+        files: &'a [FileId],
+        /// Whether we met an id that the entry doesn't know of.
+        unknown: Cell<bool>,
+    }
+    impl IdRemap for EntryIdRemap<'_> {
+        fn item_id(&self, id: ItemId) -> ItemId {
+            let new = self.items.get(&id).copied();
+            self.unknown.set(self.unknown.get() || new.is_none());
+            new.unwrap_or(id)
+        }
+        fn file_id(&self, id: FileId) -> FileId {
+            // Placeholder spans in the local crate root, see `CheckStoredFiles`.
+            if id == FileId::ZERO {
+                return id;
+            }
+            let new = (id.index().checked_sub(STORED_FILE_IDS_START))
+                .and_then(|k| self.files.get(k).copied());
+            self.unknown.set(self.unknown.get() || new.is_none());
+            new.unwrap_or(id)
+        }
+    }
+    let remap = EntryIdRemap {
+        items,
+        files,
+        unknown: Cell::new(false),
+    };
+    let value = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        with_id_remap(&remap, || {
+            let state = DedupSerializer::default();
+            T::deserialize_state(&state, &mut postcard::Deserializer::from_bytes(bytes)).ok()
+        })
+    }));
+    match value {
+        Ok(Some(value)) if !remap.unknown.get() => Some(value),
+        _ => None,
+    }
+}
+
 /// In stored items, the k-th file of the entry is `FileId::from(STORED_FILE_IDS_START + k)`. This
 /// distinguishes them from the ids of the session: hash-consing may give us values of the session
 /// when we load ours, because the equality of `TraitParam`s ignores their spans.
 const STORED_FILE_IDS_START: usize = 0xC000;
-
-#[derive(derive_generic_visitor::Visitor)]
-struct RemapIds<'a> {
-    id_map: &'a HashMap<ItemId, ItemId>,
-    file_map: &'a [FileId],
-    /// The renaming doesn't depend on where values occur.
-    memo: HashConsMemo<()>,
-}
-
-impl<'a> RemapIds<'a> {
-    fn new(id_map: &'a HashMap<ItemId, ItemId>, file_map: &'a [FileId]) -> Self {
-        Self {
-            id_map,
-            file_map,
-            memo: Default::default(),
-        }
-    }
-}
-
-impl VisitorWithMemo for RemapIds<'_> {
-    type MemoContext = ();
-    fn memo(&mut self) -> &mut HashConsMemo<()> {
-        &mut self.memo
-    }
-    fn memo_context(&self) -> Option<()> {
-        Some(())
-    }
-}
 
 /// Renumber the files of an item to be stored.
 #[derive(derive_generic_visitor::Visitor)]
@@ -1613,43 +1631,6 @@ impl VisitAst for CheckStoredFiles {
     }
 }
 
-impl RemapIds<'_> {
-    fn map<Id: Copy + Into<ItemId> + TryFrom<ItemId>>(&self, id: &mut Id) {
-        let old: ItemId = (*id).into();
-        *id = self.id_map[&old].try_into().ok().unwrap();
-    }
-}
-
-impl VisitAstMut for RemapIds<'_> {
-    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
-        &mut self,
-        value: &mut HashConsed<WithCachedTypeInfo<T>>,
-    ) -> ControlFlow<Self::Break> {
-        self.visit_memoized(value)
-    }
-    fn enter_file_id(&mut self, id: &mut FileId) {
-        // Other ids come from values of the session that are equal to the ones we loaded: these
-        // spans don't matter.
-        if let Some(index) = id.index().checked_sub(STORED_FILE_IDS_START) {
-            *id = self.file_map[index];
-        }
-    }
-    fn enter_type_decl_id(&mut self, id: &mut TypeDeclId) {
-        self.map(id)
-    }
-    fn enter_fun_decl_id(&mut self, id: &mut FunDeclId) {
-        self.map(id)
-    }
-    fn enter_global_decl_id(&mut self, id: &mut GlobalDeclId) {
-        self.map(id)
-    }
-    fn enter_trait_decl_id(&mut self, id: &mut TraitDeclId) {
-        self.map(id)
-    }
-    fn enter_trait_impl_id(&mut self, id: &mut TraitImplId) {
-        self.map(id)
-    }
-}
 
 #[derive(derive_generic_visitor::Visitor)]
 struct CollectIds {

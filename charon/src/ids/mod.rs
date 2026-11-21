@@ -19,6 +19,10 @@ macro_rules! generate_index_type {
         $crate::generate_index_type!($name, stringify!($name));
     };
     ($name:ident, $pretty_name:expr) => {
+        $crate::generate_index_type!($name, $pretty_name, remap = std::convert::identity);
+    };
+    // `remap` is applied to every deserialized id, see `crate::ast::id_remap`.
+    ($name:ident, $pretty_name:expr, remap = $remap:path) => {
         index_vec::define_index_type! {
             #[derive(Default, derive_generic_visitor::Drive, derive_generic_visitor::DriveMut, derive_generic_visitor::DriveTwo)]
             pub struct $name = u32;
@@ -47,14 +51,24 @@ macro_rules! generate_index_type {
             }
         }
 
+        impl serde::Serialize for $name {
+            fn serialize<S: serde::ser::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                serde::Serialize::serialize(&self.index(), serializer)
+            }
+        }
+        impl<'de> serde::Deserialize<'de> for $name {
+            fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                let index = <usize as serde::Deserialize>::deserialize(deserializer)?;
+                Ok($remap(Self::from_usize(index)))
+            }
+        }
         impl<State: ?Sized> serde_state::SerializeState<State> for $name {
             fn serialize_state<S: serde::ser::Serializer>(
                 &self,
                 _state: &State,
                 serializer: S,
             ) -> Result<S::Ok, S::Error> {
-                use serde::Serialize;
-                self.index().serialize(serializer)
+                serde::Serialize::serialize(self, serializer)
             }
         }
         impl<'de, State: ?Sized> serde_state::DeserializeState<'de, State> for $name {
@@ -62,8 +76,7 @@ macro_rules! generate_index_type {
                 _state: &State,
                 deserializer: D,
             ) -> Result<Self, D::Error> {
-                use serde::Deserialize;
-                usize::deserialize(deserializer).map(Self::from_usize)
+                <Self as serde::Deserialize>::deserialize(deserializer)
             }
         }
     };

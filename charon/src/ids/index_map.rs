@@ -493,7 +493,7 @@ impl<I: Idx, T: Serialize> Serialize for IndexMap<I, T> {
     where
         S: Serializer,
     {
-        self.vector.serialize(serializer)
+        self.vector.as_vec().serialize(serializer)
     }
 }
 
@@ -511,8 +511,9 @@ impl<'de, I: Idx, T: Deserialize<'de>> Deserialize<'de> for IndexMap<I, T> {
     where
         D: serde::Deserializer<'de>,
     {
+        let vec: Vec<Option<T>> = Deserialize::deserialize(deserializer)?;
         let mut ret = Self {
-            vector: Deserialize::deserialize(deserializer)?,
+            vector: index_vec::IndexVec::from(vec),
             elem_count: 0,
         };
         ret.elem_count = ret.iter().count();
