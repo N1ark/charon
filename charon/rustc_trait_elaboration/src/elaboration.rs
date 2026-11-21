@@ -4,6 +4,7 @@ use crate::*;
 use itertools::{Either, Itertools};
 use std::collections::{HashMap, hash_map::Entry};
 
+use rustc_attr_ir::LangItem;
 use rustc_hir::def_id::DefId;
 use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty::print::with_no_trimmed_paths;
@@ -495,7 +496,31 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             })
         };
 
-        let impl_source = shallow_resolve_trait_ref(tcx, self.typing_env.param_env, erased_tref);
+        // Skip rustc's trait selection when we know its answer. A type parameter can only be
+        // `Sized` or `MetaSized` because of a where-clause. Every type implements `Destruct` with a
+        // builtin impl, which only where-clauses and alias bounds can take precedence over.
+        let self_ty = erased_tref.self_ty().skip_binder();
+        let impl_source = if let ty::Param(_) = self_ty.kind()
+            && matches!(
+                tcx.as_lang_item(trait_def_id),
+                Some(LangItem::Sized | LangItem::MetaSized)
+            )
+            && self.candidates.contains_key(&erased_tref.upcast(tcx))
+        {
+            Ok(ImplSource::Param(Default::default()))
+        } else if trait_def_id == destruct_trait
+            && !matches!(self_ty.kind(), ty::Alias(..))
+            && !erased_tref.references_error()
+            && !self.typing_env.param_env.caller_bounds().any(|clause| {
+                clause
+                    .as_trait_clause()
+                    .is_some_and(|clause| clause.skip_binder().trait_ref.def_id == destruct_trait)
+            })
+        {
+            Ok(ImplSource::Builtin(BuiltinImplSource::Misc, Default::default()))
+        } else {
+            shallow_resolve_trait_ref(tcx, self.typing_env.param_env, erased_tref)
+        };
         let atom = match impl_source {
             Ok(ImplSource::UserDefined(ImplSourceUserDefinedData {
                 impl_def_id,
