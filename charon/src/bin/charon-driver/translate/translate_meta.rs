@@ -673,7 +673,61 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     pub(crate) fn opacity_for_name(&self, name: &Name) -> ItemOpacity {
-        self.options.opacity_for_name(&self.translated, name)
+        // The patterns that hide the impls of a trait match an impl by the trait rustc gives for
+        // it, as the impl may not be translated yet.
+        let in_hidden_impl = std::cell::OnceCell::new();
+        self.options.opacity_for_name_with(name, |pat| {
+            if self.options.hides_trait_impls(pat) {
+                *in_hidden_impl.get_or_init(|| self.is_in_impl_of_hidden_trait(name))
+            } else {
+                pat.matches(&self.translated, name)
+            }
+        })
+    }
+
+    /// Whether the innermost impl of this name is that of a trait of
+    /// `TranslateOptions::hide_traits`.
+    fn is_in_impl_of_hidden_trait(&self, name: &Name) -> bool {
+        let Some(PathElem::Impl(ImplElem::Trait(impl_id))) =
+            name.name.iter().rfind(|elem| elem.is_impl())
+        else {
+            return false;
+        };
+        let src = match &self.par {
+            Some(par) => par.reverse_ids.get(&(*impl_id).into()),
+            None => self.reverse_id_map.get(&(*impl_id).into()).cloned(),
+        };
+        let Some(src) = src else {
+            return false;
+        };
+        let TransItemSourceKind::TraitImpl(kind) = src.kind else {
+            return false;
+        };
+        let Some(def_id) = src.def_id().as_real_def_id() else {
+            return false;
+        };
+        let tcx = self.tcx;
+        let trait_id = match kind {
+            TransImplSource::Normal => tcx.impl_trait_ref(def_id).skip_binder().def_id,
+            TransImplSource::TraitAlias | TransImplSource::Marker => def_id,
+            TransImplSource::Virtual(VirtualImplKind::Destruct) => {
+                tcx.require_lang_item(rustc_hir::attrs::LangItem::Destruct, rustc_span::DUMMY_SP)
+            }
+            TransImplSource::Virtual(VirtualImplKind::Callable(kind)) => {
+                let lang_item = match kind {
+                    ClosureKind::Fn => rustc_hir::attrs::LangItem::Fn,
+                    ClosureKind::FnMut => rustc_hir::attrs::LangItem::FnMut,
+                    ClosureKind::FnOnce => rustc_hir::attrs::LangItem::FnOnce,
+                };
+                tcx.require_lang_item(lang_item, rustc_span::DUMMY_SP)
+            }
+        };
+        self.hax_state
+            .base()
+            .elab_ctx
+            .bounds_options()
+            .remove_traits
+            .contains(&trait_id)
     }
 }
 

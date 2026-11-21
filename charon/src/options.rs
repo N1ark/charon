@@ -1107,6 +1107,15 @@ impl TranslateOptions {
     /// `#[charon::opaque]` annotations, only cli parameters.
     #[tracing::instrument(skip(self, krate), ret)]
     pub fn opacity_for_name(&self, krate: &TranslatedCrate, name: &Name) -> ItemOpacity {
+        self.opacity_for_name_with(name, |pat| pat.matches(krate, name))
+    }
+
+    /// Like `opacity_for_name`, with `matches` telling which patterns match the name.
+    pub fn opacity_for_name_with(
+        &self,
+        name: &Name,
+        matches: impl Fn(&NamePattern) -> bool,
+    ) -> ItemOpacity {
         // Builtin names (str, tuples) are always transparent.
         if name.is_builtin() {
             return ItemOpacity::Transparent;
@@ -1117,9 +1126,16 @@ impl TranslateOptions {
         let (_, opacity) = self
             .item_opacities
             .iter()
-            .filter(|(pat, _)| pat.matches(krate, name))
+            .filter(|(pat, _)| matches(pat))
             .max()
             .unwrap();
         *opacity
+    }
+
+    /// Whether this is one of the patterns `{impl Trait for _}` that hide the impls of the traits
+    /// of `hide_traits`.
+    pub fn hides_trait_impls(&self, pat: &NamePattern) -> bool {
+        use crate::name_matcher::PatElem;
+        matches!(pat.elems.as_slice(), [PatElem::Impl(trait_pat)] if self.hide_traits.contains(trait_pat))
     }
 }
