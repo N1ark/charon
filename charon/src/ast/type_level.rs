@@ -71,8 +71,30 @@ pub struct TraitTypeConstraint {
 #[derive(Drive, DriveMut, DriveTwo)]
 pub struct BoxedArgs(pub HashConsed<WithCachedTypeInfo<GenericArgs>>);
 
+/// The number of erased regions up to which `BoxedArgs::new` keeps the interned arguments made only
+/// of erased regions.
+const ERASED_ARGS_CACHED: usize = 8;
+
+thread_local! {
+    /// The interned arguments made only of `n` erased regions: they're very common (e.g. the
+    /// arguments of monomorphic items), and interning them each time is costly.
+    static ERASED_ARGS: [std::cell::OnceCell<BoxedArgs>; ERASED_ARGS_CACHED] = Default::default();
+}
+
 impl BoxedArgs {
     pub fn new(args: GenericArgs) -> Self {
+        if args.regions.len() < ERASED_ARGS_CACHED
+            && args.types.is_empty()
+            && args.const_generics.is_empty()
+            && args.trait_refs.is_empty()
+            && args.regions.iter().all(|r| matches!(r, Region::Erased))
+        {
+            return ERASED_ARGS.with(|cache| {
+                cache[args.regions.len()]
+                    .get_or_init(|| BoxedArgs(HashConsed::new(WithCachedTypeInfo::new(args))))
+                    .clone()
+            });
+        }
         BoxedArgs(HashConsed::new(WithCachedTypeInfo::new(args)))
     }
 

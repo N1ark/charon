@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 /// Whether timing is enabled at all.
 static SETTING: LazyLock<Option<String>> = LazyLock::new(|| std::env::var("CHARON_TIMINGS").ok());
 
+#[inline]
 pub fn enabled() -> bool {
     SETTING.is_some()
 }
@@ -52,21 +53,28 @@ pub struct Guard {
 }
 
 /// Time the given scope, if timings are enabled.
+#[inline]
 pub fn scope(name: &'static str) -> Option<Guard> {
     scope_with(name, None)
 }
 
 /// Same as [`scope`] but allows refining the name dynamically.
+#[inline]
 pub fn scope_with(name: &'static str, suffix: Option<String>) -> Option<Guard> {
     if !enabled() {
         return None;
     }
+    Some(start_scope(name, suffix))
+}
+
+#[inline(never)]
+fn start_scope(name: &'static str, suffix: Option<String>) -> Guard {
     NESTED.with_borrow_mut(|stack| stack.push(Duration::ZERO));
-    Some(Guard {
+    Guard {
         name,
         suffix,
         start: Instant::now(),
-    })
+    }
 }
 
 impl Drop for Guard {
@@ -99,6 +107,7 @@ impl Drop for Guard {
 }
 
 /// Same as [`scope_with`] but only computes the suffix if timings are enabled.
+#[inline]
 pub fn scope_lazy(name: &'static str, suffix: impl FnOnce() -> String) -> Option<Guard> {
     if !enabled() {
         return None;
@@ -107,6 +116,7 @@ pub fn scope_lazy(name: &'static str, suffix: impl FnOnce() -> String) -> Option
 }
 
 /// Time the given closure.
+#[inline]
 pub fn time<T>(name: &'static str, f: impl FnOnce() -> T) -> T {
     let _guard = scope(name);
     f()

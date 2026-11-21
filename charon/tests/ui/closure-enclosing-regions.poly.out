@@ -28,4 +28,4 @@ error: Unexpected error: could not find the late-bound region variable LateParam
 52 |             let late: &'late T = y;
    |                       ^^^^^^^^
 
-ERROR Charon failed to translate this code (10 errors)
+ERROR Charon failed to translate this code (7 errors)

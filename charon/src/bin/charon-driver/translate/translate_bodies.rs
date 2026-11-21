@@ -818,10 +818,13 @@ impl BodyTransformCtx for BlockTransCtx<'_, '_, '_, '_> {
 
 impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
     fn missing_ptr_metadata() -> Operand {
-        Operand::Const(ConstantExpr::new(
-            ConstantExprKind::Opaque("Missing metadata".to_string()),
-            Ty::mk_unit(),
-        ))
+        static MISSING: std::sync::LazyLock<ConstantExpr> = std::sync::LazyLock::new(|| {
+            ConstantExpr::new(
+                ConstantExprKind::Opaque("Missing metadata".to_string()),
+                Ty::mk_unit(),
+            )
+        });
+        Operand::Const(MISSING.clone())
     }
 
     fn translate_thread_local_ref(

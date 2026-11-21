@@ -1371,12 +1371,14 @@ pub fn translate<'tcx>(
         cached_file_ids: Default::default(),
         last_source_file: Default::default(),
         cached_names: Default::default(),
+        cached_attr_infos: Default::default(),
         cached_item_metas: Default::default(),
         exported_fns: Default::default(),
         lt_mutability_computer: Default::default(),
         monomorphic_layouts: Default::default(),
         mono_type_cache: Default::default(),
         cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
+        extra_early_regions_cache: Default::default(),
         intrinsic_def_ids: Default::default(),
     };
     ctx.register_target_info();

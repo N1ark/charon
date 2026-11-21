@@ -190,8 +190,9 @@ fn translate_user_annotation<'tcx>(
     };
     let ty_constraints: hax::Binder<(Vec<hax::Ty<'tcx>>, Vec<hax::Clause<'tcx>>)> =
         ctx.catch_sinto(span, &ty_constraints)?;
-    let bound_constraints =
-        ctx.translate_region_binder(span, &ty_constraints, |ctx, (tys, clauses)| {
+    let translate_constraints =
+        |ctx: &mut ItemTransCtx<'tcx, '_>,
+         (tys, clauses): &(Vec<hax::Ty<'tcx>>, Vec<hax::Clause<'tcx>>)| {
             let tys: Vec<Ty> = tys
                 .iter()
                 .map(|ty| ctx.translate_ty(span, ty))
@@ -214,9 +215,17 @@ fn translate_user_annotation<'tcx>(
                 outlives.push(pred.no_bound_vars());
             }
             Ok((tys, outlives))
-        })?;
-    // Instantiate the binder with fresh body regions.
-    let (tys, outlives) = ctx.erase_region_binder(bound_constraints);
+        };
+    let (tys, outlives) = if ty_constraints.bound_vars.is_empty() {
+        // Instantiating an empty binder gives the same as translating outside of it, where we can
+        // use the type caches of the current binder.
+        translate_constraints(ctx, ty_constraints.hax_skip_binder_ref())?
+    } else {
+        let bound_constraints =
+            ctx.translate_region_binder(span, &ty_constraints, translate_constraints)?;
+        // Instantiate the binder with fresh body regions.
+        ctx.erase_region_binder(bound_constraints)
+    };
     let outlives = outlives.iter().flat_map(|pred| pred.normalize()).collect();
     Ok((tys, outlives))
 }

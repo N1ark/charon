@@ -151,6 +151,8 @@ pub struct TranslateCtx<'tcx> {
     pub last_source_file: Option<(Arc<rustc_span::SourceFile>, FileId)>,
     /// Cache the names to compute them only once each.
     pub cached_names: HashMap<RustcItem<'tcx>, Name>,
+    /// The attributes of each definition, computed once for all its instances.
+    pub cached_attr_infos: HashMap<hax::DefId, AttrInfo>,
     /// The `ItemMeta`s whose computation raised errors, to report these only once.
     pub cached_item_metas: HashMap<TransItemSource<'tcx>, ItemMeta>,
     /// The functions that extern functions can link to, by symbol.
@@ -165,6 +167,9 @@ pub struct TranslateCtx<'tcx> {
     pub mono_type_cache: HashMap<hax::Ty<'tcx>, (Ty, Vec<(ItemId, bool)>)>,
     /// The persistent cache of translated items, if enabled.
     pub(crate) cache: Option<super::translate_cache::TranslationCache<'tcx>>,
+    /// The extra early regions of the item references whose regions translate the same
+    /// everywhere, see `recover_extra_early_regions`.
+    pub extra_early_regions_cache: HashMap<(hax::ItemRef<'tcx>, bool), Vec<Region>>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
 }

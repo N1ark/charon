@@ -1016,6 +1016,21 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     pub(crate) fn translate_attr_info(&mut self, def: &hax::FullDef<'tcx>) -> AttrInfo {
+        // The attributes are the same for all the instances of an item in mono mode.
+        if let Some(attr_info) = self.cached_attr_infos.get(def.def_id()) {
+            return attr_info.clone();
+        }
+        let error_count = self.errors.borrow().error_count;
+        let attr_info = self.translate_attr_info_uncached(def);
+        // Keep reporting the errors for each instance.
+        if self.errors.borrow().error_count == error_count {
+            self.cached_attr_infos
+                .insert(def.def_id().clone(), attr_info.clone());
+        }
+        attr_info
+    }
+
+    fn translate_attr_info_uncached(&mut self, def: &hax::FullDef<'tcx>) -> AttrInfo {
         // Default to `false` for impl blocks and closures.
         let public = def.visibility.unwrap_or(false);
         let inline = self.translate_inline(def);

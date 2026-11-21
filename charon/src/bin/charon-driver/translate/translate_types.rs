@@ -619,30 +619,57 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         {
             return Ok(vec![]);
         }
+        // Outside of bodies, regions that are erased or `'static` translate the same everywhere,
+        // so we reuse the result when all the regions are such. The key records which
+        // definitions `hax_def` uses.
+        let key = (
+            item.clone(),
+            self.monomorphize() && !self.item_src.kind.is_for_trait(),
+        );
+        if self.lifetime_freshener.is_none()
+            && let Some(regions) = self.t_ctx.extra_early_regions_cache.get(&key)
+        {
+            return Ok(regions.clone());
+        }
+        let (regions, context_free) = self.recover_extra_early_regions_uncached(span, item)?;
+        if context_free && self.lifetime_freshener.is_none() {
+            self.t_ctx
+                .extra_early_regions_cache
+                .insert(key, regions.clone());
+        }
+        Ok(regions)
+    }
+
+    /// Returns the regions and whether they translate the same in every context.
+    fn recover_extra_early_regions_uncached(
+        &mut self,
+        span: Span,
+        item: &hax::ItemRef<'tcx>,
+    ) -> Result<(Vec<Region>, bool), Error> {
         let def = self.hax_def(item)?;
         let Some(param_env) = def.param_env() else {
-            return Ok(vec![]);
+            return Ok((vec![], true));
         };
         // Fast path: most items don't have extra early regions anywhere up the soft parent chain
         let mut ancestor = def.clone();
         loop {
             let Some(env) = ancestor.param_env() else {
-                return Ok(vec![]);
+                return Ok((vec![], true));
             };
             if !env.extra_early_regions.is_empty() {
                 break;
             }
             let Some(parent) = &env.soft_parent else {
-                return Ok(vec![]);
+                return Ok((vec![], true));
             };
             ancestor = self.hax_def(parent)?;
         }
         let (parent, actual, template) = item.soft_typing_parent(self.hax_state_with_id());
         // Recover parent arguments, in the same order as `push_generics_for_def`.
-        let mut regions = if let Some(parent) = parent {
-            self.recover_extra_early_regions(span, &parent)?
+        let (mut regions, mut context_free) = if let Some(parent) = parent {
+            self.recover_extra_early_regions_uncached(span, &parent)?
         } else {
-            Vec::new()
+            (Vec::new(), true)
         };
         // See `soft_typing_parent` for details: `template` and `actual` should be the same
         // arguments, except that `template` has placeholder regions corresponding to the items
@@ -667,10 +694,14 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 .get(placeholder)
                 .copied()
                 .unwrap_or(self.tcx.lifetimes.re_erased);
-            let region = self.catch_sinto(span, &region)?;
+            let region: hax::Region = self.catch_sinto(span, &region)?;
+            context_free &= matches!(
+                region.kind,
+                hax::RegionKind::ReErased | hax::RegionKind::ReStatic
+            );
             regions.push(self.translate_region(span, &region)?);
         }
-        Ok(regions)
+        Ok((regions, context_free))
     }
 
     /// Whether Rust treats this type specially, i.e. whether it is a tuple, `str` or `Box`.
@@ -927,9 +958,17 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         let pseudo_input = ty_env.as_query_input(ty);
         let ptr_size = self.translated.the_target_information().target_pointer_size;
 
-        let repr = match &self.poly_hax_def(&item.def_id).ok()?.kind {
-            hax::FullDefKind::Adt(adt) => self.translate_repr_options(adt.repr()),
-            _ => ReprOptions::default(),
+        // We read the representation of an ADT from rustc: its polymorphic definition is costly to
+        // compute in mono mode. Other types have the default representation.
+        let repr = if let Some(def_id) = item.def_id.as_real_def_id()
+            && matches!(
+                item.def_id.kind,
+                hax::DefKind::Struct | hax::DefKind::Enum | hax::DefKind::Union
+            ) {
+            let repr: hax::ReprOptions = hax::SInto::sinto(&tcx.adt_def(def_id).repr(), hax_state);
+            self.translate_repr_options(&repr)
+        } else {
+            ReprOptions::default()
         };
         let ty_layout = match tcx.layout_of(pseudo_input) {
             Ok(layout) => layout,

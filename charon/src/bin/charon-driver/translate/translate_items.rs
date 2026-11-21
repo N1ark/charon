@@ -1366,22 +1366,23 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                         }
                         None => {
                             // Reuse the default method from the trait declaration.
-                            let bound_method = match self.get_or_translate(trait_id.into()) {
+                            let bound_default = match self.get_or_translate(trait_id.into()) {
                                 Ok(ItemRef::TraitDecl(tdecl)) => {
-                                    tdecl.methods.get(trait_method_id).cloned()
+                                    tdecl.methods.get(trait_method_id).map(|method| {
+                                        method.map_ref(|method| {
+                                            method
+                                                .default
+                                                .clone()
+                                                .expect("default method should have a default")
+                                        })
+                                    })
                                 }
                                 _ => None,
                             };
-                            let Some(bound_method) = bound_method else {
+                            let Some(bound_default) = bound_default else {
                                 continue;
                             };
-                            bound_method
-                                .substitute_with_tref(&self_predicate)
-                                .map(|method| {
-                                    method
-                                        .default
-                                        .expect("default method should have a default")
-                                })
+                            bound_default.substitute_with_tref(&self_predicate)
                         }
                     };
 
