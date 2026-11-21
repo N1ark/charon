@@ -399,7 +399,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 }
                 TrVTableField::Method(item_id, sig, _) => {
                     let item_name = self
-                        .translated
+                        .t_ctx
                         .assoc_item_name(self_trait_ref.trait_id(), *item_id);
                     let field_name = format!("method_{}", item_name.0);
                     // In Mono mode, method shims are opaque function pointers.
@@ -742,9 +742,12 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         // This depends on the order of translation.
         match self.item_id.as_item() {
-            Some(ItemId::TraitImpl(impl_id)) => self.t_ctx.cache_record_effect(|| {
-                super::translate_cache::Effect::ImplVTable(impl_id, vtable.clone())
-            }),
+            Some(ItemId::TraitImpl(impl_id)) => {
+                self.t_ctx.cache_record_effect(|| {
+                    super::translate_cache::Effect::ImplVTable(impl_id, vtable.clone())
+                });
+                self.t_ctx.log_impl_vtable(impl_id, &vtable);
+            }
             _ => self.t_ctx.cache_taint("vtable of another impl"),
         }
         if !self.t_ctx.is_translated(vtable.id.into()) {
@@ -849,6 +852,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             self.t_ctx.cache_record_effect(|| {
                 super::translate_cache::Effect::FillLazyVTable(impl_id, vtable_ref.clone())
             });
+            self.t_ctx.log_fill_lazy_vtable(impl_id, &vtable_ref);
             if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
                 && timpl.vtable.is_lazy()
             {

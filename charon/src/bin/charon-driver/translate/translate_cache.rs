@@ -579,6 +579,8 @@ pub(crate) enum MemoKey<'tcx> {
     Ty(hax::Ty<'tcx>),
     /// See `cached_item_metas`.
     ItemMeta(TransItemSource<'tcx>),
+    /// See `cached_attr_infos`.
+    AttrInfo(hax::DefId),
 }
 
 impl Recorder {
@@ -961,6 +963,9 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// The source of this item, decoding it if it was registered from the cache without it.
     pub(crate) fn source_of(&mut self, id: ItemId) -> TransItemSource<'tcx> {
+        if let Some(par) = &self.par {
+            return par.reverse_ids.get(&id).unwrap();
+        }
         if let Some(src) = self.reverse_id_map.get(&id) {
             return src.clone();
         }
@@ -1400,6 +1405,7 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Start recording a computation memoized across items.
     pub(crate) fn cache_start_memo(&mut self) {
         self.cache_push_recorder(true);
+        self.log_start_memo();
     }
 
     fn cache_push_recorder(&mut self, memo: bool) {
@@ -1418,10 +1424,12 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Whether we're recording a computation memoized across items. Such a recording doesn't see
     /// what reusing a value from a cache of the current item skips, so it shouldn't reuse them.
     pub(crate) fn cache_recording_memo(&self) -> bool {
-        self.cache
-            .as_ref()
-            .and_then(|cache| cache.recorders.last())
-            .is_some_and(|recorder| recorder.memo)
+        self.log_recording_memo()
+            || self
+                .cache
+                .as_ref()
+                .and_then(|cache| cache.recorders.last())
+                .is_some_and(|recorder| recorder.memo)
     }
 
     /// Record that we reuse the translation of `hax_ty` from the cache of the current binder. The
@@ -1442,16 +1450,13 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// Finish recording a computation whose result is memoized for `item`: we record what it did
     /// again when we reuse its result.
-    pub(crate) fn cache_finish_memo(&mut self, key: impl FnOnce() -> MemoKey<'tcx>) {
+    pub(crate) fn cache_finish_memo(&mut self, key: impl Fn() -> MemoKey<'tcx>) {
         self.cache_finish_memo_if(true, key)
     }
 
     /// Like `cache_finish_memo`, for a computation whose result is only memoized if `memoized`.
-    pub(crate) fn cache_finish_memo_if(
-        &mut self,
-        memoized: bool,
-        key: impl FnOnce() -> MemoKey<'tcx>,
-    ) {
+    pub(crate) fn cache_finish_memo_if(&mut self, memoized: bool, key: impl Fn() -> MemoKey<'tcx>) {
+        self.log_finish_memo(memoized, &key);
         if let Some(cache) = &mut self.cache {
             let recorder = cache.recorders.pop().unwrap();
             if let Some(parent) = cache.recorders.last_mut() {
@@ -1464,7 +1469,8 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     /// Record what the memoized computation for `key` did, as we reuse its result.
-    pub(crate) fn cache_replay_memo(&mut self, key: impl FnOnce() -> MemoKey<'tcx>) {
+    pub(crate) fn cache_replay_memo(&mut self, key: impl Fn() -> MemoKey<'tcx>) {
+        self.log_replay_memo(&key);
         if let Some(cache) = &mut self.cache
             && let Some(memo) = cache.memos.get(&key())
             && let Some(recorder) = cache.recorders.last_mut()

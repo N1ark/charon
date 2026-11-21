@@ -365,10 +365,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         visitor
             .items
             .into_iter()
-            .filter_map(|id| {
-                let src = self.t_ctx.reverse_id_map.get(&id)?;
-                Some((id, src.def_id().is_local()))
-            })
+            .filter_map(|id| Some((id, self.t_ctx.is_local_item(id)?)))
             .collect()
     }
 

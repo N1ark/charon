@@ -327,7 +327,7 @@ pub struct DepSource {
 
 /// For tracing error dependencies.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum DepNode {
+pub enum DepNode {
     External(ItemId),
     /// We use the span information only for local references
     Local(ItemId, Span),
@@ -394,6 +394,27 @@ pub struct ErrorCtx {
     /// Hashes of the diagnostics displayed so far (span, message and level), to display each only
     /// once: passes can run into the same problem many times at the same place.
     displayed: HashSet<u64>,
+    /// If set, errors and dependencies are recorded here instead of being reported, to be replayed
+    /// later in another order with [`ErrorCtx::replay_error`] and [`ErrorCtx::insert_dep_edge`].
+    pub recording: Option<ErrorRecording>,
+}
+
+/// The errors and dependencies an [`ErrorCtx`] recorded, in order.
+#[derive(Default)]
+pub struct ErrorRecording {
+    pub errors: Vec<RecordedError>,
+    pub dep_edges: Vec<(ItemId, DepNode)>,
+    /// The number of errors recorded, which `error_count` counts too.
+    pub count: usize,
+}
+
+/// An error, with the context it was raised in.
+pub struct RecordedError {
+    pub span: Span,
+    pub msg: String,
+    pub level: Level<'static>,
+    pub def_id: Option<ItemId>,
+    pub def_id_is_local: bool,
 }
 
 /// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes
@@ -502,6 +523,7 @@ impl ErrorCtx {
             error_count: 0,
             deferred_output: None,
             displayed: HashSet::default(),
+            recording: None,
         }
     }
 
@@ -560,8 +582,23 @@ impl ErrorCtx {
         krate: &TranslatedCrate,
         span: Span,
         msg: &str,
-        level: Level,
+        level: Level<'static>,
     ) -> Error {
+        if let Some(recording) = &mut self.recording {
+            recording.errors.push(RecordedError {
+                span,
+                msg: msg.to_string(),
+                level,
+                def_id: self.def_id,
+                def_id_is_local: self.def_id_is_local,
+            });
+            recording.count += 1;
+            self.error_count += 1;
+            if let Some(id) = self.def_id {
+                self.items_with_errors.insert(id);
+            }
+            return Error::new(span, msg.to_string());
+        }
         self.span_err_rendered(krate, span, msg, level, None)
     }
 
@@ -619,8 +656,33 @@ impl ErrorCtx {
                 Some(span) => DepNode::Local(src.src_id, span),
                 None => DepNode::External(src.src_id),
             };
-            self.external_dep_graph.insert_edge(item_id, tgt_node)
+            match &mut self.recording {
+                Some(recording) => recording.dep_edges.push((item_id, tgt_node)),
+                None => self.external_dep_graph.insert_edge(item_id, tgt_node),
+            }
         }
+    }
+
+    /// Report a recorded error, as if it was raised now.
+    pub fn replay_error(&mut self, krate: &TranslatedCrate, error: RecordedError) {
+        self.def_id = error.def_id;
+        self.def_id_is_local = error.def_id_is_local;
+        self.span_err(krate, error.span, &error.msg, error.level);
+    }
+
+    /// Insert a recorded dependency edge.
+    pub fn insert_dep_edge(&mut self, from: ItemId, to: DepNode) {
+        self.external_dep_graph.insert_edge(from, to)
+    }
+
+    /// Forget that this item had errors, e.g. to translate it again.
+    pub fn forget_item_errors(&mut self, id: ItemId) {
+        self.items_with_errors.remove(&id);
+    }
+
+    /// Forget which items had errors, e.g. to replay the errors.
+    pub fn clear_items_with_errors(&mut self) {
+        self.items_with_errors.clear();
     }
 
     /// In case errors happened when extracting the definitions coming from the external

@@ -229,8 +229,8 @@ struct Requests<'tcx> {
     ready: usize,
     /// The number of threads waiting on `work_available`.
     workers_waiting: usize,
-    /// Whether the translation waits on `body_ready`.
-    translation_waiting: bool,
+    /// The number of translation threads waiting on `body_ready`.
+    translations_waiting: usize,
     translation_done: bool,
 }
 
@@ -288,9 +288,9 @@ impl<'tcx> BodyRequests<'tcx> {
         loop {
             match requests.prepared.get(&request)? {
                 Prepared::InProgress => {
-                    requests.translation_waiting = true;
+                    requests.translations_waiting += 1;
                     requests = self.body_ready.wait(requests).unwrap();
-                    requests.translation_waiting = false;
+                    requests.translations_waiting -= 1;
                     continue;
                 }
                 Prepared::Queued => {}
@@ -362,7 +362,9 @@ impl<'tcx> BodyRequests<'tcx> {
                 requests.workers_waiting -= 1;
             }
         };
-        let body = match request {
+        // Rustc may run other jobs on this thread while computing the body; they must not be
+        // translation workers, which may wait for this very body.
+        let body = crate::translate::translate_par::without_translation_jobs(|| match request {
             BodyRequest::Local(def_id) => {
                 compute_mir(tcx, level, def_id);
                 Some(None)
@@ -378,13 +380,13 @@ impl<'tcx> BodyRequests<'tcx> {
                 }))
                 .ok()
             }),
-        };
+        });
         let requests = &mut *self.requests.lock().unwrap();
         if let Some(prepared) = requests.prepared.get_mut(&request) {
             *prepared = Prepared::Ready(body);
             requests.ready += 1;
         }
-        if requests.translation_waiting {
+        if requests.translations_waiting != 0 {
             self.body_ready.notify_all();
         }
         true
@@ -511,7 +513,10 @@ pub fn run_rustc_driver() -> Result<Option<(TransformOutput, CliOpts)>, CharonFa
         // using its evaluation cache, which makes our many trait resolutions much slower.
         if options.old_trait_solver
             && !compiler_args.iter().any(|arg| arg.contains("next-solver"))
-            && !options.rustc_args.iter().any(|arg| arg.contains("next-solver"))
+            && !options
+                .rustc_args
+                .iter()
+                .any(|arg| arg.contains("next-solver"))
         {
             compiler_args.push("-Znext-solver=coherence".to_owned());
         }

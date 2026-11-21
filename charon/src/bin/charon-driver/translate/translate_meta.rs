@@ -82,6 +82,22 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Register a file if it is a "real" file and was not already registered
     /// `span` must be a span from which we obtained that filename.
     fn register_file(&mut self, filename: FileName, span: rustc_span::Span) -> FileId {
+        if let Some(par) = &self.par {
+            let mut files = par.files.lock();
+            if let Some(id) = files.file_to_id.get(&filename) {
+                return *id;
+            }
+            let source_file = self.tcx.sess.source_map().lookup_source_file(span.lo());
+            let crate_name = self.tcx.crate_name(source_file.cnum).to_string();
+            let id = files.files.push_with(|id| File {
+                id,
+                name: filename.clone(),
+                crate_name,
+                contents: source_file.src.as_deref().cloned(),
+            });
+            files.file_to_id.insert(filename, id);
+            return id;
+        }
         // Lookup the file if it was already registered
         match self.file_to_id.get(&filename) {
             Some(id) => *id,
@@ -268,7 +284,11 @@ impl<'tcx> TranslateCtx<'tcx> {
         if let Some(parent_span) = parent_span {
             let data = self.translate_span_data(source_info.span);
             let parent_span = self.translate_span_data(parent_span);
-            Span::new(parent_span, Some(data))
+            let span = Span::new(parent_span, Some(data));
+            if self.is_logging() {
+                self.log_span(span);
+            }
+            span
         } else {
             self.translate_span(&source_info.span)
         }
@@ -278,20 +298,25 @@ impl<'tcx> TranslateCtx<'tcx> {
         use std::hash::BuildHasher;
         let hash = rustc_hash::FxBuildHasher.hash_one(span);
         let slot = (hash >> (64 - RECENT_SPANS.trailing_zeros())) as usize;
-        if let Some((key, translated)) = self.recent_spans[slot]
+        let translated = if let Some((key, translated)) = self.recent_spans[slot]
             && key == *span
         {
-            return translated;
-        }
-        let translated = match self.cached_spans.get(span) {
-            Some(translated) => *translated,
-            None => {
-                let translated = self.translate_span_uncached(span);
-                self.cached_spans.insert(*span, translated);
-                translated
-            }
+            translated
+        } else {
+            let translated = match self.cached_spans.get(span) {
+                Some(translated) => *translated,
+                None => {
+                    let translated = self.translate_span_uncached(span);
+                    self.cached_spans.insert(*span, translated);
+                    translated
+                }
+            };
+            self.recent_spans[slot] = Some((*span, translated));
+            translated
         };
-        self.recent_spans[slot] = Some((*span, translated));
+        if self.is_logging() {
+            self.log_span(translated);
+        }
         translated
     }
 
@@ -495,6 +520,19 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// `[Ident("test"), Ident("bla"), Ident("Foo"), Impl(impl<T> Ty<T>, Disambiguator(0)), Ident("foo")]`
     /// `[Ident("test"), Ident("bla"), Ident("Foo"), Impl(impl<T> Ty<T>, Disambiguator(1)), Ident("bar")]`
     fn name_for_item(&mut self, item: &RustcItem<'tcx>) -> Result<Name, Error> {
+        if let Some(par) = self.par.clone() {
+            if let Some((name, memo)) = par.cached_names.get(item) {
+                self.log_replay_memo_ref(memo);
+                return Ok(name);
+            }
+            self.cache_start_memo();
+            let name = self.name_for_item_uncached(item);
+            let memo = self.log_finish_shared_memo(name.is_ok());
+            if let Ok(name) = &name {
+                par.cached_names.insert(item.clone(), (name.clone(), memo));
+            }
+            return name;
+        }
         if let Some(name) = self.cached_names.get(item) {
             let name = name.clone();
             self.cache_replay_memo(|| MemoKey::Name(item.clone()));
@@ -533,7 +571,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
 
         trace!("Computed name for `{def_id:?}`: `{name:?}`");
-        self.cached_names.insert(item.clone(), name.clone());
+        if self.par.is_none() {
+            self.cached_names.insert(item.clone(), name.clone());
+        }
         Ok(name)
     }
 
@@ -1026,12 +1066,17 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn translate_attr_info(&mut self, def: &hax::FullDef<'tcx>) -> AttrInfo {
         // The attributes are the same for all the instances of an item in mono mode.
         if let Some(attr_info) = self.cached_attr_infos.get(def.def_id()) {
-            return attr_info.clone();
+            let attr_info = attr_info.clone();
+            self.cache_replay_memo(|| MemoKey::AttrInfo(def.def_id().clone()));
+            return attr_info;
         }
         let error_count = self.errors.borrow().error_count;
+        self.cache_start_memo();
         let attr_info = self.translate_attr_info_uncached(def);
         // Keep reporting the errors for each instance.
-        if self.errors.borrow().error_count == error_count {
+        let cached = self.errors.borrow().error_count == error_count;
+        self.cache_finish_memo_if(cached, || MemoKey::AttrInfo(def.def_id().clone()));
+        if cached {
             self.cached_attr_infos
                 .insert(def.def_id().clone(), attr_info.clone());
         }

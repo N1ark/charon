@@ -179,6 +179,14 @@ pub struct TranslateCtx<'tcx> {
     pub extra_early_regions_cache: HashMap<(hax::ItemRef<'tcx>, bool), Vec<Region>>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
+    /// What translating each item did, if we translate items out of order.
+    pub(crate) log: Option<Box<super::translate_log::TranslationLog<'tcx>>>,
+    /// The state shared with the other workers, if we translate in parallel.
+    pub(crate) par: Option<std::sync::Arc<super::translate_par::ParShared<'tcx>>>,
+    /// The index of this context among the workers; `0` for the main context.
+    pub(crate) worker_index: usize,
+    /// The items this worker translated that aren't in `translated`, see `store_item`.
+    pub(crate) par_items: super::translate_par::ParItems,
 }
 
 /// A set of item ids. Item ids are small indices, so we store the set densely.
@@ -320,7 +328,7 @@ where
 
 impl<'tcx> TranslateCtx<'tcx> {
     /// Span an error and register the error.
-    pub fn span_err(&self, span: Span, msg: &str, level: Level) -> Error {
+    pub fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
         self.errors
             .borrow_mut()
             .span_err(&self.translated, span, msg, level)
@@ -441,7 +449,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         self.options.monomorphize_with_hax && (kind.is_for_trait() || !item.has_non_lt_param)
     }
 
-    pub fn span_err(&self, span: Span, msg: &str, level: Level) -> Error {
+    pub fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
         self.t_ctx.span_err(span, msg, level)
     }
 

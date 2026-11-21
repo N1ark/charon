@@ -39,6 +39,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             return;
         }
         self.cache_start_recording();
+        self.log_start_item(trans_id);
         self.with_def_id(def_id, &trans_id, |mut ctx| {
             let span = ctx.def_span(def_id);
             // Catch cycles
@@ -63,10 +64,14 @@ impl<'tcx> TranslateCtx<'tcx> {
         });
         if let Some(trans_id) = trans_id.as_item()
             && self.errors.borrow().item_has_errors(trans_id)
-            && let Some(mut item) = self.translated.get_item_mut(trans_id)
         {
-            item.item_meta().has_errors = true;
+            if let Some(mut item) = self.translated.get_item_mut(trans_id) {
+                item.item_meta().has_errors = true;
+            } else if let Some(item_meta) = self.par_items.item_meta_mut(trans_id) {
+                item_meta.has_errors = true;
+            }
         }
+        self.log_finish_item();
         self.cache_finish_recording(trans_id);
         // We must be careful not to early-return from this function to not unbalance the stack.
         self.translate_stack.pop();
@@ -87,6 +92,10 @@ impl<'tcx> TranslateCtx<'tcx> {
                 let name = self.translate_name(item_src)?;
                 if let Some(trans_id) = trans_id.as_item() {
                     self.translated.item_names.insert(trans_id, name.clone());
+                    if let Some(par) = &self.par {
+                        par.names.insert(trans_id, name.clone());
+                    }
+                    self.log_named(trans_id);
                 }
                 name
             }
@@ -154,22 +163,22 @@ impl<'tcx> TranslateCtx<'tcx> {
             TransItemSourceKind::Type => {
                 let id = trans_id.expect_item();
                 let ty = bt_ctx.translate_type_decl(id, item_meta, &def)?;
-                self.translated.type_decls.set_slot(id, ty);
+                self.store_item(id, ItemByVal::Type(ty));
             }
             TransItemSourceKind::Fun | TransItemSourceKind::IntrinsicFallback => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_fun_decl(id, item_meta, &def)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
             TransItemSourceKind::Global => {
                 let id = trans_id.expect_item();
                 let global_decl = bt_ctx.translate_global(id, item_meta, &def)?;
-                self.translated.global_decls.set_slot(id, global_decl);
+                self.store_item(id, ItemByVal::Global(global_decl));
             }
             TransItemSourceKind::TraitDecl => {
                 let id = trans_id.expect_item();
                 let trait_decl = bt_ctx.translate_trait_decl(id, item_meta, &def)?;
-                self.translated.trait_decls.set_slot(id, trait_decl);
+                self.store_item(id, ItemByVal::TraitDecl(trait_decl));
             }
             TransItemSourceKind::TraitImpl(kind) => {
                 let id = trans_id.expect_item();
@@ -189,46 +198,79 @@ impl<'tcx> TranslateCtx<'tcx> {
                         unreachable!("marker impls are only used as vtable item sources")
                     }
                 };
-                self.translated.trait_impls.set_slot(id, trait_impl);
+                self.store_item(id, ItemByVal::TraitImpl(trait_impl));
             }
             &TransItemSourceKind::VirtualMethod(VirtualImplKind::Callable(kind)) => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_closure_method(id, item_meta, &def, kind)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
             TransItemSourceKind::ClosureAsFnCast => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_stateless_closure_as_fn(id, item_meta, &def)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
             TransItemSourceKind::VirtualMethod(VirtualImplKind::Destruct) => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_drop_glue_method(id, item_meta, &def)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
             TransItemSourceKind::VTable => {
                 let id = trans_id.expect_item();
                 let ty_decl = bt_ctx.translate_vtable_struct(id, item_meta, &def)?;
-                self.translated.type_decls.set_slot(id, ty_decl);
+                self.store_item(id, ItemByVal::Type(ty_decl));
             }
             &TransItemSourceKind::VTableInstance(impl_kind) => {
                 let id = trans_id.expect_item();
                 let global_decl =
                     bt_ctx.translate_vtable_instance(id, item_meta, &def, impl_kind)?;
-                self.translated.global_decls.set_slot(id, global_decl);
+                self.store_item(id, ItemByVal::Global(global_decl));
             }
             &TransItemSourceKind::VTableMethod(impl_kind) => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_vtable_shim(id, item_meta, &def, impl_kind)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
             &TransItemSourceKind::VTableDropShim(impl_kind) => {
                 let id = trans_id.expect_item();
                 let fun_decl = bt_ctx.translate_vtable_drop_shim(id, item_meta, &def, impl_kind)?;
-                self.translated.fun_decls.set_slot(id, fun_decl);
+                self.store_item(id, ItemByVal::Fun(fun_decl));
             }
         }
         Ok(())
+    }
+
+    /// Store the translation of an item.
+    fn store_item(&mut self, id: impl Into<ItemId>, item: ItemByVal) {
+        let id = id.into();
+        let parallel = self.par.is_some();
+        let krate = &mut self.translated;
+        let items = &mut self.par_items;
+        match item {
+            // While translating in parallel, we keep the items that translation doesn't look up
+            // out of `translated`: its slots for all the ids would take a lot of memory in each
+            // worker.
+            ItemByVal::Fun(decl) if parallel => items.funs.push((*id.as_fun().unwrap(), decl)),
+            ItemByVal::Global(decl) if parallel => {
+                items.globals.push((*id.as_global().unwrap(), decl))
+            }
+            ItemByVal::TraitImpl(decl) if parallel => {
+                items.impls.push((*id.as_trait_impl().unwrap(), decl))
+            }
+            ItemByVal::Type(decl) => krate
+                .type_decls
+                .set_slot_extend(*id.as_type().unwrap(), decl),
+            ItemByVal::Fun(decl) => krate.fun_decls.set_slot_extend(*id.as_fun().unwrap(), decl),
+            ItemByVal::Global(decl) => krate
+                .global_decls
+                .set_slot_extend(*id.as_global().unwrap(), decl),
+            ItemByVal::TraitDecl(decl) => krate
+                .trait_decls
+                .set_slot_extend(*id.as_trait_decl().unwrap(), decl),
+            ItemByVal::TraitImpl(decl) => krate
+                .trait_impls
+                .set_slot_extend(*id.as_trait_impl().unwrap(), decl),
+        }
     }
 
     /// While translating an item you may need the contents of another. Use this to retreive the
@@ -236,6 +278,7 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn get_or_translate(&mut self, id: ItemId) -> Result<ItemRef<'_>, Error> {
         // A replay of the translation in progress must translate this item too.
         self.cache_record_use(id);
+        self.log_use(id);
         self.cache_decode_now(id);
         // We have to call `get_item` a few times because we're running into the classic `Polonius`
         // problem case.
@@ -253,7 +296,14 @@ impl<'tcx> TranslateCtx<'tcx> {
                 // raise_error!(self, span, "Failed to translate item {name}.")
             }
             // Add to avoid the double translation of the same item
-            self.processed.insert(item_source.clone());
+            match &self.par {
+                Some(par) => {
+                    par.queue.lock().processed.insert(item_source.clone());
+                }
+                None => {
+                    self.processed.insert(item_source.clone());
+                }
+            }
         }
         let item = self.translated.get_item(id);
         Ok(item.unwrap())
@@ -269,11 +319,19 @@ impl<'tcx> TranslateCtx<'tcx> {
         fun_id: FunDeclId,
     ) {
         self.cache_taint("method impl");
-        match &mut self.method_status[trait_id][method_id] {
+        self.log_method_impl(trait_id, method_id, fun_id);
+        let par = self.par.clone();
+        let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
+        let method_status = match &mut shared_methods {
+            Some(methods) => &mut methods.method_status,
+            None => &mut self.method_status,
+        };
+        match &mut method_status[trait_id][method_id] {
             MethodStatus::Unused { implementors } => {
                 implementors.insert(fun_id);
             }
             MethodStatus::Used => {
+                drop(shared_methods);
                 self.enqueue_id(fun_id);
             }
         }
@@ -285,10 +343,15 @@ impl<'tcx> TranslateCtx<'tcx> {
         self.cache_record_effect(|| {
             super::translate_cache::Effect::MarkMethodUsed(trait_id, method_id)
         });
-        let old_status = mem::replace(
-            &mut self.method_status[trait_id][method_id],
-            MethodStatus::Used,
-        );
+        self.log_mark_method_used(trait_id, method_id);
+        let par = self.par.clone();
+        let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
+        let method_status = match &mut shared_methods {
+            Some(methods) => &mut methods.method_status,
+            None => &mut self.method_status,
+        };
+        let old_status = mem::replace(&mut method_status[trait_id][method_id], MethodStatus::Used);
+        drop(shared_methods);
         match old_status {
             MethodStatus::Unused { implementors } => {
                 for fun_id in implementors {
@@ -921,7 +984,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 self.translate_drop_glue_method_id(destruct_trait_def_id, trait_decl_id)?;
             self.mark_method_as_used(trait_decl_id, method_id);
             let method = {
-                let method_name = self.translated.assoc_item_name(trait_decl_id, method_id);
+                let method_name = self.t_ctx.assoc_item_name(trait_decl_id, method_id);
                 let mut method_item_meta = ItemMeta::dummy_public(
                     span,
                     item_meta.name.clone(),
@@ -980,9 +1043,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let item_def_id = &hax_item.def_id;
             let item_span = self.def_span(item_def_id);
             let assoc_item_id = self.translate_assoc_item_id(trait_decl_id, item_def_id)?;
-            let item_name = self
-                .translated
-                .assoc_item_name(trait_decl_id, assoc_item_id);
+            let item_name = self.t_ctx.assoc_item_name(trait_decl_id, assoc_item_id);
 
             // In --mono mode, we keep only non-polymorphic items; in not-mono mode, we use the
             // polymorphic item as usual.

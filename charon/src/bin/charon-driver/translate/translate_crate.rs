@@ -592,6 +592,49 @@ impl<'tcx> TranslateCtx<'tcx> {
         let mut is_new = false;
         let item_id = match self.id_map.get(src).copied() {
             Some(tid) => tid,
+            None if let Some(par) = self.par.clone() => {
+                let (trans_id, new) = {
+                    let mut ids = par.ids.shard(src).lock();
+                    match ids.get(src) {
+                        Some(&id) => (id, false),
+                        None => {
+                            let Some(trans_id) = par.reserve_item_id(src.kind) else {
+                                let id = ItemOrModuleId::Module(src.def_id().real_rust_def_id());
+                                return (id, false);
+                            };
+                            ids.insert(src.clone(), trans_id);
+                            (trans_id, true)
+                        }
+                    }
+                };
+                self.id_map.insert(src.clone(), trans_id);
+                // Each worker keeps the names of the items it knows in its crate too, as some
+                // lookups need them.
+                if new {
+                    is_new = true;
+                    par.reverse_ids.insert(trans_id, src.clone());
+                    self.log_start_naming(trans_id);
+                    let name = self.translate_name(src);
+                    let named = name.is_ok();
+                    if let Ok(name) = name {
+                        self.translated.item_names.insert(trans_id, name.clone());
+                        par.names.insert(trans_id, name);
+                    }
+                    self.log_finish_naming(named);
+                } else if let Some(name) = par.names.get(&trans_id) {
+                    self.translated.item_names.insert(trans_id, name);
+                } else {
+                    // Another worker is computing the name, or failed to. Its log records what
+                    // computing the name does.
+                    self.log_start_discarded();
+                    let name = self.translate_name(src);
+                    self.log_finish_discarded();
+                    if let Ok(name) = name {
+                        self.translated.item_names.insert(trans_id, name);
+                    }
+                }
+                trans_id
+            }
             None if let Some(id) = self.cache_find_unbound(src) => id,
             None => {
                 is_new = true;
@@ -606,18 +649,49 @@ impl<'tcx> TranslateCtx<'tcx> {
                 self.reverse_id_map.insert(trans_id, src.clone());
                 // Store the name early so the name matcher can identify paths.
                 self.cache_start_recording();
-                if let Ok(name) = self.translate_name(src) {
+                self.log_start_naming(trans_id);
+                let name = self.translate_name(src);
+                let named = name.is_ok();
+                if let Ok(name) = name {
                     self.translated.item_names.insert(trans_id, name);
                 }
+                self.log_finish_naming(named);
                 self.cache_finish_naming(trans_id);
                 trans_id
             }
         };
         self.cache_record_registration(item_id, src, is_new, false);
+        self.log_registration(item_id);
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, item_id, src.def_id().is_local());
         (ItemOrModuleId::Item(item_id), is_new)
+    }
+
+    /// The name of this associated item of a trait whose items are registered.
+    pub(crate) fn assoc_item_name(
+        &self,
+        trait_id: TraitDeclId,
+        id: impl Into<AssocItemId>,
+    ) -> TraitItemName {
+        let id = id.into();
+        let name_in = |names: &AssocItemNames| match id {
+            AssocItemId::Type(id) => names.types[id],
+            AssocItemId::Method(id) => names.methods[id],
+            AssocItemId::Const(id) => names.consts[id],
+        };
+        match &self.par {
+            Some(par) => name_in(&par.methods.lock().assoc_item_names[trait_id]),
+            None => name_in(&self.translated.assoc_item_names[trait_id]),
+        }
+    }
+
+    /// Whether this registered item is local, if it is registered.
+    pub(crate) fn is_local_item(&self, id: ItemId) -> Option<bool> {
+        match &self.par {
+            Some(par) => Some(par.reverse_ids.get(&id)?.def_id().is_local()),
+            None => Some(self.reverse_id_map.get(&id)?.def_id().is_local()),
+        }
     }
 
     /// Reserve an id for an item of this kind. Returns `None` for kinds we don't translate as items.
@@ -643,6 +717,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         item_src: TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
         let (id, is_new) = self.register(dep_src, &item_src);
+        // Out of order, this may be the enqueuing that comes first.
+        self.log_enqueue(id);
         if let Some(item_id) = id.as_item() {
             self.cache_record_registration(item_id, &item_src, false, true);
             // Each source is translated at most once, so enqueuing it again would do nothing.
@@ -653,7 +729,10 @@ impl<'tcx> TranslateCtx<'tcx> {
         if is_new {
             self.request_body(&item_src);
         }
-        self.items_to_translate.push_back(item_src);
+        match &self.par {
+            Some(par) => par.push(item_src),
+            None => self.items_to_translate.push_back(item_src),
+        }
         id
     }
 
@@ -681,7 +760,16 @@ impl<'tcx> TranslateCtx<'tcx> {
                 _ => return,
             };
             self.body_requests.request(request);
-            self.requested_bodies.insert(item_src.clone(), request);
+            match &self.par {
+                Some(par) => {
+                    par.requested_bodies
+                        .lock()
+                        .insert(item_src.clone(), request);
+                }
+                None => {
+                    self.requested_bodies.insert(item_src.clone(), request);
+                }
+            }
         }
     }
 
@@ -690,7 +778,9 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn enqueue_id(&mut self, id: impl Into<ItemId>) {
         let id = id.into();
         self.cache_taint("enqueue by id");
-        if !self.is_translated(id) {
+        if let Some(par) = &self.par {
+            par.push(par.reverse_ids.get(&id).unwrap());
+        } else if !self.is_translated(id) {
             match self.reverse_id_map.get(&id) {
                 Some(item_src) => self.items_to_translate.push_back(item_src.clone()),
                 None => self.cache_enqueue_unbound(id),
@@ -706,18 +796,43 @@ impl<'tcx> TranslateCtx<'tcx> {
     ) -> Result<(), Error> {
         // Record it even if it's already done: replaying the translation in progress must do it.
         self.cache_record_effect(|| super::translate_cache::Effect::RegisterAssocItems(trait_id));
-        if self.method_status.get(trait_id).is_some() {
+        if let Some(par) = &self.par {
+            if par.methods.lock().method_status.get(trait_id).is_some() {
+                return Ok(());
+            }
+        } else if self.method_status.get(trait_id).is_some() {
             return Ok(());
         }
         let trait_def = self.poly_hax_def(trait_def_id)?;
         let hax::FullDefKind::Trait(t) = trait_def.kind() else {
             unreachable!()
         };
-        let names = self
-            .translated
-            .assoc_item_names
-            .get_or_insert_with(trait_id, Default::default);
-        for item in t.items(&self.hax_state) {
+        let items = t.items(&self.hax_state);
+        let par = self.par.clone();
+        let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
+        if let Some(methods) = &shared_methods
+            && methods.method_status.get(trait_id).is_some()
+        {
+            // Another worker registered them meanwhile.
+            return Ok(());
+        }
+        let (assoc_item_names, assoc_item_id_map, method_status) = match &mut shared_methods {
+            Some(methods) => {
+                let methods = &mut **methods;
+                (
+                    &mut methods.assoc_item_names,
+                    &mut methods.assoc_item_id_map,
+                    &mut methods.method_status,
+                )
+            }
+            None => (
+                &mut self.translated.assoc_item_names,
+                &mut self.assoc_item_id_map,
+                &mut self.method_status,
+            ),
+        };
+        let names = assoc_item_names.get_or_insert_with(trait_id, Default::default);
+        for item in items {
             let name = TraitItemName(
                 item.name
                     .as_ref()
@@ -729,14 +844,14 @@ impl<'tcx> TranslateCtx<'tcx> {
                 hax::AssocKind::Fn { .. } => names.methods.push(name).into(),
                 hax::AssocKind::Const { .. } => names.consts.push(name).into(),
             };
-            self.assoc_item_id_map.insert(item.def_id.clone(), id);
+            assoc_item_id_map.insert(item.def_id.clone(), id);
         }
         // Add a virtual method to the `Destruct` trait.
         if trait_def.lang_item == Some(sym::destruct) {
             let method_name = TraitItemName("drop_glue".into());
             names.methods.push(method_name);
         }
-        self.method_status.get_or_insert_with(trait_id, || {
+        method_status.get_or_insert_with(trait_id, || {
             names.methods.map_ref(|_| MethodStatus::default())
         });
         Ok(())
@@ -749,6 +864,26 @@ impl<'tcx> TranslateCtx<'tcx> {
         trait_id: TraitDeclId,
         item_def_id: &hax::DefId,
     ) -> Result<AssocItemId, Error> {
+        if let Some(par) = self.par.clone() {
+            let decl_def_id = match self
+                .tcx
+                .associated_item(item_def_id.real_rust_def_id())
+                .container
+            {
+                ty::AssocContainer::TraitImpl(Ok(decl_id)) => &decl_id.sinto(&self.hax_state),
+                _ => item_def_id,
+            };
+            if par.methods.lock().method_status.get(trait_id).is_none() {
+                let trait_def_id = decl_def_id.parent(&self.hax_state).unwrap();
+                self.register_assoc_items(&trait_def_id, trait_id)?;
+            }
+            return Ok(*par
+                .methods
+                .lock()
+                .assoc_item_id_map
+                .get(decl_def_id)
+                .unwrap());
+        }
         // The same assoc item `DefId` could belong to several `TraitDeclId`s because of
         // monomorphization, so we only return the item id if we know this trait's data is
         // initialized.
@@ -1343,6 +1478,72 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     }
 }
 
+impl<'tcx> TranslateCtx<'tcx> {
+    pub(crate) fn new(
+        tcx: TyCtxt<'tcx>,
+        sysroot: PathBuf,
+        hax_state: hax::StateWithBase<'tcx>,
+        options: TranslateOptions,
+        error_ctx: ErrorCtx,
+        cli_options: &CliOpts,
+        body_requests: Arc<BodyRequests<'tcx>>,
+    ) -> Self {
+        let crate_def_id: hax::DefId = rustc_span::def_id::CRATE_DEF_ID
+            .to_def_id()
+            .sinto(&hax_state);
+        let crate_name = crate_def_id.crate_name(&hax_state).to_string();
+        trace!("# Crate: {}", crate_name);
+        TranslateCtx {
+            tcx,
+            sysroot,
+            hax_state,
+            options,
+            errors: RefCell::new(error_ctx),
+            translated: TranslatedCrate {
+                crate_name,
+                preset: cli_options.preset,
+                runtime_checks: RuntimeChecks {
+                    ub_checks: tcx.sess.ub_checks(),
+                    overflow_checks: tcx.sess.overflow_checks(),
+                    contract_checks: tcx.sess.contract_checks(),
+                },
+                ..TranslatedCrate::default()
+            },
+            method_status: Default::default(),
+            assoc_item_id_map: Default::default(),
+            id_map: Default::default(),
+            reverse_id_map: Default::default(),
+            file_to_id: Default::default(),
+            items_to_translate: Default::default(),
+            body_requests,
+            requested_bodies: Default::default(),
+            enqueued: Default::default(),
+            processed: Default::default(),
+            containment_graph: Default::default(),
+            translate_stack: Default::default(),
+            cached_spans: Default::default(),
+            recent_spans: Box::new([None; RECENT_SPANS]),
+            cached_span_datas: Default::default(),
+            cached_file_ids: Default::default(),
+            last_source_file: Default::default(),
+            cached_names: Default::default(),
+            cached_attr_infos: Default::default(),
+            cached_item_metas: Default::default(),
+            exported_fns: Default::default(),
+            lt_mutability_computer: Default::default(),
+            monomorphic_layouts: Default::default(),
+            mono_type_cache: Default::default(),
+            cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
+            extra_early_regions_cache: Default::default(),
+            intrinsic_def_ids: Default::default(),
+            log: None,
+            par: None,
+            worker_index: 0,
+            par_items: Default::default(),
+        }
+    }
+}
+
 #[tracing::instrument(skip(tcx, error_ctx, body_requests))]
 pub fn translate<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -1386,56 +1587,35 @@ pub fn translate<'tcx>(
         },
     );
 
-    let crate_def_id: hax::DefId = rustc_span::def_id::CRATE_DEF_ID
-        .to_def_id()
-        .sinto(&hax_state);
-    let crate_name = crate_def_id.crate_name(&hax_state).to_string();
-    trace!("# Crate: {}", crate_name);
-
-    let mut ctx = TranslateCtx {
+    let mut ctx = TranslateCtx::new(
         tcx,
         sysroot,
         hax_state,
-        options: translate_options,
-        errors: RefCell::new(error_ctx),
-        translated: TranslatedCrate {
-            crate_name,
-            preset: cli_options.preset,
-            runtime_checks: RuntimeChecks {
-                ub_checks: tcx.sess.ub_checks(),
-                overflow_checks: tcx.sess.overflow_checks(),
-                contract_checks: tcx.sess.contract_checks(),
-            },
-            ..TranslatedCrate::default()
-        },
-        method_status: Default::default(),
-        assoc_item_id_map: Default::default(),
-        id_map: Default::default(),
-        reverse_id_map: Default::default(),
-        file_to_id: Default::default(),
-        items_to_translate: Default::default(),
+        translate_options,
+        error_ctx,
+        cli_options,
         body_requests,
-        requested_bodies: Default::default(),
-        enqueued: Default::default(),
-        processed: Default::default(),
-        containment_graph: Default::default(),
-        translate_stack: Default::default(),
-        cached_spans: Default::default(),
-        recent_spans: Box::new([None; RECENT_SPANS]),
-        cached_span_datas: Default::default(),
-        cached_file_ids: Default::default(),
-        last_source_file: Default::default(),
-        cached_names: Default::default(),
-        cached_attr_infos: Default::default(),
-        cached_item_metas: Default::default(),
-        exported_fns: Default::default(),
-        lt_mutability_computer: Default::default(),
-        monomorphic_layouts: Default::default(),
-        mono_type_cache: Default::default(),
-        cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
-        extra_early_regions_cache: Default::default(),
-        intrinsic_def_ids: Default::default(),
-    };
+    );
+    // Debugging aid: translate items in another order (last in first out, or pseudo-random if
+    // given a seed), then renumber as the sequential order.
+    let scramble_seed = std::env::var("CHARON_SCRAMBLE_ORDER").ok();
+    let mut rng: u64 = scramble_seed
+        .as_deref()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let scramble = scramble_seed.is_some()
+        && ctx.cache.is_none()
+        && ctx.errors.borrow().continue_on_failure()
+        && !ctx.options.collect_instantiated_layouts;
+    // The number of threads to translate with.
+    let threads: usize = std::env::var("CHARON_TRANSLATE_THREADS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or_else(rustc_thread_pool::current_num_threads);
+    let parallel = threads > 1 && super::translate_par::can_translate_in_parallel(&ctx);
+    if scramble || parallel {
+        ctx.start_translation_log();
+    }
     ctx.register_target_info();
     ctx.reserve_unit_decl();
     ctx.register_builtin_functions()?;
@@ -1565,6 +1745,12 @@ pub fn translate<'tcx>(
 
     if ctx.errors.borrow().has_errors() {
         // Don't continue translating if there were errors while parsing options.
+        if ctx.is_logging() {
+            // Report them.
+            ctx.log_finish_start();
+            ctx.replay_sequential_order();
+            ctx.renumber_as_sequential();
+        }
         return Err(Error::dummy());
     }
 
@@ -1582,8 +1768,25 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
+    ctx.log_finish_start();
+    if parallel {
+        charon_lib::timing::time("translate-parallel", || {
+            ctx.translate_in_parallel(cli_options, threads)
+        });
+    }
     loop {
-        if let Some(item_src) = ctx.items_to_translate.pop_front() {
+        let next = if scramble && rng != 0 && !ctx.items_to_translate.is_empty() {
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let i = (rng >> 33) as usize % ctx.items_to_translate.len();
+            ctx.items_to_translate.swap_remove_back(i)
+        } else if scramble {
+            ctx.items_to_translate.pop_back()
+        } else {
+            ctx.items_to_translate.pop_front()
+        };
+        if let Some(item_src) = next {
             if ctx.processed.insert(item_src.clone()) {
                 ctx.translate_item(&item_src);
             }
@@ -1608,10 +1811,16 @@ pub fn translate<'tcx>(
         }
     }
 
+    if ctx.is_logging() {
+        charon_lib::timing::time("translate-replay", || ctx.replay_sequential_order());
+    }
     // Remove methods not marked as "used". They are never called and we made sure not to translate
     // them. This removes them from the traits and impls.
     ctx.remove_unused_methods();
     ctx.compute_started_from();
+    if ctx.is_logging() {
+        charon_lib::timing::time("translate-renumber", || ctx.renumber_as_sequential());
+    }
     ctx.cache_store_names();
     if let Some(cache) = &mut ctx.cache {
         cache.finish(&ctx.translated.files);
