@@ -421,6 +421,10 @@ mod type_constraint_set {
     }
 
     impl TypeConstraintSet {
+        pub fn is_empty(&self) -> bool {
+            self.clauses.is_empty()
+        }
+
         pub fn from_constraints(
             constraints: &IndexVec<TraitTypeConstraintId, RegionBinder<TraitTypeConstraint>>,
         ) -> Self {
@@ -988,6 +992,15 @@ struct UpdateItemBody<'a> {
     // It's a reversed stack, for when we go under binders.
     type_replacements: BindingStack<TypeConstraintSet>,
     memo: &'a mut HashConsMemo<()>,
+    /// Memo for the values that mention their environment, keyed by the binder state (see
+    /// `binder_states`). Only valid within the current item.
+    item_memo: HashConsMemo<u32>,
+    /// Identifies the states of `type_replacements` we've been in, as the state below and the
+    /// pushed replacements (`0` if empty, else unique to this push). Two equal ids are two equal
+    /// states.
+    binder_states: HashMap<(u32, u32), u32>,
+    binder_state: u32,
+    pushed_sets: u32,
     caches: &'a RefCell<Caches>,
     /// The error count when we started visiting this item.
     initial_error_count: usize,
@@ -1028,9 +1041,22 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
 
 impl UpdateItemBody<'_> {
     fn under_binder<R>(&mut self, repls: TypeConstraintSet, f: impl FnOnce(&mut Self) -> R) -> R {
+        let set_id = if repls.is_empty() {
+            0
+        } else {
+            self.pushed_sets += 1;
+            self.pushed_sets
+        };
+        let next_state = self.binder_states.len() as u32 + 1;
+        let state = *self
+            .binder_states
+            .entry((self.binder_state, set_id))
+            .or_insert(next_state);
+        let outer_state = std::mem::replace(&mut self.binder_state, state);
         self.type_replacements.push(repls);
         let ret = f(self);
         self.type_replacements.pop();
+        self.binder_state = outer_state;
         ret
     }
 
@@ -1488,7 +1514,22 @@ impl VisitAstMut for UpdateItemBody<'_> {
         &mut self,
         x: &mut HashConsed<WithCachedTypeInfo<T>>,
     ) -> ControlFlow<Self::Break> {
-        self.visit_memoized(x)
+        if x.type_info().is_closed() {
+            return self.visit_memoized(x);
+        }
+        // Within an item, the rewrite of a value that mentions its environment only depends on
+        // the value and on `type_replacements`.
+        let state = Some(self.binder_state);
+        if let Some(new) = self.item_memo.get(x, state) {
+            *x = new;
+            return Continue(());
+        }
+        let old = x.clone();
+        self.visit_inner(x)?;
+        if self.may_record() {
+            self.item_memo.insert(old, state, x.clone());
+        }
+        Continue(())
     }
 
     // Normalize associated types.
@@ -1615,6 +1656,10 @@ impl TransformPass for Transform {
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
                 memo: &mut memos.get(),
+                item_memo: Default::default(),
+                binder_states: Default::default(),
+                binder_state: 0,
+                pushed_sets: 0,
                 caches: &caches.get(),
                 initial_error_count: ctx.error_count(),
             };
