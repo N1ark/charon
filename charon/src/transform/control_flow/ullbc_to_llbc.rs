@@ -957,11 +957,71 @@ impl ExitInfo {
                 };
                 !exits_set.contains(&exit_id) && cfg.all_paths_go_through(bid, exit_id, outer_exits)
             };
-            if let Some(exit_id) = merge_exit
+            // Choosing an exit duplicates two kinds of nodes: the nodes before the exit that are
+            // reachable from several branches are translated in each of them, and the nodes after
+            // the exit that a branch reaches without going through it are translated both in that
+            // branch and after the switch. The second kind is not bounded by the switch: with
+            // `if a || b { x? }`, the best exit is `x` but the branches only merge after it, so
+            // the rest of the function is translated twice, and exponentially so in a sequence of
+            // such switches. So when a branch bypasses the exit to reach branching code after it,
+            // we try the first such node as exit instead, and take it if it duplicates much less.
+            //
+            // Jumps to the exits of the enclosing loops, and to what comes after them, become
+            // `break`s; return and unwind nodes are always duplicated.
+            let loop_exits = block_data
+                .within_loops
+                .iter()
+                .filter_map(|&l| cfg.block_data[l].exit_info.loop_exit)
+                .collect_vec();
+            let is_duplicable = |b: BlockId| {
+                let data = &cfg.block_data[b];
+                !data.is_unwind
+                    && !data.is_return
+                    && !loop_exits.iter().any(|&exit| cfg.can_reach(exit, b))
+            };
+            // The nodes after `exit_id` that a branch reaches without going through it.
+            let bypassed = |exit_id: BlockId| {
+                let graph = EdgeFiltered::from_fn(&cfg.fwd_cfg, |edge| edge.target() != exit_id);
+                Dfs::new(&graph, bid)
+                    .iter(&graph)
+                    .filter(|&b| is_duplicable(b) && cfg.can_reach(exit_id, b))
+                    .collect_vec()
+            };
+            let first_branching = |nodes: &[BlockId]| {
+                nodes
+                    .iter()
+                    .copied()
+                    .filter(|&b| cfg.block_data[b].reaches_switch)
+                    .min_by_key(|&b| (cfg.topo_rank(b), b))
+            };
+            let size = |b: BlockId| body[b].statements.len() + 1;
+            let duplicated_size = |exit_id: BlockId, bypassed: &[BlockId]| {
+                block_data
+                    .reachable_including_self()
+                    .filter(|&b| {
+                        b != bid && is_duplicable(b) && !cfg.can_reach(exit_id, b) && is_merge(b)
+                    })
+                    .chain(bypassed.iter().copied())
+                    .map(size)
+                    .sum::<usize>()
+            };
+            if let Some(mut exit_id) = merge_exit
                 .into_iter()
                 .chain(best_exit)
                 .find(|&exit_id| can_be_exit(exit_id))
             {
+                let mut exit_bypassed = bypassed(exit_id);
+                while let Some(merge) = first_branching(&exit_bypassed)
+                    && can_be_exit(merge)
+                {
+                    let merge_bypassed = bypassed(merge);
+                    if 2 * duplicated_size(merge, &merge_bypassed)
+                        > duplicated_size(exit_id, &exit_bypassed)
+                    {
+                        break;
+                    }
+                    (exit_id, exit_bypassed) = (merge, merge_bypassed);
+                }
                 exits_set.insert(exit_id);
                 if cfg.block_data[exit_id].reaches_switch {
                     branching_exits.insert(exit_id);
