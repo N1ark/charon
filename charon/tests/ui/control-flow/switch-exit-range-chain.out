@@ -1,0 +1,305 @@
+# Final LLBC before serialization:
+
+// Full name: test_crate::is_code_point
+pub fn is_code_point(c: char) -> bool
+{
+    let mut _0: bool; // return
+    let c: char; // arg #1
+    let mut _2: bool; // anonymous local
+    let mut _3: bool; // anonymous local
+    let mut _4: bool; // anonymous local
+    let mut _5: bool; // anonymous local
+    let mut _6: bool; // anonymous local
+    let mut _7: bool; // anonymous local
+    let mut _8: bool; // anonymous local
+    let mut _9: bool; // anonymous local
+    let mut _10: bool; // anonymous local
+    let mut _11: bool; // anonymous local
+    let mut _12: bool; // anonymous local
+    let mut _13: bool; // anonymous local
+    let mut _14: bool; // anonymous local
+    let mut _15: bool; // anonymous local
+    let mut _16: bool; // anonymous local
+    let mut _17: bool; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    storage_live(_4)
+    storage_live(_5)
+    storage_live(_6)
+    storage_live(_7)
+    storage_live(_8)
+    storage_live(_9)
+    storage_live(_10)
+    storage_live(_11)
+    storage_live(_12)
+    storage_live(_13)
+    storage_live(_14)
+    storage_live(_15)
+    storage_live(_16)
+    storage_live(_17)
+    _16 = const 'a' <= copy c
+    if move _16 {
+        _17 = copy c <= const 'z'
+        if move _17 {
+            _0 = const true
+            storage_dead(_17)
+            storage_dead(_16)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_12)
+            storage_dead(_11)
+            storage_dead(_10)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_dead(_3)
+            storage_dead(_2)
+            storage_dead(c)
+            return
+        } else {
+        }
+    } else {
+    }
+    _14 = const 'A' <= copy c
+    if move _14 {
+        _15 = copy c <= const 'Z'
+        if move _15 {
+            _0 = const true
+            storage_dead(_17)
+            storage_dead(_16)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_12)
+            storage_dead(_11)
+            storage_dead(_10)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_dead(_3)
+            storage_dead(_2)
+            storage_dead(c)
+            return
+        } else {
+        }
+    } else {
+    }
+    _12 = const '0' <= copy c
+    if move _12 {
+        _13 = copy c <= const '9'
+        if move _13 {
+            _0 = const true
+            storage_dead(_17)
+            storage_dead(_16)
+            storage_dead(_15)
+            storage_dead(_14)
+            storage_dead(_13)
+            storage_dead(_12)
+            storage_dead(_11)
+            storage_dead(_10)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_7)
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_dead(_3)
+            storage_dead(_2)
+            storage_dead(c)
+            return
+        } else {
+        }
+    } else {
+    }
+    switch copy c {
+        '!' | '$' | '&' => {
+        },
+        _ => {
+            _10 = const '(' <= copy c
+            if move _10 {
+                _11 = copy c <= const '+'
+                if move _11 {
+                    _0 = const true
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    storage_dead(_15)
+                    storage_dead(_14)
+                    storage_dead(_13)
+                    storage_dead(_12)
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    storage_dead(_9)
+                    storage_dead(_8)
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    storage_dead(_4)
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    storage_dead(c)
+                    return
+                } else {
+                }
+            } else {
+            }
+            _8 = const '-' <= copy c
+            if move _8 {
+                _9 = copy c <= const '/'
+                if move _9 {
+                    _0 = const true
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    storage_dead(_15)
+                    storage_dead(_14)
+                    storage_dead(_13)
+                    storage_dead(_12)
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    storage_dead(_9)
+                    storage_dead(_8)
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    storage_dead(_4)
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    storage_dead(c)
+                    return
+                } else {
+                }
+            } else {
+            }
+            _6 = const ':' <= copy c
+            if move _6 {
+                _7 = copy c <= const ';'
+                if move _7 {
+                    _0 = const true
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    storage_dead(_15)
+                    storage_dead(_14)
+                    storage_dead(_13)
+                    storage_dead(_12)
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    storage_dead(_9)
+                    storage_dead(_8)
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    storage_dead(_4)
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    storage_dead(c)
+                    return
+                } else {
+                }
+            } else {
+            }
+            _4 = const '<' <= copy c
+            if move _4 {
+                _5 = copy c <= const '>'
+                if move _5 {
+                    _0 = const true
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    storage_dead(_15)
+                    storage_dead(_14)
+                    storage_dead(_13)
+                    storage_dead(_12)
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    storage_dead(_9)
+                    storage_dead(_8)
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    storage_dead(_4)
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    storage_dead(c)
+                    return
+                } else {
+                }
+            } else {
+            }
+            _2 = const '[' <= copy c
+            if move _2 {
+                _3 = copy c <= const ']'
+                if move _3 {
+                } else {
+                    _0 = const false
+                    storage_dead(_17)
+                    storage_dead(_16)
+                    storage_dead(_15)
+                    storage_dead(_14)
+                    storage_dead(_13)
+                    storage_dead(_12)
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    storage_dead(_9)
+                    storage_dead(_8)
+                    storage_dead(_7)
+                    storage_dead(_6)
+                    storage_dead(_5)
+                    storage_dead(_4)
+                    storage_dead(_3)
+                    storage_dead(_2)
+                    storage_dead(c)
+                    return
+                }
+            } else {
+                _0 = const false
+                storage_dead(_17)
+                storage_dead(_16)
+                storage_dead(_15)
+                storage_dead(_14)
+                storage_dead(_13)
+                storage_dead(_12)
+                storage_dead(_11)
+                storage_dead(_10)
+                storage_dead(_9)
+                storage_dead(_8)
+                storage_dead(_7)
+                storage_dead(_6)
+                storage_dead(_5)
+                storage_dead(_4)
+                storage_dead(_3)
+                storage_dead(_2)
+                storage_dead(c)
+                return
+            }
+        },
+    }
+    _0 = const true
+    storage_dead(_17)
+    storage_dead(_16)
+    storage_dead(_15)
+    storage_dead(_14)
+    storage_dead(_13)
+    storage_dead(_12)
+    storage_dead(_11)
+    storage_dead(_10)
+    storage_dead(_9)
+    storage_dead(_8)
+    storage_dead(_7)
+    storage_dead(_6)
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(c)
+    return
+}
+
+
+

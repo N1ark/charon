@@ -128,43 +128,38 @@ fn main2()
     storage_live(_6)
     _6 = copy a
     if move _6 {
-        storage_live(_8)
-        _8 = copy c
-        if move _8 {
-            x = const 1i32
-        } else {
-            storage_live(_9)
-            _9 = copy d
-            if move _9 {
-                x = const 1i32
-            } else {
-            }
-        }
-        storage_dead(_9)
-        storage_dead(_8)
-        x = const 2i32
     } else {
         storage_live(_7)
         _7 = copy b
         if move _7 {
-            storage_live(_8)
-            _8 = copy c
-            if move _8 {
-                x = const 1i32
-            } else {
-                storage_live(_9)
-                _9 = copy d
-                if move _9 {
-                    x = const 1i32
-                } else {
-                }
-            }
-            storage_dead(_9)
-            storage_dead(_8)
-            x = const 2i32
+        } else {
+            storage_dead(_7)
+            storage_dead(_6)
+            x = const 3i32
+            _0 = ()
+            storage_dead(d)
+            storage_dead(c)
+            storage_dead(b)
+            storage_dead(a)
+            storage_dead(x)
+            return
+        }
+    }
+    storage_live(_8)
+    _8 = copy c
+    if move _8 {
+        x = const 1i32
+    } else {
+        storage_live(_9)
+        _9 = copy d
+        if move _9 {
+            x = const 1i32
         } else {
         }
     }
+    storage_dead(_9)
+    storage_dead(_8)
+    x = const 2i32
     storage_dead(_7)
     storage_dead(_6)
     x = const 3i32

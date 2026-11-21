@@ -139,6 +139,8 @@ struct BlockData {
     // TODO: track more nicely the set of targets reachable from a node: panic, return, exit loop,
     // continue loop (this is a partial order).
     pub only_reach_error: bool,
+    /// Whether a switch is reachable from this node (including itself) in the forward graph.
+    pub reaches_switch: bool,
     /// List of reachable nodes, with the length of shortest path to them. Includes the current
     /// node.
     pub shortest_paths: hashbrown::HashMap<BlockId, usize>,
@@ -182,6 +184,7 @@ impl BlockData {
             immediately_dominated_merge_targets: Default::default(),
             within_loops: Default::default(),
             only_reach_error: false,
+            reaches_switch: false,
             shortest_paths: Default::default(),
             flow,
             exit_info: Default::default(),
@@ -294,6 +297,11 @@ impl CfgInfo {
                 block_data[block_id].only_reach_error = true;
             }
 
+            block_data[block_id].reaches_switch = switch_blocks.contains(&block_id)
+                || fwd_targets
+                    .iter()
+                    .any(|&tgt| block_data[tgt].reaches_switch);
+
             // Compute the flows between each pair of nodes.
             let mut flow: IndexVec<src::BlockId, Flow> = mem::take(&mut block_data[block_id].flow);
             // The flow to self is 1.
@@ -383,7 +391,7 @@ impl CfgInfo {
         ExitInfo::compute_loop_exits(ctx, &mut cfg);
 
         // Pick an exit block for each switch, if we find one.
-        ExitInfo::compute_switch_exits(&mut cfg);
+        ExitInfo::compute_switch_exits(&mut cfg, body);
 
         Ok(cfg)
     }
@@ -734,10 +742,12 @@ impl ExitInfo {
     /// Note that with nested switches, the branches of the inner switches might
     /// goto the exits of the outer switches: for this reason, we give precedence
     /// to the outer switches.
-    fn compute_switch_exits(cfg: &mut CfgInfo) {
+    fn compute_switch_exits(cfg: &mut CfgInfo, body: &src::BodyContents) {
         // We need to give precedence to the outer switches: we thus iterate
         // over the switch blocks in topological order.
         let mut exits_set = HashSet::default();
+        // The exits that lead to more branching, see below.
+        let mut branching_exits = HashSet::default();
         for bid in cfg
             .switch_blocks
             .iter()
@@ -769,18 +779,51 @@ impl ExitInfo {
             // same loop. There must be one, otherwise the switch entry would not be inside the
             // loop.
             let current_loop = block_data.within_loops.last().copied();
-            let best_exit: Option<BlockId> = block_data
-                .reachable_excluding_self()
-                .filter(|&b| !cfg.block_data[b].is_return)
-                .filter(|&b| {
-                    current_loop.is_none_or(|current_loop| cfg.is_within_loop(current_loop, b))
-                })
-                .max_by_key(|&id| {
-                    let is_unwind_block = Reverse(cfg.block_data[id].is_unwind);
-                    let flow = &block_data.flow[id];
-                    let rank = Reverse(cfg.topo_rank(id));
-                    ((is_unwind_block, flow, rank), id)
-                });
+            let candidates = || {
+                block_data
+                    .reachable_excluding_self()
+                    .filter(|&b| !cfg.block_data[b].is_return)
+                    .filter(|&b| {
+                        current_loop.is_none_or(|current_loop| cfg.is_within_loop(current_loop, b))
+                    })
+            };
+            let rank_candidate = |&id: &BlockId| {
+                let is_unwind_block = Reverse(cfg.block_data[id].is_unwind);
+                let flow = &block_data.flow[id];
+                let rank = Reverse(cfg.topo_rank(id));
+                ((is_unwind_block, flow, rank), id)
+            };
+            let best_exit: Option<BlockId> = candidates().max_by_key(rank_candidate);
+            let branches = body[bid]
+                .targets()
+                .into_iter()
+                .filter(|&tgt| cfg.fwd_cfg.contains_edge(bid, tgt))
+                .collect_vec();
+            // Whether the block is reachable from several branches and leads to more branching.
+            let is_branching_merge = |id: BlockId| {
+                cfg.block_data[id].reaches_switch
+                    && branches
+                        .iter()
+                        .filter(|&&branch| cfg.block_data[branch].shortest_paths.contains_key(&id))
+                        .count()
+                        >= 2
+            };
+            // The best exit may be a block from which the control-flow only goes straight to a
+            // `continue` or `return` (e.g. the block that all the `continue`s of a loop go to). It
+            // can get more flow than the block where the branches of the switch actually merge,
+            // because it also gets the flow of the paths that go through that merge. Choosing it
+            // would duplicate everything between that merge and itself in every branch, and
+            // exponentially so in a sequence of such switches. Hence we first try the best
+            // branching merge.
+            let merge_exit = if let Some(exit_id) = best_exit
+                && !cfg.block_data[exit_id].reaches_switch
+            {
+                candidates()
+                    .filter(|&id| is_branching_merge(id))
+                    .max_by_key(rank_candidate)
+            } else {
+                None
+            };
             // We have an exit candidate: we first check that it was not already taken by an
             // external switch.
             //
@@ -811,11 +854,27 @@ impl ExitInfo {
             //   ...
             // }
             // ```
-            if let Some(exit_id) = best_exit
-                && !exits_set.contains(&exit_id)
-                && cfg.all_paths_go_through(bid, exit_id, &exits_set)
+            //
+            // A jump to an outer exit that is straight-line code is translated by inlining that
+            // code, which is cheap. We accept that for a branching merge, as the alternative is to
+            // duplicate it, and the branching after it, in every branch.
+            let can_be_exit = |exit_id: BlockId| {
+                let outer_exits = if is_branching_merge(exit_id) {
+                    &branching_exits
+                } else {
+                    &exits_set
+                };
+                !exits_set.contains(&exit_id) && cfg.all_paths_go_through(bid, exit_id, outer_exits)
+            };
+            if let Some(exit_id) = merge_exit
+                .into_iter()
+                .chain(best_exit)
+                .find(|&exit_id| can_be_exit(exit_id))
             {
                 exits_set.insert(exit_id);
+                if cfg.block_data[exit_id].reaches_switch {
+                    branching_exits.insert(exit_id);
+                }
                 cfg.block_data[bid].exit_info.switch_exit = Some(exit_id);
             }
         }
