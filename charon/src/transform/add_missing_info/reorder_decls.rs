@@ -198,6 +198,11 @@ pub struct DepsForItem<'a> {
     // ```
     parent_trait_impl: Option<TraitImplId>,
     parent_trait_decl: Option<TraitDeclId>,
+    /// How many times we've seen `current_id`.
+    current_id_occurrences: usize,
+    /// The hash-consed values we already explored in this item (by address), with whether they
+    /// mention `current_id`. Exploring them again would only add a self-loop if they do.
+    explored: HashMap<*const (), bool>,
 }
 
 impl Deps {
@@ -216,6 +221,8 @@ impl Deps {
             current_id,
             parent_trait_impl: None,
             parent_trait_decl: None,
+            current_id_occurrences: 0,
+            explored: HashMap::default(),
         };
 
         // Add the id of the impl/trait this item belongs to, if necessary
@@ -266,6 +273,9 @@ impl DepsForItem<'_> {
     }
     fn insert_edge(&mut self, tgt: impl Into<ItemId>) {
         let tgt = tgt.into();
+        if tgt == self.current_id {
+            self.current_id_occurrences += 1;
+        }
         if tgt == self.current_id && !self.seen_current_id {
             // Each item contains its own id; this is a hack to avoid considering that as a self
             // loop.
@@ -281,6 +291,24 @@ impl DepsForItem<'_> {
 }
 
 impl VisitAst for DepsForItem<'_> {
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        let addr = value.inner() as *const _ as *const ();
+        if let Some(&mentions_current_id) = self.explored.get(&addr) {
+            if mentions_current_id {
+                self.insert_edge(self.current_id);
+            }
+            return Continue(());
+        }
+        let occurrences_before = self.current_id_occurrences;
+        self.visit_inner(value)?;
+        let mentions_current_id = self.current_id_occurrences > occurrences_before;
+        self.explored.insert(addr, mentions_current_id);
+        Continue(())
+    }
+
     fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
         self.insert_edge(*id);
     }
