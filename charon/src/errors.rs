@@ -12,7 +12,8 @@ use std::cmp::{Ord, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::ops::Range;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError, mpsc};
+use std::thread::JoinHandle;
 
 const BACKTRACE_ON_ERR: bool = false;
 
@@ -284,10 +285,65 @@ fn eprintln_at_once(msg: &str) {
     let stderr = std::io::stderr();
     let mut buffer = anstream::AutoStream::new(Vec::new(), anstream::AutoStream::choice(&stderr));
     let _ = writeln!(buffer, "{msg}");
-    if let Err(e) = stderr.lock().write_all(&buffer.into_inner())
-        && e.kind() != std::io::ErrorKind::BrokenPipe
-    {
+    let buffer = buffer.into_inner();
+    let result = match &*STDERR_THREAD.lock().unwrap_or_else(PoisonError::into_inner) {
+        // The thread only stops receiving once it was told to finish, under this lock.
+        Some((sender, _)) => {
+            sender.send(buffer).unwrap();
+            Ok(())
+        }
+        None => write_to_stderr(&buffer),
+    };
+    if let Err(e) = result {
         panic!("failed printing to stderr: {e}");
+    }
+}
+
+fn write_to_stderr(bytes: &[u8]) -> std::io::Result<()> {
+    match std::io::stderr().lock().write_all(bytes) {
+        Err(e) if e.kind() != std::io::ErrorKind::BrokenPipe => Err(e),
+        _ => Ok(()),
+    }
+}
+
+/// While this is set, `eprintln_at_once` hands its output to a thread that prints it in order, so
+/// that we don't wait for a slow reader of stderr (cargo reads it line by line).
+static STDERR_THREAD: Mutex<Option<(mpsc::Sender<Vec<u8>>, JoinHandle<std::io::Result<()>>)>> =
+    Mutex::new(None);
+
+/// Print the output of `eprintln_at_once` from a separate thread until
+/// `finish_printing_in_background`. Everything else that prints to stderr in the meantime must
+/// call `finish_printing_in_background` first.
+pub fn print_in_background() {
+    let (sender, receiver) = mpsc::channel::<Vec<u8>>();
+    let thread = std::thread::spawn(move || {
+        let mut result = Ok(());
+        for bytes in receiver {
+            if result.is_ok() {
+                result = write_to_stderr(&bytes);
+            }
+        }
+        result
+    });
+    let previous = STDERR_THREAD
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .replace((sender, thread));
+    assert!(previous.is_none());
+}
+
+/// Wait until the output handed to the printing thread is printed, and print directly from now
+/// on.
+pub fn finish_printing_in_background() -> std::io::Result<()> {
+    // We keep the lock until the thread is done, so that nothing is printed in the meantime.
+    let mut guard = STDERR_THREAD.lock().unwrap_or_else(PoisonError::into_inner);
+    match guard.take() {
+        Some((sender, thread)) => {
+            // This ends the thread's loop.
+            drop(sender);
+            thread.join().unwrap()
+        }
+        None => Ok(()),
     }
 }
 

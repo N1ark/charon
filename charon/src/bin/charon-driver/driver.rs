@@ -314,11 +314,18 @@ pub fn run_rustc_driver() -> Result<Option<(TransformOutput, CliOpts)>, CharonFa
                 return Err(result.err().unwrap_or(CharonFailure::RustcError));
             }
         };
+        // rustc is done printing: the passes' output can go to stderr as it comes, from another
+        // thread so the passes don't wait for it. With logging on, the logs would come out of
+        // order.
+        if env::var_os("RUST_LOG").is_none() {
+            charon_lib::errors::print_in_background();
+        }
         transform.output.lock().unwrap().release();
-        let output = transform
-            .thread
-            .join()
-            .unwrap_or_else(|payload| panic::resume_unwind(payload));
+        let output = transform.thread.join();
+        if let Err(e) = charon_lib::errors::finish_printing_in_background() {
+            panic!("failed printing to stderr: {e}");
+        }
+        let output = output.unwrap_or_else(|payload| panic::resume_unwind(payload));
         Some((output, options))
     };
     Ok(output)
@@ -493,6 +500,10 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
                 charon_lib::timing::time("transformation-passes", || {
                     run_transformation_passes(&options, &mut ctx)
                 });
+                // Serialization prints its errors directly.
+                if let Err(e) = charon_lib::errors::finish_printing_in_background() {
+                    panic!("failed printing to stderr: {e}");
+                }
                 let error_count = ctx.error_ctx().error_count;
                 let crate_data = CrateData::new(ctx);
                 let files = {

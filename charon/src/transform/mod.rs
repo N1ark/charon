@@ -431,6 +431,12 @@ impl TransformPass for PrintCtxPass {
         fmt.include_layouts = self.include_layouts;
         fmt.include_safety = self.include_safety;
         let printed = ctx.translated.with_ctx(&fmt);
+        if let PrintOutput::Stdout | PrintOutput::Stderr = self.output
+            // Print after the errors reported so far.
+            && let Err(e) = crate::errors::finish_printing_in_background()
+        {
+            panic!("failed printing to stderr: {e}");
+        }
         match self.output {
             PrintOutput::Stdout => println!("{message}:\n\n{printed}\n"),
             PrintOutput::Stderr => eprintln!("{message}:\n\n{printed}\n"),

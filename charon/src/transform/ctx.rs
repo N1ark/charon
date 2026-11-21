@@ -81,7 +81,11 @@ pub fn install_panic_hook() {
                     true
                 });
             if captured {
-            } else if PANIC_NOTE_SHOWN_BY_US.load(Ordering::Relaxed) {
+                return;
+            }
+            // Print after what we printed before.
+            let _ = crate::errors::finish_printing_in_background();
+            if PANIC_NOTE_SHOWN_BY_US.load(Ordering::Relaxed) {
                 eprintln!("{}", message());
             } else {
                 PANIC_NOTE_SHOWN.store(true, Ordering::Relaxed);
