@@ -314,19 +314,28 @@ impl TypeCheckVisitor<'_> {
         fmt
     }
 
-    fn zip_assert_match<'a, I, A, B, FmtA>(
+    /// For pretty error printing of values that live under the given binders (outermost first).
+    /// We only build it on errors, as it's not free.
+    fn binders_fmt_ctx<'b>(&'b self, binders: &[&'b GenericParams]) -> FmtCtx<'b> {
+        let mut fmt = self.ctx.into_fmt();
+        for params in binders {
+            fmt.generics.push(Cow::Borrowed(*params));
+        }
+        fmt
+    }
+
+    fn zip_assert_match<'a, I, A, B>(
         &'a mut self,
-        a: &IndexVec<I, A>,
+        a: &'a IndexVec<I, A>,
         b: &IndexVec<I, B>,
-        a_fmt: &FmtA,
+        a_binders: &[&'a GenericParams],
         kind: &str,
         target: &GenericsSource,
         check_inner: impl Fn(&mut Self, &A, &B),
     ) -> ControlFlow<()>
     where
         I: Idx,
-        FmtA: AstFormatter,
-        A: FmtWithCtx<FmtA>,
+        A: FmtWithCtx<FmtCtx<'a>>,
         B: FmtWithCtx<FmtCtx<'a>>,
     {
         if a.len() == b.len() {
@@ -335,6 +344,7 @@ impl TypeCheckVisitor<'_> {
                 .for_each(|(x, y)| check_inner(self, x, y));
             ControlFlow::Continue(())
         } else {
+            let a_fmt = &self.binders_fmt_ctx(a_binders);
             let b_fmt = &self.val_fmt_ctx();
             let a = a.iter().map(|x| x.with_ctx(a_fmt)).join(", ");
             let b = b.iter().map(|x| x.with_ctx(b_fmt)).join(", ");
@@ -349,12 +359,7 @@ impl TypeCheckVisitor<'_> {
         }
     }
 
-    fn assert_clause_matches(
-        &mut self,
-        _params_fmt: &FmtCtx<'_>,
-        tclause: Substituted<'_, TraitParam>,
-        tref: &PolyTraitRef,
-    ) {
+    fn assert_clause_matches(&mut self, tclause: Substituted<'_, TraitParam>, tref: &PolyTraitRef) {
         let expected_regions = tclause.val.trait_.regions.len();
         let actual_regions = tref.0.regions.len();
         if expected_regions != actual_regions {
@@ -395,7 +400,7 @@ impl TypeCheckVisitor<'_> {
 
     fn assert_clauses_match(
         &mut self,
-        params_fmt: &FmtCtx<'_>,
+        params_binders: &[&GenericParams],
         clauses: Substituted<'_, IndexVec<TraitClauseId, TraitParam>>,
         trefs: &IndexVec<TraitClauseId, PolyTraitRef>,
         kind: &str,
@@ -404,18 +409,16 @@ impl TypeCheckVisitor<'_> {
         let _ = self.zip_assert_match(
             clauses.val,
             trefs,
-            params_fmt,
+            params_binders,
             kind,
             target,
-            |this, tclause, tref| {
-                this.assert_clause_matches(params_fmt, clauses.rebind(tclause), tref)
-            },
+            |this, tclause, tref| this.assert_clause_matches(clauses.rebind(tclause), tref),
         );
     }
 
     fn assert_matches(
         &mut self,
-        params_fmt: &FmtCtx<'_>,
+        params_binders: &[&GenericParams],
         params: &GenericParams,
         args: &GenericArgs,
         target: &GenericsSource,
@@ -423,7 +426,7 @@ impl TypeCheckVisitor<'_> {
         self.zip_assert_match(
             &params.regions,
             &args.regions,
-            params_fmt,
+            params_binders,
             "regions",
             target,
             |_, _, _| {},
@@ -431,7 +434,7 @@ impl TypeCheckVisitor<'_> {
         self.zip_assert_match(
             &params.types,
             &args.types,
-            params_fmt,
+            params_binders,
             "type generics",
             target,
             |_, _, _| {},
@@ -439,13 +442,13 @@ impl TypeCheckVisitor<'_> {
         self.zip_assert_match(
             &params.const_generics,
             &args.const_generics,
-            params_fmt,
+            params_binders,
             "const generics",
             target,
             |_, _, _| {},
         )?;
         self.assert_clauses_match(
-            params_fmt,
+            params_binders,
             Substituted::new(&params.trait_clauses, args),
             &args.trait_refs,
             "trait clauses",
@@ -460,9 +463,7 @@ impl TypeCheckVisitor<'_> {
             return;
         };
         let params = item.generic_params();
-        let fmt1 = self.ctx.into_fmt();
-        let fmt = fmt1.push_binder(Cow::Borrowed(params));
-        let _ = self.assert_matches(&fmt, params, args, &GenericsSource::item(id));
+        let _ = self.assert_matches(&[params], params, args, &GenericsSource::item(id));
     }
 
     fn assert_matches_method(
@@ -480,10 +481,8 @@ impl TypeCheckVisitor<'_> {
             return;
         };
         if let Ok(bound_fn) = Substituted::new_for_trait_ref(bound_fn, trait_ref).try_substitute() {
-            let fmt1 = self.ctx.into_fmt();
-            let fmt2 = fmt1.push_binder(Cow::Borrowed(&trait_decl.generics));
-            let fmt = fmt2.push_binder(Cow::Borrowed(&bound_fn.params));
-            let _ = self.assert_matches(&fmt, &bound_fn.params, args, target);
+            let binders = [&trait_decl.generics, &bound_fn.params];
+            let _ = self.assert_matches(&binders, &bound_fn.params, args, target);
         }
     }
 
@@ -502,10 +501,8 @@ impl TypeCheckVisitor<'_> {
             return;
         };
         if let Ok(bound_ty) = Substituted::new_for_trait_ref(bound_ty, trait_ref).try_substitute() {
-            let fmt1 = self.ctx.into_fmt();
-            let fmt2 = fmt1.push_binder(Cow::Borrowed(&trait_decl.generics));
-            let fmt = fmt2.push_binder(Cow::Borrowed(&bound_ty.params));
-            let _ = self.assert_matches(&fmt, &bound_ty.params, args, target);
+            let binders = [&trait_decl.generics, &bound_ty.params];
+            let _ = self.assert_matches(&binders, &bound_ty.params, args, target);
         }
     }
 }
@@ -631,9 +628,8 @@ impl VisitAst for TypeCheckVisitor<'_> {
                 }
 
                 let substituted_clauses = Substituted::new_for_trait_ref(&tdecl.implied_clauses, x);
-                let fmt = &self.ctx.into_fmt();
                 self.assert_clauses_match(
-                    fmt,
+                    &[],
                     substituted_clauses,
                     parent_trait_refs,
                     "builtin trait parent clauses",
@@ -702,8 +698,6 @@ impl VisitAst for TypeCheckVisitor<'_> {
             return;
         };
 
-        let fmt1 = &self.ctx.into_fmt();
-        let tdecl_fmt = fmt1.push_binder(Cow::Borrowed(&tdecl.generics));
         let impl_tref_kind = TraitRefKind::TraitImpl(TraitImplRef {
             id: timpl.def_id,
             generics: Box::new(timpl.generics.identity_args()),
@@ -714,7 +708,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
             &impl_tref_kind,
         );
         self.assert_clauses_match(
-            &tdecl_fmt,
+            &[&tdecl.generics],
             implied_clauses,
             &timpl.implied_trait_refs,
             "trait parent clauses",
@@ -738,9 +732,8 @@ impl VisitAst for TypeCheckVisitor<'_> {
             };
             let item_args = impl_ty.params.identity_args();
             let clauses = Substituted::new(&decl_ty.skip_binder.implied_clauses, &item_args);
-            let fmt = tdecl_fmt.push_binder(Cow::Borrowed(&decl_ty.params));
             self.assert_clauses_match(
-                &fmt,
+                &[&tdecl.generics, &decl_ty.params],
                 clauses,
                 &impl_ty.skip_binder.implied_trait_refs,
                 "associated type clauses",
@@ -755,6 +748,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
         }
         let methods_match = timpl.methods.elem_count() == tdecl.methods.elem_count();
         if !methods_match && self.phase != Check::PostTranslation {
+            let fmt1 = &self.ctx.into_fmt();
             let decl_methods = tdecl
                 .methods()
                 .map(|m| format!("- {}", m.name()))
