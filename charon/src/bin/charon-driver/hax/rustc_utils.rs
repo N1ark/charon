@@ -361,10 +361,26 @@ pub fn inst_binder<'tcx, T>(
 where
     T: ty::TypeFoldable<ty::TyCtxt<'tcx>> + Clone,
 {
+    use rustc_middle::ty::{TypeFlags, TypeVisitableExt};
     match args {
         None => x.instantiate_identity().skip_normalization(),
         Some(args) => {
+            // Without parameters to instantiate nor aliases to normalize, the steps below leave
+            // the value unchanged: we check that with a single visit of the value, which can be
+            // large (e.g. a MIR body).
+            let aliases = TypeFlags::HAS_ALIAS | TypeFlags::HAS_RIGID_ALIAS;
+            if args.is_empty()
+                && !x
+                    .as_ref()
+                    .skip_binder()
+                    .has_type_flags(TypeFlags::HAS_PARAM | aliases)
+            {
+                return x.skip_binder();
+            }
             let x = x.instantiate(tcx, args).skip_normalization();
+            if !x.has_type_flags(aliases) {
+                return x;
+            }
             normalize(tcx, typing_env, ty::set_aliases_to_non_rigid(tcx, x))
         }
     }

@@ -1470,9 +1470,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                                 continue;
                             };
                             bound_ty
-                                .clone()
+                                .map_ref(|ty_decl: &TraitAssocTy| ty_decl.default.clone().unwrap())
                                 .substitute_with_tref(&self_predicate)
-                                .map(|ty_decl: TraitAssocTy| ty_decl.default.unwrap())
                         }
                     };
 
