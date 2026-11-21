@@ -5,8 +5,8 @@
 //! and settle them once translation is done:
 //! - the first lookup of an anonymous allocation decides at which type we view it: instead we pick
 //!   the view by a rule, and translate again the items that saw another one;
-//! - an impl refers to its vtable if we translated the vtable before the impl: instead it refers to
-//!   it if we translated it at all;
+//! - an impl would refer to its vtable if we translated the vtable before the impl: instead it
+//!   refers to its vtable if we translated it at all, see `settle_vtables`;
 //! - errors are reported at the end, sorted by location, which also lets the notes on errors in
 //!   external items list all the places that use them.
 use super::translate_ctx::*;
@@ -49,18 +49,53 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// Settle what depends on the order of translation, see the module docs.
     pub(crate) fn settle_translation_order(&mut self) {
-        if !self.is_recording() {
-            return;
+        if self.is_recording() {
+            self.settle_views();
         }
-        self.settle_views();
+        self.settle_vtables();
+        if self.is_recording() {
+            self.report_recorded_errors();
+        }
+    }
+
+    /// An impl refers to the vtable it computed when we translated that vtable, else to a vtable we
+    /// translated for it (a vtable can have several item sources, e.g. in mono mode), else it is
+    /// lazy.
+    fn settle_vtables(&mut self) {
+        use charon_lib::formatter::IntoFormatter;
+        use charon_lib::pretty::FmtWithCtx;
+        let krate = &self.translated;
+        let fmt = krate.into_fmt();
+        // Between several vtables translated for an impl, pick one by a rule that doesn't depend
+        // on the order.
+        let mut translated: HashMap<TraitImplId, (String, GlobalDeclRef)> = HashMap::default();
         for (impl_id, vtable) in std::mem::take(&mut self.translated_vtables) {
-            if let Some(timpl) = self.translated.trait_impls.get_mut(impl_id)
-                && timpl.vtable.is_lazy()
-            {
-                timpl.vtable = VTableDecl::VTable(vtable);
+            let key = vtable.with_ctx(&fmt).to_string();
+            match translated.get(&impl_id) {
+                Some((other, _)) if *other <= key => {}
+                _ => {
+                    translated.insert(impl_id, (key, vtable));
+                }
             }
         }
-        self.report_recorded_errors();
+        let settled: Vec<(TraitImplId, VTableDecl)> = krate
+            .trait_impls
+            .iter()
+            .filter_map(|timpl| match &timpl.vtable {
+                VTableDecl::VTable(vtable) if krate.global_decls.get(vtable.id).is_some() => None,
+                VTableDecl::VTable(_) | VTableDecl::Lazy => {
+                    let vtable = match translated.remove(&timpl.def_id) {
+                        Some((_, vtable)) => VTableDecl::VTable(vtable),
+                        None => VTableDecl::Lazy,
+                    };
+                    Some((timpl.def_id, vtable))
+                }
+                VTableDecl::NotDynCompatible | VTableDecl::Unknown(_) => None,
+            })
+            .collect();
+        for (impl_id, vtable) in settled {
+            self.translated.trait_impls[impl_id].vtable = vtable;
+        }
     }
 
     /// Translate this item again, forgetting the errors it raised.

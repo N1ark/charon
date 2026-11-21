@@ -628,11 +628,8 @@ pub(crate) enum Effect {
     RegisterAssocItems(TraitDeclId),
     /// `mark_method_as_used` of this method.
     MarkMethodUsed(TraitDeclId, TraitMethodId),
-    /// This trait impl has this vtable, which may not be translated yet (the impl's `vtable`
-    /// depends on that).
-    ImplVTable(TraitImplId, GlobalDeclRef),
-    /// This vtable was translated, which fills the `vtable` of its impl if it was lazy.
-    FillLazyVTable(TraitImplId, GlobalDeclRef),
+    /// This vtable of this impl was translated, see `settle_vtables`.
+    TranslatedVTable(TraitImplId, GlobalDeclRef),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1343,24 +1340,8 @@ impl<'tcx> TranslateCtx<'tcx> {
                         self.mark_method_as_used(trait_id, method_id);
                     }
                 }
-                Effect::ImplVTable(impl_id, vtable) => {
-                    let translated = self.is_translated(vtable.id.into());
-                    if let Some(timpl) = self.translated.trait_impls.get_mut(impl_id)
-                        && matches!(timpl.vtable, VTableDecl::Lazy | VTableDecl::VTable(_))
-                    {
-                        timpl.vtable = if translated {
-                            VTableDecl::VTable(vtable)
-                        } else {
-                            VTableDecl::Lazy
-                        };
-                    }
-                }
-                Effect::FillLazyVTable(impl_id, vtable) => {
-                    if let Some(timpl) = self.translated.trait_impls.get_mut(impl_id)
-                        && timpl.vtable.is_lazy()
-                    {
-                        timpl.vtable = VTableDecl::VTable(vtable);
-                    }
+                Effect::TranslatedVTable(impl_id, vtable) => {
+                    self.translated_vtables.push((impl_id, vtable));
                 }
             }
         }
@@ -1637,7 +1618,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                 Effect::RegisterAssocItems(t) | Effect::MarkMethodUsed(t, _) => {
                     collect.items.insert((*t).into());
                 }
-                Effect::ImplVTable(i, vtable) | Effect::FillLazyVTable(i, vtable) => {
+                Effect::TranslatedVTable(i, vtable) => {
                     collect.items.insert((*i).into());
                     let _ = vtable.drive(&mut collect);
                 }

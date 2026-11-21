@@ -740,20 +740,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             )?
             .unwrap();
 
-        // This depends on the order of translation.
-        match self.item_id.as_item() {
-            Some(ItemId::TraitImpl(impl_id)) => {
-                self.t_ctx.cache_record_effect(|| {
-                    super::translate_cache::Effect::ImplVTable(impl_id, vtable.clone())
-                });
-            }
-            _ => self.t_ctx.cache_taint("vtable of another impl"),
-        }
-        if !self.t_ctx.is_translated(vtable.id.into()) {
-            Ok(VTableDecl::Lazy)
-        } else {
-            Ok(VTableDecl::VTable(vtable))
-        }
+        // We settle this once translation is done, see `settle_translation_order`.
+        Ok(VTableDecl::VTable(vtable))
     }
 
     pub fn translate_vtable_instance_ref_maybe_enqueue(
@@ -836,7 +824,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
     ) -> Result<GlobalDecl, Error> {
         let span = item_meta.span;
 
-        // Update the impl, in case it's vtable was lazy.
+        // The impl refers to this vtable if it doesn't refer to another one we translate (see
+        // `settle_translation_order`).
         if impl_kind != TransImplSource::Marker {
             let impl_id: TraitImplId = self.register_item_maybe_enqueue(
                 span,
@@ -849,16 +838,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 generics: BoxedArgs::new(self.outermost_generics().identity_args()),
             };
             self.t_ctx.cache_record_effect(|| {
-                super::translate_cache::Effect::FillLazyVTable(impl_id, vtable_ref.clone())
+                super::translate_cache::Effect::TranslatedVTable(impl_id, vtable_ref.clone())
             });
-            if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
-                && timpl.vtable.is_lazy()
-            {
-                timpl.vtable = VTableDecl::VTable(vtable_ref);
-            } else {
-                // We may translate the impl later, or another worker may.
-                self.t_ctx.translated_vtables.push((impl_id, vtable_ref));
-            }
+            self.t_ctx.translated_vtables.push((impl_id, vtable_ref));
         }
 
         let (src, vtable_struct_ref) = self.get_vtable_instance_info(span, impl_def, impl_kind)?;
