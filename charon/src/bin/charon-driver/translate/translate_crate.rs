@@ -1366,6 +1366,7 @@ pub fn translate<'tcx>(
         containment_graph: Default::default(),
         translate_stack: Default::default(),
         cached_spans: Default::default(),
+        recent_spans: Box::new([None; RECENT_SPANS]),
         cached_span_datas: Default::default(),
         cached_file_ids: Default::default(),
         last_source_file: Default::default(),

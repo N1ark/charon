@@ -15,6 +15,67 @@ use crate::hax;
 use crate::hax::{BaseState, DefPathItem, SInto};
 use charon_lib::{ast::*, name_matcher::NamePattern};
 
+/// The line and display column of `pos`, as given by
+/// `SourceFile::lookup_file_pos_with_col_display`. That function scans all the multibyte characters
+/// of the file before `pos`, and copies the line when the source comes from another crate. `pos`
+/// must not come before line `min_line` (1-based).
+fn line_and_display_col(
+    file: &rustc_span::SourceFile,
+    pos: rustc_span::BytePos,
+    min_line: usize,
+) -> (usize, usize) {
+    use rustc_span::{Pos, RelativeBytePos};
+    // The number of characters in a range of the file. Characters take one byte, except for the
+    // multibyte ones.
+    let char_count = |begin: RelativeBytePos, end: RelativeBytePos| {
+        let mbcs = &file.multibyte_chars;
+        let first = mbcs.partition_point(|mbc| mbc.pos < begin);
+        let extra_bytes: usize = mbcs[first..]
+            .iter()
+            .take_while(|mbc| mbc.pos < end)
+            .map(|mbc| mbc.bytes as usize - 1)
+            .sum();
+        end.to_usize() - begin.to_usize() - extra_bytes
+    };
+    let rel_pos = file.relative_position(pos);
+    let lines = file.lines();
+    // The number of lines that start at or before `pos`. Spans often fit on one line.
+    let lines_before = if min_line > 0 && lines.get(min_line).is_none_or(|&next| rel_pos < next) {
+        min_line
+    } else {
+        lines.partition_point(|&begin| begin <= rel_pos)
+    };
+    let Some(line_index) = lines_before.checked_sub(1) else {
+        return (0, char_count(RelativeBytePos(0), rel_pos));
+    };
+    let line_begin = lines[line_index];
+    let display_width = |src: &str| match src.get(line_begin.to_usize()..rel_pos.to_usize()) {
+        Some(prefix) if prefix.bytes().all(|b| (0x20..0x7f).contains(&b)) => Some(prefix.len()),
+        Some(prefix) => Some(rustc_span::str_width(prefix)),
+        None => None,
+    };
+    let display_col = if let Some(src) = &file.src {
+        display_width(src)
+    } else if let Some(external_src) = file.external_src.get() // Frozen once loaded.
+        && let Some(src) = external_src.get_source()
+    {
+        display_width(src)
+    } else {
+        // Without the source, the column is counted in characters.
+        Some(char_count(line_begin, rel_pos))
+    };
+    match display_col {
+        Some(display_col) => (line_index + 1, display_col),
+        None => fallback(file, pos),
+    }
+}
+
+#[cold]
+fn fallback(file: &rustc_span::SourceFile, pos: rustc_span::BytePos) -> (usize, usize) {
+    let (line, _col, col_display) = file.lookup_file_pos_with_col_display(pos);
+    (line, col_display)
+}
+
 // Spans
 impl<'tcx> TranslateCtx<'tcx> {
     /// Register a file if it is a "real" file and was not already registered
@@ -175,15 +236,15 @@ impl<'tcx> TranslateCtx<'tcx> {
             }
         };
 
-        let convert_loc = |pos: rustc_span::BytePos| -> Loc {
-            let (line, _col, col_display) = source_file.lookup_file_pos_with_col_display(pos);
+        let convert_loc = |pos: rustc_span::BytePos, min_line: usize| -> Loc {
+            let (line, col_display) = line_and_display_col(&source_file, pos, min_line);
             Loc {
                 line: line as u32,
                 col: col_display as u32,
             }
         };
-        let beg = convert_loc(span.lo());
-        let end = convert_loc(span.hi());
+        let beg = convert_loc(span.lo(), 0);
+        let end = convert_loc(span.hi(), beg.line as usize);
 
         // Put together
         meta::SpanData { file_id, beg, end }
@@ -213,11 +274,23 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     pub(crate) fn translate_span(&mut self, span: &rustc_span::Span) -> Span {
-        if let Some(translated) = self.cached_spans.get(span) {
-            return *translated;
+        use std::hash::BuildHasher;
+        let hash = rustc_hash::FxBuildHasher.hash_one(span);
+        let slot = (hash >> (64 - RECENT_SPANS.trailing_zeros())) as usize;
+        if let Some((key, translated)) = self.recent_spans[slot]
+            && key == *span
+        {
+            return translated;
         }
-        let translated = self.translate_span_uncached(span);
-        self.cached_spans.insert(*span, translated);
+        let translated = match self.cached_spans.get(span) {
+            Some(translated) => *translated,
+            None => {
+                let translated = self.translate_span_uncached(span);
+                self.cached_spans.insert(*span, translated);
+                translated
+            }
+        };
+        self.recent_spans[slot] = Some((*span, translated));
         translated
     }
 
@@ -232,7 +305,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         } else {
             None
         };
-        let data = self.translate_span_data(*span);
+        // `cached_spans` already caches this span.
+        let data = self.translate_span_data_uncached(*span);
         match macro_call {
             Some(expn) => {
                 // Code that already points to the macro call doesn't need a `generated_from_span`.

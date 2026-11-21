@@ -140,6 +140,9 @@ pub struct TranslateCtx<'tcx> {
     pub translate_stack: Vec<ItemOrModuleId>,
     /// Cache of the translated spans, as translating one is costly.
     pub cached_spans: HashMap<rustc_span::Span, Span>,
+    /// A small direct-mapped cache in front of `cached_spans`: most spans we look up were looked
+    /// up shortly before, and `cached_spans` is large.
+    pub recent_spans: Box<[Option<(rustc_span::Span, Span)>; RECENT_SPANS]>,
     /// Cache of the translated span datas.
     pub cached_span_datas: HashMap<rustc_span::Span, meta::SpanData>,
     /// Cache of file ids per rustc source file, to avoid recomputing file names for every span.
@@ -165,6 +168,9 @@ pub struct TranslateCtx<'tcx> {
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
 }
+
+/// The number of entries of `TranslateCtx::recent_spans`.
+pub const RECENT_SPANS: usize = 1024;
 
 /// The functions exported under a given symbol.
 #[derive(Debug, Default, Clone)]
