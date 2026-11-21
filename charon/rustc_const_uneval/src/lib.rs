@@ -9,6 +9,7 @@ extern crate rustc_attr_ir;
 extern crate rustc_const_eval;
 extern crate rustc_data_structures;
 extern crate rustc_hir;
+extern crate rustc_index;
 extern crate rustc_middle;
 extern crate rustc_span;
 extern crate rustc_thread_pool;
@@ -54,6 +55,11 @@ struct AllocTypesData<'tcx> {
     views: FxHashMap<interpret::AllocId, AllocView<'tcx>>,
     /// If set, the lookups of views of each thread, in order.
     lookups: Option<FxHashMap<std::thread::ThreadId, Vec<ViewLookup<'tcx>>>>,
+    /// See `AllocTypes::raw_promoteds`.
+    raw_promoteds: FxHashMap<
+        rustc_hir::def_id::LocalDefId,
+        Option<std::sync::Arc<rustc_index::IndexVec<mir::Promoted, mir::Body<'tcx>>>>,
+    >,
 }
 
 /// A lookup of the view of an allocation.

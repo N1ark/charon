@@ -79,6 +79,29 @@ impl<'tcx> AllocTypes<'tcx> {
         self.lookup(alloc_id, || AllocView::Untyped)
     }
 
+    /// The promoted MIR of this local item as rustc built it, unless rustc's checks stole it. We
+    /// read it once and keep it: const-eval steals it, which panics if another thread is reading
+    /// it, so we fill this before evaluating anything of the item.
+    pub(crate) fn raw_promoteds(
+        &self,
+        tcx: TyCtxt<'tcx>,
+        def_id: rustc_hir::def_id::LocalDefId,
+    ) -> Option<std::sync::Arc<rustc_index::IndexVec<mir::Promoted, mir::Body<'tcx>>>> {
+        if let Some(raw) = self.0.lock().raw_promoteds.get(&def_id) {
+            return raw.clone();
+        }
+        wait_for_rustc_checks(tcx, def_id.to_def_id());
+        // We don't hold the lock across this query, see `update_if_unset`.
+        let (_, promoteds) = tcx.mir_promoted(def_id);
+        let mut data = self.0.lock();
+        data.raw_promoteds
+            .entry(def_id)
+            .or_insert_with(|| {
+                (!promoteds.is_stolen()).then(|| std::sync::Arc::new(promoteds.borrow().clone()))
+            })
+            .clone()
+    }
+
     /// Start recording the lookups of views.
     pub fn record_lookups(&self) {
         self.0.lock().lookups.get_or_insert_default();
@@ -191,17 +214,16 @@ pub fn wait_for_rustc_checks(tcx: TyCtxt<'_>, def_id: DefId) {
 /// Call `f` on the MIR of the given promoted constant.
 pub fn promoted_body<'tcx, R>(
     tcx: TyCtxt<'tcx>,
+    alloc_types: &AllocTypes<'tcx>,
     def_id: DefId,
     promoted: mir::Promoted,
     f: impl FnOnce(&mir::Body<'tcx>) -> R,
 ) -> R {
     // The promoteds of a local item are stolen once its MIR is optimized.
-    if let Some(local_def_id) = def_id.as_local() {
-        wait_for_rustc_checks(tcx, def_id);
-        let (_, promoteds) = tcx.mir_promoted(local_def_id);
-        if !promoteds.is_stolen() {
-            return f(&promoteds.borrow()[promoted]);
-        }
+    if let Some(local_def_id) = def_id.as_local()
+        && let Some(promoteds) = alloc_types.raw_promoteds(tcx, local_def_id)
+    {
+        return f(&promoteds[promoted]);
     }
     f(&tcx.promoted_mir(def_id)[promoted])
 }
@@ -245,6 +267,10 @@ impl<'tcx> ConstReader<'tcx> {
         let instantiate = |ty, args| ty::EarlyBinder::bind(tcx, ty).instantiate(tcx, args);
         Ok(match src {
             ConstSource::Item { def_id, args } => {
+                // Evaluating it may steal its promoteds, which we must have read first.
+                if let Some(local_def_id) = def_id.as_local() {
+                    self.alloc_types.raw_promoteds(tcx, local_def_id);
+                }
                 let uv = mir::UnevaluatedConst {
                     def: def_id,
                     args,
@@ -270,6 +296,10 @@ impl<'tcx> ConstReader<'tcx> {
                 args,
                 promoted,
             } => {
+                // Evaluating it steals the promoteds, which we must have read first.
+                if let Some(local_def_id) = def_id.as_local() {
+                    self.alloc_types.raw_promoteds(tcx, local_def_id);
+                }
                 let uv = mir::UnevaluatedConst {
                     def: def_id,
                     args,
@@ -280,7 +310,7 @@ impl<'tcx> ConstReader<'tcx> {
                     .map_err(|_| ReadError::NotEvaluable)?;
                 // Promoteds aren't items so `type_of` doesn't work for them; instead we read
                 // their type off the return place of their MIR body.
-                let ty = promoted_body(tcx, def_id, promoted, |body| {
+                let ty = promoted_body(tcx, &self.alloc_types, def_id, promoted, |body| {
                     body.local_decls[mir::RETURN_PLACE].ty
                 });
                 Evaluated::Value(val, instantiate(ty, args).skip_normalization())

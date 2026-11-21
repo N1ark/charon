@@ -139,13 +139,19 @@ where
         }
         DefIdBase::Promoted(rust_def_id, promoted_id) => {
             let param_env = ParamEnv::empty(s, this.typing_parent(s).as_ref());
-            let (span, ty) =
-                rustc_const_uneval::promoted_body(tcx, rust_def_id, promoted_id, |body| {
+            let alloc_types = &s.global_cache().alloc_types;
+            let (span, ty) = rustc_const_uneval::promoted_body(
+                tcx,
+                alloc_types,
+                rust_def_id,
+                promoted_id,
+                |body| {
                     (
                         body.span,
                         body.local_decls[rustc_middle::mir::RETURN_PLACE].ty,
                     )
-                });
+                },
+            );
             source_span = Some(span);
             let ty = substitute(tcx, s.typing_env(), args, ty).sinto(s);
             kind = FullDefKind::Const(Const {

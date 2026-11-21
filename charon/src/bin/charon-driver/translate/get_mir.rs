@@ -62,15 +62,18 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 mir_level,
             ));
         }
-        Ok(match get_mir_for_def_id_and_level(tcx, def_id, mir_level) {
-            Some(body) => {
-                let s = self.hax_state_with_id();
-                let typing_env = s.typing_env();
-                let args = item_ref.rustc_args(s);
-                Some(hax::substitute(tcx, typing_env, Some(args), body))
-            }
-            None => None,
-        })
+        let alloc_types = &hax::BaseState::global_cache(self.hax_state()).alloc_types;
+        Ok(
+            match get_mir_for_def_id_and_level(tcx, alloc_types, def_id, mir_level) {
+                Some(body) => {
+                    let s = self.hax_state_with_id();
+                    let typing_env = s.typing_env();
+                    let args = item_ref.rustc_args(s);
+                    Some(hax::substitute(tcx, typing_env, Some(args), body))
+                }
+                None => None,
+            },
+        )
     }
 }
 
@@ -98,17 +101,23 @@ pub fn instantiated_mir<'tcx>(
 
 /// Query the MIR for a function at a specific level. Return `None` in the case of a foreign body
 /// with no MIR available.
-#[tracing::instrument(skip(tcx))]
+#[tracing::instrument(skip(tcx, alloc_types))]
 fn get_mir_for_def_id_and_level<'tcx>(
     tcx: ty::TyCtxt<'tcx>,
+    alloc_types: &rustc_const_uneval::AllocTypes<'tcx>,
     def_id: &hax::DefId,
     level: MirLevel,
 ) -> Option<mir::Body<'tcx>> {
     match def_id.base {
         hax::DefIdBase::Real(rust_def_id) => get_real_mir(tcx, rust_def_id, level),
         hax::DefIdBase::Promoted(rust_def_id, promoted_id) => {
-            let body =
-                rustc_const_uneval::promoted_body(tcx, rust_def_id, promoted_id, Clone::clone);
+            let body = rustc_const_uneval::promoted_body(
+                tcx,
+                alloc_types,
+                rust_def_id,
+                promoted_id,
+                Clone::clone,
+            );
             Some(body)
         }
         hax::DefIdBase::Alloc(..) => None,
