@@ -1772,12 +1772,13 @@ impl TransformPass for Transform {
             }
         };
 
-        // We transform the type declarations, trait declarations and trait impls one by one, in
-        // the same order as `for_each_item_mut`: trait declarations get new associated types,
-        // and these items are looked at when formatting error messages. Globals and functions
-        // don't affect each other, so we transform them in parallel.
+        // We transform the type declarations and trait declarations one by one, in the same order
+        // as `for_each_item_mut`: trait declarations get new associated types, and these items are
+        // looked at when formatting error messages. The other items don't affect each other, so we
+        // transform them in parallel. Error messages display trait impls, so we transform copies of
+        // them.
         ctx.for_each_item_mut_where(
-            |id| !id.is_global() && !id.is_fun(),
+            |id| id.is_type() || id.is_trait_decl(),
             |ctx, mut item| {
                 let id = item.as_ref().id();
                 let modifications = item_modifications.get(&GenericsSource::Item(id)).unwrap();
@@ -1824,6 +1825,10 @@ impl TransformPass for Transform {
                 };
                 update_item(ctx, item, type_replacements)
             },
+        );
+        ctx.par_for_each_item_copy_where(
+            |id| id.is_trait_impl(),
+            |ctx, item| update_item(ctx, item, None),
         );
         ctx.par_for_each_item_mut_where(
             |id| id.is_global() || id.is_fun(),

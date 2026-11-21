@@ -554,6 +554,36 @@ impl TransformCtx {
         }
     }
 
+    /// Like `par_for_each_item_mut_where`, except that `f` transforms copies of the items while
+    /// the originals stay in the crate, so that `f` can look at any item through `ctx`. The copies
+    /// then replace the originals.
+    pub(crate) fn par_for_each_item_copy_where(
+        &mut self,
+        select: impl Fn(ItemId) -> bool,
+        f: impl Fn(&Self, ItemRefMut<'_>) + Sync,
+    ) {
+        let mut items: Vec<(ItemId, ItemByVal)> = self
+            .translated
+            .all_ids()
+            .filter(|&id| select(id))
+            .filter_map(|id| Some((id, self.translated.get_item(id)?.to_owned())))
+            .collect();
+        let outcomes = self.par_with_def_ids(
+            &mut items,
+            |(id, item)| {
+                let meta = item.as_ref().item_meta();
+                (*id, meta.is_local, meta.span)
+            },
+            |ctx, (_, item)| f(ctx, item.as_mut()),
+        );
+        for ((id, mut item), outcome) in items.into_iter().zip(outcomes) {
+            assert!(outcome.new_globals.is_empty() && outcome.first_fresh_ids.is_none());
+            item.as_mut().item_meta().has_errors |= outcome.has_errors;
+            self.translated.remove_item_temporarily(id);
+            self.translated.put_item_back(id, item);
+        }
+    }
+
     /// Same as `for_each_item_mut`, for an `f` that only looks at the trait declarations of the
     /// crate. We transform the type declarations in parallel, then the trait declarations one by
     /// one, then the other items in parallel; the order of the iteration is the same as with
