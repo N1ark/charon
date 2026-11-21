@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use std::any::type_name;
 use std::cell::RefCell;
+use std::collections::hash_map::Entry;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -71,13 +72,10 @@ impl DedupSerializerState for DedupSerializer {
     fn record_serialized<T: Dedup>(&self, value: &T) -> Option<Result<DedupId, DedupId>> {
         let mut ser = self.ser.borrow_mut();
         let table = ser.or_default::<T>();
-        Some(match table.get(value) {
-            Some(&id) => Err(id),
-            None => {
-                let id = DedupId(table.len().try_into().unwrap());
-                table.insert(value.clone(), id);
-                Ok(id)
-            }
+        let next_id = DedupId(table.len().try_into().unwrap());
+        Some(match table.entry(value.clone()) {
+            Entry::Occupied(entry) => Err(*entry.get()),
+            Entry::Vacant(entry) => Ok(*entry.insert(next_id)),
         })
     }
     fn record_deserialized<T: Dedup>(&self, id: DedupId, value: T) {
