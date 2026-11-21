@@ -46,15 +46,32 @@ fn set_mir_options(config: &mut Config) {
     }
 }
 
+/// The number of threads of the parallel parts of the work (rustc's front-end, our passes): one per
+/// available CPU, up to a cap. Past it, more threads cost CPU time and memory but no wall time.
+fn default_thread_count() -> usize {
+    const MAX_THREADS: usize = 16;
+    std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .min(MAX_THREADS)
+}
+
+/// Set up rayon's global pool, on which the transformation passes run. As visitors recurse on deep
+/// types, its threads get the stack size of the thread that runs the passes.
+fn init_thread_pool() {
+    let mut builder = rayon::ThreadPoolBuilder::new()
+        .thread_name(|_| "charon".to_owned())
+        .stack_size(rustc_interface::util::DEFAULT_STACK_SIZE);
+    // Like rayon, let `RAYON_NUM_THREADS` choose the number of threads.
+    if env::var_os("RAYON_NUM_THREADS").is_none() {
+        builder = builder.num_threads(default_thread_count());
+    }
+    builder.build_global().unwrap();
+}
+
 /// Enable rustc's parallel front-end.
 fn set_parallel_frontend(config: &mut Config) {
     if config.opts.jobs.frontend.is_none() {
-        // Match rustc's `--jobs-frontend=0` behavior.
-        const RUSTC_MAX_THREADS_CAP: usize = u8::MAX as usize;
-        let threads = std::thread::available_parallelism()
-            .map_or(1, |n| n.get())
-            .min(RUSTC_MAX_THREADS_CAP);
-        config.opts.jobs.frontend = NonZero::new(threads).filter(|n| n.get() > 1);
+        config.opts.jobs.frontend = NonZero::new(default_thread_count()).filter(|n| n.get() > 1);
     }
 }
 
@@ -271,6 +288,7 @@ pub fn run_rustc_driver() -> Result<Option<(TransformCtx, CliOpts)>, CharonFailu
             compiler_args.push(extra_flag);
         }
 
+        init_thread_pool();
         // Call the Rust compiler with our custom callback.
         let mut callback = CharonCallbacks {
             options: &options,

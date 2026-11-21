@@ -154,14 +154,6 @@ fn main() {
     logger::initialize_logger();
     charon_lib::transform::ctx::install_panic_hook();
 
-    // The transformation passes run on rayon's threads; set them up like the thread that runs
-    // the passes, as visitors recurse on deep types.
-    rayon::ThreadPoolBuilder::new()
-        .thread_name(|_| "charon".to_owned())
-        .stack_size(rustc_interface::util::DEFAULT_STACK_SIZE)
-        .build_global()
-        .unwrap();
-
     // Catch any and all panics coming from charon to display a clear error.
     let res = panic::catch_unwind(run_charon)
         .map_err(|_| CharonFailure::Panic)

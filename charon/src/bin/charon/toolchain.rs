@@ -139,7 +139,11 @@ pub fn driver_cmd() -> Result<Command> {
         && let Some(dir) = toolchain.rustup_dir()
     {
         let mut lib_path = vec![dir.join("lib")];
-        lib_path.extend(env::var_os("LD_LIBRARY_PATH").iter().flat_map(env::split_paths));
+        lib_path.extend(
+            env::var_os("LD_LIBRARY_PATH")
+                .iter()
+                .flat_map(env::split_paths),
+        );
         let mut cmd = Command::new(driver_path());
         cmd.env("LD_LIBRARY_PATH", env::join_paths(lib_path)?);
         cmd.env("RUSTUP_TOOLCHAIN", dir.file_name().unwrap());

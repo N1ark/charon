@@ -29,6 +29,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use rayon::prelude::*;
 use rustc_data_structures::fingerprint::Fingerprint;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_data_structures::memmap::Mmap;
@@ -44,7 +45,6 @@ use rustc_span::{
     AttrId, BlobDecoder, ByteSymbol, DUMMY_SP, ExpnId, Span, SpanDecoder, SpanEncoder, Symbol,
     SyntaxContext,
 };
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use serde_state_perfect_derive as serde_state;
@@ -1763,7 +1763,6 @@ impl VisitAst for CheckStoredFiles {
         }
     }
 }
-
 
 #[derive(derive_generic_visitor::Visitor)]
 struct CollectIds {
