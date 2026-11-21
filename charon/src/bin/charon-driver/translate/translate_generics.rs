@@ -763,8 +763,9 @@ pub struct LifetimeMutabilityComputer {
 struct LifetimeUses {
     /// The lifetimes used in a `&'a mut T`.
     in_mut_refs: HashSet<u32>,
-    /// The ADTs the fields mention, with the lifetimes passed to them.
-    adts: Vec<(hax::DefId, Vec<u32>)>,
+    /// The ADTs the fields mention, with the lifetimes passed to them: pairs of the index of the
+    /// ADT's parameter and of our lifetime.
+    adts: Vec<(hax::DefId, Vec<(u32, u32)>)>,
 }
 
 /// The state of Tarjan's algorithm for one ADT.
@@ -876,8 +877,8 @@ impl LifetimeMutabilityComputer {
                     };
                     let new = lifetimes
                         .iter()
-                        .copied()
-                        .filter(|lt| other_mutabilities.contains(lt))
+                        .filter(|(param, _)| other_mutabilities.contains(param))
+                        .map(|&(_, lt)| lt)
                         .collect_vec();
                     let set = self.lt_mutability.get_mut(adt).unwrap();
                     for lt in new {
@@ -909,13 +910,15 @@ impl LifetimeMutabilityComputer {
                         self.uses.in_mut_refs.insert(r.index);
                     }
                     ty::Adt(adt, args) => {
+                        // The parameters of an ADT have no parent, so their index is their position.
                         let lifetimes = args
                             .iter()
-                            .filter_map(|arg| {
+                            .enumerate()
+                            .filter_map(|(param, arg)| {
                                 if let Some(r) = arg.as_region()
                                     && let ty::RegionKind::ReEarlyParam(r) = r.kind()
                                 {
-                                    Some(r.index)
+                                    Some((param as u32, r.index))
                                 } else {
                                     None
                                 }
