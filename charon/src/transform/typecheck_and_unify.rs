@@ -162,7 +162,9 @@ impl TypeCheckVisitor<'_> {
         a: &PolyTraitDeclRef,
         b: &PolyTraitDeclRef,
     ) -> Result<(), TypeError> {
-        self.match_trait_decl_refs(&a.clone().erase(), &b.clone().erase())
+        // Matching never looks at variables, so we can match under the binders instead of
+        // instantiating them.
+        self.match_trait_decl_refs(&a.skip_binder, &b.skip_binder)
     }
 
     fn apply_poly_predicate(
@@ -172,7 +174,17 @@ impl TypeCheckVisitor<'_> {
         if pred.regions.len() != args.regions.len() {
             return Err(TypeError);
         }
-        Ok(pred.apply(args.clone()))
+        // Matching only looks at body regions and lubs, so if the args have none we can skip
+        // instantiating the binder.
+        if args
+            .regions
+            .iter()
+            .any(|r| matches!(r, Region::Body(_) | Region::Lub(_)))
+        {
+            Ok(pred.apply(args.clone()))
+        } else {
+            Ok(pred.skip_binder)
+        }
     }
 
     fn match_trait_ref_against_itself(&mut self, tref: &TraitRef) -> Result<(), TypeError> {
@@ -242,7 +254,11 @@ impl TypeCheckVisitor<'_> {
         &mut self,
         tref: &PolyTraitRef,
     ) -> Result<(), TypeError> {
-        self.match_trait_ref_against_itself(&tref.clone().erase())
+        // Like in `match_poly_trait_decl_refs`, we work under the binder instead of instantiating it.
+        self.binder_stack.push(tref.0.to_params());
+        let result = self.match_trait_ref_against_itself(&tref.0.skip_binder);
+        self.binder_stack.pop();
+        result
     }
 
     fn match_poly_trait_refs(
