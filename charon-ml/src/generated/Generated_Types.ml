@@ -549,9 +549,10 @@ and global_provenance =
           other words, the bytes of a full [TypeId] are
           [Provenance(TypeId(ty), 0, 0..16)]. *)
 
-(** Hash-consed data structure: a reference-counted wrapper that guarantees that
-    two equal value will be stored at the same address. This makes it possible
-    to use the pointer address as a hash value. *)
+(** Hash-consed data structure: a pointer to a value stored in a global
+    interning table, which guarantees that two equal values are stored at the
+    same address. This makes it possible to compare and hash by address.
+    Interned values are never freed. *)
 and 'a0 hash_consed = 'a0 (* Not actually hash-consed on the OCaml side *)
 
 (** The nature of locations where a given lifetime parameter is used. If this

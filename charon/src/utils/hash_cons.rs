@@ -1,28 +1,44 @@
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo, Visit, VisitMut, VisitTwo};
 use std::hash::Hash;
 use std::ops::{ControlFlow, Deref, DerefMut};
-use std::sync::Arc;
 
-use crate::utils::hash_by_addr::HashByAddr;
 use crate::utils::type_map::Mappable;
 
-/// Hash-consed data structure: a reference-counted wrapper that guarantees that two equal
-/// value will be stored at the same address. This makes it possible to use the pointer address
-/// as a hash value.
+/// Hash-consed data structure: a pointer to a value stored in a global interning table, which
+/// guarantees that two equal values are stored at the same address. This makes it possible to
+/// compare and hash by address. Interned values are never freed.
 // Warning: a `derive` should not introduce a way to create a new `HashConsed` value without
 // going through the interning table.
-#[derive(PartialEq, Eq, Hash)]
-pub struct HashConsed<T>(HashByAddr<Arc<T>>);
+pub struct HashConsed<T>(std::ptr::NonNull<T>);
+
+// SAFETY: this is semantically a `&'static T`.
+unsafe impl<T: Sync> Send for HashConsed<T> {}
+unsafe impl<T: Sync> Sync for HashConsed<T> {}
 
 impl<T> Clone for HashConsed<T> {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        *self
+    }
+}
+impl<T> Copy for HashConsed<T> {}
+
+impl<T> PartialEq for HashConsed<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+impl<T> Eq for HashConsed<T> {}
+
+impl<T> Hash for HashConsed<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
     }
 }
 
 impl<T> HashConsed<T> {
     pub fn inner(&self) -> &T {
-        self.0.0.as_ref()
+        // SAFETY: interned values are never freed, see `intern_table::Table`.
+        unsafe { self.0.as_ref() }
     }
 }
 
@@ -48,149 +64,68 @@ impl<T> HashConsable for T where T: Hash + PartialEq + Eq + Clone + Mappable {}
 // equality on `HashCons` to be broken.
 mod intern_table {
     use rustc_hash::FxBuildHasher;
-    use std::borrow::Borrow;
-    use std::mem::ManuallyDrop;
-    use std::ops::DerefMut;
-    use std::sync::{Arc, LazyLock, RwLock};
+    use std::sync::{LazyLock, RwLock};
 
     use super::{HashConsable, HashConsed};
-    use crate::utils::hash_by_addr::HashByAddr;
     use crate::utils::type_map::{Mappable, Mapper, TypeMap};
 
-    type SeqHashSet<T> = indexmap::IndexSet<T, FxBuildHasher>;
-
-    // This is a static mutable `SeqHashSet<Arc<T>>` that records for each `T` value a unique
-    // `Arc<T>` that contains the same value. Values inside the set are hashed/compared
-    // as is normal for `T`.
-    // Once we've gotten an `Arc` out of the set however, we're sure that "T-equality"
-    // implies address-equality, hence the `HashByAddr` wrapper preserves correct equality
-    // and hashing behavior.
+    // This is a static mutable `HashSet<&'static T>` that records for each `T` value a unique
+    // allocation that contains the same value. Values inside the set are hashed/compared as is
+    // normal for `T`. Once we've gotten a reference out of the set however, we're sure that
+    // "T-equality" implies address-equality.
     struct InternMapper;
     impl Mapper for InternMapper {
-        type Value<T: Mappable> = SeqHashSet<Arc<T>>;
+        type Value<T: Mappable> = Table<T>;
+    }
+
+    struct Table<T: 'static> {
+        set: hashbrown::HashSet<&'static T, FxBuildHasher>,
+        /// Storage for new values. Values are never freed, and this is never reallocated: when
+        /// it's full we leak it and start a new one.
+        chunk: Vec<T>,
+    }
+    impl<T> Default for Table<T> {
+        fn default() -> Self {
+            Self {
+                set: Default::default(),
+                chunk: Vec::new(),
+            }
+        }
+    }
+    impl<T> Table<T> {
+        fn alloc(&mut self, value: T) -> &'static T {
+            if self.chunk.len() == self.chunk.capacity() {
+                let new_cap = (self.chunk.capacity() * 2).clamp(16, 1 << 14);
+                std::mem::forget(std::mem::replace(
+                    &mut self.chunk,
+                    Vec::with_capacity(new_cap),
+                ));
+            }
+            self.chunk.push(value);
+            // SAFETY: the chunk is never reallocated nor dropped, so its elements live forever.
+            unsafe { &*std::ptr::from_ref(self.chunk.last().unwrap()) }
+        }
     }
     static INTERNED: LazyLock<RwLock<TypeMap<InternMapper>>> = LazyLock::new(Default::default);
 
-    // The excessive generality is to make it work for both `U = T` and `U = Arc<T>`.
-    pub(super) fn intern<T: HashConsable, U>(inner: U) -> HashConsed<T>
-    where
-        Arc<T>: Borrow<U>,
-        U: Into<Arc<T>> + std::hash::Hash,
-        U: indexmap::Equivalent<Arc<T>>,
-    {
+    pub(super) fn intern<T: HashConsable>(inner: T) -> HashConsed<T> {
         // Fast read-only check.
-        let arc = if let read_guard = INTERNED.read().unwrap()
-            && let Some(set) = read_guard.get::<T>()
-            && let Some(arc) = set.get(&inner)
+        if let read_guard = INTERNED.read().unwrap()
+            && let Some(table) = read_guard.get::<T>()
+            && let Some(&interned) = table.set.get(&inner)
         {
-            arc.clone()
+            return HashConsed(interned.into());
+        }
+        // Concurrent access is possible right here, so we have to check everything again.
+        let mut write_guard = INTERNED.write().unwrap();
+        let table = write_guard.or_default::<T>();
+        if let Some(&interned) = table.set.get(&inner) {
+            HashConsed(interned.into())
         } else {
-            // Concurrent access is possible right here, so we have to check everything again.
-            let mut write_guard = INTERNED.write().unwrap();
-            let set: &mut SeqHashSet<Arc<T>> = write_guard.or_default::<T>();
-            if let Some(arc) = set.get(&inner) {
-                arc.clone()
-            } else {
-                let arc: Arc<T> = inner.into();
-                set.insert(arc.clone());
-                arc
-            }
-        };
-        HashConsed(HashByAddr(arc))
-    }
-
-    /// The returned value must not be leaked as this would break the hash-consing invariant.
-    pub(super) fn make_mutable<T: HashConsable>(
-        x: &mut HashConsed<T>,
-    ) -> impl DerefMut<Target = T> {
-        /// A reference to a `HashConsed` for the purposes of mutating the contained value. Avoids
-        /// clones when possible.
-        ///
-        /// This value must not be leaked as that would invalidate the hash-consing invariant.
-        pub enum HashConsedMutRef<'a, T: HashConsable> {
-            /// The contained arc is known to have strong_count 1, so can be mutated directly.
-            /// The hash-consing invariant is broken: the table does not know about this value and we
-            /// must restore the invariant at the end.
-            Unique(&'a mut HashConsed<T>),
-            /// The value was shared, so we simply made a clone.
-            NotUnique(&'a mut HashConsed<T>, ManuallyDrop<T>),
+            let interned = table.alloc(inner);
+            table.set.insert(interned);
+            HashConsed(interned.into())
         }
-
-        impl<'a, T: HashConsable> HashConsedMutRef<'a, T> {
-            pub fn new(x: &'a mut HashConsed<T>) -> Self {
-                let arc = &mut x.0.0;
-                // Every value has at least two pointers: the current value and the one stored in the
-                // global map. If there are exactly two, we may mutate directly by discarding the one in
-                // the global map temporarily.
-                if Arc::strong_count(arc) != 2 {
-                    return Self::new_not_unique(x);
-                }
-                {
-                    // Take the write guard just long enough to drop the other `Arc` to this value.
-                    let mut write_guard = INTERNED.write().unwrap();
-                    // Check the count again, it could have changed concurrently.
-                    if Arc::strong_count(arc) != 2 {
-                        return Self::new_not_unique(x);
-                    }
-                    if let Some(other_arc) = write_guard.or_default::<T>().swap_take(&*arc) {
-                        drop(other_arc);
-                    } else {
-                        // Nothing was removed, early return.
-                        return Self::new_not_unique(x);
-                    }
-                    // The Arc was removed from the map; `x` is invalid as interning the same value would
-                    // result in a different pointer. NO MORE EARLY RETURN until we fix that.
-                }
-                // If we are still the sole owner, we can now mutate in-place.
-                if Arc::get_mut(arc).is_some() {
-                    Self::Unique(x)
-                } else {
-                    Self::new_not_unique(x)
-                }
-            }
-            fn new_not_unique(x: &'a mut HashConsed<T>) -> Self {
-                Self::NotUnique(x, ManuallyDrop::new(x.inner().clone()))
-            }
-        }
-
-        impl<'a, T: HashConsable> std::ops::Deref for HashConsedMutRef<'a, T> {
-            type Target = T;
-            fn deref(&self) -> &Self::Target {
-                match self {
-                    HashConsedMutRef::Unique(x) => x,
-                    HashConsedMutRef::NotUnique(_, val) => val,
-                }
-            }
-        }
-        impl<'a, T: HashConsable> std::ops::DerefMut for HashConsedMutRef<'a, T> {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                match self {
-                    HashConsedMutRef::Unique(x) => Arc::get_mut(&mut x.0.0).unwrap(),
-                    HashConsedMutRef::NotUnique(_, val) => val,
-                }
-            }
-        }
-
-        impl<'a, T: HashConsable> Drop for HashConsedMutRef<'a, T> {
-            fn drop(&mut self) {
-                match self {
-                    HashConsedMutRef::Unique(x) => {
-                        // Re-establish the interning invariant. If the same value was added to the map in the
-                        // meantime, we'll get a pointer to that.
-                        **x = HashConsed::from_arc(x.0.0.clone());
-                    }
-                    HashConsedMutRef::NotUnique(x, new_val) => {
-                        // SAFETY: we won't touch it again.
-                        let new_val = unsafe { ManuallyDrop::take(new_val) };
-                        // Re-intern the new value if it changed.
-                        if new_val != *x.inner() {
-                            **x = HashConsed::new(new_val);
-                        }
-                    }
-                }
-            }
-        }
-        HashConsedMutRef::new(x)
     }
 }
 
@@ -203,19 +138,39 @@ where
     pub fn new(inner: T) -> Self {
         intern_table::intern(inner)
     }
-    /// Rarely used: in case we already have an `Arc`, may avoid an allocation.
-    pub fn from_arc(inner: Arc<T>) -> Self {
-        intern_table::intern(inner)
-    }
 
-    /// Get a reference to the pointed-to value that can be mutated. Avoids cloning/allocation if
-    /// this is the sole pointer to that value.
-    ///
-    /// The returned value must not be leaked as this would break the hash-consing invariant.
+    /// Get a copy of the pointed-to value that can be mutated; the modified value is re-interned
+    /// when the returned guard is dropped.
     pub fn as_mut(&mut self) -> impl DerefMut<Target = T> {
-        intern_table::make_mutable(self)
+        struct HashConsedMutRef<'a, T: HashConsable> {
+            hc: &'a mut HashConsed<T>,
+            value: Option<T>,
+        }
+        impl<T: HashConsable> Deref for HashConsedMutRef<'_, T> {
+            type Target = T;
+            fn deref(&self) -> &T {
+                self.value.as_ref().unwrap()
+            }
+        }
+        impl<T: HashConsable> DerefMut for HashConsedMutRef<'_, T> {
+            fn deref_mut(&mut self) -> &mut T {
+                self.value.as_mut().unwrap()
+            }
+        }
+        impl<T: HashConsable> Drop for HashConsedMutRef<'_, T> {
+            fn drop(&mut self) {
+                let value = self.value.take().unwrap();
+                // Re-intern the new value if it changed.
+                if value != *self.hc.inner() {
+                    *self.hc = HashConsed::new(value);
+                }
+            }
+        }
+        let value = Some(self.inner().clone());
+        HashConsedMutRef { hc: self, value }
     }
-    /// Clones if needed to get mutable access to the inner value.
+    /// Clones the inner value to get mutable access to it, and re-interns it afterwards (even if
+    /// `f` panics).
     pub fn with_inner_mut<R>(&mut self, f: impl FnOnce(&mut T) -> R) -> R {
         f(&mut self.as_mut())
     }
@@ -230,7 +185,6 @@ impl<T> Deref for HashConsed<T> {
 
 impl<T: std::fmt::Debug> std::fmt::Debug for HashConsed<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Hide the `HashByAddr` wrapper.
         f.debug_tuple("HashConsed").field(self.inner()).finish()
     }
 }
