@@ -9,6 +9,8 @@ use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, PartialOrd};
+use std::io::Write;
+use std::ops::Range;
 use std::sync::{Arc, Mutex};
 
 const BACKTRACE_ON_ERR: bool = false;
@@ -83,10 +85,13 @@ impl Error {
         if let Some(file) = krate.files.get(span.file_id) {
             origin = format!("{}", file.name);
             if let Some(source) = &file.contents {
+                let (source, line_start, range) =
+                    covering_lines(source, span.to_byte_range(source));
                 let snippet = Snippet::source(source)
+                    .line_start(line_start)
                     .path(&origin)
                     .fold(true)
-                    .annotation(AnnotationKind::Primary.span(span.to_byte_range(source)));
+                    .annotation(AnnotationKind::Primary.span(range));
                 group = group.element(snippet);
             } else {
                 // Show just the file and line/col.
@@ -99,6 +104,36 @@ impl Error {
 
         Renderer::styled().render(&[group]).to_string()
     }
+}
+
+/// The lines of `source` that `range` touches, the number of the first one, and `range` relative to
+/// them. The renderer takes time linear in the source it is given, so we only give it these lines.
+fn covering_lines(source: &str, range: Range<usize>) -> (&str, usize, Range<usize>) {
+    if range.start > range.end || range.end > source.len() {
+        return (source, 1, range);
+    }
+    let bytes = source.as_bytes();
+    let line_start_before = |pos: usize| {
+        bytes[..pos]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1)
+    };
+    let mut lo = line_start_before(range.start);
+    // The renderer counts lines in the text before the end of the range: keep that text non-empty.
+    if range.end == lo && lo > 0 {
+        lo = line_start_before(lo - 1);
+    }
+    let hi = bytes[range.end..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map_or(source.len(), |i| range.end + i + 1);
+    let line_start = 1 + bytes[..lo].iter().filter(|&&b| b == b'\n').count();
+    (
+        &source[lo..hi],
+        line_start,
+        range.start - lo..range.end - lo,
+    )
 }
 
 /// Attach a source span to an error.
@@ -223,6 +258,19 @@ pub struct ErrorCtx {
     pub deferred_output: Option<Arc<Mutex<DeferredOutput>>>,
 }
 
+/// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes
+/// every styled chunk separately.
+fn eprintln_at_once(msg: &str) {
+    let stderr = std::io::stderr();
+    let mut buffer = anstream::AutoStream::new(Vec::new(), anstream::AutoStream::choice(&stderr));
+    let _ = writeln!(buffer, "{msg}");
+    if let Err(e) = stderr.lock().write_all(&buffer.into_inner())
+        && e.kind() != std::io::ErrorKind::BrokenPipe
+    {
+        panic!("failed printing to stderr: {e}");
+    }
+}
+
 /// Messages held back until `release` is called. We use this when translating in parallel with
 /// rustc's own checks, so as to report nothing if rustc rejects the crate.
 #[derive(Default)]
@@ -236,7 +284,7 @@ impl DeferredOutput {
     pub fn release(&mut self) {
         self.released = true;
         for msg in self.messages.drain(..) {
-            anstream::eprintln!("{msg}");
+            eprintln_at_once(&msg);
         }
     }
 }
@@ -273,7 +321,7 @@ impl ErrorCtx {
                 return;
             }
         }
-        anstream::eprintln!("{msg}");
+        eprintln_at_once(&msg);
     }
 
     /// Report an error without registering anything.
