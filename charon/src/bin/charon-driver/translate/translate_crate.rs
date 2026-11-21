@@ -60,6 +60,7 @@ pub enum RustcItem<'tcx> {
 
 /// The kind of a [`TransItemSource`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum TransItemSourceKind {
     Global,
     TraitDecl,
@@ -92,6 +93,7 @@ pub enum TransItemSourceKind {
 
 /// The kind of a [`TransItemSourceKind::TraitImpl`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum TransImplSource {
     /// A user-written trait impl with a `DefId`.
     Normal,
@@ -106,6 +108,7 @@ pub enum TransImplSource {
 
 /// The kind of a [`TransImplSource::Virtual`] impl.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum VirtualImplKind {
     /// A fictitious `impl Destruct for T` whose `drop_glue` method contains the drop glue code for
     /// `T`: it calls `Drop::drop` for the type and then drops its fields.
@@ -1601,6 +1604,7 @@ pub fn translate<'tcx>(
     ctx.register_target_info();
     ctx.reserve_unit_decl();
     ctx.register_builtin_functions()?;
+    ctx.cache_load_snapshot();
 
     // Start translating from the selected items.
     for start_from in ctx.options.start_from.clone() {
@@ -1744,7 +1748,7 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
-    if ctx.cache.is_none() && ctx.errors.borrow().continue_on_failure() {
+    if ctx.errors.borrow().continue_on_failure() {
         ctx.start_recording();
     }
     if parallel {
@@ -1794,10 +1798,7 @@ pub fn translate<'tcx>(
     // them. This removes them from the traits and impls.
     ctx.remove_unused_methods();
     ctx.compute_started_from();
-    ctx.cache_store_names();
-    if let Some(cache) = &mut ctx.cache {
-        cache.finish(&ctx.translated.files);
-    }
+    ctx.cache_finish();
 
     // Drop the translation state, except for the hax state.
     let hax_base = ctx.hax_state.base.clone();

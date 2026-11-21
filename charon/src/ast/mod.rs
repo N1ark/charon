@@ -1,6 +1,5 @@
 pub mod bodies;
 pub mod from_rustc;
-pub mod id_remap;
 pub mod items;
 pub mod krate;
 pub mod meta;

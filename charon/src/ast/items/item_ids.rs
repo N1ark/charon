@@ -7,17 +7,17 @@ use serde_state::{DeserializeState, SerializeState};
 use crate::ast::*;
 use enum_as_inner::EnumAsInner;
 
-generate_index_type!(FunDeclId, "Fun", remap = crate::ast::id_remap::remap_item_id);
-generate_index_type!(TypeDeclId, "Adt", remap = crate::ast::id_remap::remap_item_id);
+generate_index_type!(FunDeclId, "Fun");
+generate_index_type!(TypeDeclId, "Adt");
 
 impl TypeDeclId {
     /// The declaration of the unit type `()`. With `--no-gen-tuple-structs`, this is the
     /// declaration of every tuple.
     pub const UNIT: Self = Self::ZERO;
 }
-generate_index_type!(GlobalDeclId, "Global", remap = crate::ast::id_remap::remap_item_id);
-generate_index_type!(TraitDeclId, "TraitDecl", remap = crate::ast::id_remap::remap_item_id);
-generate_index_type!(TraitImplId, "TraitImpl", remap = crate::ast::id_remap::remap_item_id);
+generate_index_type!(GlobalDeclId, "Global");
+generate_index_type!(TraitDeclId, "TraitDecl");
+generate_index_type!(TraitImplId, "TraitImpl");
 
 /// The id of a translated item.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

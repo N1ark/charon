@@ -115,10 +115,8 @@ impl<'tcx> TranslateCtx<'tcx> {
                     contents: source_file.src.as_deref().cloned(),
                 });
                 self.file_to_id.insert(filename, id);
-                if source_file.cnum == rustc_span::def_id::LOCAL_CRATE
-                    && let Some(cache) = &mut self.cache
-                {
-                    cache.local_files.insert(id);
+                if let Some(cache) = &mut self.cache {
+                    cache.register_file(id, source_file.cnum == rustc_span::def_id::LOCAL_CRATE);
                 }
                 id
             }

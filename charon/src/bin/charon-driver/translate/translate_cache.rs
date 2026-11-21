@@ -6,35 +6,36 @@
 //! encoding (`DefPathHash`es instead of `DefId`s, see [`KeyEncoder`]). The hash of that encoding
 //! is the item's key.
 //!
-//! Besides producing the item, translating it registers (and maybe enqueues) the items it refers
-//! to. We record these registrations and store them with the item, as encoded sources. Loading an
-//! item replays them, which gives the ids that replace the ones stored in the item. We don't store
-//! items whose translation has any other effect on the translation context (errors, method usage
-//! tracking, ...).
+//! The cache is a snapshot of the items that earlier sessions stored, with their ids. A session
+//! loads it before it registers items of its own and gives the snapshot's items and files the same
+//! ids, so that stored values load as they are. The new items a session can store get the next ids
+//! of the snapshot; at the end, the session writes the snapshot it loaded plus these items.
 //!
-//! Registering an item computes its name, which we also store. This lets us register the items
-//! that a cached item refers to without decoding their sources ("unbound" items): decoding is
-//! costly, as it resolves trait references. We decode the source of an unbound item only when we
-//! need it, e.g. to translate the item if its translation isn't cached.
+//! Besides producing the item, translating it registers (and maybe enqueues) the items it refers
+//! to. We record these registrations and store them with the item. Loading an item replays them,
+//! and the other effects of its translation on the translation context that we know how to replay
+//! (see [`Effect`]). We don't store items whose translation has effects we can't replay (errors,
+//! linking extern functions, ...).
+//!
+//! We also store the name of each item, with the registrations computing it did. This lets us
+//! register the items that a loaded item refers to without decoding their sources ("unbound"
+//! items): decoding is costly, as it resolves trait references. We decode the source of an unbound
+//! item only when we need it, e.g. to translate the item if its translation isn't cached.
 //!
 //! Translation rarely reads translated items, so loading an item only replays its registrations
-//! and effects: we decode most items at the end of the translation, in parallel (see
-//! [`PendingItem`]).
+//! and effects: we decode most items at the end of the translation, in parallel.
 //!
-//! Entries live in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else the
-//! translation depends on: the charon binary, the options and the upstream crates.
-use std::borrow::Cow;
-use std::cell::Cell;
+//! The snapshot lives in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else
+//! the translation depends on: the charon binary, the options and the upstream crates.
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use rayon::prelude::*;
 use rustc_data_structures::fingerprint::Fingerprint;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_data_structures::memmap::Mmap;
 use rustc_data_structures::stable_hash::StableHasher;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rustc_hir::def_id::{CrateNum, DefId, DefIndex, DefPathHash, LOCAL_CRATE, StableCrateId};
 use rustc_middle::mir::interpret::{AllocId, GlobalAlloc};
 use rustc_middle::ty::codec::{TyDecoder, TyEncoder};
@@ -49,11 +50,10 @@ use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use serde_state_perfect_derive as serde_state;
 
-use super::translate_crate::{RustcItem, VirtualImplKind};
+use super::translate_crate::RustcItem;
 use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{AssocItemResolution, BaseState, DefIdBase, SInto, SyntheticItem};
-use charon_lib::ast::id_remap::{IdRemap, with_id_remap};
 use charon_lib::ast::*;
 use charon_lib::options::CliOpts;
 
@@ -241,94 +241,14 @@ impl BlobDecoder for KeyDecoder<'_, '_> {
 }
 
 fn encode_kind(e: &mut KeyEncoder<'_>, kind: TransItemSourceKind) {
-    use TransItemSourceKind::*;
-    fn virtual_kind(e: &mut KeyEncoder<'_>, kind: VirtualImplKind) {
-        match kind {
-            VirtualImplKind::Destruct => e.emit_u8(0),
-            VirtualImplKind::Callable(k) => e.emit_u8(1 + k as u8),
-        }
-    }
-    fn impl_kind(e: &mut KeyEncoder<'_>, kind: TransImplSource) {
-        match kind {
-            TransImplSource::Normal => e.emit_u8(0),
-            TransImplSource::TraitAlias => e.emit_u8(1),
-            TransImplSource::Marker => e.emit_u8(2),
-            TransImplSource::Virtual(k) => {
-                e.emit_u8(3);
-                virtual_kind(e, k)
-            }
-        }
-    }
-    match kind {
-        Global => e.emit_u8(0),
-        TraitDecl => e.emit_u8(1),
-        TraitImpl(k) => {
-            e.emit_u8(2);
-            impl_kind(e, k)
-        }
-        Fun => e.emit_u8(3),
-        Type => e.emit_u8(4),
-        InherentImpl => e.emit_u8(5),
-        Module => e.emit_u8(6),
-        ClosureAsFnCast => e.emit_u8(7),
-        VirtualMethod(k) => {
-            e.emit_u8(8);
-            virtual_kind(e, k)
-        }
-        VTable => e.emit_u8(9),
-        VTableInstance(k) => {
-            e.emit_u8(10);
-            impl_kind(e, k)
-        }
-        VTableMethod(k) => {
-            e.emit_u8(11);
-            impl_kind(e, k)
-        }
-        VTableDropShim(k) => {
-            e.emit_u8(12);
-            impl_kind(e, k)
-        }
-        IntrinsicFallback => e.emit_u8(13),
-    }
+    let bytes = postcard::to_allocvec(&kind).unwrap();
+    e.emit_usize(bytes.len());
+    e.emit_raw_bytes(&bytes);
 }
 
 fn decode_kind(d: &mut KeyDecoder<'_, '_>) -> TransItemSourceKind {
-    use TransItemSourceKind::*;
-    fn virtual_kind(d: &mut KeyDecoder<'_, '_>) -> VirtualImplKind {
-        match d.read_u8() {
-            0 => VirtualImplKind::Destruct,
-            1 => VirtualImplKind::Callable(ClosureKind::Fn),
-            2 => VirtualImplKind::Callable(ClosureKind::FnMut),
-            3 => VirtualImplKind::Callable(ClosureKind::FnOnce),
-            _ => unreachable!(),
-        }
-    }
-    fn impl_kind(d: &mut KeyDecoder<'_, '_>) -> TransImplSource {
-        match d.read_u8() {
-            0 => TransImplSource::Normal,
-            1 => TransImplSource::TraitAlias,
-            2 => TransImplSource::Marker,
-            3 => TransImplSource::Virtual(virtual_kind(d)),
-            _ => unreachable!(),
-        }
-    }
-    match d.read_u8() {
-        0 => Global,
-        1 => TraitDecl,
-        2 => TraitImpl(impl_kind(d)),
-        3 => Fun,
-        4 => Type,
-        5 => InherentImpl,
-        6 => Module,
-        7 => ClosureAsFnCast,
-        8 => VirtualMethod(virtual_kind(d)),
-        9 => VTable,
-        10 => VTableInstance(impl_kind(d)),
-        11 => VTableMethod(impl_kind(d)),
-        12 => VTableDropShim(impl_kind(d)),
-        13 => IntrinsicFallback,
-        _ => unreachable!(),
-    }
+    let len = d.read_usize();
+    postcard::from_bytes(d.read_raw_bytes(len)).unwrap()
 }
 
 fn encode_def_id<'tcx>(
@@ -632,41 +552,25 @@ pub(crate) enum Effect {
     TranslatedVTable(TraitImplId, GlobalDeclRef),
 }
 
+/// An item that a stored computation registered, and whether it enqueued it.
+type StoredRef = (ItemId, bool);
+
+/// Where a value is in the snapshot: offset and length.
+type Loc = (u64, u64);
+
+/// A stored item.
 #[derive(Clone, Serialize, Deserialize)]
-struct CachedRef<'a> {
-    old_id: ItemId,
-    enqueue: bool,
-    #[serde(with = "fixed_u128")]
-    hash: u128,
-    #[serde(borrow)]
-    encoded: Cow<'a, [u8]>,
-}
-
-/// Hashes are random: their fixed-size encoding is smaller and faster to decode than a varint.
-mod fixed_u128 {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-    pub fn serialize<S: Serializer>(x: &u128, serializer: S) -> Result<S::Ok, S::Error> {
-        x.to_le_bytes().serialize(serializer)
-    }
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u128, D::Error> {
-        Ok(u128::from_le_bytes(<[u8; 16]>::deserialize(deserializer)?))
-    }
-}
-
-/// An entry is: this head, the length of the serialized name and the name if `name_refs` is
-/// `Some`, and if `has_body`, the references of the item (`Vec<CachedRef>`), the length of its
-/// serialized effects (`Vec<Effect>`), its effects and the item (`CachedItem`).
-#[derive(Serialize, Deserialize)]
-struct EntryHead<'a> {
-    /// The id of the item itself in the session that stored it.
-    self_id: ItemId,
-    has_body: bool,
-    /// The files of the entry, as indices in the file table of its pack.
-    files: Vec<u32>,
-    /// The registrations made to compute the name of the item, if we stored its name.
-    #[serde(borrow)]
-    name_refs: Option<Vec<CachedRef<'a>>>,
+struct IndexEntry {
+    hash: [u8; 16],
+    id: ItemId,
+    /// The encoding of its source, see `ItemKey`.
+    key: Loc,
+    /// The registrations computing its name did, and its name: `(Vec<StoredRef>, &[u8])`.
+    name: Option<Loc>,
+    /// The registrations translating it did, its effects (`Vec<Effect>`) and the item without its
+    /// name (`CachedItem`): `(Vec<StoredRef>, &[u8], &[u8])`. AST values are serialized with a
+    /// `DedupSerializer` each.
+    body: Option<Loc>,
 }
 
 #[derive(SerializeState, DeserializeState)]
@@ -678,110 +582,140 @@ enum CachedItem {
     TraitImpl(TraitImpl),
 }
 
+/// Numbers of ids: of types, functions, globals, trait decls and trait impls, then of files.
+type Counts = [u32; 6];
+
+fn counts_of(krate: &TranslatedCrate) -> Counts {
+    [
+        krate.type_decls.slot_count() as u32,
+        krate.fun_decls.slot_count() as u32,
+        krate.global_decls.slot_count() as u32,
+        krate.trait_decls.slot_count() as u32,
+        krate.trait_impls.slot_count() as u32,
+        krate.files.len() as u32,
+    ]
+}
+
+/// The position of the kind of this id in `Counts`, and its index.
+fn kind_and_index(id: ItemId) -> (usize, usize) {
+    match id {
+        ItemId::Type(id) => (0, id.index()),
+        ItemId::Fun(id) => (1, id.index()),
+        ItemId::Global(id) => (2, id.index()),
+        ItemId::TraitDecl(id) => (3, id.index()),
+        ItemId::TraitImpl(id) => (4, id.index()),
+    }
+}
+
+fn make_item_id(kind: usize, index: usize) -> ItemId {
+    match kind {
+        0 => ItemId::Type(TypeDeclId::from_usize(index)),
+        1 => ItemId::Fun(FunDeclId::from_usize(index)),
+        2 => ItemId::Global(GlobalDeclId::from_usize(index)),
+        3 => ItemId::TraitDecl(TraitDeclId::from_usize(index)),
+        _ => ItemId::TraitImpl(TraitImplId::from_usize(index)),
+    }
+}
+
+/// A snapshot is the values of its items, this header, the length of the header as a `u64`, and
+/// `SNAPSHOT_MAGIC`.
+#[derive(Default, Serialize, Deserialize)]
+struct Header {
+    /// The ids sessions give out before they load the snapshot.
+    prefix: Counts,
+    /// The ids of the items and files of the snapshot are below these.
+    counts: Counts,
+    /// The files of the snapshot, which come after those of the prefix.
+    files: Vec<File>,
+    /// The stored items.
+    index: Vec<IndexEntry>,
+}
+
+const SNAPSHOT_MAGIC: &[u8; 8] = b"CHRNSNP1";
+
+/// Read the header of a snapshot, and the end of its values.
+fn read_header(bytes: &[u8]) -> Option<(Header, usize)> {
+    let footer_start = bytes.len().checked_sub(16)?;
+    if &bytes[footer_start + 8..] != SNAPSHOT_MAGIC {
+        return None;
+    }
+    let len = u64::from_le_bytes(bytes[footer_start..footer_start + 8].try_into().ok()?) as usize;
+    let start = footer_start.checked_sub(len)?;
+    Some((postcard::from_bytes(&bytes[start..footer_start]).ok()?, start))
+}
+
 #[derive(Default, Debug)]
 pub(crate) struct CacheStats {
     unbound: usize,
-    decoded: usize,
     hits: usize,
     misses: usize,
     stored: usize,
     tainted: HashMap<&'static str, usize>,
 }
 
-/// The bytes of an entry, in the pack that holds them.
-struct EntryBytes {
-    pack: Arc<Mmap>,
-    pack_index: usize,
-    range: std::ops::Range<usize>,
-}
-
-impl std::ops::Deref for EntryBytes {
-    type Target = [u8];
-    fn deref(&self) -> &[u8] {
-        &self.pack[self.range.clone()]
-    }
-}
-
-/// Where an entry lives: pack index, offset and length.
-type EntryLoc = (usize, usize, usize);
-
-/// An entry in the index of a pack: hash, offset, length, whether the entry has a body.
-type PackIndexEntry = (u128, u64, u64, bool);
-
-/// A pack is its entries, its file table (`Vec<File>`), its index, the lengths of the file table
-/// and the index as `u64`s, and this.
-const PACK_MAGIC: &[u8; 8] = b"CHRNPAK2";
+type Range = std::ops::Range<usize>;
 
 pub(crate) struct TranslationCache<'tcx> {
     dir: PathBuf,
-    /// The pack files of the cache, and the entries they contain.
-    packs: Vec<Arc<Mmap>>,
-    /// The file table of each pack, and the ids of these files in this session, once registered.
-    pack_files: Vec<Vec<File>>,
-    pack_file_ids: Vec<Vec<Option<FileId>>>,
-    index: HashMap<u128, EntryLoc>,
-    /// The entries stored by this session, written to a new pack at the end, and the files they
-    /// mention.
-    new_pack: Vec<u8>,
-    new_index: Vec<PackIndexEntry>,
-    new_files: indexmap::IndexSet<FileId>,
-    /// The keys of the registered items that have one, and the reverse map.
-    keys: HashMap<ItemId, Rc<ItemKey>>,
+    /// The snapshot we loaded, its header, where its values end, and its length and modification
+    /// time when we loaded it.
+    snapshot: Option<Mmap>,
+    header: Header,
+    values_end: usize,
+    stamp: Option<(u64, std::time::SystemTime)>,
+    /// Whether we loaded the snapshot (or found none), after which new items get ids above it.
+    loaded: bool,
+    /// The position in `header.index` of each item of the snapshot.
+    entries: HashMap<ItemId, usize>,
+    /// The ids of the items that have a key: those of the snapshot and the new ones.
     by_hash: HashMap<u128, ItemId>,
+    /// The keys of the items registered by this session that have one, and the reverse map.
+    keys: HashMap<ItemId, Rc<ItemKey>>,
     /// The key of the item we are registering, if we already know it.
     known_key: Option<(TransItemSource<'tcx>, Rc<ItemKey>)>,
+    /// The items of the snapshot registered without their source (see `cache_register_ref`).
+    unbound: HashSet<ItemId>,
+    /// The ids in the next snapshot of the items and files of this session above the snapshot that
+    /// we can store, the reverse map for items, the new files in order, and the next free ids.
+    store_ids: HashMap<ItemId, ItemId>,
+    from_store_ids: HashMap<ItemId, ItemId>,
+    store_files: HashMap<FileId, FileId>,
+    new_files: Vec<FileId>,
+    next: Counts,
+    /// The translations this session stored, serialized as `IndexEntry::body`, by id in the next
+    /// snapshot.
+    bodies: HashMap<ItemId, Vec<u8>>,
     /// One recorder per `translate_item` or name computation in progress.
     recorders: Vec<Recorder>,
     /// What computing the names of the items we registered did.
     name_records: HashMap<ItemId, Recorder>,
     /// What the computations memoized across items did.
     memos: HashMap<MemoKey<'tcx>, Recorder>,
-    /// Items registered without their source (see `cache_register_unbound`) that we must translate,
-    /// and those we tried to translate.
+    /// Unbound items that we must translate, and those we tried to translate.
     unbound_queue: std::collections::VecDeque<ItemId>,
-    processed_unbound: rustc_hash::FxHashSet<ItemId>,
-    /// The entries we stored in this session.
-    stored: rustc_hash::FxHashSet<u128>,
+    processed_unbound: HashSet<ItemId>,
     /// The files of the local crate.
-    pub(crate) local_files: rustc_hash::FxHashSet<FileId>,
-    /// The loaded items we haven't decoded yet, and those whose decoding failed.
-    pending: HashMap<ItemId, PendingItem>,
-    failed: rustc_hash::FxHashSet<ItemId>,
+    pub(crate) local_files: HashSet<FileId>,
+    /// The loaded items we haven't decoded yet (the range of the item and its name), and those whose
+    /// decoding failed.
+    pending: HashMap<ItemId, (Range, Name)>,
+    failed: HashSet<ItemId>,
     stats: CacheStats,
 }
 
-/// An item loaded from the cache whose registrations and effects we replayed, and that we decode
-/// later. Trait impls are never pending: the effects of other items update them, and the names of
-/// items mention them.
-struct PendingItem {
-    bytes: EntryBytes,
-    /// Where the serialized `CachedItem` starts in `bytes`.
-    item_start: usize,
-    id_map: HashMap<ItemId, ItemId>,
-    files: Vec<FileId>,
-    name: Name,
+/// Decode a value stored in the cache.
+fn decode_value<T: for<'de> DeserializeState<'de, DedupSerializer>>(bytes: &[u8]) -> Option<T> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let state = DedupSerializer::default();
+        T::deserialize_state(&state, &mut postcard::Deserializer::from_bytes(bytes)).ok()
+    }))
+    .ok()
+    .flatten()
 }
 
-impl PendingItem {
-    fn decode(&self) -> Option<CachedItem> {
-        decode_entry_value(&self.bytes[self.item_start..], &self.id_map, &self.files)
-    }
-}
-
-/// Read the file table and the index of a pack.
-fn read_pack_index(pack: &[u8]) -> Option<(Vec<File>, Vec<PackIndexEntry>)> {
-    let footer_start = pack.len().checked_sub(24)?;
-    let footer = &pack[footer_start..];
-    if &footer[16..] != PACK_MAGIC {
-        return None;
-    }
-    let files_len = u64::from_le_bytes(footer[..8].try_into().ok()?) as usize;
-    let index_len = u64::from_le_bytes(footer[8..16].try_into().ok()?) as usize;
-    let index_start = footer_start.checked_sub(index_len)?;
-    let files_start = index_start.checked_sub(files_len)?;
-    let files = postcard::from_bytes(&pack[files_start..index_start]).ok()?;
-    let index = postcard::from_bytes(&pack[index_start..footer_start]).ok()?;
-    Some((files, index))
+fn encode_value<T: SerializeState<DedupSerializer>>(value: &T) -> Option<Vec<u8>> {
+    let state = DedupSerializer::default();
+    postcard::to_allocvec(&serde_state::WithState::new(value, &state)).ok()
 }
 
 impl<'tcx> TranslationCache<'tcx> {
@@ -831,54 +765,29 @@ impl<'tcx> TranslationCache<'tcx> {
         let env: Fingerprint = hasher.finish();
         let dir = PathBuf::from(root).join(env.to_hex());
         std::fs::create_dir_all(&dir).ok()?;
-
-        let mut packs = Vec::new();
-        let mut pack_files = Vec::new();
-        let mut index = HashMap::default();
-        let mut with_body = rustc_hash::FxHashSet::default();
-        for entry in std::fs::read_dir(&dir).ok()?.flatten() {
-            if entry.path().extension().is_some_and(|ext| ext == "pack")
-                && let Ok(file) = std::fs::File::open(entry.path())
-                // SAFETY: packs are never modified once written (we write then rename).
-                && let Ok(pack) = unsafe { Mmap::map(file) }
-                && let Some((files, pack_index)) = read_pack_index(&pack)
-            {
-                for (hash, offset, len, has_body) in pack_index {
-                    // Prefer entries with a body.
-                    let loc = (packs.len(), offset as usize, len as usize);
-                    if has_body {
-                        with_body.insert(hash);
-                        index.insert(hash, loc);
-                    } else if !with_body.contains(&hash) {
-                        index.insert(hash, loc);
-                    }
-                }
-                packs.push(Arc::new(pack));
-                pack_files.push(files);
-            }
-        }
-        let pack_file_ids = pack_files
-            .iter()
-            .map(|files| vec![None; files.len()])
-            .collect();
         Some(Self {
             dir,
-            packs,
-            pack_files,
-            pack_file_ids,
-            index,
-            new_pack: Default::default(),
-            new_index: Default::default(),
-            new_files: Default::default(),
-            keys: Default::default(),
+            snapshot: None,
+            header: Default::default(),
+            values_end: 0,
+            stamp: None,
+            loaded: false,
+            entries: Default::default(),
             by_hash: Default::default(),
+            keys: Default::default(),
             known_key: None,
+            unbound: Default::default(),
+            store_ids: Default::default(),
+            from_store_ids: Default::default(),
+            store_files: Default::default(),
+            new_files: Default::default(),
+            next: Default::default(),
+            bodies: Default::default(),
             recorders: Default::default(),
             name_records: Default::default(),
             memos: Default::default(),
             unbound_queue: Default::default(),
             processed_unbound: Default::default(),
-            stored: Default::default(),
             local_files: Default::default(),
             pending: Default::default(),
             failed: Default::default(),
@@ -886,86 +795,254 @@ impl<'tcx> TranslationCache<'tcx> {
         })
     }
 
-    /// Whether this value, renumbered with `StoreFileIds`, only mentions files of its entry. The
-    /// exception is `FileId::ZERO`: in every session that's the local crate root, the file of the
-    /// placeholder spans (`Span::dummy()` and `rustc_span::DUMMY_SP`) that e.g. builtin types and
-    /// anonymous allocations get. We store these spans as is. Hash-consing can also give us values
-    /// of the session with other spans than the ones we renumbered.
-    fn only_stored_files<T: AstVisitable>(&self, value: &T) -> bool {
-        let mut check = CheckStoredFiles {
-            zero_is_local: self.local_files.contains(&FileId::ZERO),
-            ok: true,
+    fn snapshot_path(&self) -> PathBuf {
+        self.dir.join("snapshot")
+    }
+
+    fn entry(&self, id: ItemId) -> Option<&IndexEntry> {
+        Some(&self.header.index[*self.entries.get(&id)?])
+    }
+
+    fn bytes(&self, (offset, len): Loc) -> &[u8] {
+        &self.snapshot.as_ref().unwrap()[offset as usize..(offset + len) as usize]
+    }
+
+    fn slice(&self, range: Range) -> &[u8] {
+        &self.snapshot.as_ref().unwrap()[range]
+    }
+
+    /// The range of this part of the snapshot.
+    fn range_of(&self, bytes: &[u8]) -> Range {
+        let start = bytes.as_ptr() as usize - self.snapshot.as_ref().unwrap().as_ptr() as usize;
+        start..start + bytes.len()
+    }
+
+    /// The stored name of this item of the snapshot, and the registrations computing it did.
+    fn stored_name(&self, id: ItemId) -> Option<(Vec<StoredRef>, Range)> {
+        let (refs, name): (Vec<StoredRef>, &[u8]) =
+            postcard::from_bytes(self.bytes(self.entry(id)?.name?)).ok()?;
+        Some((refs, self.range_of(name)))
+    }
+
+    /// The stored translation of this item of the snapshot: registrations, effects and item.
+    fn stored_body(&self, id: ItemId) -> Option<(Vec<StoredRef>, Range, Range)> {
+        let (refs, effects, item): (Vec<StoredRef>, &[u8], &[u8]) =
+            postcard::from_bytes(self.bytes(self.entry(id)?.body?)).ok()?;
+        Some((refs, self.range_of(effects), self.range_of(item)))
+    }
+
+    /// The id in the next snapshot of this item, if it has one. The items of the snapshot and of the
+    /// prefix keep theirs.
+    fn store_id(&self, id: ItemId) -> Option<ItemId> {
+        let (kind, index) = kind_and_index(id);
+        if index < self.header.counts[kind] as usize {
+            Some(id)
+        } else {
+            self.store_ids.get(&id).copied()
+        }
+    }
+
+    /// The id in the next snapshot of this file, if it has one.
+    fn store_file(&self, id: FileId) -> Option<FileId> {
+        if id.index() < self.header.counts[5] as usize {
+            Some(id)
+        } else {
+            self.store_files.get(&id).copied()
+        }
+    }
+
+    /// Whether we can store this item: it has a key.
+    fn has_key(&self, id: ItemId) -> bool {
+        self.keys.contains_key(&id) || self.entries.contains_key(&id)
+    }
+
+    /// Record the key of a new item, and give it an id in the next snapshot.
+    fn add_key(&mut self, id: ItemId, key: Rc<ItemKey>) {
+        let first = *self.by_hash.entry(key.hash).or_insert(id);
+        self.keys.insert(id, key);
+        let (kind, index) = kind_and_index(id);
+        if !self.loaded || index < self.header.counts[kind] as usize {
+            return;
+        }
+        let store_id = match self.store_id(first) {
+            // Allocations with the same contents and view have the same key: they share an item.
+            Some(store_id) if first != id => store_id,
+            _ => {
+                let store_id = make_item_id(kind, self.next[kind] as usize);
+                self.next[kind] += 1;
+                self.from_store_ids.insert(store_id, id);
+                store_id
+            }
         };
-        let _ = value.drive(&mut check);
-        check.ok
-    }
-
-    fn store(&mut self, hash: u128, bytes: &[u8], has_body: bool) {
-        let start = self.new_pack.len() as u64;
-        self.new_pack.extend_from_slice(bytes);
-        self.new_index
-            .push((hash, start, bytes.len() as u64, has_body));
-        self.stored.insert(hash);
-        self.stats.stored += 1;
-    }
-
-    fn entry(&self, hash: u128) -> Option<EntryBytes> {
-        let &(pack, offset, len) = self.index.get(&hash)?;
-        Some(EntryBytes {
-            pack: self.packs[pack].clone(),
-            pack_index: pack,
-            range: offset..offset + len,
-        })
+        self.store_ids.insert(id, store_id);
     }
 
     pub(crate) fn pop_unbound(&mut self) -> Option<ItemId> {
         self.unbound_queue.pop_front()
     }
 
-    /// The indices in the file table of the new pack of these files of the session.
-    fn store_files(&mut self, files: &indexmap::IndexSet<FileId>) -> Vec<u32> {
-        files
-            .iter()
-            .map(|fid| self.new_files.insert_full(*fid).0 as u32)
-            .collect()
-    }
-
-    /// Write the entries stored during this session to a new pack.
-    pub(crate) fn finish(&mut self, session_files: &IndexVec<FileId, File>) {
-        if std::env::var_os("CHARON_CACHE_STATS").is_some() {
-            eprintln!("charon cache: {:?}", self.stats);
-        }
-        if self.new_index.is_empty() {
-            return;
-        }
-        let _guard = charon_lib::timing::scope("cache-write");
-        let mut pack = std::mem::take(&mut self.new_pack);
-        let files: Vec<&File> = self
-            .new_files
-            .iter()
-            .map(|fid| &session_files[*fid])
-            .collect();
-        let files = postcard::to_allocvec(&files).unwrap();
-        let index = postcard::to_allocvec(&self.new_index).unwrap();
-        pack.extend_from_slice(&files);
-        pack.extend_from_slice(&index);
-        pack.extend_from_slice(&(files.len() as u64).to_le_bytes());
-        pack.extend_from_slice(&(index.len() as u64).to_le_bytes());
-        pack.extend_from_slice(PACK_MAGIC);
-        // Write atomically, as other charon processes may be reading the cache.
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos());
-        let name = format!("{}-{nanos}", std::process::id());
-        let tmp = self.dir.join(format!("{name}.tmp"));
-        if std::fs::write(&tmp, pack).is_ok() {
-            let _ = std::fs::rename(&tmp, self.dir.join(format!("{name}.pack")));
+    /// Record a new file of the session.
+    pub(crate) fn register_file(&mut self, id: FileId, is_local: bool) {
+        if is_local {
+            self.local_files.insert(id);
+        } else if self.loaded {
+            self.store_files
+                .insert(id, FileId::from_usize(self.next[5] as usize));
+            self.next[5] += 1;
+            self.new_files.push(id);
         }
     }
 }
 
+/// Renumbers a value of the session to store it in the next snapshot.
+#[derive(derive_generic_visitor::Visitor)]
+struct ToStored<'a, 'tcx> {
+    cache: &'a TranslationCache<'tcx>,
+    /// Whether every id has an id in the next snapshot.
+    ok: bool,
+}
+
+impl ToStored<'_, '_> {
+    fn item<I: Into<ItemId> + TryFrom<ItemId> + Copy>(&mut self, id: I) -> I {
+        match self.cache.store_id(id.into()) {
+            Some(id) => id.try_into().ok().unwrap(),
+            None => {
+                self.ok = false;
+                id
+            }
+        }
+    }
+
+    /// The files of the snapshot keep their ids. The prefix's only file is the local crate root,
+    /// the file of the placeholder spans (`Span::dummy()` and `rustc_span::DUMMY_SP`) that e.g.
+    /// builtin types and anonymous allocations get: we store these spans as they are.
+    fn check_span_data(&mut self, data: &SpanData) {
+        if data.file_id.index() < self.cache.header.prefix[5] as usize {
+            let placeholder = matches!(
+                (data.beg.line, data.beg.col, data.end.line, data.end.col),
+                (0, 0, 0, 0) | (1, 0, 1, 0)
+            );
+            self.ok &= data.file_id == FileId::ZERO
+                && placeholder
+                && self.cache.local_files.contains(&FileId::ZERO);
+        } else {
+            self.ok &= self.cache.store_file(data.file_id).is_some();
+        }
+    }
+}
+
+impl VisitAstMut for ToStored<'_, '_> {
+    fn enter_type_decl_id(&mut self, id: &mut TypeDeclId) {
+        *id = self.item(*id);
+    }
+    fn enter_fun_decl_id(&mut self, id: &mut FunDeclId) {
+        *id = self.item(*id);
+    }
+    fn enter_global_decl_id(&mut self, id: &mut GlobalDeclId) {
+        *id = self.item(*id);
+    }
+    fn enter_trait_decl_id(&mut self, id: &mut TraitDeclId) {
+        *id = self.item(*id);
+    }
+    fn enter_trait_impl_id(&mut self, id: &mut TraitImplId) {
+        *id = self.item(*id);
+    }
+    // Visitors don't explore spans.
+    fn enter_span(&mut self, span: &mut charon_lib::ast::Span) {
+        let unpacked = span.unpack();
+        self.check_span_data(&unpacked.data);
+        if let Some(data) = &unpacked.generated_from_span {
+            self.check_span_data(data);
+        }
+        let cache = self.cache;
+        span.map_file_ids(|id| cache.store_file(id).unwrap_or(id));
+    }
+}
+
+#[derive(derive_generic_visitor::Visitor)]
+struct CollectIds {
+    items: HashSet<ItemId>,
+}
+
+impl VisitAst for CollectIds {
+    fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
+        self.items.insert((*id).into());
+    }
+    fn enter_fun_decl_id(&mut self, id: &FunDeclId) {
+        self.items.insert((*id).into());
+    }
+    fn enter_global_decl_id(&mut self, id: &GlobalDeclId) {
+        self.items.insert((*id).into());
+    }
+    fn enter_trait_decl_id(&mut self, id: &TraitDeclId) {
+        self.items.insert((*id).into());
+    }
+    fn enter_trait_impl_id(&mut self, id: &TraitImplId) {
+        self.items.insert((*id).into());
+    }
+}
+
 impl<'tcx> TranslateCtx<'tcx> {
-    /// If this source was registered from the cache without its source, bind it to that item.
+    /// Load the snapshot of the cache. Called once the items every session registers first are
+    /// registered.
+    pub(crate) fn cache_load_snapshot(&mut self) {
+        // Matching an impl pattern needs the impl, so whether an item matches depends on the order
+        // we translate items in (except for those of `hide_traits`, see `opacity_for_name`).
+        if self.options.item_opacities.iter().any(|(pat, _)| {
+            !self.options.hides_trait_impls(pat)
+                && pat
+                    .elems
+                    .iter()
+                    .any(|elem| matches!(elem, charon_lib::name_matcher::PatElem::Impl(_)))
+        }) {
+            self.cache = None;
+        }
+        let Some(cache) = &mut self.cache else {
+            return;
+        };
+        let _guard = charon_lib::timing::scope("cache-open");
+        let prefix = counts_of(&self.translated);
+        cache.loaded = true;
+        cache.header.prefix = prefix;
+        cache.header.counts = prefix;
+        cache.next = prefix;
+        let loaded = (|| {
+            let file = std::fs::File::open(cache.snapshot_path()).ok()?;
+            let meta = file.metadata().ok()?;
+            // SAFETY: snapshots are never modified once written (we write then rename).
+            let snapshot = unsafe { Mmap::map(file) }.ok()?;
+            let (header, values_end) = read_header(&snapshot)?;
+            (header.prefix == prefix).then_some(())?;
+            Some((snapshot, header, values_end, (meta.len(), meta.modified().ok()?)))
+        })();
+        let Some((snapshot, header, values_end, stamp)) = loaded else {
+            return;
+        };
+        let krate = &mut self.translated;
+        let reserve = |kind: usize| (header.counts[kind] - prefix[kind]) as usize;
+        krate.type_decls.reserve_slots(reserve(0));
+        krate.fun_decls.reserve_slots(reserve(1));
+        krate.global_decls.reserve_slots(reserve(2));
+        krate.trait_decls.reserve_slots(reserve(3));
+        krate.trait_impls.reserve_slots(reserve(4));
+        for file in &header.files {
+            let id = krate.files.push_with(|id| File { id, ..file.clone() });
+            self.file_to_id.insert(file.name.clone(), id);
+        }
+        cache.entries.reserve(header.index.len());
+        cache.by_hash.reserve(header.index.len());
+        for (i, entry) in header.index.iter().enumerate() {
+            cache.by_hash.insert(u128::from_le_bytes(entry.hash), entry.id);
+            cache.entries.insert(entry.id, i);
+        }
+        cache.next = header.counts;
+        cache.header = header;
+        cache.values_end = values_end;
+        cache.snapshot = Some(snapshot);
+        cache.stamp = Some(stamp);
+    }
+
+    /// If this source is the source of an item of the snapshot, bind it to that item.
     pub(crate) fn cache_find_unbound(&mut self, src: &TransItemSource<'tcx>) -> Option<ItemId> {
         let cache = self.cache.as_mut()?;
         let key = match cache.known_key.take_if(|(known, _)| known == src) {
@@ -981,7 +1058,11 @@ impl<'tcx> TranslateCtx<'tcx> {
         if self.reverse_id_map.contains_key(&id) {
             return None;
         }
+        let registered = cache.unbound.remove(&id);
         self.bind_source(id, src.clone());
+        if !registered {
+            self.cache_register_name(id);
+        }
         Some(id)
     }
 
@@ -1001,8 +1082,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         if let Some(src) = self.reverse_id_map.get(&id) {
             return src.clone();
         }
-        let key = self.cache.as_ref().unwrap().keys[&id].clone();
-        let src = decode_src(self.tcx, &self.hax_state, &key.encoded, true);
+        let cache = self.cache.as_ref().unwrap();
+        let key = cache.entry(id).unwrap().key;
+        let src = decode_src(self.tcx, &self.hax_state, cache.bytes(key), true);
         self.bind_source(id, src.clone());
         src
     }
@@ -1053,8 +1135,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                 }
             };
             if let Some(key) = key {
-                cache.by_hash.entry(key.hash).or_insert(id);
-                cache.keys.insert(id, key);
+                cache.add_key(id, key);
             }
         }
         if let Some(recorder) = cache.recorders.last_mut() {
@@ -1092,140 +1173,47 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
     }
 
-    /// Register a reference of a cached item. Returns `None` if that failed.
-    fn cache_register_ref(
-        &mut self,
-        dep_src: &Option<DepSource>,
-        r: &CachedRef<'_>,
-    ) -> Option<ItemId> {
+    /// Replay a registration of a stored computation. Returns `false` if the item is unknown.
+    fn cache_register_ref(&mut self, dep_src: &Option<DepSource>, (id, enqueue): StoredRef) -> bool {
         let cache = self.cache.as_mut().unwrap();
-        let id = match cache.by_hash.get(&r.hash) {
-            Some(&id) => {
-                if r.enqueue {
-                    match self.reverse_id_map.get(&id) {
-                        Some(src) => self.items_to_translate.push_back(src.clone()),
-                        None => self.cache_enqueue_unbound(id),
-                    }
-                }
-                id
+        if !self.reverse_id_map.contains_key(&id) && !cache.unbound.contains(&id) {
+            if !cache.entries.contains_key(&id) {
+                return false;
             }
-            None => match self.cache_register_unbound(r) {
-                Some(id) => {
-                    if r.enqueue {
-                        self.cache_enqueue_unbound(id);
-                    }
-                    id
-                }
-                None => {
-                    self.cache.as_mut().unwrap().stats.decoded += 1;
-                    let src = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        decode_src(self.tcx, &self.hax_state, &r.encoded, true)
-                    }))
-                    .ok()?;
-                    let key = Rc::new(ItemKey {
-                        hash: r.hash,
-                        encoded: r.encoded.to_vec(),
-                    });
-                    self.cache.as_mut().unwrap().known_key = Some((src.clone(), key));
-                    let id = if r.enqueue {
-                        self.register_and_enqueue(dep_src, src)
-                    } else {
-                        self.register_no_enqueue(dep_src, &src)
-                    };
-                    return id.as_item();
-                }
-            },
-        };
+            // Register the item without decoding its source.
+            cache.unbound.insert(id);
+            cache.stats.unbound += 1;
+            self.cache_register_name(id);
+        }
+        if enqueue {
+            match self.reverse_id_map.get(&id) {
+                Some(src) => self.items_to_translate.push_back(src.clone()),
+                None => self.cache_enqueue_unbound(id),
+            }
+        }
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, id, false);
-        Some(id)
+        true
     }
 
-    /// Register an item without decoding its source, using the name stored in its entry.
-    fn cache_register_unbound(&mut self, r: &CachedRef<'_>) -> Option<ItemId> {
+    /// Give its name to an item of the snapshot we're registering.
+    fn cache_register_name(&mut self, id: ItemId) {
         let cache = self.cache.as_ref().unwrap();
-        // Stored placeholder spans refer to the local crate root as `FileId::ZERO`.
-        if !cache.local_files.contains(&FileId::ZERO) {
-            return None;
+        if let Some((refs, name)) = cache.stored_name(id)
+            && refs.into_iter().all(|r| self.cache_register_ref(&None, r))
+            && let Some(name) = decode_value::<Name>(self.cache.as_ref().unwrap().slice(name))
+        {
+            self.translated.item_names.insert(id, name);
+            return;
         }
-        let bytes = cache.entry(r.hash)?;
-        let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
-        let name_refs = head.name_refs?;
-        let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
-        let name_bytes = rest.get(4..4 + name_len)?;
-        let kind = decode_kind(&mut KeyDecoder {
-            tcx: self.tcx,
-            opaque: MemDecoder::new(&r.encoded, 0).ok()?,
-        });
-        let id = self.reserve_item_id(kind)?;
-        let cache = self.cache.as_mut().unwrap();
-        cache.stats.unbound += 1;
-        cache.by_hash.insert(r.hash, id);
-        let key = Rc::new(ItemKey {
-            hash: r.hash,
-            encoded: r.encoded.to_vec(),
-        });
-        cache.keys.insert(id, key);
-
-        let mut id_map: HashMap<ItemId, ItemId> =
-            HashMap::with_capacity_and_hasher(name_refs.len() + 2, Default::default());
-        id_map.insert(head.self_id, id);
-        id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
-        let name = 'name: {
-            for name_ref in &name_refs {
-                let Some(new_id) = self.cache_register_ref(&None, name_ref) else {
-                    break 'name None;
-                };
-                id_map.insert(name_ref.old_id, new_id);
-            }
-            let Some(files) = self.cache_register_files(bytes.pack_index, &head.files) else {
-                break 'name None;
-            };
-            decode_entry_value::<Name>(name_bytes, &id_map, &files)
-        };
-        let name = match name {
-            Some(name) => name,
-            // Compute the name normally.
-            None => {
-                let src = self.source_of(id);
-                let Ok(name) = self.translate_name(&src) else {
-                    return Some(id);
-                };
-                name
-            }
-        };
-        self.translated.item_names.insert(id, name);
-        Some(id)
-    }
-
-    /// Register the files of an entry of this pack. Returns `None` if the entry is invalid.
-    fn cache_register_files(&mut self, pack: usize, files: &[u32]) -> Option<Vec<FileId>> {
-        let mut ids = Vec::with_capacity(files.len());
-        for &index in files {
-            let index = index as usize;
-            let cache = self.cache.as_mut().unwrap();
-            let id = match *cache.pack_file_ids[pack].get(index)? {
-                Some(id) => id,
-                None => {
-                    let file = &cache.pack_files[pack][index];
-                    let id = match self.file_to_id.get(&file.name) {
-                        Some(id) => *id,
-                        None => {
-                            let file = file.clone();
-                            let name = file.name.clone();
-                            let id = self.translated.files.push_with(|id| File { id, ..file });
-                            self.file_to_id.insert(name, id);
-                            id
-                        }
-                    };
-                    self.cache.as_mut().unwrap().pack_file_ids[pack][index] = Some(id);
-                    id
-                }
-            };
-            ids.push(id);
+        // Compute the name normally.
+        let src = self.source_of(id);
+        self.cache_start_recording();
+        if let Ok(name) = self.translate_name(&src) {
+            self.translated.item_names.insert(id, name);
         }
-        Some(ids)
+        self.cache_finish_naming(id);
     }
 
     /// Whether this item is translated, or loaded from the cache and waiting to be decoded.
@@ -1238,15 +1226,12 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     /// Try to get the translation of this item from the cache. Returns whether it succeeded. The
-    /// item itself is decoded later, see [`PendingItem`].
+    /// item itself is decoded later.
     pub(crate) fn cache_load(&mut self, id: ItemId) -> bool {
         let Some(cache) = &mut self.cache else {
             return false;
         };
-        let Some(key) = cache.keys.get(&id) else {
-            return false;
-        };
-        if cache.failed.contains(&id) {
+        if cache.failed.contains(&id) || !cache.entries.contains_key(&id) {
             return false;
         }
         // The name was computed when we registered the item.
@@ -1257,78 +1242,42 @@ impl<'tcx> TranslateCtx<'tcx> {
         if !cache.local_files.contains(&FileId::ZERO) {
             return false;
         }
-        let Some(bytes) = cache.entry(key.hash) else {
+        let Some((refs, effects, item)) = cache.stored_body(id) else {
             cache.stats.misses += 1;
             return false;
         };
         let _guard = charon_lib::timing::scope("cache-load");
-        let parsed = (|| {
-            let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
-            if !head.has_body {
-                return None;
-            }
-            let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
-            let rest = rest.get(4 + name_len..)?;
-            let (refs, rest) = postcard::take_from_bytes::<Vec<CachedRef>>(rest).ok()?;
-            let effects_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
-            let effects = rest.get(4..4 + effects_len)?;
-            let item_start = bytes.len() - (rest.len() - 4 - effects_len);
-            Some((head, refs, effects, item_start))
-        })();
-        let Some((head, refs, effects, item_start)) = parsed else {
-            cache.stats.misses += 1;
-            return false;
-        };
-
         // Replay the registrations. These are not part of the translation in progress, if any.
         self.cache_start_recording();
         let dep_src = Some(DepSource {
             src_id: id,
             span: None,
         });
-        let mut id_map: HashMap<ItemId, ItemId> =
-            HashMap::with_capacity_and_hasher(refs.len() + 2, Default::default());
-        for r in &refs {
-            let Some(new_id) = self.cache_register_ref(&dep_src, r) else {
-                self.cache.as_mut().unwrap().recorders.pop();
-                self.cache.as_mut().unwrap().stats.misses += 1;
-                return false;
-            };
-            id_map.insert(r.old_id, new_id);
-        }
-        id_map.insert(head.self_id, id);
-        id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
-        let files = self.cache_register_files(bytes.pack_index, &head.files);
-        let Some(files) = files else {
-            self.cache.as_mut().unwrap().recorders.pop();
-            self.cache.as_mut().unwrap().stats.misses += 1;
-            return false;
-        };
-        let Some(effects) = decode_entry_value::<Vec<Effect>>(effects, &id_map, &files) else {
-            self.cache.as_mut().unwrap().recorders.pop();
-            self.cache.as_mut().unwrap().stats.misses += 1;
-            return false;
-        };
-        let pending = PendingItem {
-            item_start,
-            bytes,
-            id_map,
-            files,
-            name,
-        };
-        if id.is_trait_impl() {
-            let item = pending.decode();
-            if item.is_none() {
-                self.cache.as_mut().unwrap().recorders.pop();
-                self.cache.as_mut().unwrap().stats.misses += 1;
-                return false;
+        let effects = refs
+            .into_iter()
+            .all(|r| self.cache_register_ref(&dep_src, r))
+            .then(|| decode_value::<Vec<Effect>>(self.cache.as_ref().unwrap().slice(effects)))
+            .flatten();
+        let decoded = match &effects {
+            // Effects update trait impls and names mention them: we decode them now.
+            Some(_) if id.is_trait_impl() => {
+                let item = decode_value(self.cache.as_ref().unwrap().slice(item.clone()));
+                let ok = item.is_some();
+                self.cache_finish_pending(id, name, item);
+                ok
             }
-            self.cache_finish_pending(id, pending, item);
-        } else {
-            self.cache.as_mut().unwrap().pending.insert(id, pending);
+            Some(_) => {
+                self.cache.as_mut().unwrap().pending.insert(id, (item, name));
+                true
+            }
+            None => false,
+        };
+        if !decoded {
+            self.cache.as_mut().unwrap().recorders.pop();
+            self.cache.as_mut().unwrap().stats.misses += 1;
+            return false;
         }
-
-        for effect in effects {
+        for effect in effects.unwrap() {
             match effect {
                 Effect::RegisterAssocItems(trait_id) | Effect::MarkMethodUsed(trait_id, _) => {
                     // The source of the trait is only needed if its items aren't registered yet.
@@ -1350,17 +1299,12 @@ impl<'tcx> TranslateCtx<'tcx> {
         true
     }
 
-    /// Put a decoded pending item in the translated crate, or mark it as failed if it couldn't be
-    /// decoded.
-    fn cache_finish_pending(&mut self, id: ItemId, pending: PendingItem, item: Option<CachedItem>) {
-        let cache = self.cache.as_mut().unwrap();
+    /// Put a decoded item in the translated crate, or mark it as failed if it couldn't be decoded.
+    fn cache_finish_pending(&mut self, id: ItemId, name: Name, item: Option<CachedItem>) {
         let Some(item) = item else {
-            cache.stats.hits -= 1;
-            cache.stats.misses += 1;
-            cache.failed.insert(id);
+            self.cache.as_mut().unwrap().failed.insert(id);
             return;
         };
-        let name = pending.name;
         macro_rules! finish {
             ($decl:expr, $slots:ident) => {{
                 let mut decl = $decl;
@@ -1381,9 +1325,11 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// Decode this item now if it is pending. If that fails, the item is left untranslated.
     pub(crate) fn cache_decode_now(&mut self, id: ItemId) {
-        if let Some(pending) = self.cache.as_mut().and_then(|c| c.pending.remove(&id)) {
-            let item = pending.decode();
-            self.cache_finish_pending(id, pending, item);
+        if let Some(cache) = &mut self.cache
+            && let Some((range, name)) = cache.pending.remove(&id)
+        {
+            let item = decode_value(cache.slice(range));
+            self.cache_finish_pending(id, name, item);
         }
     }
 
@@ -1399,15 +1345,20 @@ impl<'tcx> TranslateCtx<'tcx> {
         let _guard = charon_lib::timing::scope("cache-decode");
         let mut pending: Vec<_> = cache.pending.drain().collect();
         pending.sort_unstable_by_key(|(id, _)| *id);
-        let items: Vec<_> = pending.par_iter().map(|(_, p)| p.decode()).collect();
+        let snapshot: &[u8] = cache.snapshot.as_ref().unwrap();
+        let items: Vec<Option<CachedItem>> = pending
+            .par_iter()
+            .map(|(_, (range, _))| decode_value(&snapshot[range.clone()]))
+            .collect();
         let mut failed = vec![];
-        for ((id, pending), item) in pending.into_iter().zip(items) {
+        for ((id, (_, name)), item) in pending.into_iter().zip(items) {
             if item.is_none() {
                 failed.push(id);
             }
-            self.cache_finish_pending(id, pending, item);
+            self.cache_finish_pending(id, name, item);
         }
         for id in failed {
+            self.cache.as_mut().unwrap().stats.misses += 1;
             let src = self.source_of(id);
             self.translate_item(&src);
         }
@@ -1505,49 +1456,24 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
     }
 
-    /// Serialize the name of `id` and the registrations needed to compute it, if possible.
-    fn cache_name_section(
-        &self,
-        id: ItemId,
-        files: &mut indexmap::IndexSet<FileId>,
-    ) -> Option<(Vec<CachedRef<'static>>, Vec<u8>)> {
-        let cache = self.cache.as_ref().unwrap();
-        // The names of allocations depend on the order we encounter them in.
-        if matches!(self.reverse_id_map[&id].def_id().base, DefIdBase::Alloc(_)) {
-            return None;
-        }
-        let recorder = cache.name_records.get(&id)?;
+    /// The registrations of a recorded computation, with the ids of the next snapshot.
+    fn cache_stored_refs(&mut self, recorder: &Recorder, except: ItemId) -> Option<Vec<StoredRef>> {
         let mut refs = Vec::with_capacity(recorder.refs.len());
-        for (&ref_id, &enqueue) in &recorder.refs {
-            let ref_key = cache.keys.get(&ref_id)?;
-            refs.push(CachedRef {
-                old_id: ref_id,
-                enqueue,
-                hash: ref_key.hash,
-                encoded: Cow::Owned(ref_key.encoded.clone()),
-            });
+        for (&id, &enqueue) in &recorder.refs {
+            if id == except {
+                continue;
+            }
+            let cache = self.cache.as_mut().unwrap();
+            // The key of an allocation is only known once its view is decided.
+            if cache.store_id(id).is_none()
+                && !cache.keys.contains_key(&id)
+                && let Some(key) = compute_key(self.tcx, &self.hax_state, &self.reverse_id_map[&id])
+            {
+                cache.add_key(id, Rc::new(key));
+            }
+            refs.push((cache.store_id(id)?, enqueue));
         }
-        let mut name = self.translated.item_names.get(&id)?.clone();
-        let mut collect = CollectIds {
-            items: Default::default(),
-            files: std::mem::take(files),
-        };
-        let _ = name.drive(&mut collect);
-        *files = collect.files;
-        files.shift_remove(&FileId::ZERO);
-        let is_known = |i: &ItemId| {
-            *i == id || *i == ItemId::Type(TypeDeclId::UNIT) || recorder.refs.contains_key(i)
-        };
-        if !collect.items.iter().all(is_known) {
-            return None;
-        }
-        let _ = name.drive_mut(&mut StoreFileIds { files });
-        if !cache.only_stored_files(&name) {
-            return None;
-        }
-        let state = DedupSerializer::default();
-        let bytes = postcard::to_allocvec(&serde_state::WithState::new(&name, &state)).ok()?;
-        Some((refs, bytes))
+        Some(refs)
     }
 
     /// Finish recording the translation of `id` and store it if possible.
@@ -1561,9 +1487,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         let Some(id) = id.as_item() else {
             return;
         };
-        let Some(key) = cache.keys.get(&id).cloned() else {
+        if !cache.has_key(id) {
             return;
-        };
+        }
         if error_count != recorder.errors_before {
             recorder.tainted.get_or_insert("errors");
         }
@@ -1571,299 +1497,210 @@ impl<'tcx> TranslateCtx<'tcx> {
             *cache.stats.tainted.entry(why).or_default() += 1;
             return;
         }
-        // The item refers to itself under its own id.
-        recorder.refs.shift_remove(&id);
-        let mut refs = Vec::with_capacity(recorder.refs.len());
-        for (&ref_id, &enqueue) in &recorder.refs {
-            // The key of an allocation is only known once its view is decided.
-            if !cache.keys.contains_key(&ref_id)
-                && let Some(key) =
-                    compute_key(self.tcx, &self.hax_state, &self.reverse_id_map[&ref_id])
-            {
-                cache.by_hash.entry(key.hash).or_insert(ref_id);
-                cache.keys.insert(ref_id, Rc::new(key));
-            }
-            let Some(ref_key) = cache.keys.get(&ref_id) else {
-                *cache.stats.tainted.entry("ref without key").or_default() += 1;
-                return;
+        let stored = (|| {
+            let refs = self.cache_stored_refs(&recorder, id).ok_or("ref without id")?;
+            let cache = self.cache.as_ref().unwrap();
+            let store_id = cache.store_id(id).ok_or("no id")?;
+            let item = self.translated.get_item(id).ok_or("no item")?;
+            // Check that we recorded all the items it mentions.
+            // Check that we recorded all the items it mentions, except in its name, which we store
+            // separately.
+            let mut collect = CollectIds {
+                items: Default::default(),
             };
-            refs.push(CachedRef {
-                old_id: ref_id,
-                enqueue,
-                hash: ref_key.hash,
-                encoded: Cow::Owned(ref_key.encoded.clone()),
-            });
+            macro_rules! without_name {
+                ($variant:ident, $d:expr) => {{
+                    let mut d = $d.clone();
+                    d.item_meta.name = Name::default();
+                    let _ = d.drive(&mut collect);
+                    CachedItem::$variant(d)
+                }};
+            }
+            let mut item = match item {
+                ItemRef::Type(d) => without_name!(Type, d),
+                ItemRef::Fun(d) => without_name!(Fun, d),
+                ItemRef::Global(d) => without_name!(Global, d),
+                ItemRef::TraitDecl(d) => without_name!(TraitDecl, d),
+                ItemRef::TraitImpl(d) => without_name!(TraitImpl, d),
+            };
+            for effect in &recorder.effects {
+                match effect {
+                    Effect::RegisterAssocItems(t) | Effect::MarkMethodUsed(t, _) => {
+                        collect.items.insert((*t).into());
+                    }
+                    Effect::TranslatedVTable(i, vtable) => {
+                        collect.items.insert((*i).into());
+                        let _ = vtable.drive(&mut collect);
+                    }
+                }
+            }
+            // Every session registers the items of the prefix (e.g. `TypeDeclId::UNIT`, which items
+            // mention without registering it).
+            let is_known = |i: &ItemId| {
+                let (kind, index) = kind_and_index(*i);
+                *i == id || index < cache.header.prefix[kind] as usize || recorder.refs.contains_key(i)
+            };
+            if !collect.items.iter().all(is_known) {
+                return Err("unrecorded id");
+            }
+            let mut to_stored = ToStored { cache, ok: true };
+            let _ = match &mut item {
+                CachedItem::Type(d) => d.drive_mut(&mut to_stored),
+                CachedItem::Fun(d) => d.drive_mut(&mut to_stored),
+                CachedItem::Global(d) => d.drive_mut(&mut to_stored),
+                CachedItem::TraitDecl(d) => d.drive_mut(&mut to_stored),
+                CachedItem::TraitImpl(d) => d.drive_mut(&mut to_stored),
+            };
+            let effects: Vec<Effect> = recorder
+                .effects
+                .iter()
+                .map(|effect| match effect.clone() {
+                    Effect::RegisterAssocItems(t) => Effect::RegisterAssocItems(to_stored.item(t)),
+                    Effect::MarkMethodUsed(t, m) => Effect::MarkMethodUsed(to_stored.item(t), m),
+                    Effect::TranslatedVTable(i, mut vtable) => {
+                        let _ = vtable.drive_mut(&mut to_stored);
+                        Effect::TranslatedVTable(to_stored.item(i), vtable)
+                    }
+                })
+                .collect();
+            if !to_stored.ok {
+                return Err("unstorable id or file");
+            }
+            let (effects, item) = (encode_value(&effects).unwrap(), encode_value(&item).unwrap());
+            let body = postcard::to_allocvec(&(refs, effects.as_slice(), item.as_slice())).unwrap();
+            Ok((store_id, body))
+        })();
+        let cache = self.cache.as_mut().unwrap();
+        match stored {
+            Ok((store_id, body)) => {
+                cache.stats.stored += 1;
+                cache.bodies.insert(store_id, body);
+            }
+            Err(why) => *cache.stats.tainted.entry(why).or_default() += 1,
         }
-        let Some(mut item) = self.translated.get_item_mut(id) else {
-            // E.g. invisible items.
-            return;
-        };
-        // Serialize without the name: it is recomputed when the item is registered.
-        let name = std::mem::replace(&mut item.item_meta().name, Name::default());
-        let item = self.translated.get_item(id).unwrap();
-        // Check that we recorded all the ids the item mentions.
+    }
+
+    /// The name of `id` and the registrations computing it did, with the ids of the next
+    /// snapshot and serialized as `IndexEntry::name`, if we can store them.
+    fn cache_stored_name(&mut self, id: ItemId) -> Option<Vec<u8>> {
+        // The names of allocations depend on the order we encounter them in.
+        if matches!(self.reverse_id_map.get(&id)?.def_id().base, DefIdBase::Alloc(_)) {
+            return None;
+        }
+        let recorder = self.cache.as_mut().unwrap().name_records.remove(&id)?;
+        let refs = self.cache_stored_refs(&recorder, id)?;
+        let mut name = self.translated.item_names.get(&id)?.clone();
+        let cache = self.cache.as_ref().unwrap();
         let mut collect = CollectIds {
             items: Default::default(),
-            files: Default::default(),
         };
-        match item {
-            ItemRef::Type(d) => d.drive(&mut collect),
-            ItemRef::Fun(d) => d.drive(&mut collect),
-            ItemRef::Global(d) => d.drive(&mut collect),
-            ItemRef::TraitDecl(d) => d.drive(&mut collect),
-            ItemRef::TraitImpl(d) => d.drive(&mut collect),
+        let _ = name.drive(&mut collect);
+        let is_known = |i: &ItemId| {
+            let (kind, index) = kind_and_index(*i);
+            *i == id || index < cache.header.prefix[kind] as usize || recorder.refs.contains_key(i)
         };
-        for effect in &recorder.effects {
-            match effect {
-                Effect::RegisterAssocItems(t) | Effect::MarkMethodUsed(t, _) => {
-                    collect.items.insert((*t).into());
-                }
-                Effect::TranslatedVTable(i, vtable) => {
-                    collect.items.insert((*i).into());
-                    let _ = vtable.drive(&mut collect);
-                }
-            }
-        }
-        let is_known = |i: ItemId| {
-            i == id || i == ItemId::Type(TypeDeclId::UNIT) || recorder.refs.contains_key(&i)
+        collect.items.iter().all(is_known).then_some(())?;
+        let mut to_stored = ToStored {
+            cache: self.cache.as_ref().unwrap(),
+            ok: true,
         };
-        let all_recorded = collect.items.iter().all(|i| is_known(*i));
-        let mut files = collect.files;
-        files.shift_remove(&FileId::ZERO);
-        let serialized = all_recorded
-            .then(|| {
-                let mut store_files = StoreFileIds { files: &files };
-                macro_rules! renumber {
-                    ($variant:ident, $d:expr) => {{
-                        let mut d = $d.clone();
-                        let _ = d.drive_mut(&mut store_files);
-                        CachedItem::$variant(d)
-                    }};
-                }
-                let item = match item {
-                    ItemRef::Type(d) => renumber!(Type, d),
-                    ItemRef::Fun(d) => renumber!(Fun, d),
-                    ItemRef::Global(d) => renumber!(Global, d),
-                    ItemRef::TraitDecl(d) => renumber!(TraitDecl, d),
-                    ItemRef::TraitImpl(d) => renumber!(TraitImpl, d),
-                };
-                let only_stored_files = match &item {
-                    CachedItem::Type(d) => cache.only_stored_files(d),
-                    CachedItem::Fun(d) => cache.only_stored_files(d),
-                    CachedItem::Global(d) => cache.only_stored_files(d),
-                    CachedItem::TraitDecl(d) => cache.only_stored_files(d),
-                    CachedItem::TraitImpl(d) => cache.only_stored_files(d),
-                };
-                // Effects only mention vtable refs, which have no spans.
-                only_stored_files.then_some(item)
-            })
-            .flatten();
-        self.translated.get_item_mut(id).unwrap().item_meta().name = name;
-        let bytes = serialized.and_then(|item| {
-            // The name section may add files.
-            let name_section = self.cache_name_section(id, &mut files);
-            let head = EntryHead {
-                self_id: id,
-                has_body: true,
-                files: self.cache.as_mut().unwrap().store_files(&files),
-                name_refs: name_section.as_ref().map(|(refs, _)| refs.clone()),
-            };
-            let mut bytes = postcard::to_allocvec(&head).ok()?;
-            let name_bytes = name_section.map(|(_, bytes)| bytes).unwrap_or_default();
-            bytes.extend_from_slice(&(name_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&name_bytes);
-            bytes = postcard::to_extend(&refs, bytes).ok()?;
-            let state = DedupSerializer::default();
-            let effects =
-                postcard::to_allocvec(&serde_state::WithState::new(&recorder.effects, &state))
-                    .ok()?;
-            bytes.extend_from_slice(&(effects.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&effects);
-            let state = DedupSerializer::default();
-            postcard::to_extend(&serde_state::WithState::new(&item, &state), bytes).ok()
-        });
-        let cache = self.cache.as_mut().unwrap();
-        match bytes {
-            Some(bytes) => cache.store(key.hash, &bytes, true),
-            None => {
-                *cache
-                    .stats
-                    .tainted
-                    .entry("unrecorded id or local file")
-                    .or_default() += 1
-            }
-        }
+        let _ = name.drive_mut(&mut to_stored);
+        to_stored.ok.then_some(())?;
+        postcard::to_allocvec(&(refs, encode_value(&name)?.as_slice())).ok()
     }
 
-    /// Store the names of the items we registered but whose translation we didn't store, so that
-    /// later sessions can register them without their source.
-    pub(crate) fn cache_store_names(&mut self) {
-        let Some(cache) = &self.cache else {
+    /// Write the snapshot plus what this session stored, unless another session replaced the
+    /// snapshot meanwhile.
+    pub(crate) fn cache_finish(&mut self) {
+        let Some(cache) = &mut self.cache else {
             return;
         };
-        let mut ids: Vec<ItemId> = cache
-            .name_records
+        if std::env::var_os("CHARON_CACHE_STATS").is_some() {
+            eprintln!("charon cache: {:?}", cache.stats);
+        }
+        let _guard = charon_lib::timing::scope("cache-write");
+        let mut out = match &cache.snapshot {
+            Some(snapshot) => snapshot[..cache.values_end].to_vec(),
+            None => vec![],
+        };
+        let mut index = cache.header.index.clone();
+        let mut push = |bytes: &[u8]| {
+            let loc = (out.len() as u64, bytes.len() as u64);
+            out.extend_from_slice(bytes);
+            loc
+        };
+        // The items of this session with a key that the snapshot doesn't have, by id in the next
+        // snapshot.
+        let mut new: Vec<(ItemId, ItemId)> = cache
+            .keys
             .keys()
-            .copied()
-            .filter(|id| {
-                cache.keys.get(id).is_some_and(|key| {
-                    !cache.stored.contains(&key.hash) && !cache.index.contains_key(&key.hash)
-                })
-            })
+            .filter_map(|&id| Some((cache.store_id(id)?, id)))
+            .filter(|(store_id, _)| !cache.entries.contains_key(store_id))
             .collect();
-        ids.sort();
-        for id in ids {
-            let mut files = Default::default();
-            let Some((name_refs, name_bytes)) = self.cache_name_section(id, &mut files) else {
-                continue;
-            };
-            let head = EntryHead {
-                self_id: id,
-                has_body: false,
-                files: self.cache.as_mut().unwrap().store_files(&files),
-                name_refs: Some(name_refs),
-            };
-            let Ok(mut bytes) = postcard::to_allocvec(&head) else {
-                continue;
-            };
-            bytes.extend_from_slice(&(name_bytes.len() as u32).to_le_bytes());
-            bytes.extend_from_slice(&name_bytes);
-            let cache = self.cache.as_mut().unwrap();
-            let hash = cache.keys[&id].hash;
-            cache.store(hash, &bytes, false);
+        new.sort_unstable();
+        new.dedup_by_key(|(store_id, _)| *store_id);
+        let mut changed = !new.is_empty();
+        for (store_id, id) in new {
+            let cache = self.cache.as_ref().unwrap();
+            let id = cache.from_store_ids.get(&store_id).copied().unwrap_or(id);
+            let key = &cache.keys[&id];
+            let hash = key.hash.to_le_bytes();
+            let key = push(&key.encoded);
+            let name = self.cache_stored_name(id).map(|name| push(&name));
+            let body = self.cache.as_mut().unwrap().bodies.remove(&store_id);
+            index.push(IndexEntry {
+                hash,
+                id: store_id,
+                key,
+                name,
+                body: body.map(|body| push(&body)),
+            });
         }
-    }
-}
-
-/// Decode a value of an entry, with the ids of this session: `items` maps the item ids of the entry
-/// to ours, and its k-th file is `files[k]`.
-fn decode_entry_value<T: for<'de> DeserializeState<'de, DedupSerializer>>(
-    bytes: &[u8],
-    items: &HashMap<ItemId, ItemId>,
-    files: &[FileId],
-) -> Option<T> {
-    struct EntryIdRemap<'a> {
-        items: &'a HashMap<ItemId, ItemId>,
-        files: &'a [FileId],
-        /// Whether we met an id that the entry doesn't know of.
-        unknown: Cell<bool>,
-    }
-    impl IdRemap for EntryIdRemap<'_> {
-        fn item_id(&self, id: ItemId) -> ItemId {
-            let new = self.items.get(&id).copied();
-            self.unknown.set(self.unknown.get() || new.is_none());
-            new.unwrap_or(id)
-        }
-        fn file_id(&self, id: FileId) -> FileId {
-            // Placeholder spans in the local crate root, see `CheckStoredFiles`.
-            if id == FileId::ZERO {
-                return id;
-            }
-            let new = (id.index().checked_sub(STORED_FILE_IDS_START))
-                .and_then(|k| self.files.get(k).copied());
-            self.unknown.set(self.unknown.get() || new.is_none());
-            new.unwrap_or(id)
-        }
-    }
-    let remap = EntryIdRemap {
-        items,
-        files,
-        unknown: Cell::new(false),
-    };
-    let value = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        with_id_remap(&remap, || {
-            let state = DedupSerializer::default();
-            T::deserialize_state(&state, &mut postcard::Deserializer::from_bytes(bytes)).ok()
-        })
-    }));
-    match value {
-        Ok(Some(value)) if !remap.unknown.get() => Some(value),
-        _ => None,
-    }
-}
-
-/// In stored items, the k-th file of the entry is `FileId::from(STORED_FILE_IDS_START + k)`. This
-/// distinguishes them from the ids of the session: hash-consing may give us values of the session
-/// when we load ours, because the equality of `TraitParam`s ignores their spans.
-const STORED_FILE_IDS_START: usize = 0xC000;
-
-/// Renumber the files of an item to be stored.
-#[derive(derive_generic_visitor::Visitor)]
-struct StoreFileIds<'a> {
-    files: &'a indexmap::IndexSet<FileId>,
-}
-
-impl StoreFileIds<'_> {
-    fn store(&self, id: FileId) -> FileId {
-        match self.files.get_index_of(&id) {
-            Some(index) => FileId::from(STORED_FILE_IDS_START + index),
-            None => id,
-        }
-    }
-}
-
-impl VisitAstMut for StoreFileIds<'_> {
-    fn enter_file_id(&mut self, id: &mut FileId) {
-        *id = self.store(*id);
-    }
-    // Visitors don't explore spans.
-    fn enter_span(&mut self, span: &mut charon_lib::ast::Span) {
-        span.map_file_ids(|id| self.store(id));
-    }
-}
-
-/// See `TranslationCache::only_stored_files`.
-#[derive(derive_generic_visitor::Visitor)]
-struct CheckStoredFiles {
-    zero_is_local: bool,
-    ok: bool,
-}
-
-impl VisitAst for CheckStoredFiles {
-    fn enter_span(&mut self, span: &charon_lib::ast::Span) {
-        let span = span.unpack();
-        for data in [Some(span.data), span.generated_from_span]
-            .into_iter()
-            .flatten()
-        {
-            if data.file_id.index() < STORED_FILE_IDS_START {
-                let placeholder = matches!(
-                    (data.beg.line, data.beg.col, data.end.line, data.end.col),
-                    (0, 0, 0, 0) | (1, 0, 1, 0)
-                );
-                self.ok &= self.zero_is_local && data.file_id == FileId::ZERO && placeholder;
+        // The items of the snapshot that this session translated for the first time.
+        let cache = self.cache.as_ref().unwrap();
+        for (&store_id, body) in &cache.bodies {
+            if let Some(&i) = cache.entries.get(&store_id)
+                && index[i].body.is_none()
+            {
+                index[i].body = Some(push(body));
+                changed = true;
             }
         }
-    }
-}
-
-#[derive(derive_generic_visitor::Visitor)]
-struct CollectIds {
-    items: rustc_hash::FxHashSet<ItemId>,
-    files: indexmap::IndexSet<FileId>,
-}
-
-impl VisitAst for CollectIds {
-    fn enter_file_id(&mut self, id: &FileId) {
-        self.files.insert(*id);
-    }
-    // Visitors don't explore spans.
-    fn enter_span(&mut self, span: &charon_lib::ast::Span) {
-        self.files.extend(span.file_ids());
-    }
-    fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
-        self.items.insert((*id).into());
-    }
-    fn enter_fun_decl_id(&mut self, id: &FunDeclId) {
-        self.items.insert((*id).into());
-    }
-    fn enter_global_decl_id(&mut self, id: &GlobalDeclId) {
-        self.items.insert((*id).into());
-    }
-    fn enter_trait_decl_id(&mut self, id: &TraitDeclId) {
-        self.items.insert((*id).into());
-    }
-    fn enter_trait_impl_id(&mut self, id: &TraitImplId) {
-        self.items.insert((*id).into());
+        if !changed {
+            return;
+        }
+        let mut files = cache.header.files.clone();
+        for &id in &cache.new_files {
+            let file = &self.translated.files[id];
+            files.push(File {
+                id: cache.store_files[&id],
+                ..file.clone()
+            });
+        }
+        let header = Header {
+            prefix: cache.header.prefix,
+            counts: cache.next,
+            files,
+            index,
+        };
+        let Ok(header) = postcard::to_allocvec(&header) else {
+            return;
+        };
+        out.extend_from_slice(&header);
+        out.extend_from_slice(&(header.len() as u64).to_le_bytes());
+        out.extend_from_slice(SNAPSHOT_MAGIC);
+        // Another session may have replaced the snapshot since we loaded it: keep theirs.
+        let path = cache.snapshot_path();
+        let current = std::fs::metadata(&path)
+            .ok()
+            .and_then(|meta| Some((meta.len(), meta.modified().ok()?)));
+        if current != cache.stamp {
+            return;
+        }
+        // Write atomically, as other charon processes may be reading the cache.
+        let tmp = cache.dir.join(format!("snapshot.{}.tmp", std::process::id()));
+        if std::fs::write(&tmp, out).is_ok() {
+            let _ = std::fs::rename(&tmp, &path);
+        }
     }
 }
