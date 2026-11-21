@@ -3,7 +3,6 @@
 //! Note that the deduplication scheme is order-dependent: it relies on the fact that
 //! serialization and deserialization traverse the value in the same order.
 
-use indexmap::IndexMap as SeqHashMap;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
@@ -56,7 +55,8 @@ impl Mapper for SerializeTableMapper {
 }
 struct DeserializeTableMapper;
 impl Mapper for DeserializeTableMapper {
-    type Value<T: Mappable> = SeqHashMap<DedupId, T>;
+    /// Ids are allocated consecutively, so we index by id.
+    type Value<T: Mappable> = Vec<Option<T>>;
 }
 
 /// Deduplicate the values of each type, in one table per type.
@@ -79,14 +79,16 @@ impl DedupSerializerState for DedupSerializer {
         })
     }
     fn record_deserialized<T: Dedup>(&self, id: DedupId, value: T) {
-        self.de.borrow_mut().or_default::<T>().insert(id, value);
+        let mut de = self.de.borrow_mut();
+        let table = de.or_default::<T>();
+        let index = id.0 as usize;
+        if index >= table.len() {
+            table.resize_with(index + 1, || None);
+        }
+        table[index] = Some(value);
     }
     fn get_deserialized<T: Dedup>(&self, id: DedupId) -> Option<T> {
-        self.de
-            .borrow()
-            .get::<T>()
-            .and_then(|table| table.get(&id))
-            .cloned()
+        self.de.borrow().get::<T>()?.get(id.0 as usize)?.clone()
     }
 }
 

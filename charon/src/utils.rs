@@ -169,7 +169,9 @@ pub mod type_map {
     use rustc_hash::FxHashMap;
     use std::{
         any::{Any, TypeId},
+        hash::{Hash, Hasher},
         marker::PhantomData,
+        ptr::NonNull,
     };
 
     pub trait Mappable: Any + Send + Sync {}
@@ -179,46 +181,104 @@ pub mod type_map {
         type Value<T: Mappable>: Mappable;
     }
 
+    const CACHE_SLOTS: usize = 32;
+
     /// A map that maps types to values in a generic manner: we store for each type `T` a value of
     /// type `M::Value<T>`.
     pub struct TypeMap<M> {
         data: FxHashMap<TypeId, Box<dyn Mappable>>,
+        /// Some of the values of `data`, at the slot given by their type: finding a value here
+        /// costs a comparison instead of a hash table lookup. Values are boxed, so they don't
+        /// move when `data` grows.
+        cache: [Option<(TypeId, NonNull<()>)>; CACHE_SLOTS],
         phantom: PhantomData<M>,
     }
 
+    // SAFETY: the pointers in `cache` point to values owned by `data`, which are `Send + Sync`.
+    unsafe impl<M> Send for TypeMap<M> {}
+    unsafe impl<M> Sync for TypeMap<M> {}
+
+    /// The cache slot of a type. This is a constant for a given type.
+    #[inline]
+    fn slot(id: TypeId) -> usize {
+        let mut hasher = rustc_hash::FxHasher::default();
+        id.hash(&mut hasher);
+        (hasher.finish() >> 32) as usize % CACHE_SLOTS
+    }
+
     impl<M: Mapper> TypeMap<M> {
-        pub fn get<T: Mappable>(&self) -> Option<&M::Value<T>> {
-            self.data
-                .get(&TypeId::of::<T>())
-                // We must be careful to not accidentally cast the box itself as `dyn Any`.
-                .map(|val: &Box<dyn Mappable>| &**val)
-                .and_then(|val: &dyn Mappable| (val as &dyn Any).downcast_ref())
+        #[inline]
+        fn cached<T: Mappable>(&self) -> Option<NonNull<M::Value<T>>> {
+            let id = TypeId::of::<T>();
+            match self.cache[slot(id)] {
+                Some((cached_id, ptr)) if cached_id == id => Some(ptr.cast()),
+                _ => None,
+            }
         }
 
+        /// Cache the value of `T`, and return a pointer to it.
+        #[inline]
+        fn cache<T: Mappable>(&mut self, val: &mut dyn Mappable) -> NonNull<M::Value<T>> {
+            // The value at key `TypeId::of::<T>()` has type `M::Value<T>`.
+            let ptr = NonNull::from(val).cast::<()>();
+            let id = TypeId::of::<T>();
+            self.cache[slot(id)] = Some((id, ptr));
+            ptr.cast()
+        }
+
+        #[inline]
+        pub fn get<T: Mappable>(&self) -> Option<&M::Value<T>> {
+            if let Some(ptr) = self.cached::<T>() {
+                // SAFETY: cached pointers point to the values of `data`.
+                return Some(unsafe { ptr.as_ref() });
+            }
+            let val: &dyn Mappable = &**self.data.get(&TypeId::of::<T>())?;
+            // SAFETY: the value at key `TypeId::of::<T>()` has type `M::Value<T>`.
+            Some(unsafe { &*(val as *const dyn Mappable as *const M::Value<T>) })
+        }
+
+        #[inline]
         pub fn get_mut<T: Mappable>(&mut self) -> Option<&mut M::Value<T>> {
-            self.data
-                .get_mut(&TypeId::of::<T>())
-                // We must be careful to not accidentally cast the box itself as `dyn Any`.
-                .map(|val: &mut Box<dyn Mappable>| &mut **val)
-                .and_then(|val: &mut dyn Mappable| (val as &mut dyn Any).downcast_mut())
+            let mut ptr = match self.cached::<T>() {
+                Some(ptr) => ptr,
+                None => {
+                    let val: *mut dyn Mappable = &mut **self.data.get_mut(&TypeId::of::<T>())?;
+                    // SAFETY: `val` points to a value of `data`, which we don't otherwise borrow.
+                    self.cache::<T>(unsafe { &mut *val })
+                }
+            };
+            // SAFETY: the pointer points to a value of `data`, and we borrow `self` mutably.
+            Some(unsafe { ptr.as_mut() })
         }
 
         pub fn insert<T: Mappable>(&mut self, val: M::Value<T>) -> Option<Box<M::Value<T>>> {
-            self.data
-                .insert(TypeId::of::<T>(), Box::new(val))
-                .and_then(|val: Box<dyn Mappable>| (val as Box<dyn Any>).downcast().ok())
+            let old = self.data.insert(TypeId::of::<T>(), Box::new(val));
+            let new: *mut dyn Mappable = &mut **self.data.get_mut(&TypeId::of::<T>()).unwrap();
+            // SAFETY: `new` points to a value of `data`, which we don't otherwise borrow.
+            self.cache::<T>(unsafe { &mut *new });
+            old.and_then(|val: Box<dyn Mappable>| (val as Box<dyn Any>).downcast().ok())
         }
 
+        #[inline]
         pub fn or_insert_with<T: Mappable>(
             &mut self,
             f: impl FnOnce() -> M::Value<T>,
         ) -> &mut M::Value<T> {
-            let val: &mut dyn Mappable = &mut **self
-                .data
-                .entry(TypeId::of::<T>())
-                .or_insert_with(|| Box::new(f()));
-            (val as &mut dyn Any).downcast_mut().unwrap()
+            let mut ptr = match self.cached::<T>() {
+                Some(ptr) => ptr,
+                None => {
+                    let val: *mut dyn Mappable = &mut **self
+                        .data
+                        .entry(TypeId::of::<T>())
+                        .or_insert_with(|| Box::new(f()));
+                    // SAFETY: `val` points to a value of `data`, which we don't otherwise borrow.
+                    self.cache::<T>(unsafe { &mut *val })
+                }
+            };
+            // SAFETY: the pointer points to a value of `data`, and we borrow `self` mutably.
+            unsafe { ptr.as_mut() }
         }
+        #[inline]
         pub fn or_default<T: Mappable>(&mut self) -> &mut M::Value<T>
         where
             M::Value<T>: Default,
@@ -231,6 +291,7 @@ pub mod type_map {
         fn default() -> Self {
             Self {
                 data: Default::default(),
+                cache: [None; CACHE_SLOTS],
                 phantom: Default::default(),
             }
         }
