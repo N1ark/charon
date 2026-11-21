@@ -1307,11 +1307,14 @@ pub fn translate<'tcx>(
             hax::options::Options::default(),
             hax::options::BoundsOptions::default(),
         );
-        translate_options
+        let traits = translate_options
             .hide_traits
             .iter()
             .flat_map(|pat| super::resolve_path::def_path_def_ids(&hax_state, pat, true).unwrap())
-            .collect()
+            .collect();
+        // Safety: we only keep rustc ids.
+        unsafe { hax_state.base.free() };
+        traits
     };
     let hax_state = hax::state::State::new(
         tcx,
@@ -1552,10 +1555,19 @@ pub fn translate<'tcx>(
         cache.finish();
     }
 
-    // Return the context, dropping the hax state and rustc `tcx`.
-    Ok(TransformCtx {
-        options: ctx.options,
-        translated: ctx.translated,
-        errors: std::sync::Mutex::new(ctx.errors.into_inner()),
-    })
+    // Drop the translation state, including the hax state and caches. The translated crate doesn't
+    // refer to hax data, so we can then free the hax interners.
+    let hax_base = ctx.hax_state.base.clone();
+    let transform_ctx = {
+        let ctx = ctx;
+        TransformCtx {
+            options: ctx.options,
+            translated: ctx.translated,
+            errors: std::sync::Mutex::new(ctx.errors.into_inner()),
+        }
+    };
+    // Safety: the translation state, which held the other clones of `hax_base` and everything they
+    // produced, is gone.
+    unsafe { hax_base.free() };
+    Ok(transform_ctx)
 }

@@ -240,12 +240,14 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         assoc_item_resolution: AssocItemResolution,
     ) -> ItemRef<'tcx, Id> {
         let key = (def_id.clone(), generics, assoc_item_resolution);
-        if let Some(entry) = self.item_refs_cache.get(&key) {
-            return entry.clone();
-        }
-
+        // Concrete item references resolve the same in every owner without concrete clauses, so
+        // we only cache them in the shared cache.
         let concrete = self.has_no_concrete_clauses && !generics.has_non_region_param();
-        if concrete && let Some(entry) = self.elab_ctx.concrete_item_refs().borrow().get(&key) {
+        if concrete {
+            if let Some(entry) = self.elab_ctx.concrete_item_refs().borrow().get(&key) {
+                return entry.clone();
+            }
+        } else if let Some(entry) = self.item_refs_cache.get(&key) {
             return entry.clone();
         }
         let item_ref =
@@ -254,9 +256,10 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             self.elab_ctx
                 .concrete_item_refs()
                 .borrow_mut()
-                .insert(key.clone(), item_ref.clone());
+                .insert(key, item_ref.clone());
+        } else {
+            self.item_refs_cache.insert(key, item_ref.clone());
         }
-        self.item_refs_cache.insert(key, item_ref.clone());
         item_ref
     }
 

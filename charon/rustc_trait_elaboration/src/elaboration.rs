@@ -454,15 +454,15 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         state: &Id::State<'tcx>,
         tref: &PolyTraitRef<'tcx>,
     ) -> TraitProof<'tcx, Id> {
-        if let Some(trait_proof) = self.trait_proofs_cache.get(tref).copied() {
-            return trait_proof;
-        }
-        // Concrete trait refs resolve the same in every owner without concrete clauses.
+        // Concrete trait refs resolve the same in every owner without concrete clauses, so we only
+        // cache them in the shared cache.
         let concrete = self.has_no_concrete_clauses && !tref.has_non_region_param();
-        if concrete
-            && let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().borrow().get(tref)
-        {
-            return *trait_proof;
+        if concrete {
+            if let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().borrow().get(tref) {
+                return *trait_proof;
+            }
+        } else if let Some(trait_proof) = self.trait_proofs_cache.get(tref).copied() {
+            return trait_proof;
         }
         let trait_proof = self.resolve_uncached(state, tref);
         if concrete {
@@ -709,7 +709,10 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             kind: atom,
             pred: tref,
         });
-        self.trait_proofs_cache.insert(tref, trait_proof);
+        // `resolve` caches the concrete ones.
+        if !(self.has_no_concrete_clauses && !tref.has_non_region_param()) {
+            self.trait_proofs_cache.insert(tref, trait_proof);
+        }
         trait_proof
     }
 

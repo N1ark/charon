@@ -142,6 +142,25 @@ mod base {
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
+
+        /// Free the interners and the elaboration context, which are otherwise leaked.
+        ///
+        /// # Safety
+        /// No clone of this `Base`, nor anything it produced (types, item refs, trait proofs...),
+        /// may be used afterwards.
+        pub unsafe fn free(self) {
+            unsafe fn free_leaked<T>(value: &T) {
+                drop(unsafe { Box::from_raw(value as *const T as *mut T) })
+            }
+            // The caches point into the interners: drop them first.
+            drop(self.cache);
+            unsafe {
+                free_leaked(self.ty_interner);
+                free_leaked(self.trait_proof_interner);
+                free_leaked(self.item_ref_interner);
+                self.elab_ctx.free();
+            }
+        }
     }
 }
 

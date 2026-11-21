@@ -173,6 +173,16 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         ElaborationCtx { tcx, data }
     }
 
+    /// Free the storage of this context, which is otherwise leaked.
+    ///
+    /// # Safety
+    /// Neither this context, nor its copies, nor anything they produced (e.g. `TraitProof`s) may
+    /// be used afterwards.
+    pub unsafe fn free(self) {
+        let data = self.data as *const ElaborationData<'tcx, Id> as *mut ElaborationData<'tcx, Id>;
+        drop(unsafe { Box::from_raw(data) });
+    }
+
     pub fn bounds_options(&self) -> &BoundsOptions {
         &self.data.bounds_options
     }
