@@ -75,7 +75,7 @@ struct TypeCheckVisitor<'a> {
     last_binder_ctx: u32,
     /// The types, trait refs and constants (by address) we checked without errors under a given
     /// binder context and `accept_type_errors` mode: checking them again would do nothing.
-    checked: HashSet<(*const (), u32, bool)>,
+    checked: &'a mut HashSet<(usize, u32, bool)>,
     /// The number of errors reported so far.
     error_count: Cell<usize>,
 }
@@ -208,17 +208,18 @@ impl<'a> TypeCheckVisitor<'a> {
         check: impl FnOnce(&mut Self) -> ControlFlow<Infallible>,
     ) -> ControlFlow<Infallible> {
         let key = (
-            addr,
+            addr as usize,
             *self.binder_ctx.last().unwrap(),
             self.accept_type_errors,
         );
-        if self.checked.contains(&key) {
+        // A value doesn't contain itself, so we can mark it as checked while we check it.
+        if !self.checked.insert(key) {
             return Continue(());
         }
         let errors_before = self.error_count.get();
         check(self)?;
-        if self.error_count.get() == errors_before {
-            self.checked.insert(key);
+        if self.error_count.get() != errors_before {
+            self.checked.remove(&key);
         }
         Continue(())
     }
@@ -1246,6 +1247,8 @@ impl TransformPass for Check {
         // Whether a substitution succeeds doesn't depend on the item being checked, so each thread
         // can keep its own cache.
         let substitution_caches = PerThread::<HashMap<(SubstitutedValue, [usize; 4]), bool>>::new();
+        // The `checked` sets are per item; we reuse their allocations.
+        let checked_sets = PerThread::<HashSet<(usize, u32, bool)>>::new();
         // Check the items in parallel, then apply the lifetime unifications we computed.
         let unifications = ctx.par_for_each_item(|ctx, item| {
             if item.item_meta().has_errors {
@@ -1275,6 +1278,13 @@ impl TransformPass for Check {
             } else {
                 None
             };
+            let mut checked = checked_sets.get();
+            // Don't keep the large table of an exceptionally large item for all later items.
+            if checked.capacity() > 1 << 12 {
+                *checked = HashSet::default();
+            } else {
+                checked.clear();
+            }
             let mut visitor = TypeCheckVisitor {
                 ctx,
                 item_id: item.id(),
@@ -1292,7 +1302,7 @@ impl TransformPass for Check {
                 binder_ctx: vec![0],
                 empty_binder_ctx: HashMap::default(),
                 last_binder_ctx: 0,
-                checked: HashSet::default(),
+                checked: &mut checked,
                 error_count: Cell::new(0),
             };
             // Typecheck the item, and accumulate needed lifetime unifications.
