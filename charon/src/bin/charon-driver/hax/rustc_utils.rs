@@ -318,6 +318,13 @@ pub fn fn_sig_bound_region_variances<'tcx>(
         }
     }
 
+    if !sig
+        .bound_vars()
+        .iter()
+        .any(|var| matches!(var, ty::BoundVariableKind::Region(_)))
+    {
+        return HashMap::default();
+    }
     let mut relation = FunctionalVariances {
         tcx,
         variances: HashMap::default(),
