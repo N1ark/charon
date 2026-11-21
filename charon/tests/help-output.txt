@@ -30,6 +30,9 @@ Options:
       --rustc-arg <RUSTC_ARGS>
           Extra flags to pass to rustc
 
+      --old-trait-solver
+          Run rustc with its old trait solver outside of coherence, as stable rustc does, instead of the new solver that our nightly enables everywhere. Trait resolution is several times faster with the old solver, but the two can give different (equivalent) results
+
       --targets <TARGETS>
           A list of target architectures to translate for. Charon will run the compiler once for each target and aggregate the results, which is useful if the code includes `#[cfg(..)]` filters. Warning: this is an initial implementation which is extremely slow
 
