@@ -83,7 +83,11 @@ use crate::{
     utils::{CycleDetector, StackDepthLimitExceeded, try_ensure_sufficient_stack},
 };
 
-use crate::transform::{TransformCtx, ctx::TransformPass, utils::GenericsSource};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+    utils::GenericsSource,
+};
 
 /// Represent some `TraitRef`s as paths for easier manipulation.
 use trait_ref_path::*;
@@ -1018,7 +1022,7 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
         None
     }
     fn may_record(&self) -> bool {
-        self.ctx.errors.lock().unwrap().error_count == self.initial_error_count
+        self.ctx.error_count() == self.initial_error_count
     }
 }
 
@@ -1558,10 +1562,15 @@ impl TransformPass for Transform {
             item_modifications
         };
 
-        // Apply the computed modifications to each item.
-        let mut memo = HashConsMemo::default();
-        let caches = Default::default();
-        ctx.for_each_item_mut(|ctx, mut item| {
+        // Apply the computed modifications to each item. The memo and the caches only depend on
+        // `item_modifications`, so each thread can have its own.
+        let memos = PerThread::<HashConsMemo<()>>::new();
+        let caches = PerThread::<RefCell<Caches>>::new();
+        // `type_replacements` are the replaced paths with their associated value, if already
+        // computed.
+        let update_item = |ctx: &TransformCtx,
+                           mut item: ItemRefMut<'_>,
+                           type_replacements: Option<TypeConstraintSet>| {
             trace!(
                 "Processing {}",
                 item.item_meta().name.with_ctx(&ctx.into_fmt())
@@ -1570,52 +1579,23 @@ impl TransformPass for Transform {
             let span = item.as_ref().item_meta().span;
             let modifications = item_modifications.get(&GenericsSource::Item(id)).unwrap();
 
-            // Add new parameters or associated types in order to have types to fill in all the
-            // replaced paths. We then collect the replaced paths and their associated value.
-            let type_replacements: TypeConstraintSet = if let ItemRefMut::TraitDecl(tr) = &mut item
-                && !modifications.add_type_params
-            {
-                // If we're self-referential, instead of adding new type parameters to pass to our
-                // parent clauses, we add new associated types. That way the parameter list of the
-                // trait stays unchanged.
-                let self_tref = TraitRef::new(
-                    TraitRefKind::SelfId,
-                    TraitDeclRef {
-                        id: tr.def_id,
-                        generics: BoxedArgs::new(tr.generics.identity_args()),
-                    },
-                );
-                let trait_def_id = tr.def_id;
+            // Add new parameters in order to have types to fill in all the replaced paths. We then
+            // collect the replaced paths and their associated value.
+            let type_replacements = type_replacements.unwrap_or_else(|| {
                 modifications.compute_replacements(|path| {
-                    let new_type_name = TraitItemName(path.to_name(&ctx.translated).into());
-                    let new_type_id = ctx.translated.assoc_item_names[trait_def_id].types.push(new_type_name);
-                    tr.types.set_slot_extend(new_type_id, Binder::empty(
-                        BinderKind::TraitType(tr.def_id, new_type_id),
-                        TraitAssocTy {
-                            name: new_type_name,
-                            attr_info: AttrInfo::dummy_public(),
-                            default: None,
-                            implied_clauses: Default::default(),
-                        },
-                    ));
-                    TyKind::TraitType(self_tref.clone(), new_type_id, GenericArgs::empty().into()).into_ty()
-                })
-            } else {
-                modifications.compute_replacements(|path| {
-                    let var_id = item
-                        .generic_params()
-                        .types
-                        .push_with(|id| {
-                            let name = path.to_name(&ctx.translated);
-                            TypeParam::new(id, name, Variance::Invariant)
-                        });
+                    let var_id = item.generic_params().types.push_with(|id| {
+                        let name = path.to_name(&ctx.translated);
+                        TypeParam::new(id, name, Variance::Invariant)
+                    });
                     TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
                 })
-            };
+            });
 
             // Remove used constraints.
             for cid in modifications.remove_constraints.iter().sorted().rev() {
-                item.generic_params().trait_type_constraints.swap_remove(*cid);
+                item.generic_params()
+                    .trait_type_constraints
+                    .swap_remove(*cid);
             }
 
             // Remove trait associated types.
@@ -1634,13 +1614,75 @@ impl TransformPass for Transform {
                 is_type_alias,
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
-                memo: &mut memo,
-                caches: &caches,
-                initial_error_count: ctx.errors.lock().unwrap().error_count,
+                memo: &mut memos.get(),
+                caches: &caches.get(),
+                initial_error_count: ctx.error_count(),
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
-                register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");
+                register_error!(
+                    ctx,
+                    visitor.span,
+                    "Stack depth limit exceeded while expanding associated types"
+                );
             }
-        });
+        };
+
+        // We transform the type declarations, trait declarations and trait impls one by one, in
+        // the same order as `for_each_item_mut`: trait declarations get new associated types,
+        // and these items are looked at when formatting error messages. Globals and functions
+        // don't affect each other, so we transform them in parallel.
+        ctx.for_each_item_mut_where(
+            |id| !id.is_global() && !id.is_fun(),
+            |ctx, mut item| {
+                let id = item.as_ref().id();
+                let modifications = item_modifications.get(&GenericsSource::Item(id)).unwrap();
+                let type_replacements = if let ItemRefMut::TraitDecl(tr) = &mut item
+                    && !modifications.add_type_params
+                {
+                    // If we're self-referential, instead of adding new type parameters to pass to
+                    // our parent clauses, we add new associated types. That way the parameter
+                    // list of the trait stays unchanged.
+                    let self_tref = TraitRef::new(
+                        TraitRefKind::SelfId,
+                        TraitDeclRef {
+                            id: tr.def_id,
+                            generics: BoxedArgs::new(tr.generics.identity_args()),
+                        },
+                    );
+                    let trait_def_id = tr.def_id;
+                    Some(modifications.compute_replacements(|path| {
+                        let new_type_name = TraitItemName(path.to_name(&ctx.translated).into());
+                        let new_type_id = ctx.translated.assoc_item_names[trait_def_id]
+                            .types
+                            .push(new_type_name);
+                        tr.types.set_slot_extend(
+                            new_type_id,
+                            Binder::empty(
+                                BinderKind::TraitType(tr.def_id, new_type_id),
+                                TraitAssocTy {
+                                    name: new_type_name,
+                                    attr_info: AttrInfo::dummy_public(),
+                                    default: None,
+                                    implied_clauses: Default::default(),
+                                },
+                            ),
+                        );
+                        TyKind::TraitType(
+                            self_tref.clone(),
+                            new_type_id,
+                            GenericArgs::empty().into(),
+                        )
+                        .into_ty()
+                    }))
+                } else {
+                    None
+                };
+                update_item(ctx, item, type_replacements)
+            },
+        );
+        ctx.par_for_each_item_mut_where(
+            |id| id.is_global() || id.is_fun(),
+            |ctx, item| update_item(ctx, item, None),
+        );
     }
 }

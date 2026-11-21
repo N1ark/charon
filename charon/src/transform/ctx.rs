@@ -246,6 +246,14 @@ impl TransformCtx {
         self.error_ctx().has_errors()
     }
 
+    /// The number of errors reported so far, including the ones of the item that this thread is
+    /// transforming in a parallel loop.
+    pub(crate) fn error_count(&self) -> usize {
+        let deferred = ITEM_EFFECTS
+            .with_borrow(|effects| effects.as_ref().map_or(0, |effects| effects.errors.len()));
+        self.error_ctx().error_count + deferred
+    }
+
     /// Span an error and register the error.
     pub(crate) fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
         let deferred = ITEM_EFFECTS.with_borrow_mut(|effects| {
@@ -563,16 +571,7 @@ impl TransformCtx {
         f: impl Fn(&Self, ItemRefMut<'_>) + Sync,
     ) {
         self.par_for_each_item_mut_where(|id| id.is_type(), &f);
-        for id in self.translated.trait_decls.all_indices() {
-            if let Some(mut decl) = self.translated.remove_item_temporarily(id.into()) {
-                let span = decl.as_ref().item_meta().span;
-                let is_local = decl.as_ref().item_meta().is_local;
-                self.with_def_id(id, is_local, span, |ctx| f(ctx, decl.as_mut()));
-                decl.as_mut().item_meta().has_errors |=
-                    self.errors.lock().unwrap().item_has_errors(id);
-                self.translated.put_item_back(id.into(), decl);
-            }
-        }
+        self.for_each_item_mut_where(|id| id.is_trait_decl(), |ctx, item| f(ctx, item));
         self.par_for_each_item_mut_where(|id| !id.is_type() && !id.is_trait_decl(), &f);
     }
 
@@ -624,8 +623,17 @@ impl TransformCtx {
 
     /// Iterate mutably over all items, keeping access to `self`. To make this work, we move out
     /// each item before iterating over it. Items added during traversal will not be iterated over.
-    pub fn for_each_item_mut(&mut self, mut f: impl for<'a> FnMut(&'a mut Self, ItemRefMut<'a>)) {
-        for id in self.translated.all_ids() {
+    pub fn for_each_item_mut(&mut self, f: impl for<'a> FnMut(&'a mut Self, ItemRefMut<'a>)) {
+        self.for_each_item_mut_where(|_| true, f)
+    }
+
+    /// Same as `for_each_item_mut`, on the items for which `select` returns true.
+    pub fn for_each_item_mut_where(
+        &mut self,
+        select: impl Fn(ItemId) -> bool,
+        mut f: impl for<'a> FnMut(&'a mut Self, ItemRefMut<'a>),
+    ) {
+        for id in self.translated.all_ids().filter(|&id| select(id)) {
             if let Some(mut decl) = self.translated.remove_item_temporarily(id) {
                 let is_local = decl.as_ref().item_meta().is_local;
                 let span = decl.as_ref().item_meta().span;
