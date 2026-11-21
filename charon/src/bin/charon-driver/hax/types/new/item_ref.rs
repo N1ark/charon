@@ -3,6 +3,7 @@ use crate::hax::prelude::*;
 use rustc_data_structures::intern::Interned;
 use rustc_middle::ty;
 use rustc_span::def_id::DefId as RDefId;
+use std::cell::OnceCell;
 
 /// Reference to an item, with generics. Basically any mention of an item (function, type, etc)
 /// uses this.
@@ -61,11 +62,12 @@ pub struct ItemRefContents<'tcx> {
     /// `in_trait.unwrap().trait`.
     #[value(self.assoc_generics().sinto(s))]
     pub generic_args: Vec<GenericArg<'tcx>>,
-    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>` or `B:
-    /// ToOwned` for `Cow<'a, B>`. Same as above, for associated items this only includes clauses
-    /// for the item itself.
-    #[value(self.assoc_trait_proofs().sinto(s))]
-    pub trait_proofs: Vec<TraitProof<'tcx>>,
+    /// See [`ItemRefContents::trait_proofs`].
+    #[value(match &self.trait_proofs {
+        Some(trait_proofs) => TraitProofs::Resolved(self.assoc_trait_proofs(trait_proofs).sinto(s)),
+        None => TraitProofs::Lazy(self.clone(), OnceCell::new()),
+    })]
+    trait_proofs: TraitProofs<'tcx>,
     /// If we're referring to a trait associated item, this gives the trait clause/impl we're
     /// referring to.
     #[value(self.in_trait.as_ref().map(|(x, _)| x).sinto(s))]
@@ -80,6 +82,54 @@ pub struct ItemRefContents<'tcx> {
     /// some instantiations of the generics. In that case this reference may be wrong.
     #[value(self.may_be_further_specialized)]
     pub may_be_further_specialized: bool,
+}
+
+/// The trait proofs of an item reference. When they don't depend on the context, we only resolve
+/// them if needed.
+#[derive(Debug, Clone)]
+enum TraitProofs<'tcx> {
+    Resolved(Vec<TraitProof<'tcx>>),
+    Lazy(
+        rustc_trait_elaboration::ItemRef<'tcx, DefId>,
+        OnceCell<Vec<TraitProof<'tcx>>>,
+    ),
+}
+
+// The lazy proofs are determined by the rest of the `ItemRef`, so we can ignore them.
+impl PartialEq for TraitProofs<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Resolved(x), Self::Resolved(y)) => x == y,
+            (Self::Lazy(..), Self::Lazy(..)) => true,
+            _ => false,
+        }
+    }
+}
+impl Eq for TraitProofs<'_> {}
+impl std::hash::Hash for TraitProofs<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        if let Self::Resolved(x) = self {
+            x.hash(state)
+        }
+    }
+}
+
+impl<'tcx> ItemRefContents<'tcx> {
+    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>` or `B:
+    /// ToOwned` for `Cow<'a, B>`. Same as above, for associated items this only includes clauses
+    /// for the item itself.
+    pub fn trait_proofs<'a, S: UnderOwnerState<'tcx>>(&'a self, s: &S) -> &'a [TraitProof<'tcx>] {
+        match &self.trait_proofs {
+            TraitProofs::Resolved(trait_proofs) => trait_proofs,
+            TraitProofs::Lazy(item, trait_proofs) => trait_proofs.get_or_init(|| {
+                let all_proofs = s
+                    .base()
+                    .elab_ctx
+                    .resolve_lazy_trait_proofs(&s.base_state(), item);
+                item.assoc_trait_proofs(&all_proofs).sinto(s)
+            }),
+        }
+    }
 }
 
 impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ItemRef<'tcx>>
@@ -183,11 +233,16 @@ impl<'tcx> ItemRef<'tcx> {
 
     /// Construct an `ItemRef` for items that can't have generics (e.g. modules).
     pub fn dummy_without_generics<S: BaseState<'tcx>>(s: &S, def_id: DefId) -> ItemRef<'tcx> {
+        // Use the same representation as other parameter-free references.
+        let trait_proofs = TraitProofs::Lazy(
+            rustc_trait_elaboration::ItemRef::dummy_without_generics(def_id.clone()),
+            OnceCell::new(),
+        );
         let content = ItemRefContents {
             def_id,
             rustc_args: Default::default(),
             generic_args: Default::default(),
-            trait_proofs: Default::default(),
+            trait_proofs,
             in_trait: Default::default(),
             has_param: false,
             has_non_lt_param: false,

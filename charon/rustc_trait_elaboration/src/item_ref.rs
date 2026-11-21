@@ -183,8 +183,12 @@ pub struct ItemRefContents<'tcx, Id: ItemId = DefId> {
     pub def_id: Id,
     /// The arguments provided to this item.
     pub generic_args: ty::GenericArgsRef<'tcx>,
-    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>`.
-    pub trait_proofs: Vec<TraitProof<'tcx, Id>>,
+    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>`. This
+    /// is `None` when the generics mention no type or const parameters and the proofs are the same
+    /// as in the empty environment, which is the case unless the context has where-clauses on
+    /// parameter-free types. We then resolve them only if needed, with
+    /// [`ElaborationCtx::resolve_lazy_trait_proofs`].
+    pub trait_proofs: Option<Vec<TraitProof<'tcx, Id>>>,
     /// If we're referring to a trait associated item, this gives the trait clause/impl we're
     /// referring to, as well as the number of clauses required to mention the trait (cached for
     /// easy access).
@@ -310,7 +314,20 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             trait_info = None;
         }
 
-        let trait_proofs = self.resolve_item_required_predicates(state, def_id.clone(), generics);
+        let trait_proofs = if self.has_no_concrete_clauses && !generics.has_non_region_param() {
+            None
+        } else {
+            let trait_proofs =
+                self.resolve_item_required_predicates(state, def_id.clone(), generics);
+            // Keep the proofs if they differ from the lazily-resolved ones, so that equal
+            // references compare equal.
+            let differ = generics.has_non_region_param()
+                || trait_proofs
+                    != self
+                        .elab_ctx
+                        .resolve_empty_env_trait_proofs(state, &def_id, generics);
+            differ.then_some(trait_proofs)
+        };
         let needs_explicit_self_clause = def_id.takes_explicit_self_clause(state);
         let content = ItemRefContents {
             def_id,
@@ -334,7 +351,7 @@ impl<'tcx, Id: ItemId> ItemRef<'tcx, Id> {
         let content = ItemRefContents {
             def_id,
             generic_args: Default::default(),
-            trait_proofs: Default::default(),
+            trait_proofs: Some(vec![]),
             in_trait: Default::default(),
             needs_explicit_self_clause: false,
             has_param: false,
@@ -348,10 +365,6 @@ impl<'tcx, Id: ItemId> ItemRef<'tcx, Id> {
     pub fn generics(&self) -> GenericArgsRef<'tcx> {
         self.generic_args
     }
-    /// The trait proofs passed to the item.
-    pub fn trait_proofs(&self) -> &[TraitProof<'tcx, Id>] {
-        &self.trait_proofs
-    }
     /// The generics passed to the item, except for trait associated items these are only the
     /// generics of the method/type/const itself; generics for the trait are available in
     /// `self.in_trait`.
@@ -363,9 +376,12 @@ impl<'tcx, Id: ItemId> ItemRef<'tcx, Id> {
         };
         &self.generic_args[start..]
     }
-    /// The trait proofs passed to the item, except for trait associated items these are only the
-    /// proofs of the method/type/const itself.
-    pub fn assoc_trait_proofs(&self) -> &[TraitProof<'tcx, Id>] {
+    /// Given the trait proofs passed to the item, returns those of the method/type/const itself for
+    /// trait associated items, and all of them otherwise.
+    pub fn assoc_trait_proofs<'a>(
+        &self,
+        trait_proofs: &'a [TraitProof<'tcx, Id>],
+    ) -> &'a [TraitProof<'tcx, Id>] {
         let start = if let Some((_, num_trait_req_clauses)) = self.in_trait {
             // Assoc consts and methods get an extra `Self: Trait` clause as the first clause, we
             // skip that one too. Note: that clause is the same as `self.in_trait`.
@@ -378,7 +394,7 @@ impl<'tcx, Id: ItemId> ItemRef<'tcx, Id> {
         } else {
             0
         };
-        &self.trait_proofs[start..]
+        &trait_proofs[start..]
     }
 }
 

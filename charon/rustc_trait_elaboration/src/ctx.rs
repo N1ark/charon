@@ -99,6 +99,7 @@ struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
     predicate_searchers: RefCell<FxHashMap<Id, PredicateSearcher<'tcx, Id>>>,
+    empty_env_searcher: RefCell<Option<PredicateSearcher<'tcx, Id>>>,
     concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
     concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
     required_predicates: PredicateCache<'tcx, Id>,
@@ -112,6 +113,7 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             bounds_options: Default::default(),
             trait_proofs: Default::default(),
             predicate_searchers: Default::default(),
+            empty_env_searcher: Default::default(),
             concrete_item_refs: Default::default(),
             concrete_trait_proofs: Default::default(),
             required_predicates: Default::default(),
@@ -216,6 +218,31 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         RefMut::map(predicate_searchers, |predicate_searchers| {
             predicate_searchers.get_mut(&def_id).unwrap()
         })
+    }
+
+    /// Resolve the trait proofs of an item reference that left them unresolved. Since they don't
+    /// depend on the context, we resolve them in the empty environment.
+    pub fn resolve_lazy_trait_proofs(
+        &self,
+        state: &Id::State<'tcx>,
+        item: &ItemRef<'tcx, Id>,
+    ) -> Vec<TraitProof<'tcx, Id>> {
+        match &item.trait_proofs {
+            Some(trait_proofs) => trait_proofs.clone(),
+            None => self.resolve_empty_env_trait_proofs(state, &item.def_id, item.generic_args),
+        }
+    }
+
+    pub(crate) fn resolve_empty_env_trait_proofs(
+        &self,
+        state: &Id::State<'tcx>,
+        def_id: &Id,
+        generics: ty::GenericArgsRef<'tcx>,
+    ) -> Vec<TraitProof<'tcx, Id>> {
+        let mut searcher = self.data.empty_env_searcher.borrow_mut();
+        searcher
+            .get_or_insert_with(|| PredicateSearcher::new_empty(*self))
+            .resolve_item_required_predicates(state, def_id.clone(), generics)
     }
 
     pub(crate) fn cached_required_predicates(
