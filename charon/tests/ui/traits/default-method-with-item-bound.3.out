@@ -54,7 +54,7 @@ where
     TypeConstraint0: TraitClause2::Assoc = bool,
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -82,7 +82,7 @@ where
     TypeConstraint0: TraitClause2::Assoc = bool,
 {
     let mut _0: (); // return
-    let self: &'1 Empty<T>[TraitClause0]; // arg #1
+    let self: &'0 Empty<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()

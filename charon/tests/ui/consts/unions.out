@@ -48,18 +48,18 @@ static SAME: Same = RawMemory(0x07, 0x00, 0x00, 0x00)
 fn main()
 {
     let mut _0: (); // return
-    let mut _1: &'1 U; // anonymous local
-    let _2: &'2 U; // anonymous local
-    let mut _3: &'3 U; // anonymous local
-    let _4: &'4 U; // anonymous local
-    let mut _5: &'5 U; // anonymous local
-    let _6: &'6 U; // anonymous local
-    let mut _7: &'7 U; // anonymous local
-    let _8: &'8 U; // anonymous local
-    let mut _9: &'9 U; // anonymous local
-    let _10: &'10 U; // anonymous local
-    let mut _11: &'12 Same; // anonymous local
-    let _12: &'13 Same; // anonymous local
+    let mut _1: &'0 U; // anonymous local
+    let _2: &'1 U; // anonymous local
+    let mut _3: &'2 U; // anonymous local
+    let _4: &'3 U; // anonymous local
+    let mut _5: &'4 U; // anonymous local
+    let _6: &'5 U; // anonymous local
+    let mut _7: &'6 U; // anonymous local
+    let _8: &'7 U; // anonymous local
+    let mut _9: &'8 U; // anonymous local
+    let _10: &'9 U; // anonymous local
+    let mut _11: &'10 Same; // anonymous local
+    let _12: &'11 Same; // anonymous local
 
     storage_live(_0)
     _0 = ()

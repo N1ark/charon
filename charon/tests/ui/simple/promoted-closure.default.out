@@ -12,12 +12,12 @@ struct {closure} {}
 // Full name: test_crate::foo
 pub fn foo() -> &'static {closure}
 {
-    let mut _0: &'1 {closure}; // return
-    let _1: &'2 {closure}; // anonymous local
-    let _2: &'3 {closure}; // anonymous local
-    let mut _3: &'4 {closure}; // anonymous local
-    let mut _4: &'5 {closure}; // anonymous local
-    let mut _5: &'6 {closure}; // anonymous local
+    let mut _0: &'0 {closure}; // return
+    let _1: &'1 {closure}; // anonymous local
+    let _2: &'2 {closure}; // anonymous local
+    let mut _3: &'3 {closure}; // anonymous local
+    let mut _4: &'4 {closure}; // anonymous local
+    let mut _5: &'5 {closure}; // anonymous local
     let mut _6: {closure}; // anonymous local
 
     storage_live(_4)
@@ -47,7 +47,7 @@ pub fn foo() -> &'static {closure}
 extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: (u32,)) -> u32
 {
     let mut _0: u32; // return
-    let mut _1: &'1 {closure}; // arg #1
+    let mut _1: &'0 {closure}; // arg #1
     let mut tupled_args: (u32,); // arg #2
     let x: u32; // local
 

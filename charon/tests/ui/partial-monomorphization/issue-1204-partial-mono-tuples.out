@@ -89,14 +89,14 @@ where
     Outlives0: (T: 'a),
     Outlives1: (U: 'a),
 {
-    let mut _0: (&'10 mut T, &'11 mut U); // return
-    let x: (&'15 mut T, &'16 mut U); // arg #1
-    let mut _2: (&'20 mut T, &'21 mut U); // anonymous local
+    let mut _0: (&'0 mut T, &'1 mut U); // return
+    let x: (&'5 mut T, &'6 mut U); // arg #1
+    let mut _2: (&'10 mut T, &'11 mut U); // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = move x
-    _0 = test_crate::id::<(&_ mut _, &_ mut _)><'85, '86, T, U>[{built_in impl core::marker::Sized::<(&_ mut _, &_ mut _)><'85, '86, U> for T}](move _2)
+    _0 = test_crate::id::<(&_ mut _, &_ mut _)><'15, '16, T, U>[{built_in impl core::marker::Sized::<(&_ mut _, &_ mut _)><'15, '16, U> for T}](move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

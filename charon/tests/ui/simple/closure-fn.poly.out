@@ -95,8 +95,8 @@ where
     TypeConstraint0: TraitClause1::ImpliedClause1::ImpliedClause1::Output = u8,
 {
     let mut _0: u8; // return
-    let f: &'1 T0; // arg #1
-    let mut _2: &'2 T0; // anonymous local
+    let f: &'0 T0; // arg #1
+    let mut _2: &'1 T0; // anonymous local
     let mut _3: (u8, u8); // anonymous local
 
     storage_live(_0)
@@ -104,7 +104,7 @@ where
     _2 = &(*f)
     storage_live(_3)
     _3 = (const 10u8, const 20u8)
-    _0 = TraitClause1::call<'4>(move _2, move _3)
+    _0 = TraitClause1::call<'2>(move _2, move _3)
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(_3)
@@ -122,8 +122,8 @@ where
     TypeConstraint0: TraitClause1::ImpliedClause1::Output = u8,
 {
     let mut _0: u8; // return
-    let f: &'1 mut T0; // arg #1
-    let mut _2: &'2 mut T0; // anonymous local
+    let f: &'0 mut T0; // arg #1
+    let mut _2: &'1 mut T0; // anonymous local
     let mut _3: (u8, u8); // anonymous local
 
     storage_live(_0)
@@ -131,7 +131,7 @@ where
     _2 = &mut (*f)
     storage_live(_3)
     _3 = (const 10u8, const 20u8)
-    _0 = TraitClause1::call_mut<'4>(move _2, move _3)
+    _0 = TraitClause1::call_mut<'2>(move _2, move _3)
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(_3)
@@ -186,7 +186,7 @@ where
     Outlives1: ('_1: '_2),
 {
     let mut _0: u8; // return
-    let mut _1: &'3 {closure}<'_0, '_1>; // arg #1
+    let mut _1: &'0 {closure}<'_0, '_1>; // arg #1
     let mut tupled_args: (u8, u8); // arg #2
     let x: u8; // local
     let y: u8; // local
@@ -271,12 +271,12 @@ extern "rust-call" fn call_once<'_0, '_1>(_1: {closure}<'_0, '_1>, _2: (u8, u8))
     let mut _0: u8; // return
     let mut _1: {closure}<'_0, '_1>; // arg #1
     let _2: (u8, u8); // arg #2
-    let _3: &'3 mut {closure}<'_0, '_1>; // anonymous local
+    let _3: &'0 mut {closure}<'_0, '_1>; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'_0, '_1, '13>(move _3, move _2)
+    _0 = call_mut<'_0, '_1, '1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -324,20 +324,20 @@ fn main()
     let mut _0: (); // return
     let v: u8; // local
     let z: u8; // local
-    let mut f: {closure}<'2, '3>; // local
-    let mut _4: &'5 u8; // anonymous local
-    let mut _5: &'6 u8; // anonymous local
+    let mut f: {closure}<'0, '1>; // local
+    let mut _4: &'2 u8; // anonymous local
+    let mut _5: &'3 u8; // anonymous local
     let _6: u8; // anonymous local
-    let mut _7: &'10 {closure}<'11, '12>; // anonymous local
+    let mut _7: &'4 {closure}<'5, '6>; // anonymous local
     let mut _8: (u8, u8); // anonymous local
     let _9: u8; // anonymous local
-    let mut _10: &'13 {closure}<'14, '15>; // anonymous local
-    let _11: &'16 {closure}<'17, '18>; // anonymous local
+    let mut _10: &'7 {closure}<'8, '9>; // anonymous local
+    let _11: &'10 {closure}<'11, '12>; // anonymous local
     let _12: u8; // anonymous local
-    let mut _13: &'22 mut {closure}<'23, '24>; // anonymous local
-    let mut _14: &'25 mut {closure}<'26, '27>; // anonymous local
+    let mut _13: &'13 mut {closure}<'14, '15>; // anonymous local
+    let mut _14: &'16 mut {closure}<'17, '18>; // anonymous local
     let _15: u8; // anonymous local
-    let mut _16: {closure}<'28, '29>; // anonymous local
+    let mut _16: {closure}<'19, '20>; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -361,7 +361,7 @@ fn main()
     _7 = &f
     storage_live(_8)
     _8 = (const 10u8, const 20u8)
-    _6 = call<'38, '39, '49>(move _7, move _8)
+    _6 = call<'23, '24, '27>(move _7, move _8)
     ↳⚡ unwind_continue
     storage_dead(_8)
     storage_dead(_7)
@@ -371,7 +371,7 @@ fn main()
     storage_live(_11)
     _11 = &f
     _10 = &(*_11)
-    _9 = apply_to<'111, {closure}<'75, '76>>[{built_in impl Sized for {closure}<'75, '76>}, impl_Fn_tuple_for_closure<'75, '76>](move _10)
+    _9 = apply_to<'42, {closure}<'30, '31>>[{built_in impl Sized for {closure}<'30, '31>}, impl_Fn_tuple_for_closure<'30, '31>](move _10)
     ↳⚡ unwind_continue
     storage_dead(_10)
     storage_dead(_11)
@@ -381,7 +381,7 @@ fn main()
     storage_live(_14)
     _14 = &mut f
     _13 = &two-phase-mut (*_14)
-    _12 = apply_to_mut<'173, {closure}<'137, '138>>[{built_in impl Sized for {closure}<'137, '138>}, impl_FnMut_tuple_for_closure<'137, '138>](move _13)
+    _12 = apply_to_mut<'57, {closure}<'45, '46>>[{built_in impl Sized for {closure}<'45, '46>}, impl_FnMut_tuple_for_closure<'45, '46>](move _13)
     ↳⚡ unwind_continue
     storage_dead(_13)
     storage_dead(_14)
@@ -389,7 +389,7 @@ fn main()
     storage_live(_15)
     storage_live(_16)
     _16 = copy f
-    _15 = apply_to_once<{closure}<'224, '225>>[{built_in impl Sized for {closure}<'224, '225>}, impl_FnOnce_tuple_for_closure<'224, '225>](move _16)
+    _15 = apply_to_once<{closure}<'72, '73>>[{built_in impl Sized for {closure}<'72, '73>}, impl_FnOnce_tuple_for_closure<'72, '73>](move _16)
     ↳⚡ unwind_continue
     storage_dead(_16)
     storage_dead(_15)

@@ -96,7 +96,7 @@ where
     TypeConstraint0: TraitClause2::ImpliedClause1::Output = (),
 {
     let mut _0: (); // return
-    let self: &'3 mut Iter<'4, T>[TraitClause0]; // arg #1
+    let self: &'0 mut Iter<'1, T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()

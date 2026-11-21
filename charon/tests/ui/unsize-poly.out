@@ -71,14 +71,14 @@ where
     Outlives0: (T: '_0),
     Outlives1: (U: '_0),
 {
-    let mut _0: &'1 U; // return
-    let x: &'3 T; // arg #1
-    let mut _2: &'4 T; // anonymous local
+    let mut _0: &'0 U; // return
+    let x: &'1 T; // arg #1
+    let mut _2: &'2 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x) with_metadata(read x.metadata)
-    _0 = unsize_cast<&'5 U, TraitClause2>(move _2)
+    _0 = unsize_cast<&'3 U, TraitClause2>(move _2)
     storage_dead(_2)
     storage_dead(x)
     return
@@ -127,11 +127,11 @@ where
     Outlives0: (P: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Wrapper<P>[TraitClause0]; // arg #1
+    let _1: &'0 mut Wrapper<P>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for P}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for P}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)

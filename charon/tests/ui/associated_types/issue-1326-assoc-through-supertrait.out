@@ -65,19 +65,19 @@ where
 {
     let mut _0: (); // return
     let f: F; // arg #1
-    let mut _2: &'1 F; // anonymous local
+    let mut _2: &'0 F; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &f
-    _0 = TraitClause2::ImpliedClause1::ImpliedClause1::method<'3>(move _2)
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'4>] f
+    _0 = TraitClause2::ImpliedClause1::ImpliedClause1::method<'1>(move _2)
+    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'2>] f
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(f)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'5>] f
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'3>] f
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(f)

@@ -115,10 +115,10 @@ where
 fn pass_to_wrap<'_0>(p: &'_0 (dyn Trait + '_0))
 {
     let mut _0: (); // return
-    let p: &'3 (dyn Trait + '4); // arg #1
+    let p: &'0 (dyn Trait + '1); // arg #1
     let _2: (); // anonymous local
-    let mut _3: Wrap<&'22 (dyn Trait + '23)>[{built_in impl Sized for &'22 (dyn Trait + '29)}]; // anonymous local
-    let mut _4: &'30 (dyn Trait + '31); // anonymous local
+    let mut _3: Wrap<&'2 (dyn Trait + '3)>[{built_in impl Sized for &'2 (dyn Trait + '9)}]; // anonymous local
+    let mut _4: &'10 (dyn Trait + '11); // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -128,7 +128,7 @@ fn pass_to_wrap<'_0>(p: &'_0 (dyn Trait + '_0))
     _4 = copy p
     _3 = Wrap { _0: move _4 }
     storage_dead(_4)
-    _2 = use_trait<Wrap<&'232 (dyn Trait + '227)>[{built_in impl Sized for &'232 (dyn Trait + '233)}]>[{built_in impl Sized for Wrap<&'232 (dyn Trait + '251)>[{built_in impl Sized for &'232 (dyn Trait + '257)}]}, impl_Trait_for_Wrap<&'232 (dyn Trait + '259)>[{built_in impl Sized for &'232 (dyn Trait + '265)}, {impl Deref for &'_0 T}<'232, (dyn Trait + '267)>[{built_in impl MetaSized for (dyn Trait + '269)}], Trait<(dyn Trait + '272)>]](move _3)
+    _2 = use_trait<Wrap<&'30 (dyn Trait + '25)>[{built_in impl Sized for &'30 (dyn Trait + '31)}]>[{built_in impl Sized for Wrap<&'30 (dyn Trait + '49)>[{built_in impl Sized for &'30 (dyn Trait + '55)}]}, impl_Trait_for_Wrap<&'30 (dyn Trait + '57)>[{built_in impl Sized for &'30 (dyn Trait + '63)}, {impl Deref for &'_0 T}<'30, (dyn Trait + '65)>[{built_in impl MetaSized for (dyn Trait + '67)}], Trait<(dyn Trait + '70)>]](move _3)
     ↳⚡ storage_dead(p)
         unwind_continue
     storage_dead(_3)

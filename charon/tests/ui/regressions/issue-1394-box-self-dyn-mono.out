@@ -154,16 +154,16 @@ fn main()
     storage_live(_6)
     _6 = cast<fn(Box::<(dyn Trait), Global>)>(read (*_5.metadata).method_method)
     _4 = (read _6)(move _5)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'8>] _5
+    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'4>] _5
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'10>] b
+        conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'6>] b
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_6)
         unwind_continue
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
-    conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'9>] b
+    conditional_drop[{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'5>] b
     ↳⚡ storage_dead(_6)
         unwind_continue
     storage_dead(b)

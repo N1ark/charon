@@ -58,7 +58,7 @@ where
 unsafe fn impl_Destruct_for_String::drop_glue<'_0>(_1: &'_0 mut String)
 {
     let mut _0: (); // return
-    let _1: &'1 mut String; // arg #1
+    let _1: &'0 mut String; // arg #1
     let mut drop_arg: &'_ mut Vec<u8>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {built_in impl Destruct for u8}, {built_in impl Destruct for Global}]; // local
     let mut drop_ret: (); // local
 
@@ -67,7 +67,7 @@ unsafe fn impl_Destruct_for_String::drop_glue<'_0>(_1: &'_0 mut String)
     storage_live(drop_arg)
     drop_arg = &mut (*_1).vec
     storage_live(drop_ret)
-    drop_ret = impl_Destruct_for_Vec::drop_glue<'2, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {built_in impl Destruct for u8}, {built_in impl Destruct for Global}](move drop_arg)
+    drop_ret = impl_Destruct_for_Vec::drop_glue<'1, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {built_in impl Destruct for u8}, {built_in impl Destruct for Global}](move drop_arg)
     ↳⚡ storage_dead(_1)
         storage_dead(drop_ret)
         storage_dead(drop_arg)

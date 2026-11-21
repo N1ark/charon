@@ -39,9 +39,9 @@ fn do_test::<bool>(init: bool, expected: bool)
     let init: bool; // arg #1
     let expected: bool; // arg #2
     let mut _3: bool; // anonymous local
-    let mut _4: &'1 bool; // anonymous local
-    let mut _5: &'2 bool; // anonymous local
-    let mut _6: &'15 str; // anonymous local
+    let mut _4: &'0 bool; // anonymous local
+    let mut _5: &'1 bool; // anonymous local
+    let mut _6: &'7 str; // anonymous local
 
     bb0: {
         storage_live(_0);
@@ -51,7 +51,7 @@ fn do_test::<bool>(init: bool, expected: bool)
         _4 = &expected;
         storage_live(_5);
         _5 = &init;
-        _3 = eq<'9, '10>(move _4, move _5) -> bb1 (unwind: bb4);
+        _3 = eq<'2, '3>(move _4, move _5) -> bb1 (unwind: bb4);
     }
 
     bb1: {

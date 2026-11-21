@@ -70,7 +70,7 @@ where
     Outlives0: (F: '_0),
 {
     let mut _0: (); // return
-    let mut _1: &'1 {closure}<F, Clause1_Repr>[TraitClause0, TraitClause1]; // arg #1
+    let mut _1: &'0 {closure}<F, Clause1_Repr>[TraitClause0, TraitClause1]; // arg #1
     let mut tupled_args: ((),); // arg #2
     let _x: (); // local
 

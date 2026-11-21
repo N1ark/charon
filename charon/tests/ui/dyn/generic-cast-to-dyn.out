@@ -40,21 +40,21 @@ where
     TraitClause1: (T: Any),
     Outlives0: (T: '_0),
 {
-    let mut _0: &'3 (dyn Any + '4); // return
-    let x: &'6 T; // arg #1
-    let mut _2: &'7 (dyn Any + '8); // anonymous local
-    let _3: &'9 (dyn Any + '10); // anonymous local
-    let mut _4: &'11 T; // anonymous local
+    let mut _0: &'0 (dyn Any + '1); // return
+    let x: &'2 T; // arg #1
+    let mut _2: &'3 (dyn Any + '4); // anonymous local
+    let _3: &'5 (dyn Any + '6); // anonymous local
+    let mut _4: &'7 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     storage_live(_4)
     _4 = &(*x)
-    _3 = unsize_cast<&'12 (dyn Any + '13), &vtable_of(TraitClause1)>(move _4)
+    _3 = unsize_cast<&'8 (dyn Any + '9), &vtable_of(TraitClause1)>(move _4)
     storage_dead(_4)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _0 = unsize_cast<&'15 (dyn Any + '16),  at []>(move _2)
+    _0 = unsize_cast<&'11 (dyn Any + '12),  at []>(move _2)
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(x)

@@ -43,22 +43,22 @@ where
     Outlives1: (Self: '_1),
 {
     let mut _0: (); // return
-    let self: &'1 mut Self; // arg #1
-    let source: &'3 Self; // arg #2
+    let self: &'0 mut Self; // arg #1
+    let source: &'1 Self; // arg #2
     let mut _3: Self; // anonymous local
-    let mut _4: &'4 Self; // anonymous local
+    let mut _4: &'2 Self; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_3)
     storage_live(_4)
     _4 = &(*source) with_metadata(read source.metadata)
-    _3 = TraitClause0::clone<'6>(move _4)
+    _3 = TraitClause0::clone<'3>(move _4)
     ↳⚡ storage_dead(source)
         storage_dead(self)
         unwind_continue
     storage_dead(_4)
-    drop[TraitClause1::drop_glue<'7>] (*self)
+    drop[TraitClause1::drop_glue<'4>] (*self)
     ↳⚡ (*self) = move _3
         storage_dead(source)
         storage_dead(self)
@@ -75,7 +75,7 @@ where
 pub fn impl_Clone_for_u8::clone<'_0>(self: &'_0 u8) -> u8
 {
     let mut _0: u8; // return
-    let self: &'1 u8; // arg #1
+    let self: &'0 u8; // arg #1
 
     storage_live(_0)
     _0 = copy (*self)
@@ -89,22 +89,22 @@ where
     TraitClause0: (u8: Destruct),
 {
     let mut _0: (); // return
-    let self: &'1 mut u8; // arg #1
-    let source: &'3 u8; // arg #2
+    let self: &'0 mut u8; // arg #1
+    let source: &'1 u8; // arg #2
     let mut _3: u8; // anonymous local
-    let mut _4: &'4 u8; // anonymous local
+    let mut _4: &'2 u8; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_3)
     storage_live(_4)
     _4 = &(*source)
-    _3 = impl_Clone_for_u8::clone<'6>(move _4)
+    _3 = impl_Clone_for_u8::clone<'3>(move _4)
     ↳⚡ storage_dead(source)
         storage_dead(self)
         unwind_continue
     storage_dead(_4)
-    drop[TraitClause0::drop_glue<'7>] (*self)
+    drop[TraitClause0::drop_glue<'4>] (*self)
     ↳⚡ (*self) = move _3
         storage_dead(source)
         storage_dead(self)

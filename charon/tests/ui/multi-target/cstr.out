@@ -31,7 +31,7 @@ pub const test_crate::main::{promoted_const}::x86_64-unknown-linux-gnu: core::ff
 fn test_crate::main::x86_64-unknown-linux-gnu()
 {
     let mut _0: (); // return
-    let mut _1: &'1 core::ffi::c_str::CStr::x86_64-unknown-linux-gnu; // anonymous local
+    let mut _1: &'0 core::ffi::c_str::CStr::x86_64-unknown-linux-gnu; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -47,7 +47,7 @@ pub const test_crate::main::{promoted_const}::powerpc64-unknown-linux-gnu: core:
 fn test_crate::main::powerpc64-unknown-linux-gnu()
 {
     let mut _0: (); // return
-    let mut _1: &'1 core::ffi::c_str::CStr::powerpc64-unknown-linux-gnu; // anonymous local
+    let mut _1: &'0 core::ffi::c_str::CStr::powerpc64-unknown-linux-gnu; // anonymous local
 
     storage_live(_0)
     _0 = ()

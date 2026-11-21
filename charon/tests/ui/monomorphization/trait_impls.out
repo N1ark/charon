@@ -6,7 +6,7 @@ struct () {}
 pub fn method<'_0>(self: &'_0 bool)
 {
     let mut _0: (); // return
-    let self: &'1 bool; // arg #1
+    let self: &'0 bool; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -20,13 +20,13 @@ fn do_test::<bool>(x: bool)
 {
     let mut _0: (); // return
     let x: bool; // arg #1
-    let mut _2: &'1 bool; // anonymous local
+    let mut _2: &'0 bool; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x
-    _0 = method<'5>(move _2)
+    _0 = method<'1>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

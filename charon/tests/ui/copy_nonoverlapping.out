@@ -52,22 +52,22 @@ where
     Outlives1: (Self: '_1),
 {
     let mut _0: (); // return
-    let self: &'1 mut Self; // arg #1
-    let source: &'3 Self; // arg #2
+    let self: &'0 mut Self; // arg #1
+    let source: &'1 Self; // arg #2
     let mut _3: Self; // anonymous local
-    let mut _4: &'4 Self; // anonymous local
+    let mut _4: &'2 Self; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_3)
     storage_live(_4)
     _4 = &(*source) with_metadata(read source.metadata)
-    _3 = TraitClause0::clone<'6>(move _4)
+    _3 = TraitClause0::clone<'3>(move _4)
     ↳⚡ storage_dead(source)
         storage_dead(self)
         unwind_continue
     storage_dead(_4)
-    drop[TraitClause1::drop_glue<'7>] (*self)
+    drop[TraitClause1::drop_glue<'4>] (*self)
     ↳⚡ (*self) = move _3
         storage_dead(source)
         storage_dead(self)
@@ -84,7 +84,7 @@ where
 pub fn impl_Clone_for_usize::clone<'_0>(self: &'_0 usize) -> usize
 {
     let mut _0: usize; // return
-    let self: &'1 usize; // arg #1
+    let self: &'0 usize; // arg #1
 
     storage_live(_0)
     _0 = copy (*self)
@@ -98,22 +98,22 @@ where
     TraitClause0: (usize: Destruct),
 {
     let mut _0: (); // return
-    let self: &'1 mut usize; // arg #1
-    let source: &'3 usize; // arg #2
+    let self: &'0 mut usize; // arg #1
+    let source: &'1 usize; // arg #2
     let mut _3: usize; // anonymous local
-    let mut _4: &'4 usize; // anonymous local
+    let mut _4: &'2 usize; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_3)
     storage_live(_4)
     _4 = &(*source)
-    _3 = impl_Clone_for_usize::clone<'6>(move _4)
+    _3 = impl_Clone_for_usize::clone<'3>(move _4)
     ↳⚡ storage_dead(source)
         storage_dead(self)
         unwind_continue
     storage_dead(_4)
-    drop[TraitClause0::drop_glue<'7>] (*self)
+    drop[TraitClause0::drop_glue<'4>] (*self)
     ↳⚡ (*self) = move _3
         storage_dead(source)
         storage_dead(self)
@@ -401,13 +401,13 @@ where
 
 fn core::panic::panic_info::{PanicInfo<'a>}::new<'a>(message: &'a Arguments<'a>, location: &'static Location<'static>, can_unwind: bool, force_no_backtrace: bool) -> PanicInfo<'a>
 {
-    let mut _0: PanicInfo<'1>; // return
-    let message: &'5 Arguments<'6>; // arg #1
-    let location: &'10 Location<'11>; // arg #2
+    let mut _0: PanicInfo<'0>; // return
+    let message: &'1 Arguments<'2>; // arg #1
+    let location: &'3 Location<'4>; // arg #2
     let can_unwind: bool; // arg #3
     let force_no_backtrace: bool; // arg #4
-    let mut _5: &'12 Location<'13>; // anonymous local
-    let mut _6: &'14 Arguments<'15>; // anonymous local
+    let mut _5: &'5 Location<'6>; // anonymous local
+    let mut _6: &'7 Arguments<'8>; // anonymous local
     let mut _7: bool; // anonymous local
     let mut _8: bool; // anonymous local
 
@@ -436,7 +436,7 @@ fn core::panic::panic_info::{PanicInfo<'a>}::new<'a>(message: &'a Arguments<'a>,
 #[track_caller]
 pub fn caller<'a>() -> &'static Location<'static>
 {
-    let mut _0: &'3 Location<'4>; // return
+    let mut _0: &'0 Location<'1>; // return
 
     storage_live(_0)
     _0 = caller_location()
@@ -448,17 +448,17 @@ pub fn caller<'a>() -> &'static Location<'static>
 fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) -> !
 {
     let mut _0: !; // return
-    let fmt: Arguments<'1>; // arg #1
+    let fmt: Arguments<'0>; // arg #1
     let force_no_backtrace: bool; // arg #2
     let mut _3: bool; // anonymous local
     let mut _4: !; // anonymous local
-    let pi: PanicInfo<'3>; // local
-    let mut _6: &'6 Arguments<'7>; // anonymous local
-    let _7: &'8 Arguments<'9>; // anonymous local
-    let mut _8: &'13 Location<'14>; // anonymous local
+    let pi: PanicInfo<'1>; // local
+    let mut _6: &'2 Arguments<'3>; // anonymous local
+    let _7: &'4 Arguments<'5>; // anonymous local
+    let mut _8: &'6 Location<'7>; // anonymous local
     let mut _9: bool; // anonymous local
-    let mut _10: &'17 PanicInfo<'18>; // anonymous local
-    let _11: &'19 PanicInfo<'20>; // anonymous local
+    let mut _10: &'8 PanicInfo<'9>; // anonymous local
+    let _11: &'10 PanicInfo<'11>; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -472,7 +472,7 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
         _7 = &fmt
         _6 = &(*_7) with_metadata(read _7.metadata)
         storage_live(_8)
-        _8 = caller<'23>()
+        _8 = caller<'13>()
         ↳⚡ storage_dead(_11)
             storage_dead(_10)
             storage_dead(pi)
@@ -482,7 +482,7 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
             unwind_continue
         storage_live(_9)
         _9 = copy force_no_backtrace
-        pi = core::panic::panic_info::{PanicInfo<'a>}::new<'26>(move _6, move _8, const false, move _9)
+        pi = core::panic::panic_info::{PanicInfo<'a>}::new<'14>(move _6, move _8, const false, move _9)
         ↳⚡ storage_dead(_11)
             storage_dead(_10)
             storage_dead(pi)
@@ -498,7 +498,7 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
         storage_live(_11)
         _11 = &pi
         _10 = &(*_11)
-        _0 = core::panicking::panic_nounwind_fmt::runtime::panic_impl<'35, '36>(move _10)
+        _0 = core::panicking::panic_nounwind_fmt::runtime::panic_impl<'16, '17>(move _10)
         ↳⚡ storage_dead(_11)
             storage_dead(_10)
             storage_dead(pi)
@@ -517,10 +517,10 @@ fn core::panicking::panic_nounwind_fmt::runtime<'_0>(fmt: Arguments<'_0>, force_
 pub fn panic_nounwind_fmt<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) -> !
 {
     let mut _0: !; // return
-    let fmt: Arguments<'1>; // arg #1
+    let fmt: Arguments<'0>; // arg #1
     let force_no_backtrace: bool; // arg #2
-    let mut _3: (Arguments<'9>, bool); // anonymous local
-    let mut _4: Arguments<'13>; // anonymous local
+    let mut _3: (Arguments<'1>, bool); // anonymous local
+    let mut _4: Arguments<'5>; // anonymous local
     let mut _5: bool; // anonymous local
 
     storage_live(_0)
@@ -532,7 +532,7 @@ pub fn panic_nounwind_fmt<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) ->
     _3 = (move _4, move _5)
     storage_dead(_5)
     storage_dead(_4)
-    _0 = core::panicking::panic_nounwind_fmt::runtime<'24>(move _3._0, move _3._1)
+    _0 = core::panicking::panic_nounwind_fmt::runtime<'12>(move _3._0, move _3._1)
     ↳⚡ unwind_terminate(abi)
 }
 
@@ -541,20 +541,20 @@ pub fn panic_nounwind_fmt<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) ->
 pub fn panic_nounwind(expr: &'static str) -> !
 {
     let mut _0: !; // return
-    let expr: &'1 str; // arg #1
+    let expr: &'0 str; // arg #1
     let _2: !; // anonymous local
-    let mut _3: Arguments<'3>; // anonymous local
-    let mut _4: &'4 str; // anonymous local
+    let mut _3: Arguments<'1>; // anonymous local
+    let mut _4: &'2 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     storage_live(_4)
     _4 = copy expr
-    _3 = from_str<'9>(move _4)
+    _3 = from_str<'5>(move _4)
     ↳⚡ unwind_terminate(abi)
     storage_dead(_4)
-    _2 = panic_nounwind_fmt<'14>(move _3, const false)
+    _2 = panic_nounwind_fmt<'6>(move _3, const false)
     ↳⚡ undefined_behavior
 }
 
@@ -563,7 +563,7 @@ pub fn panic_nounwind(expr: &'static str) -> !
 fn panic_cannot_unwind() -> !
 {
     let mut _0: !; // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -579,10 +579,10 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
     let align: usize; // arg #1
     let mut _2: bool; // anonymous local
     let mut _3: usize; // anonymous local
-    let msg: &'1 str; // local
+    let msg: &'0 str; // local
     let _5: !; // anonymous local
-    let mut _6: Arguments<'3>; // anonymous local
-    let mut _7: &'4 str; // anonymous local
+    let mut _6: Arguments<'1>; // anonymous local
+    let mut _7: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -600,10 +600,10 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
         storage_live(_6)
         storage_live(_7)
         _7 = &(*msg) with_metadata(read msg.metadata)
-        _6 = from_str<'7>(move _7)
+        _6 = from_str<'4>(move _7)
         ↳⚡ unwind_terminate(abi)
         storage_dead(_7)
-        _5 = panic_nounwind_fmt<'12>(move _6, const false)
+        _5 = panic_nounwind_fmt<'5>(move _6, const false)
         ↳⚡ undefined_behavior
     }
     storage_dead(_3)
@@ -823,15 +823,15 @@ where
 pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
 {
     let mut _0: !; // return
-    let fmt: Arguments<'1>; // arg #1
+    let fmt: Arguments<'0>; // arg #1
     let mut _2: bool; // anonymous local
     let mut _3: !; // anonymous local
-    let pi: PanicInfo<'3>; // local
-    let mut _5: &'6 Arguments<'7>; // anonymous local
-    let _6: &'8 Arguments<'9>; // anonymous local
-    let mut _7: &'13 Location<'14>; // anonymous local
-    let mut _8: &'17 PanicInfo<'18>; // anonymous local
-    let _9: &'19 PanicInfo<'20>; // anonymous local
+    let pi: PanicInfo<'1>; // local
+    let mut _5: &'2 Arguments<'3>; // anonymous local
+    let _6: &'4 Arguments<'5>; // anonymous local
+    let mut _7: &'6 Location<'7>; // anonymous local
+    let mut _8: &'8 PanicInfo<'9>; // anonymous local
+    let _9: &'10 PanicInfo<'11>; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -845,14 +845,14 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
         _6 = &fmt
         _5 = &(*_6) with_metadata(read _6.metadata)
         storage_live(_7)
-        _7 = caller<'23>()
+        _7 = caller<'13>()
         ↳⚡ storage_dead(_9)
             storage_dead(_8)
             storage_dead(pi)
             storage_dead(_3)
             storage_dead(fmt)
             unwind_continue
-        pi = core::panic::panic_info::{PanicInfo<'a>}::new<'26>(move _5, move _7, const true, const false)
+        pi = core::panic::panic_info::{PanicInfo<'a>}::new<'14>(move _5, move _7, const true, const false)
         ↳⚡ storage_dead(_9)
             storage_dead(_8)
             storage_dead(pi)
@@ -866,7 +866,7 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
         storage_live(_9)
         _9 = &pi
         _8 = &(*_9)
-        _0 = core::panicking::panic_fmt::panic_impl<'35, '36>(move _8)
+        _0 = core::panicking::panic_fmt::panic_impl<'16, '17>(move _8)
         ↳⚡ storage_dead(_9)
             storage_dead(_8)
             storage_dead(pi)
@@ -885,20 +885,20 @@ pub fn panic_fmt<'_0>(fmt: Arguments<'_0>) -> !
 pub fn panic(expr: &'static str) -> !
 {
     let mut _0: !; // return
-    let expr: &'1 str; // arg #1
-    let mut _2: Arguments<'3>; // anonymous local
-    let mut _3: &'4 str; // anonymous local
+    let expr: &'0 str; // arg #1
+    let mut _2: Arguments<'1>; // anonymous local
+    let mut _3: &'2 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     _3 = copy expr
-    _2 = from_str<'9>(move _3)
+    _2 = from_str<'5>(move _3)
     ↳⚡ storage_dead(_2)
         storage_dead(expr)
         unwind_continue
     storage_dead(_3)
-    panic(panic_fmt<'14>(move _2))
+    panic(panic_fmt<'6>(move _2))
     ↳⚡ storage_dead(_2)
         storage_dead(expr)
         unwind_continue
@@ -909,7 +909,7 @@ pub fn panic(expr: &'static str) -> !
 fn unwrap_failed() -> !
 {
     let mut _0: !; // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -1160,8 +1160,8 @@ where
     Outlives1: (T: '_1),
 {
     let mut _0: (); // return
-    let x: &'1 mut T; // arg #1
-    let y: &'3 T; // arg #2
+    let x: &'0 mut T; // arg #1
+    let y: &'1 T; // arg #2
     let _3: (); // anonymous local
     let mut _4: *const T; // anonymous local
     let mut _5: *mut T; // anonymous local

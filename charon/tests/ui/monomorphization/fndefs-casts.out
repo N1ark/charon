@@ -10,7 +10,7 @@ struct (_,)::<&'_ u32> {
 fn foo::<u8><'a>(x: &'a u8)
 {
     let mut _0: (); // return
-    let x: &'1 u8; // arg #1
+    let x: &'0 u8; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -23,7 +23,7 @@ fn foo::<u8><'a>(x: &'a u8)
 fn foo::<u32><'a>(x: &'a u32)
 {
     let mut _0: (); // return
-    let x: &'1 u32; // arg #1
+    let x: &'0 u32; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -54,7 +54,7 @@ extern "rust-call" fn call::<u32><'a, '_1>(state: &'_1 for<'a> foo::<u32><'a>, a
 fn foo::<char><'a>(x: &'a char)
 {
     let mut _0: (); // return
-    let x: &'1 char; // arg #1
+    let x: &'0 char; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -68,13 +68,13 @@ fn takes_closure::<for<'a> foo::<u32><'a>>(c: for<'a> foo::<u32><'a>)
 {
     let mut _0: (); // return
     let c: for<'a> foo::<u32><'a>; // arg #1
-    let mut _2: &'1 for<'a> foo::<u32><'a>; // anonymous local
+    let mut _2: &'0 for<'a> foo::<u32><'a>; // anonymous local
     let mut _3: (&'_ u32,); // anonymous local
-    let mut _4: &'3 u32; // anonymous local
-    let _5: &'4 u32; // anonymous local
-    let mut _6: &'5 u32; // anonymous local
-    let mut _7: &'6 u32; // anonymous local
-    let mut _8: &'18 u32; // anonymous local
+    let mut _4: &'1 u32; // anonymous local
+    let _5: &'2 u32; // anonymous local
+    let mut _6: &'3 u32; // anonymous local
+    let mut _7: &'4 u32; // anonymous local
+    let mut _8: &'9 u32; // anonymous local
     let mut _9: u32; // anonymous local
 
     storage_live(_7)
@@ -95,7 +95,7 @@ fn takes_closure::<for<'a> foo::<u32><'a>>(c: for<'a> foo::<u32><'a>)
     _5 = &(*_6)
     _4 = &(*_5)
     _3 = (move _4,)
-    _0 = call::<u32><'9, '13>(move _2, move _3)
+    _0 = call::<u32><'5, '6>(move _2, move _3)
     ↳⚡ storage_dead(_6)
         storage_dead(c)
         storage_dead(_9)
@@ -130,42 +130,42 @@ fn main()
     let a: u8; // local
     let _5: (); // anonymous local
     let mut _6: fn<'_0_1>(&'_0_1 u8); // anonymous local
-    let mut _7: &'1 u8; // anonymous local
-    let _8: &'2 u8; // anonymous local
+    let mut _7: &'0 u8; // anonymous local
+    let _8: &'1 u8; // anonymous local
     let b: u8; // local
     let _10: (); // anonymous local
     let mut _11: fn<'_0_1>(&'_0_1 u8); // anonymous local
-    let mut _12: &'3 u8; // anonymous local
-    let _13: &'4 u8; // anonymous local
+    let mut _12: &'2 u8; // anonymous local
+    let _13: &'3 u8; // anonymous local
     let _14: (); // anonymous local
     let mut _15: fn<'_0_1>(&'_0_1 u8); // anonymous local
-    let mut _16: &'5 u8; // anonymous local
-    let _17: &'6 u8; // anonymous local
+    let mut _16: &'4 u8; // anonymous local
+    let _17: &'5 u8; // anonymous local
     let _18: (); // anonymous local
     let mut _19: fn<'_0_1>(&'_0_1 u8); // anonymous local
-    let mut _20: &'7 u8; // anonymous local
-    let _21: &'8 u8; // anonymous local
+    let mut _20: &'6 u8; // anonymous local
+    let _21: &'7 u8; // anonymous local
     let _22: (); // anonymous local
     let mut _23: fn<'_0_1>(&'_0_1 char); // anonymous local
-    let mut _24: &'10 char; // anonymous local
-    let _25: &'11 char; // anonymous local
+    let mut _24: &'8 char; // anonymous local
+    let _25: &'9 char; // anonymous local
     let _26: (); // anonymous local
-    let mut _27: &'12 char; // anonymous local
-    let mut _28: &'25 char; // anonymous local
-    let mut _29: &'30 char; // anonymous local
+    let mut _27: &'10 char; // anonymous local
+    let mut _28: &'21 char; // anonymous local
+    let mut _29: &'25 char; // anonymous local
     let mut _30: char; // anonymous local
 
     storage_live(_0)
     storage_live(_27)
     _0 = ()
     storage_live(fooint1)
-    fooint1 = fn_def_to_fn_ptr(const foo::<u8><'15>)
+    fooint1 = fn_def_to_fn_ptr(const foo::<u8><'12>)
     fake_read(fooint1)
     storage_live(fooint2)
-    fooint2 = fn_def_to_fn_ptr(const foo::<u8><'17>)
+    fooint2 = fn_def_to_fn_ptr(const foo::<u8><'14>)
     fake_read(fooint2)
     storage_live(foochar)
-    foochar = fn_def_to_fn_ptr(const foo::<char><'20>)
+    foochar = fn_def_to_fn_ptr(const foo::<char><'16>)
     fake_read(foochar)
     storage_live(a)
     a = const 11u8
@@ -177,7 +177,7 @@ fn main()
     storage_live(_8)
     _8 = &a
     _7 = &(*_8)
-    _5 = (move _6)<'21>(move _7)
+    _5 = (move _6)<'17>(move _7)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)
@@ -197,7 +197,7 @@ fn main()
     storage_live(_13)
     _13 = &a
     _12 = &(*_13)
-    _10 = (move _11)<'22>(move _12)
+    _10 = (move _11)<'18>(move _12)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)
@@ -214,7 +214,7 @@ fn main()
     storage_live(_17)
     _17 = &b
     _16 = &(*_17)
-    _14 = (move _15)<'23>(move _16)
+    _14 = (move _15)<'19>(move _16)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)
@@ -231,7 +231,7 @@ fn main()
     storage_live(_21)
     _21 = &b
     _20 = &(*_21)
-    _18 = (move _19)<'24>(move _20)
+    _18 = (move _19)<'20>(move _20)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)
@@ -255,7 +255,7 @@ fn main()
     _27 = move _28
     _25 = &(*_27)
     _24 = &(*_25)
-    _22 = (move _23)<'26>(move _24)
+    _22 = (move _23)<'22>(move _24)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)
@@ -266,7 +266,7 @@ fn main()
     storage_dead(_25)
     storage_dead(_22)
     storage_live(_26)
-    _26 = takes_closure::<for<'a> foo::<u32><'a>>(const foo::<u32><'29>)
+    _26 = takes_closure::<for<'a> foo::<u32><'a>>(const foo::<u32><'24>)
     ↳⚡ storage_dead(_27)
         storage_dead(_30)
         storage_dead(_29)

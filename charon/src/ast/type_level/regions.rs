@@ -20,3 +20,27 @@ pub enum Region {
     /// Erased region
     Erased,
 }
+
+/// Replace each body region `'i` in `x` with `f(i)`.
+pub fn map_body_regions<T: AstVisitable>(x: &mut T, f: impl FnMut(RegionId) -> RegionId) {
+    #[derive(Visitor)]
+    struct MapBodyRegions<F>(F);
+    impl<F: FnMut(RegionId) -> RegionId> VisitAstMut for MapBodyRegions<F> {
+        fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+            &mut self,
+            value: &mut HashConsed<WithCachedTypeInfo<T>>,
+        ) -> ControlFlow<Self::Break> {
+            if value.type_info().has_erased_or_body_regions() {
+                self.visit_inner(value)
+            } else {
+                ControlFlow::Continue(())
+            }
+        }
+        fn enter_region(&mut self, r: &mut Region) {
+            if let Region::Body(id) = r {
+                *id = (self.0)(*id);
+            }
+        }
+    }
+    let _ = MapBodyRegions(f).visit(x);
+}

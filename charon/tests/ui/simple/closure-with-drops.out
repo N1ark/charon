@@ -49,11 +49,11 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut test_crate::foo::{closure}<T>[TraitClause0, TraitClause1]; // arg #1
+    let _1: &'0 mut test_crate::foo::{closure}<T>[TraitClause0, TraitClause1]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[TraitClause1::drop_glue<'2>] (*_1)._0
+    drop[TraitClause1::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -129,7 +129,7 @@ fn bar()
 extern "rust-call" fn call<'_0>(_1: &'_0 test_crate::bar::{closure}, tupled_args: ())
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::bar::{closure}; // arg #1
+    let mut _1: &'0 test_crate::bar::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)

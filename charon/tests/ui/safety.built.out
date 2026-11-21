@@ -584,7 +584,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut MayDangle<T>[TraitClause0]; // arg #1
+    let self: &'0 mut MayDangle<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -746,7 +746,7 @@ union Foo {
 pub fn impl_Clone_for_Foo::clone<'_0>(self: &'_0 Foo) -> Foo
 {
     let mut _0: Foo; // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
 
     storage_live(_0)
     _0 = copy (*self)
@@ -1003,15 +1003,15 @@ fn unsafe_asm()
 fn unsafe_call_unsafe_dyn_method<'_0>(s: &'_0 (dyn DynTrait + '_0))
 {
     let mut _0: (); // return
-    let s: &'3 (dyn DynTrait + '4); // arg #1
-    let mut _2: &'5 (dyn DynTrait + '6); // anonymous local
+    let s: &'0 (dyn DynTrait + '1); // arg #1
+    let mut _2: &'2 (dyn DynTrait + '3); // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &(*s) with_metadata(read s.metadata)
     // unsafe
-    _0 = (read (*_2.metadata).method_unsafe_method)<'14>(move _2)
+    _0 = (read (*_2.metadata).method_unsafe_method)<'6>(move _2)
     ↳⚡ storage_dead(s)
         unwind_continue
     storage_dead(_2)
@@ -1079,14 +1079,14 @@ fn unsafe_builtins<'_0>(x: u32, p: *const u32, s: &'_0 [u32], i: usize)
     let mut _0: (); // return
     let x: u32; // arg #1
     let p: *const u32; // arg #2
-    let s: &'2 [u32]; // arg #3
+    let s: &'1 [u32]; // arg #3
     let i: usize; // arg #4
     let mut _5: i32; // anonymous local
         where _5 :< i32;
     let mut _6: u32; // anonymous local
-    let mut _7: &'4 u32; // anonymous local
+    let mut _7: &'2 u32; // anonymous local
         where _7 :< &'0 u32;
-    let mut _8: &'5 [u32]; // anonymous local
+    let mut _8: &'3 [u32]; // anonymous local
     let mut _9: usize; // anonymous local
     let mut _10: u32; // anonymous local
     let mut _11: u32; // anonymous local
@@ -1113,7 +1113,7 @@ fn unsafe_builtins<'_0>(x: u32, p: *const u32, s: &'_0 [u32], i: usize)
     storage_live(_9)
     _9 = copy i
     // unsafe
-    _7 = slice_get_unchecked<&'28 u32, &'29 [u32], u32>[{built_in impl Sized for &'28 u32}, {built_in impl Sized for &'29 [u32]}, {built_in impl Sized for u32}, {impl ChangePointee<U> for &'a T}<'28, u32, [u32]>](move _8, move _9)
+    _7 = slice_get_unchecked<&'6 u32, &'7 [u32], u32>[{built_in impl Sized for &'6 u32}, {built_in impl Sized for &'7 [u32]}, {built_in impl Sized for u32}, {impl ChangePointee<U> for &'a T}<'6, u32, [u32]>](move _8, move _9)
     ↳⚡ storage_dead(i)
         storage_dead(s)
         storage_dead(p)
@@ -1316,7 +1316,7 @@ fn safe_raw_borrow_of_union_field(foo: Foo) -> (*const u64, *mut [u32; 2usize])
 fn safe_raw_borrow_of_nested_union_field<'_0>(bar: &'_0 Bar) -> *const u64
 {
     let mut _0: *const u64; // return
-    let bar: &'1 Bar; // arg #1
+    let bar: &'0 Bar; // arg #1
 
     storage_live(_0)
     _0 = &raw const (*bar).foo.one
@@ -1342,14 +1342,14 @@ extern "C" fn safe_naked_asm()
 fn safe_call_dyn_method<'_0>(s: &'_0 (dyn DynTrait + '_0))
 {
     let mut _0: (); // return
-    let s: &'3 (dyn DynTrait + '4); // arg #1
-    let mut _2: &'5 (dyn DynTrait + '6); // anonymous local
+    let s: &'0 (dyn DynTrait + '1); // arg #1
+    let mut _2: &'2 (dyn DynTrait + '3); // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &(*s) with_metadata(read s.metadata)
-    _0 = (read (*_2.metadata).method_safe_method)<'14>(move _2)
+    _0 = (read (*_2.metadata).method_safe_method)<'6>(move _2)
     ↳⚡ storage_dead(s)
         unwind_continue
     storage_dead(_2)
@@ -1361,12 +1361,12 @@ fn safe_call_dyn_method<'_0>(s: &'_0 (dyn DynTrait + '_0))
 fn safe_drop_dyn(_s: Box<(dyn DynTrait + 'static)>[{built_in impl MetaSized for (dyn DynTrait + 'static)}, {built_in impl Sized for Global}])
 {
     let mut _0: (); // return
-    let _s: Box<(dyn DynTrait + '6)>[{built_in impl MetaSized for (dyn DynTrait + '8)}, {built_in impl Sized for Global}]; // arg #1
+    let _s: Box<(dyn DynTrait + '0)>[{built_in impl MetaSized for (dyn DynTrait + '2)}, {built_in impl Sized for Global}]; // arg #1
 
     storage_live(_0)
     _0 = ()
     _0 = ()
-    conditional_drop[drop_glue<'23, (dyn DynTrait + '18), Global>[{built_in impl MetaSized for (dyn DynTrait + '18)}, {built_in impl Sized for Global}]] _s
+    conditional_drop[drop_glue<'9, (dyn DynTrait + '3), Global>[{built_in impl MetaSized for (dyn DynTrait + '3)}, {built_in impl Sized for Global}]] _s
     ↳⚡ storage_dead(_s)
         unwind_continue
     storage_dead(_s)
@@ -1446,7 +1446,7 @@ struct test_crate::safe_call_target_feature_fn_in_closure::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_closure::{closure}}::call<'_0>(_1: &'_0 test_crate::safe_call_target_feature_fn_in_closure::{closure}, tupled_args: ())
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::safe_call_target_feature_fn_in_closure::{closure}; // arg #1
+    let mut _1: &'0 test_crate::safe_call_target_feature_fn_in_closure::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -1466,7 +1466,7 @@ extern "rust-call" fn {impl Fn<()> for test_crate::safe_call_target_feature_fn_i
 unsafe fn safe_call_target_feature_fn_in_closure()
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::safe_call_target_feature_fn_in_closure::{closure}; // anonymous local
+    let mut _1: &'0 test_crate::safe_call_target_feature_fn_in_closure::{closure}; // anonymous local
     let _2: test_crate::safe_call_target_feature_fn_in_closure::{closure}; // anonymous local
     let mut _3: (); // anonymous local
 
@@ -1478,7 +1478,7 @@ unsafe fn safe_call_target_feature_fn_in_closure()
     _1 = &_2
     storage_live(_3)
     _3 = ()
-    _0 = {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_closure::{closure}}::call<'3>(move _1, move _3)
+    _0 = {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_closure::{closure}}::call<'1>(move _1, move _3)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_1)
@@ -1494,7 +1494,7 @@ struct test_crate::safe_call_target_feature_fn_in_inline_closure::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}}::call<'_0>(_1: &'_0 test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}, tupled_args: ())
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}; // arg #1
+    let mut _1: &'0 test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -1514,7 +1514,7 @@ extern "rust-call" fn {impl Fn<()> for test_crate::safe_call_target_feature_fn_i
 unsafe fn safe_call_target_feature_fn_in_inline_closure()
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}; // anonymous local
+    let mut _1: &'0 test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}; // anonymous local
     let _2: test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}; // anonymous local
     let mut _3: (); // anonymous local
 
@@ -1526,7 +1526,7 @@ unsafe fn safe_call_target_feature_fn_in_inline_closure()
     _1 = &_2
     storage_live(_3)
     _3 = ()
-    _0 = {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}}::call<'3>(move _1, move _3)
+    _0 = {impl Fn<()> for test_crate::safe_call_target_feature_fn_in_inline_closure::{closure}}::call<'1>(move _1, move _3)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_1)

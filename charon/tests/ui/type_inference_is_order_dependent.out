@@ -94,17 +94,17 @@ where
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: Arguments<'4>; // anonymous local
-    let args_3: (&'7 U,); // local
-    let mut _4: &'8 U; // anonymous local
+    let mut _2: Arguments<'2>; // anonymous local
+    let args_3: (&'3 U,); // local
+    let mut _4: &'4 U; // anonymous local
     let _5: U; // anonymous local
-    let args_6: [Argument<'17>; 1usize]; // local
-    let mut _7: Argument<'21>; // anonymous local
-    let mut _8: &'22 U; // anonymous local
-    let mut _9: &'24 [u8; 4usize]; // anonymous local
-    let _10: &'25 [u8; 4usize]; // anonymous local
-    let mut _11: &'31 [Argument<'32>; 1usize]; // anonymous local
-    let _12: &'36 [Argument<'37>; 1usize]; // anonymous local
+    let args_6: [Argument<'5>; 1usize]; // local
+    let mut _7: Argument<'9>; // anonymous local
+    let mut _8: &'10 U; // anonymous local
+    let mut _9: &'11 [u8; 4usize]; // anonymous local
+    let _10: &'12 [u8; 4usize]; // anonymous local
+    let mut _11: &'13 [Argument<'14>; 1usize]; // anonymous local
+    let _12: &'18 [Argument<'19>; 1usize]; // anonymous local
     let mut _13: [u8; 4usize]; // anonymous local
 
     storage_live(_0)
@@ -125,8 +125,8 @@ where
     storage_live(_7)
     storage_live(_8)
     _8 = &(*args_3._0)
-    _7 = new_debug<'1, '50, U>[TraitClause1, TraitClause5](move _8)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'51>] _5
+    _7 = new_debug<'0, '25, U>[TraitClause1, TraitClause5](move _8)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_13)
         unwind_continue
@@ -144,8 +144,8 @@ where
     storage_live(_12)
     _12 = &args_6
     _11 = &(*_12)
-    _2 = new<'2, 4usize, 1usize>(move _9, move _11)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'51>] _5
+    _2 = new<'1, 4usize, 1usize>(move _9, move _11)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_13)
         unwind_continue
@@ -153,14 +153,14 @@ where
     storage_dead(_11)
     storage_dead(_10)
     storage_dead(_9)
-    _1 = _print<'64>(move _2)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'51>] _5
+    _1 = _print<'33>(move _2)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_13)
         unwind_continue
     storage_dead(_2)
     storage_dead(args_6)
-    conditional_drop[{built_in impl Destruct for U}::drop_glue<'65>] _5
+    conditional_drop[{built_in impl Destruct for U}::drop_glue<'34>] _5
     ↳⚡ storage_dead(_13)
         unwind_continue
     storage_dead(_5)

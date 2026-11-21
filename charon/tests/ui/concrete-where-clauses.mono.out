@@ -4,4 +4,4 @@ error: Unexpected error: could not find the trait clause variable Required(test_
 26 |     x.0.method()
    |     ^^^^^^^^^^^^
 
-ERROR Charon failed to translate this code (2 errors)
+ERROR Charon failed to translate this code (1 errors)

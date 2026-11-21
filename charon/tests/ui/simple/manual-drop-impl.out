@@ -71,7 +71,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut Foo<T>[TraitClause0]; // arg #1
+    let self: &'0 mut Foo<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -87,8 +87,8 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Foo<T>[TraitClause0]; // arg #1
-    let mut _2: &'2 mut Foo<T>[TraitClause0]; // anonymous local
+    let _1: &'0 mut Foo<T>[TraitClause0]; // arg #1
+    let mut _2: &'1 mut Foo<T>[TraitClause0]; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -96,14 +96,14 @@ where
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Foo::drop<'6, T>[TraitClause0](move _2)
-    ↳⚡ drop[impl_Destruct_for_Vec::drop_glue<'7, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
+    _3 = impl_Drop_for_Foo::drop<'2, T>[TraitClause0](move _2)
+    ↳⚡ drop[impl_Destruct_for_Vec::drop_glue<'3, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
         unwind_continue
-    drop[impl_Destruct_for_Vec::drop_glue<'8, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
+    drop[impl_Destruct_for_Vec::drop_glue<'4, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

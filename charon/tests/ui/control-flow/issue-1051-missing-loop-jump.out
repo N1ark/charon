@@ -222,8 +222,8 @@ pub fn f()
     let mut _4: Range<i32>[{built_in impl Sized for i32}]; // anonymous local
     let mut iter: Range<i32>[{built_in impl Sized for i32}]; // local
     let mut _6: Option<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _7: &'1 mut Range<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _8: &'2 mut Range<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _7: &'0 mut Range<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _8: &'1 mut Range<i32>[{built_in impl Sized for i32}]; // anonymous local
     let v: i32; // local
     let mut _10: bool; // anonymous local
     let mut _11: i32; // anonymous local
@@ -254,7 +254,7 @@ pub fn f()
             storage_live(_8)
             _8 = &mut iter
             _7 = &two-phase-mut (*_8)
-            _6 = next<'6, i32>[{built_in impl Sized for i32}, impl_Step_for_i32, {built_in impl Destruct for i32}](move _7)
+            _6 = next<'2, i32>[{built_in impl Sized for i32}, impl_Step_for_i32, {built_in impl Destruct for i32}](move _7)
             ↳⚡ unwind_continue
             storage_dead(_7)
             match _6 {

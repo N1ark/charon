@@ -19,18 +19,18 @@ fn main()
 {
     let mut _0: (); // return
     let mut _1: isize; // anonymous local
-    let mut _2: &'1 E1; // anonymous local
-    let _3: &'2 E1; // anonymous local
+    let mut _2: &'0 E1; // anonymous local
+    let _3: &'1 E1; // anonymous local
     let mut _4: isize; // anonymous local
-    let mut _5: &'4 E2; // anonymous local
-    let _6: &'5 E2; // anonymous local
-    let mut _7: &'6 E2; // anonymous local
-    let mut _8: &'7 E1; // anonymous local
-    let mut _9: &'8 E1; // anonymous local
-    let mut _10: &'13 E2; // anonymous local
-    let mut _11: &'18 E1; // anonymous local
+    let mut _5: &'2 E2; // anonymous local
+    let _6: &'3 E2; // anonymous local
+    let mut _7: &'4 E2; // anonymous local
+    let mut _8: &'5 E1; // anonymous local
+    let mut _9: &'6 E1; // anonymous local
+    let mut _10: &'8 E2; // anonymous local
+    let mut _11: &'10 E1; // anonymous local
     let mut _12: E1; // anonymous local
-    let mut _13: &'19 E2; // anonymous local
+    let mut _13: &'11 E2; // anonymous local
     let mut _14: E2; // anonymous local
 
     storage_live(_9)

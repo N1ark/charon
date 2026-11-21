@@ -82,8 +82,8 @@ where
     Outlives0: (F: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 F; // arg #1
-    let mut _2: &'2 F; // anonymous local
+    let self: &'0 F; // arg #1
+    let mut _2: &'1 F; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -92,7 +92,7 @@ where
     _2 = &(*self)
     storage_live(_3)
     _3 = ()
-    _0 = TraitClause0::call<'4>(move _2, move _3)
+    _0 = TraitClause0::call<'2>(move _2, move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)

@@ -103,7 +103,7 @@ struct Foo {}
 pub fn impl_Drop_for_Foo::drop<'_0>(self: &'_0 mut Foo)
 {
     let mut _0: (); // return
-    let self: &'1 mut Foo; // arg #1
+    let self: &'0 mut Foo; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -115,8 +115,8 @@ pub fn impl_Drop_for_Foo::drop<'_0>(self: &'_0 mut Foo)
 unsafe fn drop_glue<'_0>(_1: &'_0 mut Foo)
 {
     let mut _0: (); // return
-    let _1: &'1 mut Foo; // arg #1
-    let mut _2: &'2 mut Foo; // anonymous local
+    let _1: &'0 mut Foo; // arg #1
+    let mut _2: &'1 mut Foo; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -124,7 +124,7 @@ unsafe fn drop_glue<'_0>(_1: &'_0 mut Foo)
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Foo::drop<'6>(move _2)
+    _3 = impl_Drop_for_Foo::drop<'2>(move _2)
     ↳⚡ unwind_continue
     return
 }
@@ -155,7 +155,7 @@ fn main()
     let _2: (); // anonymous local
     let mut _3: u8; // anonymous local
     let mut _4: (u8, bool); // anonymous local
-    let mut _5: &'1 Foo; // anonymous local
+    let mut _5: &'0 Foo; // anonymous local
 
     storage_live(_0)
     storage_live(_4)
@@ -165,7 +165,7 @@ fn main()
     fake_read(f)
     storage_live(_2)
     _2 = may_unwind()
-    ↳⚡ conditional_drop[drop_glue<'2>] f
+    ↳⚡ conditional_drop[drop_glue<'1>] f
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
@@ -173,7 +173,7 @@ fn main()
     _4 = add_with_overflow<u8>[{built_in impl Sized for u8}, impl_Copy_for_u8](const 255u8, const 1u8)
     ↳⚡ undefined_behavior
     assert(move _4._1 == false) (overflow) else panic(panic_const_add_overflow())
-    ↳⚡ conditional_drop[drop_glue<'2>] f
+    ↳⚡ conditional_drop[drop_glue<'1>] f
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     _3 = move _4._0
@@ -182,7 +182,7 @@ fn main()
     _5 = &f
     storage_dead(_5)
     _0 = ()
-    conditional_drop[drop_glue<'3>] f
+    conditional_drop[drop_glue<'2>] f
     ↳⚡ unwind_continue
     storage_dead(f)
     return

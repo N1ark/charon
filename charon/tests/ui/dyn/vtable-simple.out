@@ -66,10 +66,10 @@ where
     Outlives0: (T: '_1),
 {
     let mut _0: T; // return
-    let self: &'1 mut i32; // arg #1
-    let arg: &'3 T; // arg #2
+    let self: &'0 mut i32; // arg #1
+    let arg: &'1 T; // arg #2
     let mut _3: i32; // anonymous local
-    let mut _4: &'4 T; // anonymous local
+    let mut _4: &'2 T; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -77,7 +77,7 @@ where
     (*self) = move _3
     storage_live(_4)
     _4 = &(*arg)
-    _0 = TraitClause1::clone<'6>(move _4)
+    _0 = TraitClause1::clone<'3>(move _4)
     ↳⚡ storage_dead(_3)
         storage_dead(arg)
         storage_dead(self)
@@ -163,15 +163,15 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: T; // return
-    let arg: &'5 T; // arg #1
-    let x: &'9 mut (dyn Modifiable<T> + '10); // local
+    let arg: &'4 T; // arg #1
+    let x: &'5 mut (dyn Modifiable<T> + '6); // local
         where x :< &'0 mut (dyn Modifiable<T> + '1);
         where x := &'2 mut (dyn Modifiable<T> + '3);
-    let mut _3: &'12 mut i32; // anonymous local
-    let mut _4: &'13 mut i32; // anonymous local
+    let mut _3: &'7 mut i32; // anonymous local
+    let mut _4: &'8 mut i32; // anonymous local
     let mut _5: i32; // anonymous local
-    let mut _6: &'14 mut (dyn Modifiable<T> + '15); // anonymous local
-    let mut _7: &'16 T; // anonymous local
+    let mut _6: &'9 mut (dyn Modifiable<T> + '10); // anonymous local
+    let mut _7: &'11 T; // anonymous local
 
     storage_live(_0)
     set T: '0
@@ -185,7 +185,7 @@ where
     _5 = const 199i32
     _4 = &mut _5
     _3 = &mut (*_4)
-    x = unsize_cast<&'17 mut (dyn Modifiable<T> + '18), &impl_Modifiable_for_i32::{vtable}<T>[TraitClause0, TraitClause1]>(move _3)
+    x = unsize_cast<&'12 mut (dyn Modifiable<T> + '13), &impl_Modifiable_for_i32::{vtable}<T>[TraitClause0, TraitClause1]>(move _3)
     storage_dead(_3)
     fake_read(x)
     storage_dead(_4)
@@ -193,7 +193,7 @@ where
     _6 = &two-phase-mut (*x) with_metadata(read x.metadata)
     storage_live(_7)
     _7 = &(*arg)
-    _0 = (read (*_6.metadata).method_modify)<'27, '28>(move _6, move _7)
+    _0 = (read (*_6.metadata).method_modify)<'16, '17>(move _6, move _7)
     ↳⚡ storage_dead(arg)
         unwind_continue
     storage_dead(_7)
@@ -209,11 +209,11 @@ fn main()
 {
     let mut _0: (); // return
     let _1: i32; // anonymous local
-    let mut _2: &'1 i32; // anonymous local
-    let _3: &'2 i32; // anonymous local
-    let mut _4: &'3 i32; // anonymous local
-    let mut _5: &'4 i32; // anonymous local
-    let mut _6: &'9 i32; // anonymous local
+    let mut _2: &'0 i32; // anonymous local
+    let _3: &'1 i32; // anonymous local
+    let mut _4: &'2 i32; // anonymous local
+    let mut _5: &'3 i32; // anonymous local
+    let mut _6: &'5 i32; // anonymous local
     let mut _7: i32; // anonymous local
 
     storage_live(_5)
@@ -231,7 +231,7 @@ fn main()
     _4 = move _5
     _3 = &(*_4)
     _2 = &(*_3)
-    _1 = modify_trait_object<'8, i32>[{built_in impl Sized for i32}, impl_Clone_for_i32](move _2)
+    _1 = modify_trait_object<'4, i32>[{built_in impl Sized for i32}, impl_Clone_for_i32](move _2)
     ↳⚡ storage_dead(_4)
         storage_dead(_7)
         storage_dead(_6)

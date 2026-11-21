@@ -68,7 +68,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -85,7 +85,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Option<T>[TraitClause0]; // arg #1
+    let self: &'0 Option<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -112,7 +112,7 @@ where
     TraitClause0: (String: Copy),
 {
     let mut _0: (); // return
-    let self: &'1 String; // arg #1
+    let self: &'0 String; // arg #1
 
     storage_live(_0)
     _0 = ()

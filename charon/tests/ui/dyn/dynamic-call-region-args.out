@@ -30,12 +30,12 @@ pub fn call<'a, 'x, '_2>(processor: &'_2 (dyn Processor<'x> + '_2), input: &'a u
 where
     Outlives0: ('x: '_2),
 {
-    let mut _0: &'1 u32; // return
-    let processor: &'7 (dyn Processor<'8> + '9); // arg #1
-    let input: &'10 u32; // arg #2
-    let _3: &'11 u32; // anonymous local
-    let mut _4: &'12 (dyn Processor<'13> + '14); // anonymous local
-    let mut _5: &'15 u32; // anonymous local
+    let mut _0: &'0 u32; // return
+    let processor: &'1 (dyn Processor<'2> + '3); // arg #1
+    let input: &'4 u32; // arg #2
+    let _3: &'5 u32; // anonymous local
+    let mut _4: &'6 (dyn Processor<'7> + '8); // anonymous local
+    let mut _5: &'9 u32; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -43,7 +43,7 @@ where
     _4 = &(*processor) with_metadata(read processor.metadata)
     storage_live(_5)
     _5 = &(*input)
-    _3 = (read (*_4.metadata).method_process)<'37, '38>(move _4, move _5)
+    _3 = (read (*_4.metadata).method_process)<'15, '16>(move _4, move _5)
     ↳⚡ storage_dead(input)
         storage_dead(processor)
         unwind_continue

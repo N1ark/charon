@@ -4,4 +4,4 @@ error: `test_crate::{impl#0}::f` may be overridden by a more specialized impl de
 15 |     x.f()
    |     ^^^^^
 
-ERROR Charon failed to translate this code (2 errors)
+ERROR Charon failed to translate this code (1 errors)

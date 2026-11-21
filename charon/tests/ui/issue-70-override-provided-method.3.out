@@ -111,8 +111,8 @@ where
     let x: T; // arg #1
     let y: U; // arg #2
     let mut _3: bool; // anonymous local
-    let mut _4: &'1 U; // anonymous local
-    let mut _5: &'3 T; // anonymous local
+    let mut _4: &'0 U; // anonymous local
+    let mut _5: &'1 T; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -121,10 +121,10 @@ where
     _4 = &y
     storage_live(_5)
     _5 = &x
-    _3 = TraitClause2::eq<'6, '7>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+    _3 = TraitClause2::eq<'2, '3>(move _4, move _5)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
@@ -133,9 +133,9 @@ where
         storage_dead(_5)
         storage_dead(_4)
         _0 = TraitClause0::other_method()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
             ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
+            conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
@@ -146,13 +146,13 @@ where
         _0 = ()
     }
     storage_dead(_3)
-    conditional_drop[{built_in impl Destruct for U}::drop_glue<'10>] y
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
+    conditional_drop[{built_in impl Destruct for U}::drop_glue<'6>] y
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
-    conditional_drop[{built_in impl Destruct for T}::drop_glue<'11>] x
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'7>] x
     ↳⚡ storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -195,8 +195,8 @@ where
     let x: Option<T>[TraitClause0]; // arg #1
     let y: U; // arg #2
     let mut _3: bool; // anonymous local
-    let mut _4: &'1 U; // anonymous local
-    let mut _5: &'3 Option<T>[TraitClause0]; // anonymous local
+    let mut _4: &'0 U; // anonymous local
+    let mut _5: &'1 Option<T>[TraitClause0]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -205,8 +205,8 @@ where
     _4 = &y
     storage_live(_5)
     _5 = &x
-    _3 = TraitClause3::eq<'6, '7>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+    _3 = TraitClause3::eq<'2, '3>(move _4, move _5)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
@@ -215,7 +215,7 @@ where
         storage_dead(_5)
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_Override::other_method<T>[TraitClause0, TraitClause1]()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
@@ -226,7 +226,7 @@ where
         _0 = ()
     }
     storage_dead(_3)
-    conditional_drop[{built_in impl Destruct for U}::drop_glue<'9>] y
+    conditional_drop[{built_in impl Destruct for U}::drop_glue<'5>] y
     ↳⚡ storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -283,8 +283,8 @@ where
     let x: Option<T>[TraitClause0]; // arg #1
     let y: U; // arg #2
     let mut _3: bool; // anonymous local
-    let mut _4: &'1 U; // anonymous local
-    let mut _5: &'3 Option<T>[TraitClause0]; // anonymous local
+    let mut _4: &'0 U; // anonymous local
+    let mut _5: &'1 Option<T>[TraitClause0]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -293,10 +293,10 @@ where
     _4 = &y
     storage_live(_5)
     _5 = &x
-    _3 = TraitClause3::eq<'6, '7>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+    _3 = TraitClause3::eq<'2, '3>(move _4, move _5)
+    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
+        conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
@@ -305,9 +305,9 @@ where
         storage_dead(_5)
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_NoOverride::other_method<T>[TraitClause0, TraitClause1]()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
+        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
             ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
+            conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
@@ -318,13 +318,13 @@ where
         _0 = ()
     }
     storage_dead(_3)
-    conditional_drop[{built_in impl Destruct for U}::drop_glue<'10>] y
-    ↳⚡ conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
+    conditional_drop[{built_in impl Destruct for U}::drop_glue<'6>] y
+    ↳⚡ conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
-    conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'11>] x
+    conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'7>] x
     ↳⚡ storage_dead(y)
         storage_dead(x)
         unwind_continue

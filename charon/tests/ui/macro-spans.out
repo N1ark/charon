@@ -335,10 +335,10 @@ pub struct Derived {
 pub fn impl_Clone_for_Derived::clone<'_0>(self: &'_0 Derived) -> Derived
 {
     let mut _0: Derived; // return
-    let self: &'1 Derived; // arg #1
+    let self: &'0 Derived; // arg #1
     let mut _2: u32; // anonymous local
-    let mut _3: &'3 u32; // anonymous local
-    let _4: &'4 u32; // anonymous local
+    let mut _3: &'1 u32; // anonymous local
+    let _4: &'2 u32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -346,7 +346,7 @@ pub fn impl_Clone_for_Derived::clone<'_0>(self: &'_0 Derived) -> Derived
     storage_live(_4)
     _4 = &(*self)._0
     _3 = &(*_4)
-    _2 = impl_Clone_for_u32::clone<'8>(move _3)
+    _2 = impl_Clone_for_u32::clone<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -404,8 +404,8 @@ pub fn desugarings(x: Option<u32>[{built_in impl Sized for u32}]) -> Option<u32>
     let val: u32; // local
     let mut iter: Range<u32>[{built_in impl Sized for u32}]; // local
     let mut _12: Option<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let mut _13: &'1 mut Range<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let mut _14: &'2 mut Range<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _13: &'0 mut Range<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _14: &'1 mut Range<u32>[{built_in impl Sized for u32}]; // anonymous local
     let i: u32; // local
     let mut _16: u32; // anonymous local
     let mut _17: u32; // anonymous local
@@ -470,7 +470,7 @@ pub fn desugarings(x: Option<u32>[{built_in impl Sized for u32}]) -> Option<u32>
         storage_live(_14)
         _14 = &mut iter
         _13 = &two-phase-mut (*_14)
-        _12 = next<'6, u32>[{built_in impl Sized for u32}, impl_Step_for_u32, {built_in impl Destruct for u32}](move _13)
+        _12 = next<'2, u32>[{built_in impl Sized for u32}, impl_Step_for_u32, {built_in impl Destruct for u32}](move _13)
         ↳⚡ storage_dead(_17)
             storage_dead(x)
             unwind_continue

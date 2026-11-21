@@ -82,7 +82,7 @@ pub struct S {}
 pub fn from<'_0>(_1: &'_0 u64) -> S
 {
     let mut _0: S; // return
-    let mut _1: &'1 u64; // arg #1
+    let mut _1: &'0 u64; // arg #1
 
     storage_live(_0)
     _0 = S {  }
@@ -163,13 +163,13 @@ where
     TypeConstraint0: TraitClause1::ImpliedClause1::Output = S,
 {
     let mut _0: (); // return
-    let mut _1: &'1 u64; // arg #1
+    let mut _1: &'0 u64; // arg #1
     let mut _2: F; // arg #2
 
     storage_live(_0)
     _0 = ()
     _0 = ()
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'2>] _2
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'1>] _2
     ↳⚡ storage_dead(_2)
         storage_dead(_1)
         unwind_continue
@@ -182,16 +182,16 @@ where
 pub fn test<'a>(x: &'a u64)
 {
     let mut _0: (); // return
-    let x: &'4 u64; // arg #1
+    let x: &'2 u64; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'5 u64; // anonymous local
+    let mut _3: &'3 u64; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*x)
-    _2 = use_fn<'21, from<'22>>[{built_in impl Sized for from<'25>}, {impl FnMut<(&'_0 u64,)> for from<'_0>}<'21>](move _3, const from<'1>)
+    _2 = use_fn<'4, from<'5>>[{built_in impl Sized for from<'8>}, {impl FnMut<(&'_0 u64,)> for from<'_0>}<'4>](move _3, const from<'0>)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_3)

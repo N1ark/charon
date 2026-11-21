@@ -48,8 +48,8 @@ where
     Outlives0: (H: '_1),
 {
     let mut _0: (); // return
-    let self: &'1 u32; // arg #1
-    let _state: &'3 mut H; // arg #2
+    let self: &'0 u32; // arg #1
+    let _state: &'1 mut H; // arg #2
 
     storage_live(_0)
     _0 = ()
@@ -72,12 +72,12 @@ fn main()
     let mut _0: (); // return
     let mut hasher: DefaultHasher; // local
     let _2: (); // anonymous local
-    let mut _3: &'1 u32; // anonymous local
-    let mut _4: &'3 mut DefaultHasher; // anonymous local
-    let mut _5: &'4 mut DefaultHasher; // anonymous local
-    let mut _6: &'5 u32; // anonymous local
-    let mut _7: &'6 u32; // anonymous local
-    let mut _8: &'15 u32; // anonymous local
+    let mut _3: &'0 u32; // anonymous local
+    let mut _4: &'1 mut DefaultHasher; // anonymous local
+    let mut _5: &'2 mut DefaultHasher; // anonymous local
+    let mut _6: &'3 u32; // anonymous local
+    let mut _7: &'4 u32; // anonymous local
+    let mut _8: &'7 u32; // anonymous local
     let mut _9: u32; // anonymous local
 
     storage_live(_7)
@@ -100,7 +100,7 @@ fn main()
     storage_live(_5)
     _5 = &mut hasher
     _4 = &two-phase-mut (*_5)
-    _2 = hash<'13, '14, DefaultHasher>[{built_in impl Sized for DefaultHasher}, impl_Hasher_for_DefaultHasher](move _3, move _4)
+    _2 = hash<'5, '6, DefaultHasher>[{built_in impl Sized for DefaultHasher}, impl_Hasher_for_DefaultHasher](move _3, move _4)
     ↳⚡ storage_dead(_6)
         storage_dead(_9)
         storage_dead(_8)

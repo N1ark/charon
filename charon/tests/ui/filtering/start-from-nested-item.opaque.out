@@ -55,7 +55,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -78,7 +78,7 @@ fn test_crate::Foo::f::in_default()
 fn impl_Foo_for_unit::f<'_0>(self: &'_0 ())
 {
     let mut _0: (); // return
-    let self: &'1 (); // arg #1
+    let self: &'0 (); // arg #1
 
     storage_live(_0)
     _0 = ()

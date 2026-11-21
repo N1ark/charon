@@ -71,7 +71,7 @@ fn do_something_at_the_end()
 fn shared_tail<'_0>(a: &'_0 [u8]) -> usize
 {
     let mut _0: usize; // return
-    let a: &'1 [u8]; // arg #1
+    let a: &'0 [u8]; // arg #1
     let mut sampled: usize; // local
     let mut _3: bool; // anonymous local
     let mut _4: u8; // anonymous local
@@ -154,9 +154,9 @@ fn diamond_with_diagonal(opt: Option<u32>[{built_in impl Sized for u32}])
     let mut _0: (); // return
     let opt: Option<u32>[{built_in impl Sized for u32}]; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'1 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _3: &'0 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
     let x_4: u32; // local
-    let x_5: &'3 u32; // local
+    let x_5: &'1 u32; // local
     let mut _6: bool; // anonymous local
     let mut _7: u32; // anonymous local
 

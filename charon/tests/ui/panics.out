@@ -100,7 +100,7 @@ pub const test_crate::panic1::{promoted_const}: str = "explicit panic" with_meta
 fn panic1()
 {
     let mut _0: (); // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -117,8 +117,8 @@ pub const test_crate::panic2::{promoted_const}: str = "O no!" with_metadata(5usi
 fn panic2()
 {
     let mut _0: (); // return
-    let mut _1: Arguments<'2>; // anonymous local
-    let mut _2: &'7 str; // anonymous local
+    let mut _1: Arguments<'1>; // anonymous local
+    let mut _2: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -129,7 +129,7 @@ fn panic2()
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
-    panic(panic_fmt<'11>(move _1))
+    panic(panic_fmt<'3>(move _1))
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
@@ -141,8 +141,8 @@ pub const test_crate::panic3::{promoted_const}: str = "O no!" with_metadata(5usi
 fn panic3()
 {
     let mut _0: (); // return
-    let mut _1: Arguments<'2>; // anonymous local
-    let mut _2: &'7 str; // anonymous local
+    let mut _1: Arguments<'1>; // anonymous local
+    let mut _2: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -153,7 +153,7 @@ fn panic3()
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
-    panic(panic_fmt<'11>(move _1))
+    panic(panic_fmt<'3>(move _1))
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
@@ -166,7 +166,7 @@ fn panic4()
 {
     let mut _0: (); // return
     let mut _1: bool; // anonymous local
-    let mut _2: &'1 str; // anonymous local
+    let mut _2: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -190,8 +190,8 @@ fn panic5()
 {
     let mut _0: (); // return
     let mut _1: bool; // anonymous local
-    let mut _2: Arguments<'2>; // anonymous local
-    let mut _3: &'7 str; // anonymous local
+    let mut _2: Arguments<'1>; // anonymous local
+    let mut _3: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -206,7 +206,7 @@ fn panic5()
         ↳⚡ storage_dead(_2)
             storage_dead(_3)
             unwind_continue
-        panic(panic_fmt<'11>(move _2))
+        panic(panic_fmt<'3>(move _2))
         ↳⚡ storage_dead(_2)
             storage_dead(_3)
             unwind_continue
@@ -224,7 +224,7 @@ pub const test_crate::panic6::{promoted_const}: str = "internal error: entered u
 fn panic6()
 {
     let mut _0: (); // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -241,8 +241,8 @@ pub const test_crate::panic7::{promoted_const}: str = "internal error: entered u
 fn panic7()
 {
     let mut _0: (); // return
-    let mut _1: Arguments<'2>; // anonymous local
-    let mut _2: &'7 str; // anonymous local
+    let mut _1: Arguments<'1>; // anonymous local
+    let mut _2: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -253,7 +253,7 @@ fn panic7()
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
-    panic(panic_fmt<'11>(move _1))
+    panic(panic_fmt<'3>(move _1))
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
@@ -265,7 +265,7 @@ pub const test_crate::panic8::{promoted_const}: str = "not yet implemented" with
 fn panic8()
 {
     let mut _0: (); // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -282,13 +282,13 @@ pub const test_crate::panic9::{promoted_const}: str = "explicit panic" with_meta
 fn panic9()
 {
     let mut _0: (); // return
-    let mut _1: &'47 str; // anonymous local
+    let mut _1: &'10 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_1)
     _1 = &test_crate::panic9::{promoted_const} with_metadata(const 14usize)
-    panic(begin_panic<&'18 str>[{built_in impl Sized for &'18 str}, impl_Any_for_T<&'18 str>[{built_in impl MetaSized for &'18 str}], {impl Send for &'_0 T}<'18, str>[{built_in impl Sync for str}]](move _1))
+    panic(begin_panic<&'0 str>[{built_in impl Sized for &'0 str}, impl_Any_for_T<&'0 str>[{built_in impl MetaSized for &'0 str}], {impl Send for &'_0 T}<'0, str>[{built_in impl Sync for str}]](move _1))
     ↳⚡ storage_dead(_1)
         unwind_continue
 }

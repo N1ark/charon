@@ -28,7 +28,7 @@ pub trait Tr<Self>
 pub fn impl_Tr_for_u32::method<'_0>(self: &'_0 u32)
 {
     let mut _0: (); // return
-    let self: &'1 u32; // arg #1
+    let self: &'0 u32; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -50,7 +50,7 @@ where
     Outlives0: ('a: '_1),
 {
     let mut _0: (); // return
-    let self: &'3 &'4 u8; // arg #1
+    let self: &'0 &'1 u8; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -80,13 +80,13 @@ pub fn before(x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32])
 {
     let mut _0: (); // return
     let x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32]; // arg #1
-    let mut _2: &'1 u32; // anonymous local
+    let mut _2: &'0 u32; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x._0
-    _0 = impl_Tr_for_u32::method<'5>(move _2)
+    _0 = impl_Tr_for_u32::method<'1>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -101,13 +101,13 @@ where
 {
     let mut _0: (); // return
     let x: Wrap<u32>[{built_in impl Sized for u32}, TraitClause0]; // arg #1
-    let mut _2: &'1 u32; // anonymous local
+    let mut _2: &'0 u32; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x._0
-    _0 = TraitClause0::method<'3>(move _2)
+    _0 = TraitClause0::method<'1>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -120,13 +120,13 @@ pub fn after(x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32])
 {
     let mut _0: (); // return
     let x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32]; // arg #1
-    let mut _2: &'1 u32; // anonymous local
+    let mut _2: &'0 u32; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x._0
-    _0 = impl_Tr_for_u32::method<'5>(move _2)
+    _0 = impl_Tr_for_u32::method<'1>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -138,14 +138,14 @@ pub fn after(x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32])
 pub fn ref_before<'a>(x: &'a u8)
 {
     let mut _0: (); // return
-    let x: &'1 u8; // arg #1
-    let mut _2: &'4 &'5 u8; // anonymous local
+    let x: &'0 u8; // arg #1
+    let mut _2: &'1 &'2 u8; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x
-    _0 = {impl Tr for &'a u8}::method<'8, '12>(move _2)
+    _0 = {impl Tr for &'a u8}::method<'3, '4>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -159,14 +159,14 @@ where
     TraitClause0: (&'a u8: Tr),
 {
     let mut _0: (); // return
-    let x: &'1 u8; // arg #1
-    let mut _2: &'4 &'5 u8; // anonymous local
+    let x: &'0 u8; // arg #1
+    let mut _2: &'1 &'2 u8; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x
-    _0 = TraitClause0::method<'12>(move _2)
+    _0 = TraitClause0::method<'4>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -178,14 +178,14 @@ where
 pub fn ref_after<'a>(x: &'a u8)
 {
     let mut _0: (); // return
-    let x: &'1 u8; // arg #1
-    let mut _2: &'4 &'5 u8; // anonymous local
+    let x: &'0 u8; // arg #1
+    let mut _2: &'1 &'2 u8; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x
-    _0 = {impl Tr for &'a u8}::method<'8, '12>(move _2)
+    _0 = {impl Tr for &'a u8}::method<'3, '4>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

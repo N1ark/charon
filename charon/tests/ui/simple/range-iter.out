@@ -186,8 +186,8 @@ fn iter(n: usize)
     let mut _4: usize; // anonymous local
     let mut iter: Range<usize>; // local
     let mut _6: Option<usize>; // anonymous local
-    let mut _7: &'1 mut Range<usize>; // anonymous local
-    let mut _8: &'2 mut Range<usize>; // anonymous local
+    let mut _7: &'0 mut Range<usize>; // anonymous local
+    let mut _8: &'1 mut Range<usize>; // anonymous local
     let i: usize; // local
 
     storage_live(_0)
@@ -210,7 +210,7 @@ fn iter(n: usize)
         storage_live(_8)
         _8 = &mut iter
         _7 = &two-phase-mut (*_8)
-        _6 = next<'6, usize>[impl_Step_for_usize, {built_in impl Destruct for usize}](move _7)
+        _6 = next<'2, usize>[impl_Step_for_usize, {built_in impl Destruct for usize}](move _7)
         ↳⚡ storage_dead(n)
             unwind_continue
         storage_dead(_7)

@@ -79,7 +79,7 @@ fn method1(self: (), _other: &'static u32) -> bool
 {
     let mut _0: bool; // return
     let self: (); // arg #1
-    let _other: &'1 u32; // arg #2
+    let _other: &'0 u32; // arg #2
 
     storage_live(_0)
     _0 = const true
@@ -109,8 +109,8 @@ trait MyCompare<Self, Other>
 fn compare<'a>(self: &'a (), _other: &'a ()) -> bool
 {
     let mut _0: bool; // return
-    let self: &'1 (); // arg #1
-    let _other: &'2 (); // arg #2
+    let self: &'0 (); // arg #1
+    let _other: &'1 (); // arg #2
 
     storage_live(_0)
     _0 = const true
@@ -133,25 +133,25 @@ fn main()
     let mut _0: (); // return
     let mut _1: bool; // anonymous local
     let mut _2: (); // anonymous local
-    let mut _3: &'1 u32; // anonymous local
-    let _4: &'2 u32; // anonymous local
+    let mut _3: &'0 u32; // anonymous local
+    let _4: &'1 u32; // anonymous local
     let mut _5: (); // anonymous local
     let mut _6: (); // anonymous local
     let mut _7: bool; // anonymous local
-    let mut _8: &'4 (); // anonymous local
-    let mut _9: &'5 (); // anonymous local
-    let _10: &'6 (); // anonymous local
-    let mut _11: &'7 (); // anonymous local
-    let mut _12: &'8 (); // anonymous local
-    let mut _13: &'9 u32; // anonymous local
-    let mut _14: &'10 u32; // anonymous local
-    let mut _15: &'11 (); // anonymous local
-    let mut _16: &'12 (); // anonymous local
-    let mut _17: &'16 u32; // anonymous local
+    let mut _8: &'2 (); // anonymous local
+    let mut _9: &'3 (); // anonymous local
+    let _10: &'4 (); // anonymous local
+    let mut _11: &'5 (); // anonymous local
+    let mut _12: &'6 (); // anonymous local
+    let mut _13: &'7 u32; // anonymous local
+    let mut _14: &'8 u32; // anonymous local
+    let mut _15: &'9 (); // anonymous local
+    let mut _16: &'10 (); // anonymous local
+    let mut _17: &'12 u32; // anonymous local
     let mut _18: u32; // anonymous local
-    let mut _19: &'17 (); // anonymous local
+    let mut _19: &'13 (); // anonymous local
     let mut _20: (); // anonymous local
-    let mut _21: &'18 (); // anonymous local
+    let mut _21: &'14 (); // anonymous local
     let mut _22: (); // anonymous local
 
     storage_live(_14)
@@ -233,7 +233,7 @@ fn main()
     _11 = move _16
     _10 = &(*_11)
     _9 = &(*_10)
-    _7 = compare<'14>(move _8, move _9)
+    _7 = compare<'11>(move _8, move _9)
     ↳⚡ storage_dead(_13)
         storage_dead(_12)
         storage_dead(_11)
@@ -278,9 +278,9 @@ trait Foo<Self>
 // Full name: test_crate::{impl Foo for ()}::foo
 fn foo<'a, 'b>(x: &'a (), y: &'b ()) -> &'a ()
 {
-    let mut _0: &'1 (); // return
-    let x: &'2 (); // arg #1
-    let y: &'3 (); // arg #2
+    let mut _0: &'0 (); // return
+    let x: &'1 (); // arg #1
+    let y: &'2 (); // arg #2
 
     storage_live(_0)
     _0 = copy x
@@ -299,15 +299,15 @@ impl "impl_Foo_for_unit" Foo for () {
 // Full name: test_crate::call_foo
 fn call_foo<'e>(x: &'e ()) -> &'e ()
 {
-    let mut _0: &'1 (); // return
-    let x: &'2 (); // arg #1
-    let _2: &'3 (); // anonymous local
-    let mut _3: &'4 (); // anonymous local
-    let mut _4: &'5 (); // anonymous local
-    let _5: &'6 (); // anonymous local
-    let mut _6: &'7 (); // anonymous local
-    let mut _7: &'8 (); // anonymous local
-    let mut _8: &'17 (); // anonymous local
+    let mut _0: &'0 (); // return
+    let x: &'1 (); // arg #1
+    let _2: &'2 (); // anonymous local
+    let mut _3: &'3 (); // anonymous local
+    let mut _4: &'4 (); // anonymous local
+    let _5: &'5 (); // anonymous local
+    let mut _6: &'6 (); // anonymous local
+    let mut _7: &'7 (); // anonymous local
+    let mut _8: &'10 (); // anonymous local
     let mut _9: (); // anonymous local
 
     storage_live(_7)
@@ -327,7 +327,7 @@ fn call_foo<'e>(x: &'e ()) -> &'e ()
     _6 = move _7
     _5 = &(*_6)
     _4 = &(*_5)
-    _2 = foo<'15, '16>(move _3, move _4)
+    _2 = foo<'8, '9>(move _3, move _4)
     ↳⚡ storage_dead(_6)
         storage_dead(x)
         storage_dead(_9)

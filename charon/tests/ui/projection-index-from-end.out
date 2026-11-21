@@ -160,12 +160,12 @@ struct () {}
 fn slice_pattern_end<'_0>(x: &'_0 [()])
 {
     let mut _0: (); // return
-    let x: &'1 [()]; // arg #1
+    let x: &'0 [()]; // arg #1
     let mut _2: usize; // anonymous local
     let mut _3: usize; // anonymous local
     let mut _4: usize; // anonymous local
     let mut _5: bool; // anonymous local
-    let _named: &'3 (); // local
+    let _named: &'1 (); // local
     let mut _7: &'_ [()]; // anonymous local
     let mut _8: usize; // anonymous local
     let mut _9: &'_ (); // anonymous local
@@ -219,8 +219,8 @@ fn slice_pattern_end<'_0>(x: &'_0 [()])
 fn array_pattern_end<'_0>(x: &'_0 [u32; 3usize]) -> u32
 {
     let mut _0: u32; // return
-    let x: &'1 [u32; 3usize]; // arg #1
-    let last: &'3 u32; // local
+    let x: &'0 [u32; 3usize]; // arg #1
+    let last: &'1 u32; // local
     let mut _3: &'_ [u32; 3usize]; // anonymous local
     let mut _4: &'_ u32; // anonymous local
 
@@ -250,7 +250,7 @@ struct Tail {
 fn field_pattern_end<'_0>(x: &'_0 Tail) -> u32
 {
     let mut _0: u32; // return
-    let x: &'1 Tail; // arg #1
+    let x: &'0 Tail; // arg #1
     let mut _2: usize; // anonymous local
     let mut _3: *const [u32]; // anonymous local
     let mut _4: usize; // anonymous local

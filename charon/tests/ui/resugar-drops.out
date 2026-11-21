@@ -60,15 +60,15 @@ where
     Outlives1: (B: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut (A, B); // arg #1
+    let _1: &'0 mut (A, B); // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'2>] (*_1)._0
-    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'4>] (*_1)._1
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
+    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
+    drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
     ↳⚡ unwind_continue
     return
 }
@@ -80,7 +80,7 @@ struct NeedsDrop {}
 pub fn impl_Drop_for_NeedsDrop::drop<'_0>(self: &'_0 mut NeedsDrop)
 {
     let mut _0: (); // return
-    let self: &'1 mut NeedsDrop; // arg #1
+    let self: &'0 mut NeedsDrop; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -92,8 +92,8 @@ pub fn impl_Drop_for_NeedsDrop::drop<'_0>(self: &'_0 mut NeedsDrop)
 unsafe fn impl_Destruct_for_NeedsDrop::drop_glue<'_0>(_1: &'_0 mut NeedsDrop)
 {
     let mut _0: (); // return
-    let _1: &'1 mut NeedsDrop; // arg #1
-    let mut _2: &'2 mut NeedsDrop; // anonymous local
+    let _1: &'0 mut NeedsDrop; // arg #1
+    let mut _2: &'1 mut NeedsDrop; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -101,7 +101,7 @@ unsafe fn impl_Destruct_for_NeedsDrop::drop_glue<'_0>(_1: &'_0 mut NeedsDrop)
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_NeedsDrop::drop<'6>(move _2)
+    _3 = impl_Drop_for_NeedsDrop::drop<'2>(move _2)
     ↳⚡ unwind_continue
     return
 }

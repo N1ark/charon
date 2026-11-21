@@ -27,7 +27,7 @@ struct () {}
 fn main()
 {
     let mut _0: (); // return
-    let y: &'1 [u8]; // local
+    let y: &'0 [u8]; // local
     let z: *const u8; // local
     let mut _3: *const [u8]; // anonymous local
     let mut _4: usize; // anonymous local

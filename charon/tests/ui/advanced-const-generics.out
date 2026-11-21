@@ -94,12 +94,12 @@ enum Foo {
 pub fn eq<'_0, '_1>(self: &'_0 Foo, other: &'_1 Foo) -> bool
 {
     let mut _0: bool; // return
-    let self: &'1 Foo; // arg #1
-    let other: &'2 Foo; // arg #2
+    let self: &'0 Foo; // arg #1
+    let other: &'1 Foo; // arg #2
     let __self_discr: isize; // local
-    let mut _4: &'3 Foo; // anonymous local
+    let mut _4: &'2 Foo; // anonymous local
     let __arg1_discr: isize; // local
-    let mut _6: &'4 Foo; // anonymous local
+    let mut _6: &'3 Foo; // anonymous local
     let mut _7: isize; // anonymous local
     let mut _8: isize; // anonymous local
 
@@ -169,12 +169,12 @@ where
     Outlives0: ('_2: '_1),
 {
     let mut _0: Result<(), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}]; // return
-    let self: &'4 Foo; // arg #1
-    let f: &'8 mut Formatter<'9>; // arg #2
-    let mut _3: &'10 mut Formatter<'11>; // anonymous local
-    let mut _4: &'13 str; // anonymous local
-    let _5: &'14 str; // anonymous local
-    let _6: &'15 str; // anonymous local
+    let self: &'1 Foo; // arg #1
+    let f: &'2 mut Formatter<'3>; // arg #2
+    let mut _3: &'4 mut Formatter<'5>; // anonymous local
+    let mut _4: &'6 str; // anonymous local
+    let _5: &'7 str; // anonymous local
+    let _6: &'8 str; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -194,7 +194,7 @@ where
             storage_dead(_6)
         },
     }
-    _0 = core::fmt::{Formatter<'a>}::write_str<'2, '30, '31>(move _3, move _4)
+    _0 = core::fmt::{Formatter<'a>}::write_str<'0, '12, '13>(move _3, move _4)
     ↳⚡ storage_dead(f)
         storage_dead(self)
         unwind_continue

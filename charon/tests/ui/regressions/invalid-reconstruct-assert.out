@@ -128,7 +128,7 @@ where
     TypeConstraint0: TraitClause2::ImpliedClause1::Output = Ordering,
 {
     let mut _0: Result<usize, usize>[{built_in impl Sized for usize}, {built_in impl Sized for usize}]; // return
-    let self: &'1 [T]; // arg #1
+    let self: &'0 [T]; // arg #1
     let mut f: F; // arg #2
     let mut size: usize; // local
     let mut _4: usize; // anonymous local
@@ -140,15 +140,15 @@ where
     let mid: usize; // local
     let mut _11: usize; // anonymous local
     let cmp_12: Ordering; // local
-    let mut _13: &'3 mut F; // anonymous local
-    let mut _14: (&'6 T,); // anonymous local
-    let _15: &'7 T; // anonymous local
+    let mut _13: &'1 mut F; // anonymous local
+    let mut _14: (&'2 T,); // anonymous local
+    let _15: &'3 T; // anonymous local
     let mut _16: usize; // anonymous local
     let mut _17: bool; // anonymous local
     let cmp_18: Ordering; // local
-    let mut _19: &'10 mut F; // anonymous local
-    let mut _20: (&'11 T,); // anonymous local
-    let _21: &'12 T; // anonymous local
+    let mut _19: &'5 mut F; // anonymous local
+    let mut _20: (&'6 T,); // anonymous local
+    let _21: &'7 T; // anonymous local
     let mut index: usize; // local
     let mut cond_23: bool; // local
     let mut _24: usize; // anonymous local
@@ -205,7 +205,7 @@ where
         storage_dead(_4);
         _0 = Result::Err { _0: const 0usize };
         storage_dead(size);
-        drop[TraitClause3::drop_glue<'18>] f -> bb33 (unwind: bb2);
+        drop[TraitClause3::drop_glue<'12>] f -> bb33 (unwind: bb2);
     }
 
     bb2 (cleanup): {
@@ -297,7 +297,7 @@ where
         _15 = &(*_29);
         storage_dead(_29);
         _14 = (copy _15,);
-        cmp_12 = TraitClause2::call_mut<'37>(move _13, move _14) -> bb11 (unwind: bb36);
+        cmp_12 = TraitClause2::call_mut<'21>(move _13, move _14) -> bb11 (unwind: bb36);
     }
 
     bb11: {
@@ -372,7 +372,7 @@ where
         storage_dead(_35);
         storage_dead(index);
         _20 = (copy _21,);
-        cmp_18 = TraitClause2::call_mut<'53>(move _19, move _20) -> bb20 (unwind: bb36);
+        cmp_18 = TraitClause2::call_mut<'30>(move _19, move _20) -> bb20 (unwind: bb36);
     }
 
     bb20: {
@@ -453,7 +453,7 @@ where
     bb32: {
         storage_dead(cmp_18);
         storage_dead(size);
-        drop[TraitClause3::drop_glue<'55>] f -> bb33 (unwind: bb34);
+        drop[TraitClause3::drop_glue<'32>] f -> bb33 (unwind: bb34);
     }
 
     bb33: {
@@ -507,7 +507,7 @@ where
     }
 
     bb36 (cleanup): {
-        drop[TraitClause3::drop_glue<'54>] f -> bb37 (unwind: bb38);
+        drop[TraitClause3::drop_glue<'31>] f -> bb37 (unwind: bb38);
     }
 
     bb37 (cleanup): {
@@ -551,15 +551,15 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: Ordering; // return
-    let mut _1: &'2 mut {closure}<'_0>; // arg #1
+    let mut _1: &'0 mut {closure}<'_0>; // arg #1
     let mut tupled_args: (&'_0 u32,); // arg #2
-    let x: &'4 u32; // local
-    let mut _4: &'5 u32; // anonymous local
-    let mut _5: &'6 u32; // anonymous local
-    let _6: &'7 u32; // anonymous local
-    let mut _7: &'8 u32; // anonymous local
-    let mut _8: &'9 u32; // anonymous local
-    let mut _9: &'18 u32; // anonymous local
+    let x: &'1 u32; // local
+    let mut _4: &'2 u32; // anonymous local
+    let mut _5: &'3 u32; // anonymous local
+    let _6: &'4 u32; // anonymous local
+    let mut _7: &'5 u32; // anonymous local
+    let mut _8: &'6 u32; // anonymous local
+    let mut _9: &'9 u32; // anonymous local
     let mut _10: u32; // anonymous local
 
     bb0: {
@@ -580,7 +580,7 @@ where
         _7 = move _8;
         _6 = &(*_7);
         _5 = &(*_6);
-        _0 = cmp<'16, '17>(move _4, move _5) -> bb1 (unwind: bb2);
+        _0 = cmp<'7, '8>(move _4, move _5) -> bb1 (unwind: bb2);
     }
 
     bb1: {
@@ -614,14 +614,14 @@ extern "rust-call" fn call_once<'_0>(_1: {closure}<'_0>, _2: (&'_0 u32,)) -> Ord
 {
     let mut _0: Ordering; // return
     let mut _1: {closure}<'_0>; // arg #1
-    let _2: (&'3 u32,); // arg #2
-    let _3: &'5 mut {closure}<'_0>; // anonymous local
+    let _2: (&'0 u32,); // arg #2
+    let _3: &'1 mut {closure}<'_0>; // anonymous local
 
     bb0: {
         storage_live(_0);
         storage_live(_3);
         _3 = &mut _1;
-        _0 = call_mut<'_0, '18>(move _3, move _2) -> bb1 (unwind: bb2);
+        _0 = call_mut<'_0, '3>(move _3, move _2) -> bb1 (unwind: bb2);
     }
 
     bb1: {
@@ -667,15 +667,15 @@ fn main()
     let a: [u32; 5usize]; // local
         where a :< [u32; 5usize];
         where a := [u32; 5usize];
-    let b: &'3 [u32]; // local
+    let b: &'2 [u32]; // local
         where b :< &'0 [u32];
         where b := &'1 [u32];
-    let mut _3: &'5 [u32; 5usize]; // anonymous local
-    let _4: &'6 [u32; 5usize]; // anonymous local
+    let mut _3: &'3 [u32; 5usize]; // anonymous local
+    let _4: &'4 [u32; 5usize]; // anonymous local
     let res: Result<usize, usize>[{built_in impl Sized for usize}, {built_in impl Sized for usize}]; // local
-    let mut _6: &'7 [u32]; // anonymous local
-    let mut _7: &'8 [u32; 5usize]; // anonymous local
-    let mut _8: {closure}<'10>; // anonymous local
+    let mut _6: &'5 [u32]; // anonymous local
+    let mut _7: &'6 [u32; 5usize]; // anonymous local
+    let mut _8: {closure}<'7>; // anonymous local
 
     bb0: {
         storage_live(_0);
@@ -688,7 +688,7 @@ fn main()
         storage_live(_4);
         _4 = &a;
         _3 = &(*_4);
-        b = unsize_cast<&'11 [u32], 5usize>(move _3);
+        b = unsize_cast<&'8 [u32], 5usize>(move _3);
         storage_dead(_3);
         fake_read(b);
         storage_dead(_4);
@@ -696,11 +696,11 @@ fn main()
         storage_live(_6);
         storage_live(_7);
         _7 = &a;
-        _6 = unsize_cast<&'12 [u32], 5usize>(move _7);
+        _6 = unsize_cast<&'9 [u32], 5usize>(move _7);
         storage_dead(_7);
         storage_live(_8);
         _8 = {closure} {  };
-        res = binary_search_by<'31, u32, {closure}<'31>>[{built_in impl Sized for u32}, {built_in impl Sized for {closure}<'31>}, impl_FnMut_tuple_for_closure<'31>, {built_in impl Destruct for {closure}<'31>}](move _6, move _8) -> bb1 (unwind: bb2);
+        res = binary_search_by<'11, u32, {closure}<'11>>[{built_in impl Sized for u32}, {built_in impl Sized for {closure}<'11>}, impl_FnMut_tuple_for_closure<'11>, {built_in impl Destruct for {closure}<'11>}](move _6, move _8) -> bb1 (unwind: bb2);
     }
 
     bb1: {

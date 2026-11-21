@@ -89,7 +89,7 @@ extern unsafe static extern_weak: Option<unsafe extern "C" fn()>[{built_in impl 
 fn no_writable<'_0>(_1: &'_0 mut u32)
 {
     let mut _0: (); // return
-    let mut _1: &'1 mut u32; // arg #1
+    let mut _1: &'0 mut u32; // arg #1
 
     storage_live(_0)
     _0 = ()

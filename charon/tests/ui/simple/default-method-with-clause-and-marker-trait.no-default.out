@@ -36,7 +36,7 @@ where
 {
     let mut _0: TraitClause1::Assoc; // return
     let mut _1: !; // anonymous local
-    let mut _2: &'1 str; // anonymous local
+    let mut _2: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)

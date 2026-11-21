@@ -46,7 +46,7 @@ pub struct MyStruct {}
 pub fn foo<'_0>(self: &'_0 MyStruct)
 {
     let mut _0: (); // return
-    let self: &'1 MyStruct; // arg #1
+    let self: &'0 MyStruct; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -106,14 +106,14 @@ impl "impl_MyTrait_for_MyStruct" MyTrait for MyStruct {
 fn main()
 {
     let mut _0: (); // return
-    let x: &'3 (dyn MyTrait + '4); // local
-    let mut _2: &'6 MyStruct; // anonymous local
-    let _3: &'7 MyStruct; // anonymous local
+    let x: &'0 (dyn MyTrait + '1); // local
+    let mut _2: &'2 MyStruct; // anonymous local
+    let _3: &'3 MyStruct; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'8 (dyn MyTrait + '9); // anonymous local
-    let mut _6: &'10 MyStruct; // anonymous local
-    let mut _7: &'11 MyStruct; // anonymous local
-    let mut _8: &'22 MyStruct; // anonymous local
+    let mut _5: &'4 (dyn MyTrait + '5); // anonymous local
+    let mut _6: &'6 MyStruct; // anonymous local
+    let mut _7: &'7 MyStruct; // anonymous local
+    let mut _8: &'13 MyStruct; // anonymous local
     let mut _9: MyStruct; // anonymous local
 
     storage_live(_7)
@@ -131,13 +131,13 @@ fn main()
     _6 = move _7
     _3 = &(*_6)
     _2 = &(*_3)
-    x = unsize_cast<&'12 (dyn MyTrait + '13), &impl_MyTrait_for_MyStruct::{vtable}>(move _2)
+    x = unsize_cast<&'8 (dyn MyTrait + '9), &impl_MyTrait_for_MyStruct::{vtable}>(move _2)
     storage_dead(_2)
     storage_dead(_3)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*x) with_metadata(read x.metadata)
-    _4 = (read (*_5.metadata).method_foo)<'21>(move _5)
+    _4 = (read (*_5.metadata).method_foo)<'12>(move _5)
     ↳⚡ storage_dead(_6)
         storage_dead(_9)
         storage_dead(_8)

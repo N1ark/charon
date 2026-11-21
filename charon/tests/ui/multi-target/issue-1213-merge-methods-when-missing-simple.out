@@ -31,7 +31,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -47,7 +47,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -64,14 +64,14 @@ where
     Outlives0: (T0: '_0),
 {
     let mut _0: (); // return
-    let x: &'1 T0; // arg #1
-    let mut _2: &'2 T0; // anonymous local
+    let x: &'0 T0; // arg #1
+    let mut _2: &'1 T0; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &(*x)
-    _0 = TraitClause1::method1<'4>(move _2)
+    _0 = TraitClause1::method1<'2>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -87,14 +87,14 @@ where
     Outlives0: (T0: '_0),
 {
     let mut _0: (); // return
-    let x: &'1 T0; // arg #1
-    let mut _2: &'2 T0; // anonymous local
+    let x: &'0 T0; // arg #1
+    let mut _2: &'1 T0; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &(*x)
-    _0 = TraitClause1::method2<'4>(move _2)
+    _0 = TraitClause1::method2<'2>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

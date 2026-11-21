@@ -34,7 +34,7 @@ static A: Null = A()
 pub unsafe fn alloc<'_0>(self: &'_0 Null, _2: Layout) -> *mut u8
 {
     let mut _0: *mut u8; // return
-    let self: &'1 Null; // arg #1
+    let self: &'0 Null; // arg #1
     let mut _2: Layout; // arg #2
 
     storage_live(_0)
@@ -50,9 +50,9 @@ unsafe fn test_crate::_::__rust_alloc(size: usize, align: Alignment) -> *mut u8
     let mut _0: *mut u8; // return
     let size: usize; // arg #1
     let align: Alignment; // arg #2
-    let mut _3: &'1 Null; // anonymous local
-    let _4: &'2 Null; // anonymous local
-    let _5: &'3 Null; // anonymous local
+    let mut _3: &'0 Null; // anonymous local
+    let _4: &'1 Null; // anonymous local
+    let _5: &'2 Null; // anonymous local
     let mut _6: Layout; // anonymous local
     let mut _7: usize; // anonymous local
     let mut _8: Alignment; // anonymous local
@@ -75,7 +75,7 @@ unsafe fn test_crate::_::__rust_alloc(size: usize, align: Alignment) -> *mut u8
         unwind_continue
     storage_dead(_8)
     storage_dead(_7)
-    _0 = alloc<'8>(move _3, move _6)
+    _0 = alloc<'4>(move _3, move _6)
     ↳⚡ storage_dead(align)
         storage_dead(size)
         unwind_continue

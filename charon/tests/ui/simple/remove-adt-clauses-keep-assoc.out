@@ -55,11 +55,11 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Direct<T>[TraitClause0, TraitClause1]; // arg #1
+    let _1: &'0 mut Direct<T>[TraitClause0, TraitClause1]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for T}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for T}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -100,11 +100,11 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Transitive<T>[TraitClause0, TraitClause1]; // arg #1
+    let _1: &'0 mut Transitive<T>[TraitClause0, TraitClause1]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for T}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for T}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -139,11 +139,11 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Marker<T>; // arg #1
+    let _1: &'0 mut Marker<T>; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for T}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for T}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)

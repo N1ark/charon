@@ -24,7 +24,7 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: u8; // return
-    let mut _1: &'2 test_crate::main::{closure}<'_0>; // arg #1
+    let mut _1: &'0 test_crate::main::{closure}<'_0>; // arg #1
     let mut tupled_args: (u8,); // arg #2
     let x: u8; // local
     let mut _4: u8; // anonymous local
@@ -55,7 +55,7 @@ fn apply_to_zero::<test_crate::main::{closure}<'_>>(f: test_crate::main::{closur
 {
     let mut _0: u8; // return
     let f: test_crate::main::{closure}<'0>; // arg #1
-    let mut _2: &'3 test_crate::main::{closure}<'4>; // anonymous local
+    let mut _2: &'1 test_crate::main::{closure}<'2>; // anonymous local
     let mut _3: (u8,); // anonymous local
 
     storage_live(_0)
@@ -63,7 +63,7 @@ fn apply_to_zero::<test_crate::main::{closure}<'_>>(f: test_crate::main::{closur
     _2 = &f
     storage_live(_3)
     _3 = (const 0u8,)
-    _0 = call<'7, '11>(move _2, move _3)
+    _0 = call<'3, '4>(move _2, move _3)
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(_3)
@@ -82,7 +82,7 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: u8; // return
-    let mut _1: &'2 mut test_crate::main::{closure#1}<'_0>; // arg #1
+    let mut _1: &'0 mut test_crate::main::{closure#1}<'_0>; // arg #1
     let mut tupled_args: (u8,); // arg #2
     let x: u8; // local
     let mut _4: u8; // anonymous local
@@ -118,7 +118,7 @@ fn apply_to_zero_mut::<test_crate::main::{closure#1}<'_>>(f: test_crate::main::{
 {
     let mut _0: u8; // return
     let mut f: test_crate::main::{closure#1}<'0>; // arg #1
-    let mut _2: &'3 mut test_crate::main::{closure#1}<'4>; // anonymous local
+    let mut _2: &'1 mut test_crate::main::{closure#1}<'2>; // anonymous local
     let mut _3: (u8,); // anonymous local
 
     storage_live(_0)
@@ -126,7 +126,7 @@ fn apply_to_zero_mut::<test_crate::main::{closure#1}<'_>>(f: test_crate::main::{
     _2 = &mut f
     storage_live(_3)
     _3 = (const 0u8,)
-    _0 = call_mut<'7, '11>(move _2, move _3)
+    _0 = call_mut<'3, '4>(move _2, move _3)
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(_3)
@@ -206,12 +206,12 @@ fn main()
     let mut _0: (); // return
     let z_1: u8; // local
     let _2: u8; // anonymous local
-    let mut _3: test_crate::main::{closure}<'1>; // anonymous local
-    let mut _4: &'3 u8; // anonymous local
+    let mut _3: test_crate::main::{closure}<'0>; // anonymous local
+    let mut _4: &'1 u8; // anonymous local
     let mut z_5: u8; // local
     let _6: u8; // anonymous local
-    let mut _7: test_crate::main::{closure#1}<'5>; // anonymous local
-    let mut _8: &'7 mut u8; // anonymous local
+    let mut _7: test_crate::main::{closure#1}<'2>; // anonymous local
+    let mut _8: &'3 mut u8; // anonymous local
     let z_9: Thing; // local
     let _10: u8; // anonymous local
     let mut _11: test_crate::main::{closure#2}; // anonymous local

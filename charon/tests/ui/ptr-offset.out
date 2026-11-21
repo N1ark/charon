@@ -229,10 +229,10 @@ fn precondition_check(this: *const (), count: isize, size: usize)
     let mut _5: *const (); // anonymous local
     let mut _6: isize; // anonymous local
     let mut _7: usize; // anonymous local
-    let msg: &'1 str; // local
+    let msg: &'0 str; // local
     let _9: !; // anonymous local
-    let mut _10: Arguments<'3>; // anonymous local
-    let mut _11: &'4 str; // anonymous local
+    let mut _10: Arguments<'1>; // anonymous local
+    let mut _11: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -256,10 +256,10 @@ fn precondition_check(this: *const (), count: isize, size: usize)
         storage_live(_10)
         storage_live(_11)
         _11 = &(*msg) with_metadata(read msg.metadata)
-        _10 = from_str<'7>(move _11)
+        _10 = from_str<'4>(move _11)
         ↳⚡ unwind_terminate(abi)
         storage_dead(_11)
-        _9 = panic_nounwind_fmt<'12>(move _10, const false)
+        _9 = panic_nounwind_fmt<'5>(move _10, const false)
         ↳⚡ undefined_behavior
     }
     storage_dead(_7)
@@ -356,13 +356,13 @@ fn main()
     let mut _0: (); // return
     let s: [i32; 2usize]; // local
     let ptr: *const i32; // local
-    let mut _3: &'1 [i32]; // anonymous local
-    let mut _4: &'3 [i32; 2usize]; // anonymous local
+    let mut _3: &'0 [i32]; // anonymous local
+    let mut _4: &'1 [i32; 2usize]; // anonymous local
     let mut _5: bool; // anonymous local
     let mut _6: i32; // anonymous local
     let mut _7: *const i32; // anonymous local
     let mut _8: *const i32; // anonymous local
-    let mut _9: &'10 str; // anonymous local
+    let mut _9: &'4 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -376,7 +376,7 @@ fn main()
     _3 = as_slice<'_, i32, 2usize>[{built_in impl Sized for i32}](move _4)
     ↳⚡ undefined_behavior
     storage_dead(_4)
-    ptr = as_ptr<'8, i32>[{built_in impl Sized for i32}](move _3)
+    ptr = as_ptr<'3, i32>[{built_in impl Sized for i32}](move _3)
     ↳⚡ storage_dead(_9)
         unwind_continue
     storage_dead(_3)

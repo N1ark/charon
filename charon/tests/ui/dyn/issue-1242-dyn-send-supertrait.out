@@ -32,21 +32,21 @@ trait Trait<Self>
 // Full name: test_crate::foo
 fn foo<'_0>(x: &'_0 (dyn Trait + '_0)) -> &'_0 (dyn Send + '_0)
 {
-    let mut _0: &'3 (dyn Send + '4); // return
-    let x: &'8 (dyn Trait + '9); // arg #1
-    let mut _2: &'10 (dyn Send + '11); // anonymous local
-    let _3: &'12 (dyn Send + '13); // anonymous local
-    let mut _4: &'14 (dyn Trait + '15); // anonymous local
+    let mut _0: &'0 (dyn Send + '1); // return
+    let x: &'2 (dyn Trait + '3); // arg #1
+    let mut _2: &'4 (dyn Send + '5); // anonymous local
+    let _3: &'6 (dyn Send + '7); // anonymous local
+    let mut _4: &'8 (dyn Trait + '9); // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     storage_live(_4)
     _4 = &(*x) with_metadata(read x.metadata)
-    _3 = unsize_cast<&'17 (dyn Send + '18),  at [4]>(move _4)
+    _3 = unsize_cast<&'11 (dyn Send + '12),  at [4]>(move _4)
     storage_dead(_4)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _0 = unsize_cast<&'20 (dyn Send + '21),  at []>(move _2)
+    _0 = unsize_cast<&'14 (dyn Send + '15),  at []>(move _2)
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(x)

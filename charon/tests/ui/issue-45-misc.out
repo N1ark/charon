@@ -470,7 +470,7 @@ struct {closure} {}
 extern "rust-call" fn call_mut<'_0>(_1: &'_0 mut {closure}, tupled_args: (i32,)) -> i32
 {
     let mut _0: i32; // return
-    let mut _1: &'1 mut {closure}; // arg #1
+    let mut _1: &'0 mut {closure}; // arg #1
     let mut tupled_args: (i32,); // arg #2
     let v: i32; // local
 
@@ -490,12 +490,12 @@ extern "rust-call" fn call_once(_1: {closure}, _2: (i32,)) -> i32
     let mut _0: i32; // return
     let mut _1: {closure}; // arg #1
     let _2: (i32,); // arg #2
-    let _3: &'1 mut {closure}; // anonymous local
+    let _3: &'0 mut {closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'3>(move _3, move _2)
+    _0 = call_mut<'1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -568,8 +568,8 @@ fn cbd(prf_input: [u8; 33usize])
     let mut _3: Range<u8>[{built_in impl Sized for u8}]; // anonymous local
     let mut iter: Range<u8>[{built_in impl Sized for u8}]; // local
     let mut _5: Option<u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _6: &'1 mut Range<u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _7: &'2 mut Range<u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _6: &'0 mut Range<u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _7: &'1 mut Range<u8>[{built_in impl Sized for u8}]; // anonymous local
     let i: u8; // local
     let mut _9: u8; // anonymous local
     let _10: usize; // anonymous local
@@ -595,7 +595,7 @@ fn cbd(prf_input: [u8; 33usize])
         storage_live(_7)
         _7 = &mut iter
         _6 = &two-phase-mut (*_7)
-        _5 = next<'6, u8>[{built_in impl Sized for u8}, impl_Step_for_u8, {built_in impl Destruct for u8}](move _6)
+        _5 = next<'2, u8>[{built_in impl Sized for u8}, impl_Step_for_u8, {built_in impl Destruct for u8}](move _6)
         ↳⚡ storage_dead(prf_input)
             storage_dead(_12)
             storage_dead(_11)
@@ -643,28 +643,28 @@ fn cbd(prf_input: [u8; 33usize])
 fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
 {
     let mut _0: (); // return
-    let lhs: &'1 [u8]; // arg #1
-    let rhs: &'2 [u8]; // arg #2
+    let lhs: &'0 [u8]; // arg #1
+    let rhs: &'1 [u8]; // arg #2
     let mut _3: bool; // anonymous local
-    let mut _4: (&'12 usize, &'13 usize); // anonymous local
-    let mut _5: &'17 usize; // anonymous local
+    let mut _4: (&'2 usize, &'3 usize); // anonymous local
+    let mut _5: &'7 usize; // anonymous local
     let _6: usize; // anonymous local
-    let mut _7: &'18 [u8]; // anonymous local
-    let mut _8: &'19 usize; // anonymous local
+    let mut _7: &'8 [u8]; // anonymous local
+    let mut _8: &'9 usize; // anonymous local
     let _9: usize; // anonymous local
-    let mut _10: &'20 [u8]; // anonymous local
-    let left_val: &'21 usize; // local
-    let right_val: &'22 usize; // local
+    let mut _10: &'10 [u8]; // anonymous local
+    let left_val: &'11 usize; // local
+    let right_val: &'12 usize; // local
     let mut _13: bool; // anonymous local
     let mut _14: usize; // anonymous local
     let mut _15: usize; // anonymous local
     let kind: AssertKind; // local
     let mut _17: AssertKind; // anonymous local
-    let mut _18: &'23 usize; // anonymous local
-    let _19: &'24 usize; // anonymous local
-    let mut _20: &'25 usize; // anonymous local
-    let _21: &'26 usize; // anonymous local
-    let mut _22: Option<Arguments<'35>>[{built_in impl Sized for Arguments<'35>}]; // anonymous local
+    let mut _18: &'13 usize; // anonymous local
+    let _19: &'14 usize; // anonymous local
+    let mut _20: &'15 usize; // anonymous local
+    let _21: &'16 usize; // anonymous local
+    let mut _22: Option<Arguments<'17>>[{built_in impl Sized for Arguments<'17>}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -676,7 +676,7 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
         storage_live(_6)
         storage_live(_7)
         _7 = &(*lhs) with_metadata(read lhs.metadata)
-        _6 = core::slice::{[T]}::len<'42, u8>[{built_in impl Sized for u8}](move _7)
+        _6 = core::slice::{[T]}::len<'21, u8>[{built_in impl Sized for u8}](move _7)
         ↳⚡ storage_dead(_22)
             storage_dead(_21)
             storage_dead(_20)
@@ -693,7 +693,7 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
         storage_live(_9)
         storage_live(_10)
         _10 = &(*rhs) with_metadata(read rhs.metadata)
-        _9 = core::slice::{[T]}::len<'45, u8>[{built_in impl Sized for u8}](move _10)
+        _9 = core::slice::{[T]}::len<'22, u8>[{built_in impl Sized for u8}](move _10)
         ↳⚡ storage_dead(_22)
             storage_dead(_21)
             storage_dead(_20)
@@ -738,7 +738,7 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
             _20 = &(*_21)
             storage_live(_22)
             _22 = Option::None {  }
-            panic(assert_failed<'75, '76, '77, usize, usize>[{built_in impl MetaSized for usize}, {built_in impl MetaSized for usize}, {impl#15}, {impl#15}](move _17, move _18, move _20, move _22))
+            panic(assert_failed<'38, '39, '40, usize, usize>[{built_in impl MetaSized for usize}, {built_in impl MetaSized for usize}, {impl#15}, {impl#15}](move _17, move _18, move _20, move _22))
             ↳⚡ storage_dead(_22)
                 storage_dead(_21)
                 storage_dead(_20)

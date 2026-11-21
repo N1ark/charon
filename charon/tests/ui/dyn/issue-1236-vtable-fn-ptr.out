@@ -33,7 +33,7 @@ struct Bar {}
 fn foo<'_0>(self: &'_0 Bar)
 {
     let mut _0: (); // return
-    let self: &'1 Bar; // arg #1
+    let self: &'0 Bar; // arg #1
 
     bb0: {
         storage_live(_0);
@@ -104,14 +104,14 @@ fn main()
 {
     let mut _0: (); // return
     let bar: Bar; // local
-    let some_foo: &'7 (dyn Foo + '8); // local
+    let some_foo: &'4 (dyn Foo + '5); // local
         where some_foo :< &'0 (dyn Foo + '1);
         where some_foo := &'2 (dyn Foo + '3);
-    let mut _3: &'10 Bar; // anonymous local
-    let _4: &'11 Bar; // anonymous local
+    let mut _3: &'6 Bar; // anonymous local
+    let _4: &'7 Bar; // anonymous local
     let _5: (); // anonymous local
-    let mut _6: &'12 (dyn Foo + '13); // anonymous local
-    let mut _7: fn(&'12 (dyn Foo + '13)); // anonymous local
+    let mut _6: &'8 (dyn Foo + '9); // anonymous local
+    let mut _7: fn(&'8 (dyn Foo + '9)); // anonymous local
 
     bb0: {
         storage_live(_0);
@@ -126,7 +126,7 @@ fn main()
         storage_live(_4);
         _4 = &bar;
         _3 = &(*_4);
-        some_foo = unsize_cast<&'14 (dyn Foo + '15), &impl_Foo_for_Bar::{vtable}>(move _3);
+        some_foo = unsize_cast<&'10 (dyn Foo + '11), &impl_Foo_for_Bar::{vtable}>(move _3);
         storage_dead(_3);
         fake_read(some_foo);
         storage_dead(_4);
@@ -134,7 +134,7 @@ fn main()
         storage_live(_6);
         _6 = &(*some_foo) with_metadata(read some_foo.metadata);
         storage_live(_7);
-        _7 = cast<fn(&'12 (dyn Foo + '13))>(read (*_6.metadata).method_foo);
+        _7 = cast<fn(&'8 (dyn Foo + '9))>(read (*_6.metadata).method_foo);
         _5 = (read _7)(move _6) -> bb1 (unwind: bb2);
     }
 

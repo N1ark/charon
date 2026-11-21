@@ -32,7 +32,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 Option<T>[TraitClause0]; // arg #1
+    let self: &'0 Option<T>[TraitClause0]; // arg #1
     let mut _2: isize; // anonymous local
 
     storage_live(_0)
@@ -74,8 +74,8 @@ pub fn run()
 {
     let mut _0: (); // return
     let mut _1: bool; // anonymous local
-    let mut _2: &'1 Option<bool>[{built_in impl Sized for bool}]; // anonymous local
-    let mut _3: &'2 Option<bool>[{built_in impl Sized for bool}]; // anonymous local
+    let mut _2: &'0 Option<bool>[{built_in impl Sized for bool}]; // anonymous local
+    let mut _3: &'1 Option<bool>[{built_in impl Sized for bool}]; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -84,7 +84,7 @@ pub fn run()
     storage_live(_2)
     _3 = read {promoted_const}
     _2 = &(*_3)
-    _1 = is_some<'7, bool>[{built_in impl Sized for bool}](move _2)
+    _1 = is_some<'3, bool>[{built_in impl Sized for bool}](move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     storage_dead(_1)

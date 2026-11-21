@@ -31,7 +31,7 @@ extern unsafe static STATIC: u8 = STATIC()
 fn use_type<'_0>(_x: &'_0 Type)
 {
     let mut _0: (); // return
-    let _x: &'1 Type; // arg #1
+    let _x: &'0 Type; // arg #1
 
     storage_live(_0)
     _0 = ()

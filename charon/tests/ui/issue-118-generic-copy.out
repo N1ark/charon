@@ -61,7 +61,7 @@ struct Foo {}
 pub fn impl_Clone_for_Foo::clone<'_0>(self: &'_0 Foo) -> Foo
 {
     let mut _0: Foo; // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
 
     storage_live(_0)
     _0 = copy (*self)
@@ -235,10 +235,10 @@ where
     TraitClause0: (T: MetaSized),
     Outlives0: (T: '_0),
 {
-    let mut _0: (&'9 T, &'10 T); // return
-    let x: &'14 T; // arg #1
-    let mut _2: &'15 T; // anonymous local
-    let mut _3: &'16 T; // anonymous local
+    let mut _0: (&'0 T, &'1 T); // return
+    let x: &'5 T; // arg #1
+    let mut _2: &'6 T; // anonymous local
+    let mut _3: &'7 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

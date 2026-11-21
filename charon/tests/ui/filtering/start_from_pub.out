@@ -74,8 +74,8 @@ pub fn impl_Trait1_for_Type2::method()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: Arguments<'2>; // anonymous local
-    let mut _3: &'7 str; // anonymous local
+    let mut _2: Arguments<'1>; // anonymous local
+    let mut _3: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -86,7 +86,7 @@ pub fn impl_Trait1_for_Type2::method()
     _2 = from_str<'0>(move _3)
     ↳⚡ storage_dead(_3)
         unwind_continue
-    _1 = _print<'11>(move _2)
+    _1 = _print<'3>(move _2)
     ↳⚡ storage_dead(_3)
         unwind_continue
     storage_dead(_2)

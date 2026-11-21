@@ -61,7 +61,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: i32; // return
-    let mut _1: &'1 {closure}<T>[TraitClause0]; // arg #1
+    let mut _1: &'0 {closure}<T>[TraitClause0]; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)

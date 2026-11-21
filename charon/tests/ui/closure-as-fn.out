@@ -9,7 +9,7 @@ struct {closure} {}
 extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ())
 {
     let mut _0: (); // return
-    let mut _1: &'1 {closure}; // arg #1
+    let mut _1: &'0 {closure}; // arg #1
     let mut tupled_args: (); // arg #2
     let mut _3: i32; // anonymous local
 
@@ -53,13 +53,13 @@ extern "rust-call" fn call_once(_1: {closure}, _2: ())
     let mut _0: (); // return
     let mut _1: {closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut {closure}; // anonymous local
+    let _3: &'0 mut {closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _0 = ()
     _3 = &mut _1
-    _0 = call_mut<'3>(move _3, move _2)
+    _0 = call_mut<'1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

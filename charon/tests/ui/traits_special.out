@@ -42,7 +42,7 @@ pub trait From<Self, T>
 pub fn from<'_0>(v: &'_0 bool) -> Result<bool, ()>[{built_in impl Sized for bool}, {built_in impl Sized for ()}]
 {
     let mut _0: Result<bool, ()>[{built_in impl Sized for bool}, {built_in impl Sized for ()}]; // return
-    let v: &'1 bool; // arg #1
+    let v: &'0 bool; // arg #1
     let mut _2: bool; // anonymous local
 
     storage_live(_0)

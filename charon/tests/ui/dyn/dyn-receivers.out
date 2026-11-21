@@ -85,11 +85,11 @@ where
     Outlives0: (Ptr: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Pin<Ptr>[TraitClause0]; // arg #1
+    let _1: &'0 mut Pin<Ptr>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for Ptr}::drop_glue<'2>] (*_1).pointer
+    drop[{built_in impl Destruct for Ptr}::drop_glue<'1>] (*_1).pointer
     ↳⚡ unwind_continue
     return
 }
@@ -155,10 +155,10 @@ where
     Outlives1: (A: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
-    let mut _2: &'2 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
+    let _1: &'0 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
+    let mut _2: &'1 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
     let mut _3: (); // anonymous local
-    let mut _4: &'3 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
+    let mut _4: &'2 mut Box<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
     let mut _5: (); // anonymous local
     let mut _6: *const T; // anonymous local
 
@@ -170,19 +170,19 @@ where
     storage_live(_6)
     _0 = ()
     _6 = transmute<*const T>(copy (*_1)._0.pointer)
-    drop[{built_in impl Destruct for T}::drop_glue<'4>] (*_6)
+    drop[{built_in impl Destruct for T}::drop_glue<'3>] (*_6)
     ↳⚡ _4 = &mut (*_1)
-        _5 = impl_Drop_for_Box::drop<'11, T, A>[TraitClause0, TraitClause1, TraitClause2](move _4)
+        _5 = impl_Drop_for_Box::drop<'5, T, A>[TraitClause0, TraitClause1, TraitClause2](move _4)
         ↳⚡ unwind_terminate(in_cleanup)
-        drop[{built_in impl Destruct for A}::drop_glue<'12>] (*_1)._1
+        drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Box::drop<'8, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
-    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'12>] (*_1)._1
+    _3 = impl_Drop_for_Box::drop<'4, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
+    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    drop[{built_in impl Destruct for A}::drop_glue<'13>] (*_1)._1
+    drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1)._1
     ↳⚡ unwind_continue
     return
 }
@@ -225,8 +225,8 @@ where
     Outlives1: (A: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Rc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
-    let mut _2: &'2 mut Rc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
+    let _1: &'0 mut Rc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
+    let mut _2: &'1 mut Rc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -234,11 +234,11 @@ where
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Rc::drop<'6, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
-    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1).alloc
+    _3 = impl_Drop_for_Rc::drop<'2, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
+    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'3>] (*_1).alloc
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    drop[{built_in impl Destruct for A}::drop_glue<'8>] (*_1).alloc
+    drop[{built_in impl Destruct for A}::drop_glue<'4>] (*_1).alloc
     ↳⚡ unwind_continue
     return
 }
@@ -281,8 +281,8 @@ where
     Outlives1: (A: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Arc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
-    let mut _2: &'2 mut Arc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
+    let _1: &'0 mut Arc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // arg #1
+    let mut _2: &'1 mut Arc<T, A>[TraitClause0, TraitClause1, TraitClause2]; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -290,11 +290,11 @@ where
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Arc::drop<'6, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
-    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1).alloc
+    _3 = impl_Drop_for_Arc::drop<'2, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
+    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'3>] (*_1).alloc
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    drop[{built_in impl Destruct for A}::drop_glue<'8>] (*_1).alloc
+    drop[{built_in impl Destruct for A}::drop_glue<'4>] (*_1).alloc
     ↳⚡ unwind_continue
     return
 }
@@ -327,21 +327,21 @@ trait T<Self>
 pub fn call_box(x: Box<(dyn T + 'static), Global>[{built_in impl MetaSized for (dyn T + 'static)}, {built_in impl Sized for Global}, impl_Allocator_for_Global])
 {
     let mut _0: (); // return
-    let x: Box<(dyn T + '6), Global>[{built_in impl MetaSized for (dyn T + '8)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
-    let mut _2: Box<(dyn T + '9), Global>[{built_in impl MetaSized for (dyn T + '11)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
+    let x: Box<(dyn T + '0), Global>[{built_in impl MetaSized for (dyn T + '2)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
+    let mut _2: Box<(dyn T + '3), Global>[{built_in impl MetaSized for (dyn T + '5)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = move x
     _0 = (read (*_2._0.pointer.pointer.metadata).method_by_box)(move _2)
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'31, (dyn T + '26), Global>[{built_in impl MetaSized for (dyn T + '26)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'13, (dyn T + '7), Global>[{built_in impl MetaSized for (dyn T + '7)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Box::drop_glue<'61, (dyn T + '56), Global>[{built_in impl MetaSized for (dyn T + '56)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'27, (dyn T + '21), Global>[{built_in impl MetaSized for (dyn T + '21)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Box::drop_glue<'46, (dyn T + '41), Global>[{built_in impl MetaSized for (dyn T + '41)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+    conditional_drop[impl_Destruct_for_Box::drop_glue<'20, (dyn T + '14), Global>[{built_in impl MetaSized for (dyn T + '14)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
     ↳⚡ unwind_continue
     return
 }
@@ -350,21 +350,21 @@ pub fn call_box(x: Box<(dyn T + 'static), Global>[{built_in impl MetaSized for (
 pub fn call_rc(x: Rc<(dyn T + 'static), Global>[{built_in impl MetaSized for (dyn T + 'static)}, {built_in impl Sized for Global}, impl_Allocator_for_Global])
 {
     let mut _0: (); // return
-    let x: Rc<(dyn T + '6), Global>[{built_in impl MetaSized for (dyn T + '8)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
-    let mut _2: Rc<(dyn T + '9), Global>[{built_in impl MetaSized for (dyn T + '11)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
+    let x: Rc<(dyn T + '0), Global>[{built_in impl MetaSized for (dyn T + '2)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
+    let mut _2: Rc<(dyn T + '3), Global>[{built_in impl MetaSized for (dyn T + '5)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = move x
     _0 = (read (*_2.ptr.pointer.metadata).method_by_rc)(move _2)
-    ↳⚡ conditional_drop[impl_Destruct_for_Rc::drop_glue<'31, (dyn T + '26), Global>[{built_in impl MetaSized for (dyn T + '26)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_Rc::drop_glue<'13, (dyn T + '7), Global>[{built_in impl MetaSized for (dyn T + '7)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Rc::drop_glue<'61, (dyn T + '56), Global>[{built_in impl MetaSized for (dyn T + '56)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+        conditional_drop[impl_Destruct_for_Rc::drop_glue<'27, (dyn T + '21), Global>[{built_in impl MetaSized for (dyn T + '21)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Rc::drop_glue<'46, (dyn T + '41), Global>[{built_in impl MetaSized for (dyn T + '41)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+    conditional_drop[impl_Destruct_for_Rc::drop_glue<'20, (dyn T + '14), Global>[{built_in impl MetaSized for (dyn T + '14)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
     ↳⚡ unwind_continue
     return
 }
@@ -373,21 +373,21 @@ pub fn call_rc(x: Rc<(dyn T + 'static), Global>[{built_in impl MetaSized for (dy
 pub fn call_arc(x: Arc<(dyn T + 'static), Global>[{built_in impl MetaSized for (dyn T + 'static)}, {built_in impl Sized for Global}, impl_Allocator_for_Global])
 {
     let mut _0: (); // return
-    let x: Arc<(dyn T + '6), Global>[{built_in impl MetaSized for (dyn T + '8)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
-    let mut _2: Arc<(dyn T + '9), Global>[{built_in impl MetaSized for (dyn T + '11)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
+    let x: Arc<(dyn T + '0), Global>[{built_in impl MetaSized for (dyn T + '2)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // arg #1
+    let mut _2: Arc<(dyn T + '3), Global>[{built_in impl MetaSized for (dyn T + '5)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = move x
     _0 = (read (*_2.ptr.pointer.metadata).method_by_arc)(move _2)
-    ↳⚡ conditional_drop[impl_Destruct_for_Arc::drop_glue<'31, (dyn T + '26), Global>[{built_in impl MetaSized for (dyn T + '26)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_Arc::drop_glue<'13, (dyn T + '7), Global>[{built_in impl MetaSized for (dyn T + '7)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] _2
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Arc::drop_glue<'61, (dyn T + '56), Global>[{built_in impl MetaSized for (dyn T + '56)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+        conditional_drop[impl_Destruct_for_Arc::drop_glue<'27, (dyn T + '21), Global>[{built_in impl MetaSized for (dyn T + '21)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Arc::drop_glue<'46, (dyn T + '41), Global>[{built_in impl MetaSized for (dyn T + '41)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
+    conditional_drop[impl_Destruct_for_Arc::drop_glue<'20, (dyn T + '14), Global>[{built_in impl MetaSized for (dyn T + '14)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]] x
     ↳⚡ unwind_continue
     return
 }
@@ -396,14 +396,14 @@ pub fn call_arc(x: Arc<(dyn T + 'static), Global>[{built_in impl MetaSized for (
 pub fn call_pin_mut<'_0>(x: Pin<&'_0 mut (dyn T + '_0)>[{built_in impl Sized for &'_0 mut (dyn T + '_0)}])
 {
     let mut _0: (); // return
-    let x: Pin<&'20 mut (dyn T + '21)>[{built_in impl Sized for &'20 mut (dyn T + '27)}]; // arg #1
-    let mut _2: Pin<&'28 mut (dyn T + '29)>[{built_in impl Sized for &'28 mut (dyn T + '35)}]; // anonymous local
+    let x: Pin<&'0 mut (dyn T + '1)>[{built_in impl Sized for &'0 mut (dyn T + '7)}]; // arg #1
+    let mut _2: Pin<&'8 mut (dyn T + '9)>[{built_in impl Sized for &'8 mut (dyn T + '15)}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = move x
-    _0 = (read (*_2.pointer.metadata).method_by_pin_mut)<'42>(move _2)
+    _0 = (read (*_2.pointer.metadata).method_by_pin_mut)<'17>(move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     return
@@ -413,21 +413,21 @@ pub fn call_pin_mut<'_0>(x: Pin<&'_0 mut (dyn T + '_0)>[{built_in impl Sized for
 pub fn call_pin_box(x: Pin<Box<(dyn T + 'static), Global>[{built_in impl MetaSized for (dyn T + 'static)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + 'static), Global>[{built_in impl MetaSized for (dyn T + 'static)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}])
 {
     let mut _0: (); // return
-    let x: Pin<Box<(dyn T + '36), Global>[{built_in impl MetaSized for (dyn T + '38)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '45), Global>[{built_in impl MetaSized for (dyn T + '47)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]; // arg #1
-    let mut _2: Pin<Box<(dyn T + '48), Global>[{built_in impl MetaSized for (dyn T + '50)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '57), Global>[{built_in impl MetaSized for (dyn T + '59)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]; // anonymous local
+    let x: Pin<Box<(dyn T + '0), Global>[{built_in impl MetaSized for (dyn T + '2)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '9), Global>[{built_in impl MetaSized for (dyn T + '11)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]; // arg #1
+    let mut _2: Pin<Box<(dyn T + '12), Global>[{built_in impl MetaSized for (dyn T + '14)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '21), Global>[{built_in impl MetaSized for (dyn T + '23)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = move x
     _0 = (read (*_2.pointer._0.pointer.pointer.metadata).method_by_pin_box)(move _2)
-    ↳⚡ conditional_drop[impl_Destruct_for_Pin::drop_glue<'143, Box<(dyn T + '113), Global>[{built_in impl MetaSized for (dyn T + '115)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '113), Global>[{built_in impl MetaSized for (dyn T + '115)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_Pin::drop_glue<'49, Box<(dyn T + '25), Global>[{built_in impl MetaSized for (dyn T + '27)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '25), Global>[{built_in impl MetaSized for (dyn T + '27)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] _2
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Pin::drop_glue<'301, Box<(dyn T + '271), Global>[{built_in impl MetaSized for (dyn T + '273)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '271), Global>[{built_in impl MetaSized for (dyn T + '273)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] x
+        conditional_drop[impl_Destruct_for_Pin::drop_glue<'99, Box<(dyn T + '75), Global>[{built_in impl MetaSized for (dyn T + '77)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '75), Global>[{built_in impl MetaSized for (dyn T + '77)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] x
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Pin::drop_glue<'222, Box<(dyn T + '192), Global>[{built_in impl MetaSized for (dyn T + '194)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '192), Global>[{built_in impl MetaSized for (dyn T + '194)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] x
+    conditional_drop[impl_Destruct_for_Pin::drop_glue<'74, Box<(dyn T + '50), Global>[{built_in impl MetaSized for (dyn T + '52)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T + '50), Global>[{built_in impl MetaSized for (dyn T + '52)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]] x
     ↳⚡ unwind_continue
     return
 }

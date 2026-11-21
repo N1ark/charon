@@ -111,7 +111,7 @@ struct (_,)<A> {
 fn takes_fn<'_0>(_1: &'_0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '_0))
 {
     let mut _0: (); // return
-    let mut _1: &'3 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '4); // arg #1
+    let mut _1: &'0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '1); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -609,7 +609,7 @@ struct {closure} {}
 extern "rust-call" fn impl_Fn_tuple_for_closure::call<'_0>(_1: &'_0 {closure}, tupled_args: (u32,)) -> u32
 {
     let mut _0: u32; // return
-    let mut _1: &'1 {closure}; // arg #1
+    let mut _1: &'0 {closure}; // arg #1
     let mut tupled_args: (u32,); // arg #2
     let mut _3: u32; // anonymous local
 
@@ -651,12 +651,12 @@ extern "rust-call" fn impl_FnOnce_tuple_for_closure::call_once(_1: {closure}, _2
     let mut _0: u32; // return
     let mut _1: {closure}; // arg #1
     let _2: (u32,); // arg #2
-    let _3: &'1 mut {closure}; // anonymous local
+    let _3: &'0 mut {closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = impl_FnMut_tuple_for_closure::call_mut<'3>(move _3, move _2)
+    _0 = impl_FnMut_tuple_for_closure::call_mut<'1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -826,28 +826,28 @@ fn main()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: &'3 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '4); // anonymous local
-    let mut _3: &'6 some_fn; // anonymous local
-    let _4: &'7 some_fn; // anonymous local
+    let mut _2: &'0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '1); // anonymous local
+    let mut _3: &'2 some_fn; // anonymous local
+    let _4: &'3 some_fn; // anonymous local
     let _5: (); // anonymous local
-    let mut _6: &'8 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '9); // anonymous local
-    let mut _7: &'11 {closure}; // anonymous local
-    let _8: &'12 {closure}; // anonymous local
+    let mut _6: &'4 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '5); // anonymous local
+    let mut _7: &'6 {closure}; // anonymous local
+    let _8: &'7 {closure}; // anonymous local
     let _9: (); // anonymous local
-    let mut _10: &'13 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '14); // anonymous local
-    let mut _11: &'16 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let _12: &'17 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let mut _13: &'18 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let mut _14: &'19 {closure}; // anonymous local
-    let mut _15: &'20 some_fn; // anonymous local
-    let mut _16: &'21 some_fn; // anonymous local
-    let mut _17: &'28 {closure}; // anonymous local
-    let mut _18: &'34 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
-    let mut _19: &'40 some_fn; // anonymous local
+    let mut _10: &'8 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '9); // anonymous local
+    let mut _11: &'10 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let _12: &'11 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _13: &'12 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _14: &'13 {closure}; // anonymous local
+    let mut _15: &'14 some_fn; // anonymous local
+    let mut _16: &'15 some_fn; // anonymous local
+    let mut _17: &'19 {closure}; // anonymous local
+    let mut _18: &'23 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _19: &'27 some_fn; // anonymous local
     let mut _20: some_fn; // anonymous local
-    let mut _21: &'41 {closure}; // anonymous local
+    let mut _21: &'28 {closure}; // anonymous local
     let mut _22: {closure}; // anonymous local
-    let mut _23: &'42 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _23: &'29 generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
     let mut _24: generic_fn<u32>[{built_in impl Sized for u32}]; // anonymous local
 
     storage_live(_16)
@@ -868,9 +868,9 @@ fn main()
     _15 = move _16
     _4 = &(*_15)
     _3 = &(*_4)
-    _2 = unsize_cast<&'22 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '23), &{impl Fn<(u32,)> for some_fn}::{vtable}>(move _3)
+    _2 = unsize_cast<&'16 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '17), &{impl Fn<(u32,)> for some_fn}::{vtable}>(move _3)
     storage_dead(_3)
-    _1 = takes_fn<'27>(move _2)
+    _1 = takes_fn<'18>(move _2)
     ↳⚡ storage_dead(_15)
         storage_dead(_14)
         storage_dead(_13)
@@ -900,9 +900,9 @@ fn main()
     _14 = move _17
     _8 = &(*_14)
     _7 = &(*_8)
-    _6 = unsize_cast<&'29 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '30), &impl_Fn_tuple_for_closure::{vtable}>(move _7)
+    _6 = unsize_cast<&'20 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '21), &impl_Fn_tuple_for_closure::{vtable}>(move _7)
     storage_dead(_7)
-    _5 = takes_fn<'33>(move _6)
+    _5 = takes_fn<'22>(move _6)
     ↳⚡ storage_dead(_15)
         storage_dead(_14)
         storage_dead(_13)
@@ -933,9 +933,9 @@ fn main()
     _13 = move _18
     _12 = &(*_13)
     _11 = &(*_12)
-    _10 = unsize_cast<&'35 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '36), &{impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<u32>[{built_in impl Sized for u32}]>(move _11)
+    _10 = unsize_cast<&'24 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '25), &{impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<u32>[{built_in impl Sized for u32}]>(move _11)
     storage_dead(_11)
-    _9 = takes_fn<'39>(move _10)
+    _9 = takes_fn<'26>(move _10)
     ↳⚡ storage_dead(_15)
         storage_dead(_14)
         storage_dead(_13)

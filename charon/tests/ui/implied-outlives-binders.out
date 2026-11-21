@@ -68,7 +68,7 @@ where
     Outlives0: (T: 'b),
 {
     let mut _0: (); // return
-    let mut _1: fn<'a where T: 'a>(&'a &'3 T); // arg #1
+    let mut _1: fn<'a where T: 'a>(&'a &'0 T); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -81,7 +81,7 @@ where
 pub fn reference_to_function_pointer<'a>(_1: &'a fn<'b>(&'b u32))
 {
     let mut _0: (); // return
-    let mut _1: &'1 fn<'b>(&'b u32); // arg #1
+    let mut _1: &'0 fn<'b>(&'b u32); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -96,7 +96,7 @@ where
     Outlives0: ('c: 'a),
 {
     let mut _0: (); // return
-    let mut _1: &'4 fn<'b>(&'5 u32); // arg #1
+    let mut _1: &'0 fn<'b>(&'1 u32); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -121,7 +121,7 @@ where
     Outlives0: (&'b u32: 'a),
 {
     let mut _0: (); // return
-    let mut _1: Holds<'9, &'10 u32>[{built_in impl Sized for &'10 u32}]; // arg #1
+    let mut _1: Holds<'0, &'1 u32>[{built_in impl Sized for &'1 u32}]; // arg #1
 
     storage_live(_0)
     _0 = ()

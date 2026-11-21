@@ -71,12 +71,12 @@ where
 // Full name: test_crate::OUTER
 pub fn OUTER() -> &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}]
 {
-    let mut _0: &'1 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // return
-    let mut _1: &'3 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let _2: &'4 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let mut _3: &'5 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let mut _4: &'6 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let mut _5: &'8 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let mut _0: &'0 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // return
+    let mut _1: &'1 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let _2: &'2 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let mut _3: &'3 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let mut _4: &'4 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let mut _5: &'6 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
     let mut _6: Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
     let mut _7: Wrap<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
     let mut _8: [u16; 2usize]; // anonymous local
@@ -98,7 +98,7 @@ pub fn OUTER() -> &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}]
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'7 Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(move _1)
+    _0 = unsize_cast<&'5 Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -110,12 +110,12 @@ pub const OUTER: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = OU
 // Full name: test_crate::WRAP
 fn WRAP() -> &'static Wrap<[u8]>[{built_in impl MetaSized for [u8]}]
 {
-    let mut _0: &'1 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // return
-    let mut _1: &'3 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
-    let _2: &'4 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
-    let mut _3: &'5 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
-    let mut _4: &'6 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
-    let mut _5: &'8 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
+    let mut _0: &'0 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // return
+    let mut _1: &'1 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
+    let _2: &'2 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
+    let mut _3: &'3 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
+    let mut _4: &'4 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
+    let mut _5: &'6 Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
     let mut _6: Wrap<[u8; 2usize]>[{built_in impl MetaSized for [u8; 2usize]}]; // anonymous local
     let mut _7: [u8; 2usize]; // anonymous local
 
@@ -134,7 +134,7 @@ fn WRAP() -> &'static Wrap<[u8]>[{built_in impl MetaSized for [u8]}]
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'7 Wrap<[u8]>[{built_in impl MetaSized for [u8]}], 2usize>(move _1)
+    _0 = unsize_cast<&'5 Wrap<[u8]>[{built_in impl MetaSized for [u8]}], 2usize>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -146,11 +146,11 @@ const WRAP: &'static Wrap<[u8]>[{built_in impl MetaSized for [u8]}] = WRAP()
 // Full name: test_crate::TUPLE
 pub fn TUPLE() -> &'static (u8, [u8])
 {
-    let mut _0: &'1 (u8, [u8]); // return
-    let _1: &'2 (u8, [u8]); // anonymous local
+    let mut _0: &'0 (u8, [u8]); // return
+    let _1: &'1 (u8, [u8]); // anonymous local
     let _2: *const (u8, [u8]); // anonymous local
     let mut _3: *const Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
-    let _4: &'4 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
+    let _4: &'2 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -174,11 +174,11 @@ pub const TUPLE: &'static (u8, [u8]) = TUPLE()
 // Full name: test_crate::STR_TAIL
 pub fn STR_TAIL() -> &'static Wrap<str>[{built_in impl MetaSized for str}]
 {
-    let mut _0: &'1 Wrap<str>[{built_in impl MetaSized for str}]; // return
-    let _1: &'2 Wrap<str>[{built_in impl MetaSized for str}]; // anonymous local
+    let mut _0: &'0 Wrap<str>[{built_in impl MetaSized for str}]; // return
+    let _1: &'1 Wrap<str>[{built_in impl MetaSized for str}]; // anonymous local
     let _2: *const Wrap<str>[{built_in impl MetaSized for str}]; // anonymous local
     let mut _3: *const Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
-    let _4: &'4 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
+    let _4: &'2 Wrap<[u8]>[{built_in impl MetaSized for [u8]}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -202,7 +202,7 @@ pub const STR_TAIL: &'static Wrap<str>[{built_in impl MetaSized for str}] = STR_
 // Full name: test_crate::NESTED
 pub fn NESTED() -> (u8, &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}])
 {
-    let mut _0: (u8, &'2 Outer<[u16]>[{built_in impl MetaSized for [u16]}]); // return
+    let mut _0: (u8, &'0 Outer<[u16]>[{built_in impl MetaSized for [u16]}]); // return
 
     storage_live(_0)
     _0 = (const 7u8, read OUTER)
@@ -215,7 +215,7 @@ pub const NESTED: (u8, &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}
 // Full name: test_crate::STATIC
 pub fn STATIC() -> &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}]
 {
-    let mut _0: &'1 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // return
+    let mut _0: &'0 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // return
 
     storage_live(_0)
     _0 = read OUTER
@@ -228,9 +228,9 @@ pub static STATIC: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = 
 // Full name: test_crate::INTERIOR
 pub fn INTERIOR() -> &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}]
 {
-    let mut _0: &'1 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // return
-    let _1: &'2 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
-    let _2: &'6 &'7 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
+    let mut _0: &'0 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // return
+    let _1: &'1 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
+    let _2: &'2 &'3 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -269,10 +269,10 @@ pub static SIZED: Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize
 // Full name: test_crate::SIZED_INTERIOR
 pub fn SIZED_INTERIOR() -> &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}]
 {
-    let mut _0: &'1 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // return
-    let mut _1: &'3 Wrap<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let _2: &'4 Wrap<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
-    let _3: &'6 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let mut _0: &'0 Wrap<[u16]>[{built_in impl MetaSized for [u16]}]; // return
+    let mut _1: &'1 Wrap<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let _2: &'2 Wrap<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
+    let _3: &'3 Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -281,7 +281,7 @@ pub fn SIZED_INTERIOR() -> &'static Wrap<[u16]>[{built_in impl MetaSized for [u1
     _3 = &SIZED
     _2 = &(*_3).w
     _1 = &(*_2)
-    _0 = unsize_cast<&'8 Wrap<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(move _1)
+    _0 = unsize_cast<&'5 Wrap<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -345,12 +345,12 @@ unsafe impl "impl_Sync_for_RawPtr" Sync for RawPtr {
 // Full name: test_crate::DYN
 pub fn DYN() -> &'static (dyn Trait + 'static)
 {
-    let mut _0: &'3 (dyn Trait + '4); // return
-    let mut _1: &'6 u8; // anonymous local
-    let _2: &'7 u8; // anonymous local
-    let mut _3: &'8 u8; // anonymous local
-    let mut _4: &'9 u8; // anonymous local
-    let mut _5: &'12 u8; // anonymous local
+    let mut _0: &'0 (dyn Trait + '1); // return
+    let mut _1: &'2 u8; // anonymous local
+    let _2: &'3 u8; // anonymous local
+    let mut _3: &'4 u8; // anonymous local
+    let mut _4: &'5 u8; // anonymous local
+    let mut _5: &'8 u8; // anonymous local
     let mut _6: u8; // anonymous local
 
     storage_live(_4)
@@ -366,7 +366,7 @@ pub fn DYN() -> &'static (dyn Trait + 'static)
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'10 (dyn Trait + '11), &impl_Trait_for_u8::{vtable}>(move _1)
+    _0 = unsize_cast<&'6 (dyn Trait + '7), &impl_Trait_for_u8::{vtable}>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -378,12 +378,12 @@ pub static DYN: &'static (dyn Trait + 'static) = DYN()
 // Full name: test_crate::FOO
 pub fn FOO() -> &'static (dyn Debug + Sync + 'static)
 {
-    let mut _0: &'3 (dyn Debug + Sync + '4); // return
-    let mut _1: &'6 i32; // anonymous local
-    let _2: &'7 i32; // anonymous local
-    let mut _3: &'8 i32; // anonymous local
-    let mut _4: &'9 i32; // anonymous local
-    let mut _5: &'12 i32; // anonymous local
+    let mut _0: &'0 (dyn Debug + Sync + '1); // return
+    let mut _1: &'2 i32; // anonymous local
+    let _2: &'3 i32; // anonymous local
+    let mut _3: &'4 i32; // anonymous local
+    let mut _4: &'5 i32; // anonymous local
+    let mut _5: &'8 i32; // anonymous local
     let mut _6: i32; // anonymous local
 
     storage_live(_4)
@@ -399,7 +399,7 @@ pub fn FOO() -> &'static (dyn Debug + Sync + 'static)
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'10 (dyn Debug + Sync + '11), &{impl#8}::{vtable}>(move _1)
+    _0 = unsize_cast<&'6 (dyn Debug + Sync + '7), &{impl#8}::{vtable}>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -411,12 +411,12 @@ pub static FOO: &'static (dyn Debug + Sync + 'static) = FOO()
 // Full name: test_crate::DYN_TAIL
 pub fn DYN_TAIL() -> &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSized for (dyn Trait + 'static)}]
 {
-    let mut _0: &'10 Wrap<(dyn Trait + '11)>[{built_in impl MetaSized for (dyn Trait + '13)}]; // return
-    let mut _1: &'15 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
-    let _2: &'16 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
-    let mut _3: &'17 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
-    let mut _4: &'18 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
-    let mut _5: &'23 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
+    let mut _0: &'0 Wrap<(dyn Trait + '1)>[{built_in impl MetaSized for (dyn Trait + '3)}]; // return
+    let mut _1: &'4 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
+    let _2: &'5 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
+    let mut _3: &'6 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
+    let mut _4: &'7 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
+    let mut _5: &'12 Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
     let mut _6: Wrap<u8>[{built_in impl MetaSized for u8}]; // anonymous local
 
     storage_live(_4)
@@ -432,7 +432,7 @@ pub fn DYN_TAIL() -> &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSiz
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'19 Wrap<(dyn Trait + '20)>[{built_in impl MetaSized for (dyn Trait + '22)}], &impl_Trait_for_u8::{vtable}>(move _1)
+    _0 = unsize_cast<&'8 Wrap<(dyn Trait + '9)>[{built_in impl MetaSized for (dyn Trait + '11)}], &impl_Trait_for_u8::{vtable}>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return
@@ -445,12 +445,12 @@ pub static DYN_TAIL: &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSiz
 pub fn RAW_DYN() -> RawPtr
 {
     let mut _0: RawPtr; // return
-    let mut _1: *const (dyn Trait + '2); // anonymous local
+    let mut _1: *const (dyn Trait + '0); // anonymous local
     let mut _2: *const u8; // anonymous local
-    let _3: &'4 u8; // anonymous local
-    let mut _4: &'5 u8; // anonymous local
-    let mut _5: &'6 u8; // anonymous local
-    let mut _6: &'8 u8; // anonymous local
+    let _3: &'1 u8; // anonymous local
+    let mut _4: &'2 u8; // anonymous local
+    let mut _5: &'3 u8; // anonymous local
+    let mut _6: &'5 u8; // anonymous local
     let mut _7: u8; // anonymous local
 
     storage_live(_5)
@@ -467,7 +467,7 @@ pub fn RAW_DYN() -> RawPtr
     _4 = move _5
     _3 = &(*_4)
     _2 = &raw const (*_3)
-    _1 = unsize_cast<*const (dyn Trait + '7), &impl_Trait_for_u8::{vtable}>(move _2)
+    _1 = unsize_cast<*const (dyn Trait + '4), &impl_Trait_for_u8::{vtable}>(move _2)
     storage_dead(_2)
     _0 = RawPtr { _0: move _1 }
     storage_dead(_3)
@@ -481,15 +481,15 @@ pub static RAW_DYN: RawPtr = RAW_DYN()
 // Full name: test_crate::EMPTY
 pub fn EMPTY() -> &'static [u8]
 {
-    let mut _0: &'1 [u8]; // return
-    let _1: &'2 [u8]; // anonymous local
+    let mut _0: &'0 [u8]; // return
+    let _1: &'1 [u8]; // anonymous local
     let mut _2: *const u8; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
     storage_live(_2)
     _2 = cast_with_exposed<*const u8>(const 1usize)
-    _1 = from_raw_parts<'4, u8>[{built_in impl Sized for u8}](move _2, const 0usize)
+    _1 = from_raw_parts<'2, u8>[{built_in impl Sized for u8}](move _2, const 0usize)
     ↳⚡ unwind_continue
     _0 = &(*_1) with_metadata(read _1.metadata)
     storage_dead(_2)
@@ -506,7 +506,7 @@ pub const test_crate::inline_const::{promoted_const}: Outer<[u16]>[{built_in imp
 pub fn inline_const()
 {
     let mut _0: (); // return
-    let mut _1: &'2 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
+    let mut _1: &'1 Outer<[u16]>[{built_in impl MetaSized for [u16]}]; // anonymous local
         where _1 :< &'0 Outer<[u16]>[{built_in impl MetaSized for [u16]}];
 
     storage_live(_0)

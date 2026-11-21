@@ -29,7 +29,7 @@ pub struct Foo {}
 pub fn clone<'_0>(self: &'_0 Foo) -> Foo
 {
     let mut _0: Foo; // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
 
     storage_live(_0)
     loop {

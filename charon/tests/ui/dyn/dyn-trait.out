@@ -130,13 +130,13 @@ where
 fn destruct<'_0>(x: &'_0 (dyn Display + '_0)) -> String
 {
     let mut _0: String; // return
-    let x: &'3 (dyn Display + '4); // arg #1
-    let mut _2: &'5 (dyn Display + '6); // anonymous local
+    let x: &'0 (dyn Display + '1); // arg #1
+    let mut _2: &'2 (dyn Display + '3); // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x) with_metadata(read x.metadata)
-    _0 = to_string<'31, (dyn Display + '17)>[{built_in impl MetaSized for (dyn Display + '19)}, Display<(dyn Display + '20)>](move _2)
+    _0 = to_string<'9, (dyn Display + '5)>[{built_in impl MetaSized for (dyn Display + '7)}, Display<(dyn Display + '8)>](move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -157,8 +157,8 @@ where
     Outlives1: (T: '_1),
 {
     let mut _0: (); // return
-    let mut _1: &'11 (dyn for<'a where T: 'a> Fn<(&'a T,), ImpliedClause1::ImpliedClause1::Output = T> + '12); // arg #1
-    let mut _2: &'20 (dyn PartialEq<Option<T>[TraitClause0]> + '21); // arg #2
+    let mut _1: &'0 (dyn for<'a where T: 'a> Fn<(&'a T,), ImpliedClause1::ImpliedClause1::Output = T> + '1); // arg #1
+    let mut _2: &'6 (dyn PartialEq<Option<T>[TraitClause0]> + '7); // arg #2
 
     storage_live(_0)
     _0 = ()
@@ -172,7 +172,7 @@ where
 fn bar<'_0>(_1: &'_0 (dyn for<'_0_2> Fn<(&'_0_2 (dyn Display + '_0_2),), ImpliedClause1::ImpliedClause1::Output = ()> + '_0))
 {
     let mut _0: (); // return
-    let mut _1: &'18 (dyn for<'_0_2> Fn<(&'_0_2 (dyn Display + '_0_2),), ImpliedClause1::ImpliedClause1::Output = ()> + '19); // arg #1
+    let mut _1: &'0 (dyn for<'_0_2> Fn<(&'_0_2 (dyn Display + '_0_2),), ImpliedClause1::ImpliedClause1::Output = ()> + '1); // arg #1
 
     storage_live(_0)
     _0 = ()

@@ -48,7 +48,7 @@ pub const test_crate::FOO::{promoted_const}: str = "hello" with_metadata(5usize)
 // Full name: test_crate::FOO
 fn FOO() -> &'static str
 {
-    let mut _0: &'1 str; // return
+    let mut _0: &'0 str; // return
 
     storage_live(_0)
     _0 = &test_crate::FOO::{promoted_const} with_metadata(const 5usize)
@@ -61,9 +61,9 @@ static FOO: &'static str = FOO()
 // Full name: test_crate::BAR
 fn BAR() -> &'static [u8]
 {
-    let mut _0: &'1 [u8]; // return
-    let mut _1: &'3 [u8; 5usize]; // anonymous local
-    let _2: &'4 [u8; 5usize]; // anonymous local
+    let mut _0: &'0 [u8]; // return
+    let mut _1: &'1 [u8; 5usize]; // anonymous local
+    let _2: &'2 [u8; 5usize]; // anonymous local
     let mut _3: [u8; 5usize]; // anonymous local
 
     storage_live(_0)
@@ -90,8 +90,8 @@ fn main()
 {
     let mut _0: (); // return
     let _s: String; // local
-    let mut _2: &'1 str; // anonymous local
-    let _3: &'2 str; // anonymous local
+    let mut _2: &'0 str; // anonymous local
+    let _3: &'1 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -100,13 +100,13 @@ fn main()
     storage_live(_3)
     _3 = &test_crate::main::{promoted_const} with_metadata(const 5usize)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _s = to_string<'7, str>[{built_in impl MetaSized for str}, {impl#7}](move _2)
+    _s = to_string<'3, str>[{built_in impl MetaSized for str}, {impl#7}](move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     fake_read(_s)
     storage_dead(_3)
     _0 = ()
-    conditional_drop[drop_glue<'8>] _s
+    conditional_drop[drop_glue<'4>] _s
     ↳⚡ unwind_continue
     storage_dead(_s)
     return

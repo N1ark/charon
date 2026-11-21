@@ -136,9 +136,9 @@ trait Join<Self, T>
 fn super_method<'_0>(self: &'_0 i32, arg: i32) -> i32
 {
     let mut _0: i32; // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
     let arg: i32; // arg #2
-    let mut _3: &'2 i32; // anonymous local
+    let mut _3: &'1 i32; // anonymous local
     let mut _4: i32; // anonymous local
 
     storage_live(_0)
@@ -146,7 +146,7 @@ fn super_method<'_0>(self: &'_0 i32, arg: i32) -> i32
     _3 = copy self
     storage_live(_4)
     _4 = copy arg
-    _0 = add<'7>(move _3, move _4)
+    _0 = add<'4>(move _3, move _4)
     ↳⚡ storage_dead(arg)
         storage_dead(self)
         unwind_continue
@@ -210,7 +210,7 @@ impl "impl_Super_i32_for_i32" Super<i32> for i32 {
 fn internal_method<'_0>(self: &'_0 i32) -> i32
 {
     let mut _0: i32; // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
     let mut _2: i32; // anonymous local
     let mut _3: i32; // anonymous local
 
@@ -277,7 +277,7 @@ impl "impl_Internal_for_i32" Internal for i32 {
 fn left_method<'_0>(self: &'_0 i32) -> i32
 {
     let mut _0: i32; // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
     let mut _2: i32; // anonymous local
     let mut _3: i32; // anonymous local
 
@@ -345,16 +345,16 @@ impl "impl_Left_for_i32" Left for i32 {
 fn right_method<'_0>(self: &'_0 i32) -> i32
 {
     let mut _0: i32; // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
     let mut _2: i32; // anonymous local
     let mut _3: i32; // anonymous local
     let mut _4: i32; // anonymous local
     let mut _5: i32; // anonymous local
     let mut _6: i32; // anonymous local
-    let mut _7: &'2 i32; // anonymous local
+    let mut _7: &'1 i32; // anonymous local
     let mut _8: i32; // anonymous local
     let mut _9: i32; // anonymous local
-    let mut _10: &'3 i32; // anonymous local
+    let mut _10: &'2 i32; // anonymous local
     let mut _11: i32; // anonymous local
 
     storage_live(_0)
@@ -371,7 +371,7 @@ fn right_method<'_0>(self: &'_0 i32) -> i32
     storage_live(_6)
     storage_live(_7)
     _7 = &(*self)
-    _6 = internal_method<'7>(move _7)
+    _6 = internal_method<'3>(move _7)
     ↳⚡ storage_dead(_11)
         storage_dead(_8)
         storage_dead(_5)
@@ -385,7 +385,7 @@ fn right_method<'_0>(self: &'_0 i32) -> i32
     storage_live(_9)
     storage_live(_10)
     _10 = &(*self)
-    _9 = super_method<'11>(move _10, const 10i32)
+    _9 = super_method<'4>(move _10, const 10i32)
     ↳⚡ storage_dead(_11)
         storage_dead(_8)
         storage_dead(_5)
@@ -457,24 +457,24 @@ impl "impl_Right_i32_for_i32" Right<i32> for i32 {
 fn join_method<'_0>(self: &'_0 i32) -> (i32, i32)
 {
     let mut _0: (i32, i32); // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
     let mut _2: i32; // anonymous local
-    let mut _3: &'2 i32; // anonymous local
+    let mut _3: &'1 i32; // anonymous local
     let mut _4: i32; // anonymous local
-    let mut _5: &'3 i32; // anonymous local
+    let mut _5: &'2 i32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = left_method<'7>(move _3)
+    _2 = left_method<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
-    _4 = right_method<'11>(move _5)
+    _4 = right_method<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -537,16 +537,16 @@ impl "impl_Join_i32_for_i32" Join<i32> for i32 {
 fn main()
 {
     let mut _0: (); // return
-    let v: &'7 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '8); // local
+    let v: &'4 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '5); // local
         where v :< &'0 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '1);
         where v := &'2 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '3);
-    let mut _2: &'10 i32; // anonymous local
-    let _3: &'11 i32; // anonymous local
+    let mut _2: &'6 i32; // anonymous local
+    let _3: &'7 i32; // anonymous local
     let mut _4: (i32, i32); // anonymous local
-    let mut _5: &'12 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '13); // anonymous local
-    let mut _6: &'14 i32; // anonymous local
-    let mut _7: &'15 i32; // anonymous local
-    let mut _8: &'26 i32; // anonymous local
+    let mut _5: &'8 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '9); // anonymous local
+    let mut _6: &'10 i32; // anonymous local
+    let mut _7: &'11 i32; // anonymous local
+    let mut _8: &'17 i32; // anonymous local
     let mut _9: i32; // anonymous local
 
     storage_live(_7)
@@ -566,14 +566,14 @@ fn main()
     _6 = move _7
     _3 = &(*_6)
     _2 = &(*_3)
-    v = unsize_cast<&'16 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '17), &impl_Join_i32_for_i32::{vtable}>(move _2)
+    v = unsize_cast<&'12 (dyn Join<i32, ImpliedClause1::ImpliedClause1::Internal = i32, ImpliedClause1::Left = i32, ImpliedClause2::Right = i32> + '13), &impl_Join_i32_for_i32::{vtable}>(move _2)
     storage_dead(_2)
     fake_read(v)
     storage_dead(_3)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*v) with_metadata(read v.metadata)
-    _4 = (read (*_5.metadata).method_join_method)<'25>(move _5)
+    _4 = (read (*_5.metadata).method_join_method)<'16>(move _5)
     ↳⚡ storage_dead(_6)
         storage_dead(_9)
         storage_dead(_8)

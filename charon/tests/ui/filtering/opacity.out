@@ -100,8 +100,8 @@ pub fn from(small: u32) -> u64
     let mut _8: u128; // anonymous local
     let mut _9: u128; // anonymous local
     let mut _10: u32; // anonymous local
-    let mut _11: &'1 str; // anonymous local
-    let mut _12: &'2 str; // anonymous local
+    let mut _11: &'0 str; // anonymous local
+    let mut _12: &'1 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -182,7 +182,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 Option<T>[TraitClause0]; // arg #1
+    let self: &'0 Option<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _ = (*self)
@@ -205,19 +205,19 @@ fn foo()
 {
     let mut _0: (); // return
     let mut _1: bool; // anonymous local
-    let mut _2: &'1 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _2: &'0 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
     let mut _3: u64; // anonymous local
         where _3 :< u64;
-    let mut _4: &'3 [i32]; // anonymous local
-    let mut _5: &'5 i32; // anonymous local
-    let _6: &'6 i32; // anonymous local
-    let mut _7: &'7 i32; // anonymous local
-    let mut _8: &'8 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _9: &'9 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _10: &'14 i32; // anonymous local
-    let mut _11: &'19 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _4: &'1 [i32]; // anonymous local
+    let mut _5: &'2 i32; // anonymous local
+    let _6: &'3 i32; // anonymous local
+    let mut _7: &'4 i32; // anonymous local
+    let mut _8: &'5 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _9: &'6 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _10: &'8 i32; // anonymous local
+    let mut _11: &'10 Option<i32>[{built_in impl Sized for i32}]; // anonymous local
     let mut _12: Option<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _13: &'20 i32; // anonymous local
+    let mut _13: &'11 i32; // anonymous local
     let mut _14: i32; // anonymous local
 
     storage_live(_9)
@@ -234,7 +234,7 @@ fn foo()
     storage_live(_2)
     _8 = move _9
     _2 = &(*_8)
-    _1 = is_some<'13, i32>[{built_in impl Sized for i32}](move _2)
+    _1 = is_some<'7, i32>[{built_in impl Sized for i32}](move _2)
     ↳⚡ storage_dead(_8)
         storage_dead(_7)
         storage_dead(_14)
@@ -270,7 +270,7 @@ fn foo()
     _7 = move _10
     _6 = &(*_7)
     _5 = &(*_6)
-    _4 = from_ref<'18, i32>[{built_in impl Sized for i32}](move _5)
+    _4 = from_ref<'9, i32>[{built_in impl Sized for i32}](move _5)
     ↳⚡ storage_dead(_8)
         storage_dead(_7)
         storage_dead(_14)

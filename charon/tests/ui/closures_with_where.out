@@ -98,7 +98,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: T; // return
-    let mut _1: &'1 mut {closure}<T, K>[TraitClause0, TraitClause1]; // arg #1
+    let mut _1: &'0 mut {closure}<T, K>[TraitClause0, TraitClause1]; // arg #1
     let mut tupled_args: (usize,); // arg #2
     let i: usize; // local
     let mut _4: usize; // anonymous local
@@ -129,12 +129,12 @@ where
     let mut _0: T; // return
     let mut _1: {closure}<T, K>[TraitClause0, TraitClause1]; // arg #1
     let _2: (usize,); // arg #2
-    let _3: &'1 mut {closure}<T, K>[TraitClause0, TraitClause1]; // anonymous local
+    let _3: &'0 mut {closure}<T, K>[TraitClause0, TraitClause1]; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'3, T, K>[TraitClause0, TraitClause1](move _3, move _2)
+    _0 = call_mut<'1, T, K>[TraitClause0, TraitClause1](move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

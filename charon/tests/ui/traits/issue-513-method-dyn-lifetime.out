@@ -22,7 +22,7 @@ trait Use<Self, C>
 fn method<'a>(context: &'a (dyn Trait + 'static))
 {
     let mut _0: (); // return
-    let context: &'3 (dyn Trait + '4); // arg #1
+    let context: &'0 (dyn Trait + '1); // arg #1
 
     storage_live(_0)
     _0 = ()

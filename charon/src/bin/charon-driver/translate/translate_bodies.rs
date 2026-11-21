@@ -2014,29 +2014,57 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
         // are using a local function pointer (i.e., the operand is a "move").
         let lval = self.translate_place(span, destination)?;
         let on_unwind = self.translate_unwind_action(span, unwind)?;
-        // Translate the function operand.
-        let op = self.translate_operand(span, func)?;
-        let fn_operand = match op.ty().kind() {
-            // The type of the value is one of the singleton types that corresponds to each
-            // function, so we statically know which function is getting called.
-            TyKind::FnDef(fn_ptr) => {
-                let fn_ptr = self.erase_region_binder(fn_ptr.clone());
-                FnOperand::Regular(fn_ptr)
+        // When calling a statically-known function, only the type of the function operand matters,
+        // and is the same as the type of the operand `translate_operand` would give. We skip
+        // translating its value, which would allocate body regions we don't use.
+        let fn_def_ty = if let mir::Operand::Constant(const_op) = func
+            && let ty::FnDef(..) = op_ty.kind()
+        {
+            let annotated_ty = const_op
+                .user_ty
+                .and_then(|base| self.user_type_annotations.translate_annotation(base));
+            match annotated_ty {
+                Some(ty) => ty.kind().is_fn_def().then_some(ty),
+                None => {
+                    let const_op: hax::ConstOperand = self.catch_sinto(span, &const_op)?;
+                    let ty = match &const_op.kind {
+                        hax::ConstOperandKind::Value(constant) => &constant.ty,
+                        hax::ConstOperandKind::Promoted(_) => &const_op.ty,
+                    };
+                    Some(self.translate_ty(span, ty)?)
+                }
             }
-            // Otherwise, we're calling a function pointer.
-            TyKind::FnPtr(sig) => {
-                let regions = RegionArgs::new(
-                    sig.regions
-                        .map_ref_indexed(|_, _| self.translate_erased_region()),
-                );
-                FnOperand::Dynamic(Box::new(op), regions)
+        } else {
+            None
+        };
+        let fn_operand = if let Some(ty) = fn_def_ty
+            && let TyKind::FnDef(fn_ptr) = ty.kind()
+        {
+            FnOperand::Regular(self.erase_region_binder(fn_ptr.clone()))
+        } else {
+            let op = self.translate_operand(span, func)?;
+            match op.ty().kind() {
+                // The type of the value is one of the singleton types that corresponds to each
+                // function, so we statically know which function is getting called.
+                TyKind::FnDef(fn_ptr) => {
+                    let fn_ptr = self.erase_region_binder(fn_ptr.clone());
+                    FnOperand::Regular(fn_ptr)
+                }
+                // Otherwise, we're calling a function pointer.
+                TyKind::FnPtr(sig) => {
+                    let regions = RegionArgs::new(
+                        sig.regions
+                            .map_ref_indexed(|_, _| self.translate_erased_region()),
+                    );
+                    FnOperand::Dynamic(Box::new(op), regions)
+                }
+                _ => raise_error!(
+                    self,
+                    span,
+                    "cannot call a value of type {}",
+                    op.ty().with_ctx(&self.into_fmt())
+                ),
             }
-            _ => raise_error!(
-                self,
-                span,
-                "cannot call a value of type {}",
-                op.ty().with_ctx(&self.into_fmt())
-            ),
         };
         let args = self.translate_arguments(span, args)?;
 

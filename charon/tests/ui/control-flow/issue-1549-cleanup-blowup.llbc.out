@@ -36,7 +36,7 @@ pub struct Ticket {
 pub fn impl_Drop_for_Ticket::drop<'_0>(self: &'_0 mut Ticket)
 {
     let mut _0: (); // return
-    let self: &'1 mut Ticket; // arg #1
+    let self: &'0 mut Ticket; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -49,8 +49,8 @@ pub fn impl_Drop_for_Ticket::drop<'_0>(self: &'_0 mut Ticket)
 unsafe fn drop_glue<'_0>(_1: &'_0 mut Ticket)
 {
     let mut _0: (); // return
-    let _1: &'1 mut Ticket; // arg #1
-    let mut _2: &'2 mut Ticket; // anonymous local
+    let _1: &'0 mut Ticket; // arg #1
+    let mut _2: &'1 mut Ticket; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -58,7 +58,7 @@ unsafe fn drop_glue<'_0>(_1: &'_0 mut Ticket)
     storage_live(_3)
     _0 = ()
     _2 = &mut (*_1)
-    _3 = impl_Drop_for_Ticket::drop<'6>(move _2)
+    _3 = impl_Drop_for_Ticket::drop<'2>(move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

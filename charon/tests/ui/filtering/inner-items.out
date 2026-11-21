@@ -49,7 +49,7 @@ struct Bar {}
 fn bar<'_0>(self: &'_0 Bar)
 {
     let mut _0: (); // return
-    let self: &'1 Bar; // arg #1
+    let self: &'0 Bar; // arg #1
 
     storage_live(_0)
     _0 = ()

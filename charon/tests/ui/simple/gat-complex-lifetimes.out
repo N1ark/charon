@@ -57,26 +57,26 @@ where
     Outlives0: ('y: 'x),
     Outlives1: ('z: 'y),
 {
-    let mut _0: &'6 &'7 &'8 (); // return
-    let x: TraitClause1::Type<'12>; // arg #1
-    let _2: &'13 &'14 &'15 (); // anonymous local
-    let mut _3: TraitClause1::Type<'17>; // anonymous local
+    let mut _0: &'0 &'1 &'2 (); // return
+    let x: TraitClause1::Type<'4>; // arg #1
+    let _2: &'5 &'6 &'7 (); // anonymous local
+    let mut _3: TraitClause1::Type<'9>; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     _3 = move x
-    _2 = TraitClause1::Type<'35>::ImpliedClause1<'36>::foo(move _3)
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::Type<'61>}::drop_glue<'62>] _3
+    _2 = TraitClause1::Type<'11>::ImpliedClause1<'12>::foo(move _3)
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::Type<'19>}::drop_glue<'20>] _3
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for TraitClause1::Type<'73>}::drop_glue<'74>] x
+        conditional_drop[{built_in impl Destruct for TraitClause1::Type<'27>}::drop_glue<'28>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x)
         unwind_continue
     _0 = &(*_2)
     storage_dead(_3)
     storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for TraitClause1::Type<'68>}::drop_glue<'69>] x
+    conditional_drop[{built_in impl Destruct for TraitClause1::Type<'24>}::drop_glue<'25>] x
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(x)

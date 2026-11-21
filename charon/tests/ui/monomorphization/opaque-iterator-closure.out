@@ -102,14 +102,14 @@ fn main()
     let mut total: u32; // local
     let mut iter: Map::<Range::<u32>, test_crate::main::{closure}<'_>>; // local
     let mut _3: Range::<u32>; // anonymous local
-    let mut _4: test_crate::main::{closure}<'1>; // anonymous local
-    let mut _5: &'3 mut u32; // anonymous local
+    let mut _4: test_crate::main::{closure}<'0>; // anonymous local
+    let mut _5: &'1 mut u32; // anonymous local
     let mut _6: Option::<u32>; // anonymous local
-    let mut _7: &'5 mut Map::<Range::<u32>, test_crate::main::{closure}<'_>>; // anonymous local
+    let mut _7: &'2 mut Map::<Range::<u32>, test_crate::main::{closure}<'_>>; // anonymous local
     let offset: u32; // local
     let mut _9: u32; // anonymous local
-    let mut _10: test_crate::main::{closure#1}<'7>; // anonymous local
-    let mut _11: &'9 u32; // anonymous local
+    let mut _10: test_crate::main::{closure#1}<'3>; // anonymous local
+    let mut _11: &'4 u32; // anonymous local
     let thing: Thing; // local
     let mut _13: u32; // anonymous local
     let mut _14: test_crate::main::{closure#2}; // anonymous local
@@ -135,7 +135,7 @@ fn main()
     storage_live(_6)
     storage_live(_7)
     _7 = &two-phase-mut iter
-    _6 = next::<u32, Range::<u32>, test_crate::main::{closure}<'_>><'14>(move _7)
+    _6 = next::<u32, Range::<u32>, test_crate::main::{closure}<'_>><'6>(move _7)
     ↳⚡ unwind_continue
     storage_dead(_7)
     storage_dead(_6)
@@ -176,7 +176,7 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: u32; // return
-    let mut _1: &'2 mut test_crate::main::{closure}<'_0>; // arg #1
+    let mut _1: &'0 mut test_crate::main::{closure}<'_0>; // arg #1
     let mut tupled_args: (u32,); // arg #2
     let x: u32; // local
     let mut _4: u32; // anonymous local
@@ -214,7 +214,7 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: u32; // return
-    let mut _1: &'2 test_crate::main::{closure#1}<'_0>; // arg #1
+    let mut _1: &'0 test_crate::main::{closure#1}<'_0>; // arg #1
     let mut tupled_args: (u32,); // arg #2
     let x: u32; // local
     let mut _4: u32; // anonymous local

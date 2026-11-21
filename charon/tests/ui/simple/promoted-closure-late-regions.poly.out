@@ -60,14 +60,14 @@ const {promoted_const}: &'_ u8 = {promoted_const}()
 // Full name: test_crate::foo::{impl Fn<(&'_0 u8,)> for {closure}}::call
 extern "rust-call" fn impl_Fn_tuple_for_closure::call<'_0, '_1>(_1: &'_1 {closure}, tupled_args: (&'_0 u8,)) -> (&'_0 u8, &'_0 u8)
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
-    let mut _1: &'15 {closure}; // arg #1
+    let mut _0: (&'0 u8, &'1 u8); // return
+    let mut _1: &'5 {closure}; // arg #1
     let mut tupled_args: (&'_0 u8,); // arg #2
-    let x: &'16 u8; // local
-    let mut _4: &'17 u8; // anonymous local
-    let mut _5: &'18 u8; // anonymous local
-    let _6: &'19 u8; // anonymous local
-    let mut _7: &'20 u8; // anonymous local
+    let x: &'6 u8; // local
+    let mut _4: &'7 u8; // anonymous local
+    let mut _5: &'8 u8; // anonymous local
+    let _6: &'9 u8; // anonymous local
+    let mut _7: &'10 u8; // anonymous local
 
     storage_live(_0)
     storage_live(x)
@@ -89,12 +89,12 @@ extern "rust-call" fn impl_Fn_tuple_for_closure::call<'_0, '_1>(_1: &'_1 {closur
 
 pub fn test_crate::call<'_0>(x: &'_0 u8) -> (&'_0 u8, &'_0 u8)
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
-    let x: &'14 u8; // arg #1
-    let mut _2: &'16 {closure}; // anonymous local
+    let mut _0: (&'0 u8, &'1 u8); // return
+    let x: &'5 u8; // arg #1
+    let mut _2: &'6 {closure}; // anonymous local
     let _3: {closure}; // anonymous local
-    let mut _4: (&'18 u8,); // anonymous local
-    let mut _5: &'19 u8; // anonymous local
+    let mut _4: (&'7 u8,); // anonymous local
+    let mut _5: &'8 u8; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -106,7 +106,7 @@ pub fn test_crate::call<'_0>(x: &'_0 u8) -> (&'_0 u8, &'_0 u8)
     storage_live(_5)
     _5 = &(*x)
     _4 = (move _5,)
-    _0 = impl_Fn_tuple_for_closure::call<'25, '32>(move _2, move _4)
+    _0 = impl_Fn_tuple_for_closure::call<'10, '12>(move _2, move _4)
     ↳⚡ unwind_continue
     storage_dead(_5)
     storage_dead(_4)

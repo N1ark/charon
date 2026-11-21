@@ -78,7 +78,7 @@ where
 {
     let mut _0: u8; // return
     let mut f: T0; // arg #1
-    let mut _2: &'1 mut T0; // anonymous local
+    let mut _2: &'0 mut T0; // anonymous local
     let mut _3: (u8,); // anonymous local
 
     storage_live(_0)
@@ -86,14 +86,14 @@ where
     _2 = &mut f
     storage_live(_3)
     _3 = (const 0u8,)
-    _0 = TraitClause1::call_mut<'3>(move _2, move _3)
-    ↳⚡ conditional_drop[{built_in impl Destruct for T0}::drop_glue<'4>] f
+    _0 = TraitClause1::call_mut<'1>(move _2, move _3)
+    ↳⚡ conditional_drop[{built_in impl Destruct for T0}::drop_glue<'2>] f
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(f)
         unwind_continue
     storage_dead(_3)
     storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for T0}::drop_glue<'5>] f
+    conditional_drop[{built_in impl Destruct for T0}::drop_glue<'3>] f
     ↳⚡ storage_dead(f)
         unwind_continue
     storage_dead(f)
@@ -111,7 +111,7 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: u8; // return
-    let mut _1: &'2 mut {closure}<'_0>; // arg #1
+    let mut _1: &'0 mut {closure}<'_0>; // arg #1
     let mut tupled_args: (u8,); // arg #2
     let x: u8; // local
     let mut _4: u8; // anonymous local
@@ -148,12 +148,12 @@ extern "rust-call" fn call_once<'_0>(_1: {closure}<'_0>, _2: (u8,)) -> u8
     let mut _0: u8; // return
     let mut _1: {closure}<'_0>; // arg #1
     let _2: (u8,); // arg #2
-    let _3: &'2 mut {closure}<'_0>; // anonymous local
+    let _3: &'0 mut {closure}<'_0>; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'_0, '8>(move _3, move _2)
+    _0 = call_mut<'_0, '1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -191,8 +191,8 @@ fn main()
     let mut _0: (); // return
     let mut z: u8; // local
     let _2: u8; // anonymous local
-    let mut _3: {closure}<'1>; // anonymous local
-    let mut _4: &'3 mut u8; // anonymous local
+    let mut _3: {closure}<'0>; // anonymous local
+    let mut _4: &'1 mut u8; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -205,7 +205,7 @@ fn main()
     _4 = &mut z
     _3 = {closure} { _0: move _4 }
     storage_dead(_4)
-    _2 = apply_to_zero_mut<{closure}<'16>>[{built_in impl Sized for {closure}<'16>}, impl_FnMut_tuple_for_closure<'16>](move _3)
+    _2 = apply_to_zero_mut<{closure}<'3>>[{built_in impl Sized for {closure}<'3>}, impl_FnMut_tuple_for_closure<'3>](move _3)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_2)

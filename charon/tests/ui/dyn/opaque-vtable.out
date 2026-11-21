@@ -35,7 +35,7 @@ impl "impl_Trait_for_unit" Trait for () {
 fn use_debug<'_0>(_d: &'_0 (dyn Trait + '_0))
 {
     let mut _0: (); // return
-    let _d: &'3 (dyn Trait + '4); // arg #1
+    let _d: &'0 (dyn Trait + '1); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -49,12 +49,12 @@ fn main()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: &'3 (dyn Trait + '4); // anonymous local
-    let mut _3: &'6 (); // anonymous local
-    let _4: &'7 (); // anonymous local
-    let mut _5: &'8 (); // anonymous local
-    let mut _6: &'9 (); // anonymous local
-    let mut _7: &'16 (); // anonymous local
+    let mut _2: &'0 (dyn Trait + '1); // anonymous local
+    let mut _3: &'2 (); // anonymous local
+    let _4: &'3 (); // anonymous local
+    let mut _5: &'4 (); // anonymous local
+    let mut _6: &'5 (); // anonymous local
+    let mut _7: &'9 (); // anonymous local
     let mut _8: (); // anonymous local
 
     storage_live(_6)
@@ -73,9 +73,9 @@ fn main()
     _5 = move _6
     _4 = &(*_5)
     _3 = &(*_4)
-    _2 = unsize_cast<&'10 (dyn Trait + '11), &impl_Trait_for_unit::{vtable}>(move _3)
+    _2 = unsize_cast<&'6 (dyn Trait + '7), &impl_Trait_for_unit::{vtable}>(move _3)
     storage_dead(_3)
-    _1 = use_debug<'15>(move _2)
+    _1 = use_debug<'8>(move _2)
     ↳⚡ storage_dead(_5)
         storage_dead(_8)
         storage_dead(_7)

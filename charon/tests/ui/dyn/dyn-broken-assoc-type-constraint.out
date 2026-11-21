@@ -65,7 +65,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 T; // arg #1
+    let self: &'0 T; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -141,14 +141,14 @@ where
 fn main()
 {
     let mut _0: (); // return
-    let _m: &'7 (dyn Broken<Assoc = ()> + '8); // local
+    let _m: &'4 (dyn Broken<Assoc = ()> + '5); // local
         where _m :< &'0 (dyn Broken<Assoc = ()> + '1);
         where _m := &'2 (dyn Broken<Assoc = ()> + '3);
-    let mut _2: &'10 (); // anonymous local
-    let _3: &'11 (); // anonymous local
-    let mut _4: &'12 (); // anonymous local
-    let mut _5: &'13 (); // anonymous local
-    let mut _6: &'16 (); // anonymous local
+    let mut _2: &'6 (); // anonymous local
+    let _3: &'7 (); // anonymous local
+    let mut _4: &'8 (); // anonymous local
+    let mut _5: &'9 (); // anonymous local
+    let mut _6: &'12 (); // anonymous local
     let mut _7: (); // anonymous local
 
     storage_live(_5)
@@ -168,7 +168,7 @@ fn main()
     _4 = move _5
     _3 = &(*_4)
     _2 = &(*_3)
-    _m = unsize_cast<&'14 (dyn Broken<Assoc = ()> + '15), &impl_Broken_for_T::{vtable}<()>[{built_in impl Sized for ()}]>(move _2)
+    _m = unsize_cast<&'10 (dyn Broken<Assoc = ()> + '11), &impl_Broken_for_T::{vtable}<()>[{built_in impl Sized for ()}]>(move _2)
     storage_dead(_2)
     fake_read(_m)
     storage_dead(_3)

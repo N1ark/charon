@@ -56,7 +56,7 @@ where
     TraitClause1: (C: HasGAT),
 {
     let mut _0: TraitClause1::ImpliedClause2::Assoc; // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)

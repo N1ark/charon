@@ -23,7 +23,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
     let mut _2: {closure}<Self>; // anonymous local
 
     storage_live(_0)
@@ -42,7 +42,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: usize; // return
-    let mut _1: &'1 {closure}<Self>; // arg #1
+    let mut _1: &'0 {closure}<Self>; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -56,7 +56,7 @@ where
 pub fn impl_Trait_for_unit::method<'_0>(self: &'_0 ())
 {
     let mut _0: (); // return
-    let self: &'1 (); // arg #1
+    let self: &'0 (); // arg #1
     let mut _2: {closure}<()>; // anonymous local
 
     storage_live(_0)

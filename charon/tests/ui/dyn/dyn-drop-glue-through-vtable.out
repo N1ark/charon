@@ -132,8 +132,8 @@ struct A {
 unsafe fn impl_Destruct_for_A::drop_glue<'_0>(_1: &'_0 mut A)
 {
     let mut _0: (); // return
-    let _1: &'1 mut A; // arg #1
-    let mut drop_arg: &'_ mut (dyn T + '6); // local
+    let _1: &'0 mut A; // arg #1
+    let mut drop_arg: &'_ mut (dyn T + '3); // local
     let mut drop_ret: (); // local
 
     storage_live(_0)
@@ -141,7 +141,7 @@ unsafe fn impl_Destruct_for_A::drop_glue<'_0>(_1: &'_0 mut A)
     storage_live(drop_arg)
     drop_arg = &mut (*_1)._0 with_metadata(read _1.metadata)
     storage_live(drop_ret)
-    drop_ret = (read (*drop_arg.metadata).drop)<'4>(move drop_arg)
+    drop_ret = (read (*drop_arg.metadata).drop)<'2>(move drop_arg)
     ↳⚡ unwind_continue
     return
 }

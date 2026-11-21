@@ -48,9 +48,9 @@ trait Convert<Self, T>
 // Full name: test_crate::{impl Convert<&'a [u8; 4usize]> for &'a u32}::method
 fn method<'a>(self: &'a u32) -> &'a [u8; 4usize]
 {
-    let mut _0: &'1 [u8; 4usize]; // return
-    let self: &'3 u32; // arg #1
-    let _2: &'4 [u8; 4usize]; // anonymous local
+    let mut _0: &'0 [u8; 4usize]; // return
+    let self: &'1 u32; // arg #1
+    let _2: &'2 [u8; 4usize]; // anonymous local
     let _3: *const [u8; 4usize]; // anonymous local
     let mut _4: *const u32; // anonymous local
 
@@ -111,10 +111,10 @@ where
 // Full name: test_crate::to_bytes_by_ref
 pub fn to_bytes_by_ref<'b>(s: &'b u32) -> &'b [u8; 4usize]
 {
-    let mut _0: &'1 [u8; 4usize]; // return
-    let s: &'3 u32; // arg #1
-    let _2: &'4 [u8; 4usize]; // anonymous local
-    let mut _3: &'5 u32; // anonymous local
+    let mut _0: &'0 [u8; 4usize]; // return
+    let s: &'1 u32; // arg #1
+    let _2: &'2 [u8; 4usize]; // anonymous local
+    let mut _3: &'3 u32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -122,7 +122,7 @@ pub fn to_bytes_by_ref<'b>(s: &'b u32) -> &'b [u8; 4usize]
     // Here `convert` is given generics `<&'_ u32, &'_ [u8; 4]>`, which loses the information
     // that the lifetime is the same by virtue of the trait impl.
     _3 = copy s
-    _2 = convert<&'31 u32, &'31 [u8; 4usize]>[{built_in impl Sized for &'31 u32}, {built_in impl Sized for &'31 [u8; 4usize]}, {impl Convert<&'a [u8; 4usize]> for &'a u32}<'31>](move _3)
+    _2 = convert<&'7 u32, &'7 [u8; 4usize]>[{built_in impl Sized for &'7 u32}, {built_in impl Sized for &'7 [u8; 4usize]}, {impl Convert<&'a [u8; 4usize]> for &'a u32}<'7>](move _3)
     ↳⚡ storage_dead(s)
         unwind_continue
     _0 = &(*_2)

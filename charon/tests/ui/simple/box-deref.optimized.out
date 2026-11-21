@@ -68,12 +68,12 @@ fn into_inner(b: Box<String>[{built_in impl MetaSized for String}, {built_in imp
 // Full name: test_crate::read_ref
 fn read_ref<'a>(b: Box<&'a u32>[{built_in impl MetaSized for &'a u32}, {built_in impl Sized for Global}]) -> &'a u32
 {
-    let mut _0: &'1 u32; // return
-    let b: Box<&'7 u32>[{built_in impl MetaSized for &'7 u32}, {built_in impl Sized for Global}]; // arg #1
+    let mut _0: &'0 u32; // return
+    let b: Box<&'1 u32>[{built_in impl MetaSized for &'1 u32}, {built_in impl Sized for Global}]; // arg #1
 
     storage_live(_0)
     _0 = copy (*b)
-    drop[impl_Destruct_for_Box::drop_glue<'37, &'32 u32, Global>[{built_in impl MetaSized for &'32 u32}, {built_in impl Sized for Global}]] b
+    drop[impl_Destruct_for_Box::drop_glue<'18, &'12 u32, Global>[{built_in impl MetaSized for &'12 u32}, {built_in impl Sized for Global}]] b
     ↳⚡ storage_dead(b)
         unwind_continue
     storage_dead(b)
@@ -116,7 +116,7 @@ fn borrow(b: Box<String>[{built_in impl MetaSized for String}, {built_in impl Si
 {
     let mut _0: (); // return
     let mut b: Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]; // arg #1
-    let mut _2: &'1 mut String; // anonymous local
+    let mut _2: &'0 mut String; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -124,7 +124,7 @@ fn borrow(b: Box<String>[{built_in impl MetaSized for String}, {built_in impl Si
     _2 = &mut (*b)
     storage_dead(_2)
     _0 = ()
-    drop[impl_Destruct_for_Box::drop_glue<'2, String, Global>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]] b
+    drop[impl_Destruct_for_Box::drop_glue<'1, String, Global>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]] b
     ↳⚡ storage_dead(b)
         unwind_continue
     storage_dead(b)
@@ -134,10 +134,10 @@ fn borrow(b: Box<String>[{built_in impl MetaSized for String}, {built_in impl Si
 // Full name: test_crate::reborrow
 fn reborrow<'_0>(b: &'_0 mut Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]) -> &'_0 mut String
 {
-    let mut _0: &'1 mut String; // return
-    let b: &'3 mut Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]; // arg #1
-    let mut _2: &'4 mut String; // anonymous local
-    let mut _3: &'5 mut Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]; // anonymous local
+    let mut _0: &'0 mut String; // return
+    let b: &'1 mut Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]; // arg #1
+    let mut _2: &'2 mut String; // anonymous local
+    let mut _3: &'3 mut Box<String>[{built_in impl MetaSized for String}, {built_in impl Sized for Global}]; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -175,10 +175,10 @@ fn field(b: Box<Struct>[{built_in impl MetaSized for Struct}, {built_in impl Siz
 // Full name: test_crate::reborrow_slice
 fn reborrow_slice<'_0>(b: &'_0 mut Box<[u32]>[{built_in impl MetaSized for [u32]}, {built_in impl Sized for Global}]) -> &'_0 mut [u32]
 {
-    let mut _0: &'1 mut [u32]; // return
-    let b: &'3 mut Box<[u32]>[{built_in impl MetaSized for [u32]}, {built_in impl Sized for Global}]; // arg #1
-    let mut _2: &'4 mut [u32]; // anonymous local
-    let mut _3: &'5 mut [u32]; // anonymous local
+    let mut _0: &'0 mut [u32]; // return
+    let b: &'1 mut Box<[u32]>[{built_in impl MetaSized for [u32]}, {built_in impl Sized for Global}]; // arg #1
+    let mut _2: &'2 mut [u32]; // anonymous local
+    let mut _3: &'3 mut [u32]; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

@@ -116,9 +116,9 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: Discriminant<T>[TraitClause0]; // return
-    let v: &'1 T; // arg #1
+    let v: &'0 T; // arg #1
     let mut _2: {built_in impl DiscriminantKind for T}::Discriminant; // anonymous local
-    let mut _3: &'2 T; // anonymous local
+    let mut _3: &'1 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -139,13 +139,13 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: Discriminant<T>[TraitClause0]; // return
-    let x: &'1 T; // arg #1
-    let mut _2: &'2 T; // anonymous local
+    let x: &'0 T; // arg #1
+    let mut _2: &'1 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x)
-    _0 = discriminant<'6, T>[TraitClause0](move _2)
+    _0 = discriminant<'2, T>[TraitClause0](move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

@@ -66,9 +66,9 @@ fn foo(opt: Option<u32>[{built_in impl Sized for u32}])
     let mut _0: (); // return
     let opt: Option<u32>[{built_in impl Sized for u32}]; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'1 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _3: &'0 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
     let x_4: u32; // local
-    let x_5: &'3 u32; // local
+    let x_5: &'1 u32; // local
     let mut _6: bool; // anonymous local
     let mut _7: u32; // anonymous local
 

@@ -96,8 +96,8 @@ where
 fn simple(_1: NeedsFn<fn<'a>(&'a u8), &'static u8>[{built_in impl Sized for fn<'a>(&'a u8)}, {built_in impl Sized for &'static u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'_, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]], _2: NeedsFn<fn<'b>(&'b u8), &'static u8>[{built_in impl Sized for fn<'b>(&'b u8)}, {built_in impl Sized for &'static u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'_, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]])
 {
     let mut _0: (); // return
-    let mut _1: NeedsFn<fn<'a>(&'a u8), &'18 u8>[{built_in impl Sized for fn<'a>(&'a u8)}, {built_in impl Sized for &'18 u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'18, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]]; // arg #1
-    let mut _2: NeedsFn<fn<'b>(&'b u8), &'43 u8>[{built_in impl Sized for fn<'b>(&'b u8)}, {built_in impl Sized for &'43 u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'43, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]]; // arg #2
+    let mut _1: NeedsFn<fn<'a>(&'a u8), &'0 u8>[{built_in impl Sized for fn<'a>(&'a u8)}, {built_in impl Sized for &'0 u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'0, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]]; // arg #1
+    let mut _2: NeedsFn<fn<'b>(&'b u8), &'8 u8>[{built_in impl Sized for fn<'b>(&'b u8)}, {built_in impl Sized for &'8 u8}, {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1>(&'_0_1 A) -> B}<'8, u8, ()>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for ()}]]; // arg #2
 
     storage_live(_0)
     _0 = ()

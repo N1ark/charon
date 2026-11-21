@@ -52,7 +52,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: TraitClause2::Assoc2; // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     loop {
@@ -77,7 +77,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: TraitClause2::Assoc2; // return
-    let self: &'1 Empty<T>[TraitClause0]; // arg #1
+    let self: &'0 Empty<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     loop {
@@ -104,7 +104,7 @@ where
     TraitClause1: (TraitClause0::Assoc1: HasAssoc2),
 {
     let mut _0: TraitClause1::Assoc2; // return
-    let self: &'1 (); // arg #1
+    let self: &'0 (); // arg #1
 
     storage_live(_0)
     loop {

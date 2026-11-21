@@ -49,10 +49,10 @@ pub struct Wrap {
 // Full name: test_crate::{impl Index<usize> for Wrap}::index
 pub fn index<'_0>(self: &'_0 Wrap, i: usize) -> &'_0 u64
 {
-    let mut _0: &'1 u64; // return
-    let self: &'3 Wrap; // arg #1
+    let mut _0: &'0 u64; // return
+    let self: &'1 Wrap; // arg #1
     let i: usize; // arg #2
-    let _3: &'4 u64; // anonymous local
+    let _3: &'2 u64; // anonymous local
     let _4: usize; // anonymous local
 
     bb0: {
@@ -82,11 +82,11 @@ impl "impl_Index_usize_for_Wrap" Index<usize> for Wrap {
 // Full name: test_crate::{impl IndexMut<usize> for Wrap}::index_mut
 pub fn index_mut<'_0>(self: &'_0 mut Wrap, i: usize) -> &'_0 mut u64
 {
-    let mut _0: &'1 mut u64; // return
-    let self: &'3 mut Wrap; // arg #1
+    let mut _0: &'0 mut u64; // return
+    let self: &'1 mut Wrap; // arg #1
     let i: usize; // arg #2
-    let mut _3: &'4 mut u64; // anonymous local
-    let mut _4: &'5 mut u64; // anonymous local
+    let mut _3: &'2 mut u64; // anonymous local
+    let mut _4: &'3 mut u64; // anonymous local
     let _5: usize; // anonymous local
 
     bb0: {
@@ -120,10 +120,10 @@ pub fn shr_into_index<'_0>(x: u64, out: &'_0 mut Wrap)
 {
     let mut _0: (); // return
     let x: u64; // arg #1
-    let out: &'1 mut Wrap; // arg #2
+    let out: &'0 mut Wrap; // arg #2
     let mut _3: u64; // anonymous local
-    let mut _4: &'3 mut u64; // anonymous local
-    let mut _5: &'4 mut Wrap; // anonymous local
+    let mut _4: &'1 mut u64; // anonymous local
+    let mut _5: &'2 mut Wrap; // anonymous local
     let mut _6: u64; // anonymous local
 
     bb0: {
@@ -136,7 +136,7 @@ pub fn shr_into_index<'_0>(x: u64, out: &'_0 mut Wrap)
         storage_live(_4);
         storage_live(_5);
         _5 = &mut (*out);
-        _4 = index_mut<'8>(move _5, const 0usize) -> bb1 (unwind: bb2);
+        _4 = index_mut<'3>(move _5, const 0usize) -> bb1 (unwind: bb2);
     }
 
     bb1: {
@@ -159,11 +159,11 @@ pub fn shl_into_index_by_var<'_0>(x: u64, n: u32, out: &'_0 mut Wrap)
     let mut _0: (); // return
     let x: u64; // arg #1
     let n: u32; // arg #2
-    let out: &'1 mut Wrap; // arg #3
+    let out: &'0 mut Wrap; // arg #3
     let mut _4: u64; // anonymous local
     let mut _5: u32; // anonymous local
-    let mut _6: &'3 mut u64; // anonymous local
-    let mut _7: &'4 mut Wrap; // anonymous local
+    let mut _6: &'1 mut u64; // anonymous local
+    let mut _7: &'2 mut Wrap; // anonymous local
     let mut _8: u64; // anonymous local
 
     bb0: {
@@ -178,7 +178,7 @@ pub fn shl_into_index_by_var<'_0>(x: u64, n: u32, out: &'_0 mut Wrap)
         storage_live(_6);
         storage_live(_7);
         _7 = &mut (*out);
-        _6 = index_mut<'8>(move _7, const 1usize) -> bb1 (unwind: bb2);
+        _6 = index_mut<'3>(move _7, const 1usize) -> bb1 (unwind: bb2);
     }
 
     bb1: {

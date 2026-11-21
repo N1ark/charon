@@ -39,8 +39,8 @@ fn main()
 {
     let mut _0: (); // return
     let a: String; // local
-    let mut _2: &'1 str; // anonymous local
-    let _3: &'2 str; // anonymous local
+    let mut _2: &'0 str; // anonymous local
+    let _3: &'1 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -49,13 +49,13 @@ fn main()
     storage_live(_3)
     _3 = &test_crate::main::{promoted_const} with_metadata(const 13usize)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    a = to_string::<str><'7>(move _2)
+    a = to_string::<str><'3>(move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     fake_read(a)
     storage_dead(_3)
     _0 = ()
-    conditional_drop[drop_glue<'8>] a
+    conditional_drop[drop_glue<'4>] a
     ↳⚡ unwind_continue
     storage_dead(a)
     return

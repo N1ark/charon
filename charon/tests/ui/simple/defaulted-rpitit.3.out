@@ -71,7 +71,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: Empty<T>[TraitClause0::ImpliedClause1]; // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = empty<T>[TraitClause0::ImpliedClause1]()
@@ -87,7 +87,7 @@ where
     TraitClause0: (T: Sized),
 {
     let mut _0: Empty<T>[TraitClause0]; // return
-    let self: &'1 (); // arg #1
+    let self: &'0 (); // arg #1
 
     storage_live(_0)
     _0 = empty<T>[TraitClause0]()

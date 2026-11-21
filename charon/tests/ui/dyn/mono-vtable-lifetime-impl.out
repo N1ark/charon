@@ -48,7 +48,7 @@ pub struct Pattern::<'_> {
 pub fn method::<'_><'_0>(self: &'_0 Pattern::<'_>)
 {
     let mut _0: (); // return
-    let self: &'1 Pattern::<'_>; // arg #1
+    let self: &'0 Pattern::<'_>; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -105,21 +105,21 @@ impl Trait for Pattern::<'_> {
 // Full name: test_crate::f
 pub fn f<'a>(x: &'a Pattern::<'_>) -> &'a (dyn Trait + 'a)
 {
-    let mut _0: &'3 (dyn Trait + '4); // return
-    let x: &'6 Pattern::<'_>; // arg #1
-    let mut _2: &'7 (dyn Trait + '8); // anonymous local
-    let _3: &'9 (dyn Trait + '10); // anonymous local
-    let mut _4: &'11 Pattern::<'_>; // anonymous local
+    let mut _0: &'0 (dyn Trait + '1); // return
+    let x: &'2 Pattern::<'_>; // arg #1
+    let mut _2: &'3 (dyn Trait + '4); // anonymous local
+    let _3: &'5 (dyn Trait + '6); // anonymous local
+    let mut _4: &'7 Pattern::<'_>; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     storage_live(_4)
     _4 = &(*x)
-    _3 = unsize_cast<&'12 (dyn Trait + '13), &{impl Trait for Pattern::<'_>}::{vtable}::<'_>>(move _4)
+    _3 = unsize_cast<&'8 (dyn Trait + '9), &{impl Trait for Pattern::<'_>}::{vtable}::<'_>>(move _4)
     storage_dead(_4)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _0 = unsize_cast<&'15 (dyn Trait + '16),  at []>(move _2)
+    _0 = unsize_cast<&'11 (dyn Trait + '12),  at []>(move _2)
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(x)

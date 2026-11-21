@@ -39,11 +39,11 @@ where
     Outlives0: (A: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut (A,); // arg #1
+    let _1: &'0 mut (A,); // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -73,7 +73,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let mut _1: &'1 {closure}<Self>[TraitClause0]; // arg #1
+    let mut _1: &'0 {closure}<Self>[TraitClause0]; // arg #1
     let mut tupled_args: (TraitClause0::Item,); // arg #2
     let mut _3: TraitClause0::Item; // anonymous local
 
@@ -82,7 +82,7 @@ where
     _0 = ()
     _3 = noretag move tupled_args._0
     _0 = ()
-    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'2>] _3
+    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'1>] _3
     ↳⚡ storage_dead(_3)
         storage_dead(tupled_args)
         storage_dead(_1)
@@ -100,12 +100,12 @@ where
 {
     let mut _0: (); // return
     let i: TraitClause0::Item; // arg #1
-    let mut _2: &'1 {closure}<Self>[TraitClause0]; // anonymous local
+    let mut _2: &'0 {closure}<Self>[TraitClause0]; // anonymous local
     let mut _3: (TraitClause0::Item,); // anonymous local
     let mut _4: TraitClause0::Item; // anonymous local
-    let mut _5: &'2 {closure}<Self>[TraitClause0]; // anonymous local
-    let mut _6: &'3 {closure}<Self>[TraitClause0]; // anonymous local
-    let mut _7: &'11 {closure}<Self>[TraitClause0]; // anonymous local
+    let mut _5: &'1 {closure}<Self>[TraitClause0]; // anonymous local
+    let mut _6: &'2 {closure}<Self>[TraitClause0]; // anonymous local
+    let mut _7: &'9 {closure}<Self>[TraitClause0]; // anonymous local
     let mut _8: {closure}<Self>[TraitClause0]; // anonymous local
 
     storage_live(_6)
@@ -124,12 +124,12 @@ where
     storage_live(_4)
     _4 = move i
     _3 = (move _4,)
-    _0 = call<'5, Self>[TraitClause0](move _2, move _3)
-    ↳⚡ conditional_drop[drop_glue<'6, TraitClause0::Item>] _3
+    _0 = call<'3, Self>[TraitClause0](move _2, move _3)
+    ↳⚡ conditional_drop[drop_glue<'4, TraitClause0::Item>] _3
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] _4
+        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'6>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'10>] i
+        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] i
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_5)
         storage_dead(i)
@@ -137,8 +137,8 @@ where
         storage_dead(_7)
         storage_dead(_6)
         unwind_continue
-    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'7>] _4
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'10>] i
+    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'5>] _4
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] i
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_5)
         storage_dead(i)
@@ -149,7 +149,7 @@ where
     storage_dead(_4)
     storage_dead(_3)
     storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'9>] i
+    conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'7>] i
     ↳⚡ storage_dead(_5)
         storage_dead(i)
         storage_dead(_8)

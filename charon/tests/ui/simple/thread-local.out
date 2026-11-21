@@ -217,12 +217,12 @@ thread_local __RUST_STD_INTERNAL_VAL: Storage<u32, !>[{built_in impl Sized for u
 extern "rust-call" fn call<'_0, '_1>(_1: &'_1 {closure}, tupled_args: (Option<&'_0 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'_0 mut Option<u32>[{built_in impl Sized for u32}]}],)) -> *const u32
 {
     let mut _0: *const u32; // return
-    let mut _1: &'1 {closure}; // arg #1
+    let mut _1: &'0 {closure}; // arg #1
     let mut tupled_args: (Option<&'_0 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'_0 mut Option<u32>[{built_in impl Sized for u32}]}],); // arg #2
-    let __rust_std_internal_init: Option<&'10 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'10 mut Option<u32>[{built_in impl Sized for u32}]}]; // local
-    let mut _4: &'15 Storage<u32, !>[{built_in impl Sized for u32}, {built_in impl Sized for !}]; // anonymous local
-    let _5: &'16 Storage<u32, !>[{built_in impl Sized for u32}, {built_in impl Sized for !}]; // anonymous local
-    let mut _6: Option<&'17 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'17 mut Option<u32>[{built_in impl Sized for u32}]}]; // anonymous local
+    let __rust_std_internal_init: Option<&'1 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'1 mut Option<u32>[{built_in impl Sized for u32}]}]; // local
+    let mut _4: &'5 Storage<u32, !>[{built_in impl Sized for u32}, {built_in impl Sized for !}]; // anonymous local
+    let _5: &'6 Storage<u32, !>[{built_in impl Sized for u32}, {built_in impl Sized for !}]; // anonymous local
+    let mut _6: Option<&'7 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'7 mut Option<u32>[{built_in impl Sized for u32}]}]; // anonymous local
 
     storage_live(_0)
     storage_live(__rust_std_internal_init)
@@ -233,7 +233,7 @@ extern "rust-call" fn call<'_0, '_1>(_1: &'_1 {closure}, tupled_args: (Option<&'
     _4 = &(*_5)
     storage_live(_6)
     _6 = move __rust_std_internal_init
-    _0 = get_or_init<'27, '28, u32, !, __rust_std_internal_init_fn>[{built_in impl Sized for u32}, {built_in impl Sized for !}, {impl DestroyedState for !}, {built_in impl Sized for __rust_std_internal_init_fn}, {impl FnOnce<()> for __rust_std_internal_init_fn}](move _4, move _6, const __rust_std_internal_init_fn)
+    _0 = get_or_init<'11, '12, u32, !, __rust_std_internal_init_fn>[{built_in impl Sized for u32}, {built_in impl Sized for !}, {impl DestroyedState for !}, {built_in impl Sized for __rust_std_internal_init_fn}, {impl FnOnce<()> for __rust_std_internal_init_fn}](move _4, move _6, const __rust_std_internal_init_fn)
     ↳⚡ storage_dead(__rust_std_internal_init)
         storage_dead(tupled_args)
         storage_dead(_1)
@@ -274,13 +274,13 @@ extern "rust-call" fn impl_FnOnce_tuple_for_closure::call_once<'_0>(_1: {closure
 {
     let mut _0: *const u32; // return
     let mut _1: {closure}; // arg #1
-    let _2: (Option<&'12 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'12 mut Option<u32>[{built_in impl Sized for u32}]}],); // arg #2
-    let _3: &'17 mut {closure}; // anonymous local
+    let _2: (Option<&'0 mut Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for &'0 mut Option<u32>[{built_in impl Sized for u32}]}],); // arg #2
+    let _3: &'4 mut {closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'_0, '57>(move _3, move _2)
+    _0 = call_mut<'_0, '9>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

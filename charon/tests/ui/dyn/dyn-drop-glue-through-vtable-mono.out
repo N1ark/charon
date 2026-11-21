@@ -60,8 +60,8 @@ pub unsafe fn drop_in_place::<(dyn T)>(to_drop: *mut (dyn T))
 {
     let mut _0: (); // return
     let to_drop: *mut (dyn T + '0); // arg #1
-    let mut _2: &'3 mut (dyn T + '4); // anonymous local
-    let mut _3: &'5 mut (dyn T + '6); // anonymous local
+    let mut _2: &'1 mut (dyn T + '2); // anonymous local
+    let mut _3: &'3 mut (dyn T + '4); // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -69,7 +69,7 @@ pub unsafe fn drop_in_place::<(dyn T)>(to_drop: *mut (dyn T))
     storage_live(_3)
     _3 = &mut (*to_drop) with_metadata(read to_drop.metadata)
     _2 = &two-phase-mut (*_3) with_metadata(read _3.metadata)
-    _0 = drop_glue::<(dyn T)><'12>(move _2)
+    _0 = drop_glue::<(dyn T)><'7>(move _2)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_2)
@@ -80,8 +80,8 @@ pub unsafe fn drop_in_place::<(dyn T)>(to_drop: *mut (dyn T))
 unsafe fn f(p: *mut (dyn T + 'static))
 {
     let mut _0: (); // return
-    let p: *mut (dyn T + '2); // arg #1
-    let mut _2: *mut (dyn T + '3); // anonymous local
+    let p: *mut (dyn T + '0); // arg #1
+    let mut _2: *mut (dyn T + '1); // anonymous local
 
     storage_live(_0)
     _0 = ()

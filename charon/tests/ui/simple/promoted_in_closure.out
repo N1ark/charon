@@ -24,12 +24,12 @@ fn main()
 extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ())
 {
     let mut _0: (); // return
-    let mut _1: &'1 {closure}; // arg #1
+    let mut _1: &'0 {closure}; // arg #1
     let mut tupled_args: (); // arg #2
-    let mut _3: &'3 i32; // anonymous local
-    let mut _4: &'4 i32; // anonymous local
-    let mut _5: &'5 i32; // anonymous local
-    let mut _6: &'6 i32; // anonymous local
+    let mut _3: &'1 i32; // anonymous local
+    let mut _4: &'2 i32; // anonymous local
+    let mut _5: &'3 i32; // anonymous local
+    let mut _6: &'4 i32; // anonymous local
     let mut _7: i32; // anonymous local
 
     storage_live(_5)

@@ -72,7 +72,7 @@ struct test_crate::CLOSURE_STATELESS::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_crate::CLOSURE_STATELESS::{closure}}::call<'_0>(_1: &'_0 test_crate::CLOSURE_STATELESS::{closure}, tupled_args: ()) -> u8
 {
     let mut _0: u8; // return
-    let mut _1: &'1 test_crate::CLOSURE_STATELESS::{closure}; // arg #1
+    let mut _1: &'0 test_crate::CLOSURE_STATELESS::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -110,12 +110,12 @@ extern "rust-call" fn {impl FnOnce<()> for test_crate::CLOSURE_STATELESS::{closu
     let mut _0: u8; // return
     let mut _1: test_crate::CLOSURE_STATELESS::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut test_crate::CLOSURE_STATELESS::{closure}; // anonymous local
+    let _3: &'0 mut test_crate::CLOSURE_STATELESS::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = {impl FnMut<()> for test_crate::CLOSURE_STATELESS::{closure}}::call_mut<'3>(move _3, move _2)
+    _0 = {impl FnMut<()> for test_crate::CLOSURE_STATELESS::{closure}}::call_mut<'1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -182,7 +182,7 @@ struct test_crate::CLOSURE_BY_VALUE::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_crate::CLOSURE_BY_VALUE::{closure}}::call<'_0>(_1: &'_0 test_crate::CLOSURE_BY_VALUE::{closure}, tupled_args: ()) -> u8
 {
     let mut _0: u8; // return
-    let mut _1: &'1 test_crate::CLOSURE_BY_VALUE::{closure}; // arg #1
+    let mut _1: &'0 test_crate::CLOSURE_BY_VALUE::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
 
     storage_live(_0)
@@ -220,12 +220,12 @@ extern "rust-call" fn {impl FnOnce<()> for test_crate::CLOSURE_BY_VALUE::{closur
     let mut _0: u8; // return
     let mut _1: test_crate::CLOSURE_BY_VALUE::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut test_crate::CLOSURE_BY_VALUE::{closure}; // anonymous local
+    let _3: &'0 mut test_crate::CLOSURE_BY_VALUE::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = {impl FnMut<()> for test_crate::CLOSURE_BY_VALUE::{closure}}::call_mut<'3>(move _3, move _2)
+    _0 = {impl FnMut<()> for test_crate::CLOSURE_BY_VALUE::{closure}}::call_mut<'1>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

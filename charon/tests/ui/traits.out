@@ -141,16 +141,16 @@ where
     Outlives1: (B: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut (A, B); // arg #1
+    let _1: &'0 mut (A, B); // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'2>] (*_1)._0
-    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'4>] (*_1)._1
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
+    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_1)
         unwind_continue
-    drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
+    drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -172,7 +172,7 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
 
     storage_live(_0)
     _0 = const true
@@ -184,7 +184,7 @@ where
 pub fn impl_BoolTrait_for_bool::get_bool<'_0>(self: &'_0 bool) -> bool
 {
     let mut _0: bool; // return
-    let self: &'1 bool; // arg #1
+    let self: &'0 bool; // arg #1
 
     storage_live(_0)
     _0 = copy (*self)
@@ -196,7 +196,7 @@ pub fn impl_BoolTrait_for_bool::get_bool<'_0>(self: &'_0 bool) -> bool
 pub fn impl_BoolTrait_for_bool::ret_true<'_0>(self: &'_0 bool) -> bool
 {
     let mut _0: bool; // return
-    let self: &'1 bool; // arg #1
+    let self: &'0 bool; // arg #1
 
     storage_live(_0)
     _0 = const true
@@ -218,14 +218,14 @@ pub fn test_bool_trait_bool(x: bool) -> bool
     let mut _0: bool; // return
     let x: bool; // arg #1
     let mut _2: bool; // anonymous local
-    let mut _3: &'1 bool; // anonymous local
-    let mut _4: &'2 bool; // anonymous local
+    let mut _3: &'0 bool; // anonymous local
+    let mut _4: &'1 bool; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     _3 = &x
-    _2 = impl_BoolTrait_for_bool::get_bool<'6>(move _3)
+    _2 = impl_BoolTrait_for_bool::get_bool<'2>(move _3)
     ↳⚡ storage_dead(x)
         unwind_continue
     if move _2 {
@@ -239,7 +239,7 @@ pub fn test_bool_trait_bool(x: bool) -> bool
     storage_dead(_3)
     storage_live(_4)
     _4 = &x
-    _0 = impl_BoolTrait_for_bool::ret_true<'10>(move _4)
+    _0 = impl_BoolTrait_for_bool::ret_true<'3>(move _4)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_4)
@@ -255,7 +255,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 Option<T>[TraitClause0]; // arg #1
+    let self: &'0 Option<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     match (*self) {
@@ -279,7 +279,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 Option<T>[TraitClause0]; // arg #1
+    let self: &'0 Option<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = const true
@@ -306,15 +306,15 @@ where
     let mut _0: bool; // return
     let x: Option<T>[TraitClause0]; // arg #1
     let mut _2: bool; // anonymous local
-    let mut _3: &'1 Option<T>[TraitClause0]; // anonymous local
-    let mut _4: &'2 Option<T>[TraitClause0]; // anonymous local
+    let mut _3: &'0 Option<T>[TraitClause0]; // anonymous local
+    let mut _4: &'1 Option<T>[TraitClause0]; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     _3 = &x
-    _2 = impl_BoolTrait_for_Option::get_bool<'6, T>[TraitClause0](move _3)
-    ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'7, T>[TraitClause0]] x
+    _2 = impl_BoolTrait_for_Option::get_bool<'2, T>[TraitClause0](move _3)
+    ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'3, T>[TraitClause0]] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x)
         unwind_continue
@@ -322,8 +322,8 @@ where
         storage_dead(_3)
         storage_live(_4)
         _4 = &x
-        _0 = impl_BoolTrait_for_Option::ret_true<'11, T>[TraitClause0](move _4)
-        ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'7, T>[TraitClause0]] x
+        _0 = impl_BoolTrait_for_Option::ret_true<'4, T>[TraitClause0](move _4)
+        ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'3, T>[TraitClause0]] x
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(x)
             unwind_continue
@@ -333,7 +333,7 @@ where
         _0 = const false
     }
     storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Option::drop_glue<'12, T>[TraitClause0]] x
+    conditional_drop[impl_Destruct_for_Option::drop_glue<'5, T>[TraitClause0]] x
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(x)
@@ -348,18 +348,18 @@ where
 {
     let mut _0: bool; // return
     let x: T; // arg #1
-    let mut _2: &'1 T; // anonymous local
+    let mut _2: &'0 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &x
-    _0 = TraitClause1::get_bool<'3>(move _2)
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] x
+    _0 = TraitClause1::get_bool<'1>(move _2)
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x)
         unwind_continue
     storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(x)
@@ -545,11 +545,11 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut Wrapper<T>[TraitClause0]; // arg #1
+    let _1: &'0 mut Wrapper<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for T}::drop_glue<'2>] (*_1).x
+    drop[{built_in impl Destruct for T}::drop_glue<'1>] (*_1).x
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)
@@ -770,7 +770,7 @@ struct TestType1 {
 fn impl_TestTrait_for_TestType1::test<'_0>(self: &'_0 TestType1) -> bool
 {
     let mut _0: bool; // return
-    let self: &'1 TestType1; // arg #1
+    let self: &'0 TestType1; // arg #1
     let mut _2: u64; // anonymous local
 
     storage_live(_0)
@@ -789,14 +789,14 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: bool; // return
-    let self: &'1 TestType<T>[TraitClause0]; // arg #1
+    let self: &'0 TestType<T>[TraitClause0]; // arg #1
     let x_2: T; // arg #2
     let x_3: u64; // local
     let mut _4: T; // anonymous local
     let y: TestType1; // local
     let mut _6: bool; // anonymous local
     let mut _7: u64; // anonymous local
-    let mut _8: &'3 TestType1; // anonymous local
+    let mut _8: &'1 TestType1; // anonymous local
 
     storage_live(_0)
     storage_live(x_3)
@@ -808,9 +808,9 @@ where
     // blocks).
     _4 = move x_2
     x_3 = TraitClause1::to_u64(move _4)
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] _4
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x_2
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x_2
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x_2)
         storage_dead(self)
@@ -828,8 +828,8 @@ where
         storage_dead(_7)
         storage_live(_8)
         _8 = &y
-        _0 = impl_TestTrait_for_TestType1::test<'9>(move _8)
-        ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x_2
+        _0 = impl_TestTrait_for_TestType1::test<'4>(move _8)
+        ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x_2
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(x_2)
             storage_dead(self)
@@ -842,7 +842,7 @@ where
     storage_dead(_6)
     storage_dead(y)
     storage_dead(x_3)
-    conditional_drop[{built_in impl Destruct for T}::drop_glue<'10>] x_2
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x_2
     ↳⚡ storage_dead(x_2)
         storage_dead(self)
         unwind_continue
@@ -941,8 +941,8 @@ where
 pub fn impl_WithConstTy_for_bool::f<'_0, '_1>(_1: &'_0 mut u64, _2: &'_1 [u8; 32usize])
 {
     let mut _0: (); // return
-    let mut _1: &'1 mut u64; // arg #1
-    let mut _2: &'3 [u8; 32usize]; // arg #2
+    let mut _1: &'0 mut u64; // arg #1
+    let mut _2: &'1 [u8; 32usize]; // arg #2
 
     storage_live(_0)
     _0 = ()
@@ -1046,7 +1046,7 @@ where
     Outlives0: (T: 'a),
 {
     let mut _0: (); // return
-    let _x: &'1 T; // arg #1
+    let _x: &'0 T; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -1107,13 +1107,13 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: String; // return
-    let x: &'1 T; // arg #1
-    let mut _2: &'2 T; // anonymous local
+    let x: &'0 T; // arg #1
+    let mut _2: &'1 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x)
-    _0 = TraitClause1::ImpliedClause1::get_name<'4>(move _2)
+    _0 = TraitClause1::ImpliedClause1::get_name<'2>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -1129,13 +1129,13 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: TraitClause1::ImpliedClause1::W; // return
-    let x: &'1 T; // arg #1
-    let mut _2: &'2 T; // anonymous local
+    let x: &'0 T; // arg #1
+    let mut _2: &'1 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x)
-    _0 = TraitClause1::ImpliedClause1::get_w<'4>(move _2)
+    _0 = TraitClause1::ImpliedClause1::get_w<'2>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -1337,13 +1337,13 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: TraitClause1::W; // return
-    let x: &'1 T; // arg #1
-    let mut _2: &'2 T; // anonymous local
+    let x: &'0 T; // arg #1
+    let mut _2: &'1 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     _2 = &(*x)
-    _0 = TraitClause1::get_w<'4>(move _2)
+    _0 = TraitClause1::get_w<'2>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -1515,9 +1515,9 @@ pub const test_crate::flabada::{promoted_const}: str = "not yet implemented" wit
 // Full name: test_crate::flabada
 pub fn flabada<'a>(_x: &'a ()) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
 {
-    let mut _0: Wrapper<(bool, &'12 ())>[{built_in impl Sized for (bool, &'12 ())}]; // return
-    let _x: &'16 (); // arg #1
-    let mut _2: &'18 str; // anonymous local
+    let mut _0: Wrapper<(bool, &'0 ())>[{built_in impl Sized for (bool, &'0 ())}]; // return
+    let _x: &'4 (); // arg #1
+    let mut _2: &'5 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -1638,7 +1638,7 @@ pub fn flibidi()
     storage_live(_0)
     _0 = ()
     storage_live(_1)
-    _1 = test_crate::call<'10, for<'a> flabada<'a>>[{built_in impl Sized for for<'a> flabada<'a>}, {impl Fn<(&'a (),)> for for<'a> flabada<'a>}<'10>](const flabada<'25>)
+    _1 = test_crate::call<'0, for<'a> flabada<'a>>[{built_in impl Sized for for<'a> flabada<'a>}, {impl Fn<(&'a (),)> for for<'a> flabada<'a>}<'0>](const flabada<'4>)
     ↳⚡ unwind_continue
     storage_dead(_1)
     _0 = ()
@@ -1661,7 +1661,7 @@ where
     TraitClause1: (I: test_crate::assoc_ty_trait_ref::SliceIndex),
 {
     let mut _0: TraitClause1::Output; // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)

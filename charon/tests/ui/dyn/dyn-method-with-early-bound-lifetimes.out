@@ -29,7 +29,7 @@ trait Trait<Self>
 fn foo<'_0>(x: &'_0 (dyn Trait + '_0))
 {
     let mut _0: (); // return
-    let x: &'3 (dyn Trait + '4); // arg #1
+    let x: &'0 (dyn Trait + '1); // arg #1
 
     storage_live(_0)
     _0 = ()

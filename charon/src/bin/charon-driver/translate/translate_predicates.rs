@@ -284,10 +284,20 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             return Ok(tref.clone());
         }
         let error_count = self.t_ctx.errors.borrow().error_count;
-        let fresh_regions = self.lifetime_freshener.as_ref().map(|v| v.slot_count());
-        let tref = self.translate_trait_proof_uncached(span, trait_proof)?;
+        // Inside bodies, we give fresh regions to the ones that appear in the result afterwards.
+        // That way we don't allocate regions we don't use, and the regions we allocate don't
+        // depend on what the caches contain.
+        let (tref, local_regions) = self.with_local_body_regions(|this| {
+            let tref = this.translate_trait_proof_uncached(span, trait_proof);
+            (
+                tref,
+                this.lifetime_freshener.as_ref().map(|v| v.slot_count()),
+            )
+        });
+        let mut tref = tref?;
+        self.import_body_regions(&mut tref);
         if self.t_ctx.errors.borrow().error_count == error_count
-            && self.lifetime_freshener.as_ref().map(|v| v.slot_count()) == fresh_regions
+            && local_regions.is_none_or(|n| n == 0)
         {
             self.innermost_binder_mut()
                 .trait_proof_trans_cache

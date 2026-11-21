@@ -102,7 +102,7 @@ struct () {}
 fn f1<'_0>(a: &'_0 [u8]) -> usize
 {
     let mut _0: usize; // return
-    let a: &'1 [u8]; // arg #1
+    let a: &'0 [u8]; // arg #1
     let mut sampled: usize; // local
     let mut _3: bool; // anonymous local
     let mut _4: u8; // anonymous local
@@ -194,17 +194,17 @@ const FIELD_MODULUS: i16 = FIELD_MODULUS()
 fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
 {
     let mut _0: usize; // return
-    let a: &'1 [u8]; // arg #1
-    let result: &'3 mut [i16]; // arg #2
+    let a: &'0 [u8]; // arg #1
+    let result: &'1 mut [i16]; // arg #2
     let mut sampled: usize; // local
-    let mut _4: Chunks<'5, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _5: Chunks<'6, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _6: &'7 [u8]; // anonymous local
-    let mut iter: Chunks<'8, u8>[{built_in impl Sized for u8}]; // local
-    let mut _8: Option<&'16 [u8]>[{built_in impl Sized for &'16 [u8]}]; // anonymous local
-    let mut _9: &'22 mut Chunks<'23, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _10: &'24 mut Chunks<'25, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let bytes: &'26 [u8]; // local
+    let mut _4: Chunks<'2, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _5: Chunks<'3, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _6: &'4 [u8]; // anonymous local
+    let mut iter: Chunks<'5, u8>[{built_in impl Sized for u8}]; // local
+    let mut _8: Option<&'6 [u8]>[{built_in impl Sized for &'6 [u8]}]; // anonymous local
+    let mut _9: &'10 mut Chunks<'11, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _10: &'12 mut Chunks<'13, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let bytes: &'14 [u8]; // local
     let b1: i16; // local
     let mut _13: u8; // anonymous local
     let _14: usize; // anonymous local
@@ -259,7 +259,7 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
     storage_live(_5)
     storage_live(_6)
     _6 = &(*a) with_metadata(read a.metadata)
-    _5 = chunks<'30, u8>[{built_in impl Sized for u8}](move _6, const 3usize)
+    _5 = chunks<'15, u8>[{built_in impl Sized for u8}](move _6, const 3usize)
     ↳⚡ storage_dead(_44)
         storage_dead(_37)
         storage_dead(result)
@@ -276,7 +276,7 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
         storage_dead(_45)
         unwind_continue
     storage_dead(_6)
-    _4 = into_iter<Chunks<'42, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Chunks<'42, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Chunks<'42, u8>[{built_in impl Sized for u8}]](move _5)
+    _4 = into_iter<Chunks<'16, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Chunks<'16, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Chunks<'16, u8>[{built_in impl Sized for u8}]](move _5)
     ↳⚡ storage_dead(_44)
         storage_dead(_37)
         storage_dead(result)
@@ -301,7 +301,7 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
         storage_live(_10)
         _10 = &mut iter
         _9 = &two-phase-mut (*_10)
-        _8 = next<'62, '66, u8>[{built_in impl Sized for u8}](move _9)
+        _8 = next<'23, '24, u8>[{built_in impl Sized for u8}](move _9)
         ↳⚡ storage_dead(_44)
             storage_dead(_37)
             storage_dead(result)

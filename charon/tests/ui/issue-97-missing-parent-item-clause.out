@@ -51,8 +51,8 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut AVLTree<T>[TraitClause0]; // arg #1
-    let mut _2: &'3 str; // anonymous local
+    let self: &'0 mut AVLTree<T>[TraitClause0]; // arg #1
+    let mut _2: &'1 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -76,14 +76,14 @@ pub fn test(tree: AVLTree<u32>[{built_in impl Sized for u32}])
     let mut _0: (); // return
     let mut tree: AVLTree<u32>[{built_in impl Sized for u32}]; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'1 mut AVLTree<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _3: &'0 mut AVLTree<u32>[{built_in impl Sized for u32}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &two-phase-mut tree
-    _2 = insert<'5, u32>[{built_in impl Sized for u32}, impl_Ord_for_u32](move _3)
+    _2 = insert<'1, u32>[{built_in impl Sized for u32}, impl_Ord_for_u32](move _3)
     ↳⚡ storage_dead(tree)
         unwind_continue
     storage_dead(_3)

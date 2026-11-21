@@ -345,29 +345,29 @@ fn main()
     let mut _0: (); // return
     let mut _1: (); // anonymous local
     let mut _2: *const u32; // anonymous local
-    let _3: &'1 u32; // anonymous local
+    let _3: &'0 u32; // anonymous local
     let mut _4: usize; // anonymous local
     let mut _5: *const [u32]; // anonymous local
-    let _6: &'3 [u32]; // anonymous local
-    let _7: &'4 [u32]; // anonymous local
-    let mut _8: &'6 [u32; 2usize]; // anonymous local
+    let _6: &'1 [u32]; // anonymous local
+    let _7: &'2 [u32]; // anonymous local
+    let mut _8: &'3 [u32; 2usize]; // anonymous local
     let mut _9: RangeFull; // anonymous local
-    let mut _10: DynMetadata<(dyn Trait + '9)>; // anonymous local
-    let mut _11: *const (dyn Trait + '11); // anonymous local
-    let _12: &'14 (dyn Trait + '15); // anonymous local
-    let mut _13: &'16 u32; // anonymous local
-    let _14: &'17 u32; // anonymous local
-    let mut _15: &'18 u32; // anonymous local
-    let mut _16: &'19 [u32; 2usize]; // anonymous local
-    let mut _17: &'20 u32; // anonymous local
-    let mut _18: &'21 u32; // anonymous local
-    let mut _19: &'22 [u32; 2usize]; // anonymous local
-    let mut _20: &'27 u32; // anonymous local
-    let mut _21: &'46 u32; // anonymous local
+    let mut _10: DynMetadata<(dyn Trait + '4)>; // anonymous local
+    let mut _11: *const (dyn Trait + '5); // anonymous local
+    let _12: &'6 (dyn Trait + '7); // anonymous local
+    let mut _13: &'8 u32; // anonymous local
+    let _14: &'9 u32; // anonymous local
+    let mut _15: &'10 u32; // anonymous local
+    let mut _16: &'11 [u32; 2usize]; // anonymous local
+    let mut _17: &'12 u32; // anonymous local
+    let mut _18: &'13 u32; // anonymous local
+    let mut _19: &'14 [u32; 2usize]; // anonymous local
+    let mut _20: &'16 u32; // anonymous local
+    let mut _21: &'23 u32; // anonymous local
     let mut _22: u32; // anonymous local
-    let mut _23: &'47 [u32; 2usize]; // anonymous local
+    let mut _23: &'24 [u32; 2usize]; // anonymous local
     let mut _24: [u32; 2usize]; // anonymous local
-    let mut _25: &'48 u32; // anonymous local
+    let mut _25: &'25 u32; // anonymous local
     let mut _26: u32; // anonymous local
 
     storage_live(_18)
@@ -419,7 +419,7 @@ fn main()
     _8 = &(*_16)
     storage_live(_9)
     _9 = RangeFull {  }
-    _7 = impl_Index_for_array::index<'26, u32, RangeFull, 2usize>[{built_in impl Sized for u32}, {built_in impl Sized for RangeFull}, impl_Index_for_slice<u32, RangeFull>[{built_in impl Sized for u32}, {built_in impl Sized for RangeFull}, impl_SliceIndex_slice_for_RangeFull<u32>[{built_in impl Sized for u32}]]](move _8, move _9)
+    _7 = impl_Index_for_array::index<'15, u32, RangeFull, 2usize>[{built_in impl Sized for u32}, {built_in impl Sized for RangeFull}, impl_Index_for_slice<u32, RangeFull>[{built_in impl Sized for u32}, {built_in impl Sized for RangeFull}, impl_SliceIndex_slice_for_RangeFull<u32>[{built_in impl Sized for u32}]]](move _8, move _9)
     ↳⚡ storage_dead(_17)
         storage_dead(_16)
         storage_dead(_15)
@@ -469,10 +469,10 @@ fn main()
     _15 = move _20
     _14 = &(*_15)
     _13 = &(*_14)
-    _12 = unsize_cast<&'28 (dyn Trait + '29), &impl_Trait_for_u32::{vtable}>(move _13)
+    _12 = unsize_cast<&'17 (dyn Trait + '18), &impl_Trait_for_u32::{vtable}>(move _13)
     storage_dead(_13)
     _11 = &raw const (*_12) with_metadata(read _12.metadata)
-    _10 = metadata<(dyn Trait + '37)>[{built_in impl MetaSized for (dyn Trait + '39)}](move _11)
+    _10 = metadata<(dyn Trait + '20)>[{built_in impl MetaSized for (dyn Trait + '22)}](move _11)
     ↳⚡ storage_dead(_17)
         storage_dead(_16)
         storage_dead(_15)

@@ -120,11 +120,11 @@ where
     Outlives0: (A: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut (A,); // arg #1
+    let _1: &'0 mut (A,); // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
     ↳⚡ unwind_continue
     return
 }
@@ -135,7 +135,7 @@ where
     Outlives0: ('_1: '_0),
 {
     let mut _0: (); // return
-    let arr: (&'6 mut (&'7 mut (u64,),),); // arg #1
+    let arr: (&'0 mut (&'1 mut (u64,),),); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -150,7 +150,7 @@ where
     Outlives0: ('_1: '_0),
 {
     let mut _0: (); // return
-    let arr: (&'6 (&'7 (u64,),),); // arg #1
+    let arr: (&'0 (&'1 (u64,),),); // arg #1
     let _2: u64; // anonymous local
 
     storage_live(_0)
@@ -181,9 +181,9 @@ pub fn boxed(arr: (Box<(Box<(u64,), Global>[{built_in impl MetaSized for (u64,)}
 pub fn f<'_0>(ctx: &'_0 mut [u64])
 {
     let mut _0: (); // return
-    let ctx: &'1 mut [u64]; // arg #1
-    let acc: (&'10 mut [u64], &'11 mut [u64]); // local
-    let mut _3: &'15 mut [u64]; // anonymous local
+    let ctx: &'0 mut [u64]; // arg #1
+    let acc: (&'1 mut [u64], &'2 mut [u64]); // local
+    let mut _3: &'6 mut [u64]; // anonymous local
     let _4: usize; // anonymous local
     let mut _5: &'_ mut [u64]; // anonymous local
     let mut _6: &'_ mut u64; // anonymous local
@@ -193,7 +193,7 @@ pub fn f<'_0>(ctx: &'_0 mut [u64])
     storage_live(acc)
     storage_live(_3)
     _3 = &two-phase-mut (*ctx) with_metadata(read ctx.metadata)
-    acc = split_at_mut<'21, u64>[{built_in impl Sized for u64}](move _3, const 0usize)
+    acc = split_at_mut<'9, u64>[{built_in impl Sized for u64}](move _3, const 0usize)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_live(_4)

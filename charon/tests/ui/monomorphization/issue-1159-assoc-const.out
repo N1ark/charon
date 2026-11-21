@@ -42,12 +42,12 @@ const ARR: [u64; 1usize] = ARR()
 pub fn SLICE_HOLDER() -> Option::<&'_ [u64]>
 {
     let mut _0: Option::<&'_ [u64]>; // return
-    let mut _1: &'1 [u64]; // anonymous local
-    let mut _2: &'3 [u64; 1usize]; // anonymous local
-    let _3: &'4 [u64; 1usize]; // anonymous local
-    let mut _4: &'5 [u64; 1usize]; // anonymous local
-    let mut _5: &'6 [u64; 1usize]; // anonymous local
-    let mut _6: &'8 [u64; 1usize]; // anonymous local
+    let mut _1: &'0 [u64]; // anonymous local
+    let mut _2: &'1 [u64; 1usize]; // anonymous local
+    let _3: &'2 [u64; 1usize]; // anonymous local
+    let mut _4: &'3 [u64; 1usize]; // anonymous local
+    let mut _5: &'4 [u64; 1usize]; // anonymous local
+    let mut _6: &'6 [u64; 1usize]; // anonymous local
     let mut _7: [u64; 1usize]; // anonymous local
 
     storage_live(_5)
@@ -64,7 +64,7 @@ pub fn SLICE_HOLDER() -> Option::<&'_ [u64]>
     _4 = move _5
     _3 = &(*_4)
     _2 = &(*_3)
-    _1 = unsize_cast<&'7 [u64], 1usize>(move _2)
+    _1 = unsize_cast<&'5 [u64], 1usize>(move _2)
     storage_dead(_2)
     _0 = Option::<&'_ [u64]>::Some { _0: move _1 }
     storage_dead(_1)

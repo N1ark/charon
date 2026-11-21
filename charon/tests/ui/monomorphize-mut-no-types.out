@@ -167,22 +167,22 @@ where
 {
     let mut _0: (); // return
     let mut x: A; // arg #1
-    let mut _2: &'1 u32; // anonymous local
-    let mut _3: &'2 u32; // anonymous local
-    let mut _4: &'4 mut u32; // anonymous local
-    let mut _5: &'5 mut u32; // anonymous local
+    let mut _2: &'0 u32; // anonymous local
+    let mut _3: &'1 u32; // anonymous local
+    let mut _4: &'2 mut u32; // anonymous local
+    let mut _5: &'3 mut u32; // anonymous local
     let mut _6: u32; // anonymous local
-    let mut _7: Option<&'13 mut u32>; // anonymous local
-    let mut _8: Option<&'17 mut u32>; // anonymous local
-    let mut _9: &'21 mut u32; // anonymous local
+    let mut _7: Option<&'4 mut u32>; // anonymous local
+    let mut _8: Option<&'8 mut u32>; // anonymous local
+    let mut _9: &'12 mut u32; // anonymous local
     let mut _10: u32; // anonymous local
-    let mut _11: Option<Option<&'70 mut A>>; // anonymous local
-    let mut _12: Option<Option<&'86 mut A>>; // anonymous local
-    let mut _13: Option<&'102 mut A>; // anonymous local
-    let mut _14: &'106 mut A; // anonymous local
-    let mut _15: &'107 u32; // anonymous local
-    let mut _16: &'108 u32; // anonymous local
-    let mut _17: &'893 u32; // anonymous local
+    let mut _11: Option<Option<&'13 mut A>>; // anonymous local
+    let mut _12: Option<Option<&'29 mut A>>; // anonymous local
+    let mut _13: Option<&'45 mut A>; // anonymous local
+    let mut _14: &'49 mut A; // anonymous local
+    let mut _15: &'50 u32; // anonymous local
+    let mut _16: &'51 u32; // anonymous local
+    let mut _17: &'166 u32; // anonymous local
     let mut _18: u32; // anonymous local
 
     storage_live(_16)
@@ -198,8 +198,8 @@ where
     storage_live(_3)
     _15 = move _16
     _3 = &(*_15)
-    _2 = identity<&'117 u32>[{built_in impl Sized for &'117 u32}](move _3)
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'129>] x
+    _2 = identity<&'52 u32>[{built_in impl Sized for &'52 u32}](move _3)
+    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'56>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_15)
         storage_dead(x)
@@ -214,8 +214,8 @@ where
     storage_live(_6)
     _6 = const 0u32
     _5 = &mut _6
-    _4 = test_crate::identity::<&_ mut _><'138, u32>[{built_in impl core::marker::Sized::<&_ mut _><'138> for u32}](move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'129>] x
+    _4 = test_crate::identity::<&_ mut _><'57, u32>[{built_in impl core::marker::Sized::<&_ mut _><'57> for u32}](move _5)
+    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'56>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_15)
         storage_dead(x)
@@ -234,8 +234,8 @@ where
     _9 = &mut _10
     _8 = Option::Some { _0: move _9 }
     storage_dead(_9)
-    _7 = test_crate::identity::<Option<&_ mut _>><'205, u32>[{built_in impl core::marker::Sized::<Option<&_ mut _>><'205> for u32}](move _8)
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'129>] x
+    _7 = test_crate::identity::<Option<&_ mut _>><'65, u32>[{built_in impl core::marker::Sized::<Option<&_ mut _>><'65> for u32}](move _8)
+    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'56>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_15)
         storage_dead(x)
@@ -255,8 +255,8 @@ where
     storage_dead(_14)
     _12 = Option::Some { _0: move _13 }
     storage_dead(_13)
-    _11 = test_crate::identity::<Option<Option<&_ mut _>>><'572, A>[{built_in impl core::marker::Sized::<Option<Option<&_ mut _>>><'572> for A}](move _12)
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'129>] x
+    _11 = test_crate::identity::<Option<Option<&_ mut _>>><'101, A>[{built_in impl core::marker::Sized::<Option<Option<&_ mut _>>><'101> for A}](move _12)
+    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'56>] x
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_15)
         storage_dead(x)
@@ -267,7 +267,7 @@ where
     storage_dead(_12)
     storage_dead(_11)
     _0 = ()
-    conditional_drop[{built_in impl Destruct for A}::drop_glue<'892>] x
+    conditional_drop[{built_in impl Destruct for A}::drop_glue<'165>] x
     ↳⚡ storage_dead(_15)
         storage_dead(x)
         storage_dead(_18)

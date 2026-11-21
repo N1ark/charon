@@ -546,12 +546,12 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_add(a: __m128i, b: _
 fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_store<'_0>(dst: &'_0 mut [u16; 8usize], val: __m128i)
 {
     let mut _0: (); // return
-    let dst: &'1 mut [u16; 8usize]; // arg #1
+    let dst: &'0 mut [u16; 8usize]; // arg #1
     let val: __m128i; // arg #2
     let mut _3: *mut __m128i; // anonymous local
     let mut _4: *mut u16; // anonymous local
-    let mut _5: &'3 mut [u16]; // anonymous local
-    let mut _6: &'4 mut [u16; 8usize]; // anonymous local
+    let mut _5: &'1 mut [u16]; // anonymous local
+    let mut _6: &'2 mut [u16; 8usize]; // anonymous local
     let mut _7: __m128i; // anonymous local
 
     storage_live(_0)
@@ -564,7 +564,7 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_store<'_0>(dst: &'_0
     _5 = as_mut_slice<'_, u16, 8usize>[{built_in impl Sized for u16}](move _6)
     ↳⚡ undefined_behavior
     storage_dead(_6)
-    _4 = as_mut_ptr<'9, u16>[{built_in impl Sized for u16}](move _5)
+    _4 = as_mut_ptr<'4, u16>[{built_in impl Sized for u16}](move _5)
     ↳⚡ storage_dead(val)
         storage_dead(dst)
         unwind_continue
@@ -588,11 +588,11 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_store<'_0>(dst: &'_0
 fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_load<'_0>(src: &'_0 [u16; 8usize]) -> __m128i
 {
     let mut _0: __m128i; // return
-    let src: &'1 [u16; 8usize]; // arg #1
+    let src: &'0 [u16; 8usize]; // arg #1
     let mut _2: *const __m128i; // anonymous local
     let mut _3: *const u16; // anonymous local
-    let mut _4: &'3 [u16]; // anonymous local
-    let mut _5: &'4 [u16; 8usize]; // anonymous local
+    let mut _4: &'1 [u16]; // anonymous local
+    let mut _5: &'2 [u16; 8usize]; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -603,7 +603,7 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm::vec128_load<'_0>(src: &'_0 
     _4 = as_slice<'_, u16, 8usize>[{built_in impl Sized for u16}](move _5)
     ↳⚡ undefined_behavior
     storage_dead(_5)
-    _3 = as_ptr<'9, u16>[{built_in impl Sized for u16}](move _4)
+    _3 = as_ptr<'4, u16>[{built_in impl Sized for u16}](move _4)
     ↳⚡ storage_dead(src)
         unwind_continue
     storage_dead(_4)
@@ -661,11 +661,11 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_add(a: uint16x8_t, 
 fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_store<'_0>(dst: &'_0 mut [u16; 8usize], val: uint16x8_t)
 {
     let mut _0: (); // return
-    let dst: &'1 mut [u16; 8usize]; // arg #1
+    let dst: &'0 mut [u16; 8usize]; // arg #1
     let val: uint16x8_t; // arg #2
     let mut _3: *mut u16; // anonymous local
-    let mut _4: &'3 mut [u16]; // anonymous local
-    let mut _5: &'4 mut [u16; 8usize]; // anonymous local
+    let mut _4: &'1 mut [u16]; // anonymous local
+    let mut _5: &'2 mut [u16; 8usize]; // anonymous local
     let mut _6: uint16x8_t; // anonymous local
 
     storage_live(_0)
@@ -677,7 +677,7 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_store<'_0>(dst: &'_
     _4 = as_mut_slice<'_, u16, 8usize>[{built_in impl Sized for u16}](move _5)
     ↳⚡ undefined_behavior
     storage_dead(_5)
-    _3 = as_mut_ptr<'9, u16>[{built_in impl Sized for u16}](move _4)
+    _3 = as_mut_ptr<'4, u16>[{built_in impl Sized for u16}](move _4)
     ↳⚡ storage_dead(val)
         storage_dead(dst)
         unwind_continue
@@ -699,10 +699,10 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_store<'_0>(dst: &'_
 fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_load<'_0>(src: &'_0 [u16; 8usize]) -> uint16x8_t
 {
     let mut _0: uint16x8_t; // return
-    let src: &'1 [u16; 8usize]; // arg #1
+    let src: &'0 [u16; 8usize]; // arg #1
     let mut _2: *const u16; // anonymous local
-    let mut _3: &'3 [u16]; // anonymous local
-    let mut _4: &'4 [u16; 8usize]; // anonymous local
+    let mut _3: &'1 [u16]; // anonymous local
+    let mut _4: &'2 [u16; 8usize]; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -712,7 +712,7 @@ fn impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon::vec128_load<'_0>(src: &'_0
     _3 = as_slice<'_, u16, 8usize>[{built_in impl Sized for u16}](move _4)
     ↳⚡ undefined_behavior
     storage_dead(_4)
-    _2 = as_ptr<'9, u16>[{built_in impl Sized for u16}](move _3)
+    _2 = as_ptr<'4, u16>[{built_in impl Sized for u16}](move _3)
     ↳⚡ storage_dead(src)
         unwind_continue
     storage_dead(_3)
@@ -740,14 +740,14 @@ impl "impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon" NttIntrinsicsInterface 
 fn ntt_layer_generic<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
 {
     let mut _0: (); // return
-    let a: &'1 mut [u16; 8usize]; // arg #1
-    let b: &'3 [u16; 8usize]; // arg #2
+    let a: &'0 mut [u16; 8usize]; // arg #1
+    let b: &'1 [u16; 8usize]; // arg #2
     let mut _3: Range<usize>[{built_in impl Sized for usize}]; // anonymous local
     let mut _4: Range<usize>[{built_in impl Sized for usize}]; // anonymous local
     let mut iter: Range<usize>[{built_in impl Sized for usize}]; // local
     let mut _6: Option<usize>[{built_in impl Sized for usize}]; // anonymous local
-    let mut _7: &'5 mut Range<usize>[{built_in impl Sized for usize}]; // anonymous local
-    let mut _8: &'6 mut Range<usize>[{built_in impl Sized for usize}]; // anonymous local
+    let mut _7: &'2 mut Range<usize>[{built_in impl Sized for usize}]; // anonymous local
+    let mut _8: &'3 mut Range<usize>[{built_in impl Sized for usize}]; // anonymous local
     let i: usize; // local
     let mut _10: u16; // anonymous local
     let mut _11: u16; // anonymous local
@@ -786,7 +786,7 @@ fn ntt_layer_generic<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
         storage_live(_8)
         _8 = &mut iter
         _7 = &two-phase-mut (*_8)
-        _6 = next<'10, usize>[{built_in impl Sized for usize}, impl_Step_for_usize, {built_in impl Destruct for usize}](move _7)
+        _6 = next<'4, usize>[{built_in impl Sized for usize}, impl_Step_for_usize, {built_in impl Destruct for usize}](move _7)
         ↳⚡ storage_dead(b)
             storage_dead(a)
             storage_dead(_21)
@@ -880,17 +880,17 @@ where
     TraitClause1: (T: NttIntrinsicsInterface),
 {
     let mut _0: (); // return
-    let a: &'1 mut [u16; 8usize]; // arg #1
-    let b: &'3 [u16; 8usize]; // arg #2
+    let a: &'0 mut [u16; 8usize]; // arg #1
+    let b: &'1 [u16; 8usize]; // arg #2
     let va: TraitClause1::Vec128; // local
-    let mut _4: &'4 [u16; 8usize]; // anonymous local
+    let mut _4: &'2 [u16; 8usize]; // anonymous local
     let vb: TraitClause1::Vec128; // local
-    let mut _6: &'5 [u16; 8usize]; // anonymous local
+    let mut _6: &'3 [u16; 8usize]; // anonymous local
     let vr: TraitClause1::Vec128; // local
     let mut _8: TraitClause1::Vec128; // anonymous local
     let mut _9: TraitClause1::Vec128; // anonymous local
     let _10: (); // anonymous local
-    let mut _11: &'6 mut [u16; 8usize]; // anonymous local
+    let mut _11: &'4 mut [u16; 8usize]; // anonymous local
     let mut _12: TraitClause1::Vec128; // anonymous local
 
     storage_live(_0)
@@ -898,7 +898,7 @@ where
     storage_live(va)
     storage_live(_4)
     _4 = &(*a)
-    va = TraitClause1::vec128_load<'8>(move _4)
+    va = TraitClause1::vec128_load<'5>(move _4)
     ↳⚡ storage_dead(b)
         storage_dead(a)
         unwind_continue
@@ -907,7 +907,7 @@ where
     storage_live(vb)
     storage_live(_6)
     _6 = &(*b)
-    vb = TraitClause1::vec128_load<'10>(move _6)
+    vb = TraitClause1::vec128_load<'6>(move _6)
     ↳⚡ storage_dead(b)
         storage_dead(a)
         unwind_continue
@@ -930,7 +930,7 @@ where
     _11 = &two-phase-mut (*a)
     storage_live(_12)
     _12 = copy vr
-    _10 = TraitClause1::vec128_store<'12>(move _11, move _12)
+    _10 = TraitClause1::vec128_store<'7>(move _11, move _12)
     ↳⚡ storage_dead(b)
         storage_dead(a)
         unwind_continue
@@ -987,15 +987,15 @@ fn cpu_features_present(_mask: u32) -> bool
 fn test_crate::poly_element_ntt_layer::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
 {
     let mut _0: (); // return
-    let a: &'1 mut [u16; 8usize]; // arg #1
-    let b: &'3 [u16; 8usize]; // arg #2
+    let a: &'0 mut [u16; 8usize]; // arg #1
+    let b: &'1 [u16; 8usize]; // arg #2
     let mut _3: bool; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'4 mut [u16; 8usize]; // anonymous local
-    let mut _6: &'5 [u16; 8usize]; // anonymous local
+    let mut _5: &'2 mut [u16; 8usize]; // anonymous local
+    let mut _6: &'3 [u16; 8usize]; // anonymous local
     let _7: (); // anonymous local
-    let mut _8: &'6 mut [u16; 8usize]; // anonymous local
-    let mut _9: &'7 [u16; 8usize]; // anonymous local
+    let mut _8: &'4 mut [u16; 8usize]; // anonymous local
+    let mut _9: &'5 [u16; 8usize]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -1011,7 +1011,7 @@ fn test_crate::poly_element_ntt_layer::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut
         _8 = &two-phase-mut (*a)
         storage_live(_9)
         _9 = &(*b)
-        _7 = ntt_layer_generic<'22, '23>(move _8, move _9)
+        _7 = ntt_layer_generic<'8, '9>(move _8, move _9)
         ↳⚡ storage_dead(b)
             storage_dead(a)
             unwind_continue
@@ -1029,7 +1029,7 @@ fn test_crate::poly_element_ntt_layer::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut
     _5 = &two-phase-mut (*a)
     storage_live(_6)
     _6 = &(*b)
-    _4 = ntt_layer_vec128<'14, '15, NttIntrinsicsXmm>[{built_in impl Sized for NttIntrinsicsXmm}, impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm](move _5, move _6)
+    _4 = ntt_layer_vec128<'6, '7, NttIntrinsicsXmm>[{built_in impl Sized for NttIntrinsicsXmm}, impl_NttIntrinsicsInterface_for_NttIntrinsicsXmm](move _5, move _6)
     ↳⚡ storage_dead(b)
         storage_dead(a)
         unwind_continue
@@ -1046,15 +1046,15 @@ fn test_crate::poly_element_ntt_layer::x86_64-apple-darwin<'_0, '_1>(a: &'_0 mut
 fn test_crate::poly_element_ntt_layer::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mut [u16; 8usize], b: &'_1 [u16; 8usize])
 {
     let mut _0: (); // return
-    let a: &'1 mut [u16; 8usize]; // arg #1
-    let b: &'3 [u16; 8usize]; // arg #2
+    let a: &'0 mut [u16; 8usize]; // arg #1
+    let b: &'1 [u16; 8usize]; // arg #2
     let mut _3: bool; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'4 mut [u16; 8usize]; // anonymous local
-    let mut _6: &'5 [u16; 8usize]; // anonymous local
+    let mut _5: &'2 mut [u16; 8usize]; // anonymous local
+    let mut _6: &'3 [u16; 8usize]; // anonymous local
     let _7: (); // anonymous local
-    let mut _8: &'6 mut [u16; 8usize]; // anonymous local
-    let mut _9: &'7 [u16; 8usize]; // anonymous local
+    let mut _8: &'4 mut [u16; 8usize]; // anonymous local
+    let mut _9: &'5 [u16; 8usize]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -1070,7 +1070,7 @@ fn test_crate::poly_element_ntt_layer::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mu
         _8 = &two-phase-mut (*a)
         storage_live(_9)
         _9 = &(*b)
-        _7 = ntt_layer_generic<'22, '23>(move _8, move _9)
+        _7 = ntt_layer_generic<'8, '9>(move _8, move _9)
         ↳⚡ storage_dead(b)
             storage_dead(a)
             unwind_continue
@@ -1088,7 +1088,7 @@ fn test_crate::poly_element_ntt_layer::aarch64-apple-darwin<'_0, '_1>(a: &'_0 mu
     _5 = &two-phase-mut (*a)
     storage_live(_6)
     _6 = &(*b)
-    _4 = ntt_layer_vec128<'14, '15, NttIntrinsicsNeon>[{built_in impl Sized for NttIntrinsicsNeon}, impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon](move _5, move _6)
+    _4 = ntt_layer_vec128<'6, '7, NttIntrinsicsNeon>[{built_in impl Sized for NttIntrinsicsNeon}, impl_NttIntrinsicsInterface_for_NttIntrinsicsNeon](move _5, move _6)
     ↳⚡ storage_dead(b)
         storage_dead(a)
         unwind_continue

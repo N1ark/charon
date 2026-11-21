@@ -40,7 +40,7 @@ trait Trait<Self, T>
 fn comsume<'_0>(self: &'_0 i32)
 {
     let mut _0: (); // return
-    let self: &'1 i32; // arg #1
+    let self: &'0 i32; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -99,17 +99,17 @@ impl "impl_Trait_usize_for_i32" Trait<usize> for i32 {
 fn main()
 {
     let mut _0: (); // return
-    let a: &'7 (dyn Trait<usize, Item = bool> + '8); // local
+    let a: &'4 (dyn Trait<usize, Item = bool> + '5); // local
         where a :< &'0 (dyn Trait<usize, Item = bool> + '1);
         where a := &'2 (dyn Trait<usize, Item = bool> + '3);
-    let mut _2: &'10 i32; // anonymous local
-    let _3: &'11 i32; // anonymous local
+    let mut _2: &'6 i32; // anonymous local
+    let _3: &'7 i32; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'12 (dyn Trait<usize, Item = bool> + '13); // anonymous local
-    let mut _6: &'14 i32; // anonymous local
-    let mut _7: fn(&'12 (dyn Trait<usize, Item = bool> + '13)); // anonymous local
-    let mut _8: &'15 i32; // anonymous local
-    let mut _9: &'26 i32; // anonymous local
+    let mut _5: &'8 (dyn Trait<usize, Item = bool> + '9); // anonymous local
+    let mut _6: &'10 i32; // anonymous local
+    let mut _7: fn(&'8 (dyn Trait<usize, Item = bool> + '9)); // anonymous local
+    let mut _8: &'11 i32; // anonymous local
+    let mut _9: &'17 i32; // anonymous local
     let mut _10: i32; // anonymous local
 
     storage_live(_8)
@@ -129,7 +129,7 @@ fn main()
     _6 = move _8
     _3 = &(*_6)
     _2 = &(*_3)
-    a = unsize_cast<&'16 (dyn Trait<usize, Item = bool> + '17), &impl_Trait_usize_for_i32::{vtable}>(move _2)
+    a = unsize_cast<&'12 (dyn Trait<usize, Item = bool> + '13), &impl_Trait_usize_for_i32::{vtable}>(move _2)
     storage_dead(_2)
     fake_read(a)
     storage_dead(_3)
@@ -137,7 +137,7 @@ fn main()
     storage_live(_5)
     _5 = &(*a) with_metadata(read a.metadata)
     storage_live(_7)
-    _7 = cast<fn(&'12 (dyn Trait<usize, Item = bool> + '13))>(read (*_5.metadata).method_comsume)
+    _7 = cast<fn(&'8 (dyn Trait<usize, Item = bool> + '9))>(read (*_5.metadata).method_comsume)
     _4 = (read _7)(move _5)
     ↳⚡ storage_dead(_6)
         storage_dead(_10)

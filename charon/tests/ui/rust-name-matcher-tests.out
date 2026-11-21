@@ -234,9 +234,9 @@ where
     TraitClause0: (T: Sized),
     Outlives0: (T: '_0),
 {
-    let mut _0: &'1 T; // return
-    let self: &'3 Generic<T>[TraitClause0]; // arg #1
-    let _2: &'4 T; // anonymous local
+    let mut _0: &'0 T; // return
+    let self: &'1 Generic<T>[TraitClause0]; // arg #1
+    let _2: &'2 T; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -254,10 +254,10 @@ fn use_generic()
 {
     let mut _0: (); // return
     let _int_generic: Generic<i32>[{built_in impl Sized for i32}]; // local
-    let _str_generic: Generic<&'9 str>[{built_in impl Sized for &'9 str}]; // local
-    let mut _3: &'14 i32; // anonymous local
-    let mut _4: &'16 Generic<i32>[{built_in impl Sized for i32}]; // anonymous local
-    let mut _5: &'37 str; // anonymous local
+    let _str_generic: Generic<&'1 str>[{built_in impl Sized for &'1 str}]; // local
+    let mut _3: &'5 i32; // anonymous local
+    let mut _4: &'6 Generic<i32>[{built_in impl Sized for i32}]; // anonymous local
+    let mut _5: &'7 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -274,7 +274,7 @@ fn use_generic()
     storage_live(_3)
     storage_live(_4)
     _4 = &_int_generic
-    _3 = test_crate::{Generic<T>[TraitClause0]}::get<'41, i32>[{built_in impl Sized for i32}](move _4)
+    _3 = test_crate::{Generic<T>[TraitClause0]}::get<'8, i32>[{built_in impl Sized for i32}](move _4)
     ↳⚡ unwind_continue
     storage_dead(_4)
     storage_dead(_3)

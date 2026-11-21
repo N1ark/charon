@@ -77,7 +77,7 @@ where
     Outlives0: ('a: '_1),
 {
     let mut _0: (); // return
-    let mut _1: &'19 (dyn Fn<(&'20 (),), ImpliedClause1::ImpliedClause1::Output = ()> + '21); // arg #1
+    let mut _1: &'0 (dyn Fn<(&'1 (),), ImpliedClause1::ImpliedClause1::Output = ()> + '2); // arg #1
 
     storage_live(_0)
     _0 = ()

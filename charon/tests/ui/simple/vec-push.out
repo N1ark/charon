@@ -195,14 +195,14 @@ where
     Outlives0: (T: '_0),
     Outlives1: (A: '_0),
 {
-    let mut _0: &'1 mut T; // return
-    let self_1: &'3 mut Vec<T>[TraitClause0, TraitClause1]; // arg #1
+    let mut _0: &'0 mut T; // return
+    let self_1: &'1 mut Vec<T>[TraitClause0, TraitClause1]; // arg #1
     let value: T; // arg #2
     let len: usize; // local
     let mut _4: bool; // anonymous local
     let mut _5: usize; // anonymous local
     let _6: (); // anonymous local
-    let mut _7: &'7 mut RawVec<T, A>[TraitClause0, TraitClause1]; // anonymous local
+    let mut _7: &'3 mut RawVec<T, A>[TraitClause0, TraitClause1]; // anonymous local
     let end: *mut T; // local
     let mut self_9: *mut T; // local
     let mut src: T; // local
@@ -233,8 +233,8 @@ where
         storage_dead(_5)
         storage_live(_7)
         _7 = &two-phase-mut (*self_1).buf
-        _6 = grow_one<'13, T, A>[TraitClause0, TraitClause1, TraitClause2](move _7)
-        ↳⚡ drop[{built_in impl Destruct for T}::drop_glue<'14>] value
+        _6 = grow_one<'5, T, A>[TraitClause0, TraitClause1, TraitClause2](move _7)
+        ↳⚡ drop[{built_in impl Destruct for T}::drop_glue<'6>] value
             ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(_13)
             storage_dead(end)
@@ -281,14 +281,14 @@ where
     Outlives1: (A: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut Vec<T>[TraitClause0, TraitClause1]; // arg #1
+    let self: &'0 mut Vec<T>[TraitClause0, TraitClause1]; // arg #1
     let value: T; // arg #2
-    let mut _3: &'3 mut T; // anonymous local
+    let mut _3: &'1 mut T; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_3)
-    _3 = push_mut<'7, T, A>[TraitClause0, TraitClause1, TraitClause2](move self, move value)
+    _3 = push_mut<'2, T, A>[TraitClause0, TraitClause1, TraitClause2](move self, move value)
     ↳⚡ storage_dead(value)
         storage_dead(self)
         unwind_continue
@@ -302,14 +302,14 @@ where
 fn vec<'_0>(x: &'_0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in impl Sized for Global}])
 {
     let mut _0: (); // return
-    let x: &'1 mut Vec<u32>[{built_in impl Sized for u32}, {built_in impl Sized for Global}]; // arg #1
-    let mut _2: &'2 mut Vec<u32>[{built_in impl Sized for u32}, {built_in impl Sized for Global}]; // anonymous local
+    let x: &'0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in impl Sized for Global}]; // arg #1
+    let mut _2: &'1 mut Vec<u32>[{built_in impl Sized for u32}, {built_in impl Sized for Global}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &two-phase-mut (*x)
-    _0 = push<'6, u32, Global>[{built_in impl Sized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for Global}](move _2, const 42u32)
+    _0 = push<'2, u32, Global>[{built_in impl Sized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for Global}](move _2, const 42u32)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

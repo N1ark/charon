@@ -75,15 +75,15 @@ static INNER: &'static u64 = cast<&'_ u64>(&raw const test_crate::{promoted_cons
 fn main()
 {
     let mut _0: (); // return
-    let mut _1: &'3 &'4 u8; // anonymous local
-    let mut _2: &'8 &'9 u16; // anonymous local
-    let mut _3: &'13 &'14 u32; // anonymous local
-    let mut _4: &'18 &'19 u64; // anonymous local
-    let mut _5: &'23 &'24 u128; // anonymous local
-    let mut _6: &'28 &'29 [u32; 3usize]; // anonymous local
-    let mut _7: &'33 &'34 [u32]; // anonymous local
-    let mut _8: &'38 &'39 S; // anonymous local
-    let mut _9: &'40 &'41 u64; // anonymous local
+    let mut _1: &'0 &'1 u8; // anonymous local
+    let mut _2: &'2 &'3 u16; // anonymous local
+    let mut _3: &'4 &'5 u32; // anonymous local
+    let mut _4: &'6 &'7 u64; // anonymous local
+    let mut _5: &'8 &'9 u128; // anonymous local
+    let mut _6: &'10 &'11 [u32; 3usize]; // anonymous local
+    let mut _7: &'12 &'13 [u32]; // anonymous local
+    let mut _8: &'14 &'15 S; // anonymous local
+    let mut _9: &'16 &'17 u64; // anonymous local
 
     storage_live(_0)
     _0 = ()

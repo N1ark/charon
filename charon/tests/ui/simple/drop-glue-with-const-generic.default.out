@@ -62,11 +62,11 @@ struct PortableHash<const K : usize> {
 unsafe fn impl_Destruct_for_PortableHash::drop_glue<'_0, const K : usize>(_1: &'_0 mut PortableHash<K>)
 {
     let mut _0: (); // return
-    let _1: &'1 mut PortableHash<K>; // arg #1
+    let _1: &'0 mut PortableHash<K>; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[impl_Destruct_for_Box::drop_glue<'2, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).make_non_trivial
+    drop[impl_Destruct_for_Box::drop_glue<'1, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).make_non_trivial
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)

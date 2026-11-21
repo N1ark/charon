@@ -33,7 +33,7 @@ fn my_panic(_x: u32) -> !
 {
     let mut _0: !; // return
     let _x: u32; // arg #1
-    let mut _2: &'1 str; // anonymous local
+    let mut _2: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

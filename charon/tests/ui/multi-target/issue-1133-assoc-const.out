@@ -176,7 +176,7 @@ const test_crate::{test_crate::Foo::x86_64-pc-windows-msvc}::uses_const::TABLE::
 pub fn test_crate::{test_crate::Foo::x86_64-pc-windows-msvc}::uses_const::x86_64-pc-windows-msvc<'_0>(self: &'_0 test_crate::Foo::x86_64-pc-windows-msvc) -> u32
 {
     let mut _0: u32; // return
-    let self: &'1 test_crate::Foo::x86_64-pc-windows-msvc; // arg #1
+    let self: &'0 test_crate::Foo::x86_64-pc-windows-msvc; // arg #1
     let mut _2: [u32; 4usize]; // anonymous local
     let _3: usize; // anonymous local
     let mut _4: &'_ [u32; 4usize]; // anonymous local
@@ -216,7 +216,7 @@ const test_crate::{test_crate::Foo::i686-unknown-linux-gnu}::uses_const::TABLE::
 pub fn test_crate::{test_crate::Foo::i686-unknown-linux-gnu}::uses_const::i686-unknown-linux-gnu<'_0>(self: &'_0 test_crate::Foo::i686-unknown-linux-gnu) -> u32
 {
     let mut _0: u32; // return
-    let self: &'1 test_crate::Foo::i686-unknown-linux-gnu; // arg #1
+    let self: &'0 test_crate::Foo::i686-unknown-linux-gnu; // arg #1
     let mut _2: [u32; 4usize]; // anonymous local
     let _3: usize; // anonymous local
     let mut _4: &'_ [u32; 4usize]; // anonymous local

@@ -111,7 +111,7 @@ where
     TraitClause0: (T: Sized),
     TraitClause1: (T: Provide<'a>),
 {
-    let mut _0: {closure}<'3, '4, T>[TraitClause0, TraitClause1]; // return
+    let mut _0: {closure}<'0, '1, T>[TraitClause0, TraitClause1]; // return
 
     storage_live(_0)
     _0 = {closure} {  }
@@ -127,13 +127,13 @@ where
     Outlives1: ('_1: '_3),
     Outlives2: (T: '_3),
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
-    let mut _1: &'19 {closure}<'a, '_1, T>[TraitClause0, TraitClause1]; // arg #1
+    let mut _0: (&'0 u8, &'1 u8); // return
+    let mut _1: &'5 {closure}<'a, '_1, T>[TraitClause0, TraitClause1]; // arg #1
     let mut tupled_args: (&'_2 u8,); // arg #2
-    let x: &'21 u8; // local
-    let mut _4: &'22 u8; // anonymous local
-    let mut _5: &'23 u8; // anonymous local
-    let _6: &'24 u8; // anonymous local
+    let x: &'7 u8; // local
+    let mut _4: &'8 u8; // anonymous local
+    let mut _5: &'9 u8; // anonymous local
+    let _6: &'10 u8; // anonymous local
 
     storage_live(_0)
     storage_live(x)
@@ -192,15 +192,15 @@ where
     TraitClause0: (T: Sized),
     TraitClause1: (T: Provide<'a>),
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
+    let mut _0: (&'0 u8, &'1 u8); // return
     let mut _1: {closure}<'a, '_1, T>[TraitClause0, TraitClause1]; // arg #1
-    let _2: (&'19 u8,); // arg #2
-    let _3: &'22 mut {closure}<'a, '_1, T>[TraitClause0, TraitClause1]; // anonymous local
+    let _2: (&'6 u8,); // arg #2
+    let _3: &'7 mut {closure}<'a, '_1, T>[TraitClause0, TraitClause1]; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = call_mut<'a, '_1, '_2, '50, T>[TraitClause0, TraitClause1](move _3, move _2)
+    _0 = call_mut<'a, '_1, '_2, '12, T>[TraitClause0, TraitClause1](move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -261,12 +261,12 @@ where
     TraitClause1: for<'c> (F: Fn<(&'c u8,)>),
     TypeConstraint0: for<'c> TraitClause1<'_>::ImpliedClause1::ImpliedClause1::Output = (&'c u8, &'a u8),
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
+    let mut _0: (&'0 u8, &'1 u8); // return
     let f: F; // arg #1
-    let x: &'14 u8; // arg #2
-    let mut _3: &'16 F; // anonymous local
-    let mut _4: (&'18 u8,); // anonymous local
-    let mut _5: &'19 u8; // anonymous local
+    let x: &'5 u8; // arg #2
+    let mut _3: &'6 F; // anonymous local
+    let mut _4: (&'7 u8,); // anonymous local
+    let mut _5: &'8 u8; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -275,8 +275,8 @@ where
     storage_live(_5)
     _5 = &(*x)
     _4 = (move _5,)
-    _0 = TraitClause1<'25>::call<'32>(move _3, move _4)
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'33>] f
+    _0 = TraitClause1<'10>::call<'12>(move _3, move _4)
+    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'13>] f
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x)
         storage_dead(f)
@@ -284,7 +284,7 @@ where
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'34>] f
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'14>] f
     ↳⚡ storage_dead(x)
         storage_dead(f)
         unwind_continue
@@ -298,10 +298,10 @@ where
     TraitClause0: (T: Sized),
     TraitClause1: (T: Provide<'a>),
 {
-    let mut _0: (&'9 u8, &'10 u8); // return
-    let x: &'14 u8; // arg #1
-    let mut _2: {closure}<'18, '19, T>[TraitClause0, TraitClause1]; // anonymous local
-    let mut _3: &'21 u8; // anonymous local
+    let mut _0: (&'0 u8, &'1 u8); // return
+    let x: &'5 u8; // arg #1
+    let mut _2: {closure}<'6, '7, T>[TraitClause0, TraitClause1]; // anonymous local
+    let mut _3: &'9 u8; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -310,7 +310,7 @@ where
         unwind_continue
     storage_live(_3)
     _3 = &(*x)
-    _0 = apply<'64, '121, {closure}<'67, '66, T>[TraitClause0, TraitClause1]>[{built_in impl Sized for {closure}<'67, '66, T>[TraitClause0, TraitClause1]}, for<'c> impl_Fn_tuple_for_closure<'67, '66, '79, T>[TraitClause0, TraitClause1]](move _2, move _3)
+    _0 = apply<'10, '30, {closure}<'13, '12, T>[TraitClause0, TraitClause1]>[{built_in impl Sized for {closure}<'13, '12, T>[TraitClause0, TraitClause1]}, for<'c> impl_Fn_tuple_for_closure<'13, '12, '25, T>[TraitClause0, TraitClause1]](move _2, move _3)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_3)

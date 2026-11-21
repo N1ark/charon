@@ -261,7 +261,7 @@ fn function_call(_1: u32)
 pub fn sum<'_0>(s: &'_0 [u32]) -> u32
 {
     let mut _0: u32; // return
-    let s: &'1 [u32]; // arg #1
+    let s: &'0 [u32]; // arg #1
     let mut sum: u32; // local
     let mut i: usize; // local
     let _4: (); // anonymous local
@@ -271,7 +271,7 @@ pub fn sum<'_0>(s: &'_0 [u32]) -> u32
     let mut _8: bool; // anonymous local
     let mut _9: usize; // anonymous local
     let mut _10: usize; // anonymous local
-    let mut _11: &'2 [u32]; // anonymous local
+    let mut _11: &'1 [u32]; // anonymous local
     let mut _12: u32; // anonymous local
     let _13: usize; // anonymous local
     let mut _14: u32; // anonymous local
@@ -332,7 +332,7 @@ pub fn sum<'_0>(s: &'_0 [u32]) -> u32
         storage_live(_10)
         storage_live(_11)
         _11 = &(*s) with_metadata(read s.metadata)
-        _10 = len<'6, u32>[{built_in impl Sized for u32}](move _11)
+        _10 = len<'2, u32>[{built_in impl Sized for u32}](move _11)
         ↳⚡ storage_dead(_24)
             storage_dead(_20)
             storage_dead(_15)
@@ -536,25 +536,25 @@ fn foo()
     let mut _13: u32; // anonymous local
     let mut _14: u32; // anonymous local
     let a: [u32; 10usize]; // local
-    let mut _16: (&'9 u32, &'10 u32); // anonymous local
-    let mut _17: &'14 u32; // anonymous local
+    let mut _16: (&'0 u32, &'1 u32); // anonymous local
+    let mut _17: &'5 u32; // anonymous local
     let _18: usize; // anonymous local
-    let mut _19: &'15 u32; // anonymous local
-    let left_val: &'16 u32; // local
-    let right_val: &'17 u32; // local
+    let mut _19: &'6 u32; // anonymous local
+    let left_val: &'7 u32; // local
+    let right_val: &'8 u32; // local
     let mut _22: bool; // anonymous local
     let mut _23: u32; // anonymous local
     let mut _24: u32; // anonymous local
     let kind: AssertKind; // local
     let mut _26: AssertKind; // anonymous local
-    let mut _27: &'18 u32; // anonymous local
-    let _28: &'19 u32; // anonymous local
-    let mut _29: &'20 u32; // anonymous local
-    let _30: &'21 u32; // anonymous local
-    let mut _31: Option<Arguments<'30>>[{built_in impl Sized for Arguments<'30>}]; // anonymous local
-    let mut _32: &'34 u32; // anonymous local
-    let mut _33: &'35 u32; // anonymous local
-    let mut _34: &'68 u32; // anonymous local
+    let mut _27: &'9 u32; // anonymous local
+    let _28: &'10 u32; // anonymous local
+    let mut _29: &'11 u32; // anonymous local
+    let _30: &'12 u32; // anonymous local
+    let mut _31: Option<Arguments<'13>>[{built_in impl Sized for Arguments<'13>}]; // anonymous local
+    let mut _32: &'17 u32; // anonymous local
+    let mut _33: &'18 u32; // anonymous local
+    let mut _34: &'37 u32; // anonymous local
     let mut _35: u32; // anonymous local
     let mut _36: &'_ [u32; 10usize]; // anonymous local
     let mut _37: &'_ u32; // anonymous local
@@ -720,7 +720,7 @@ fn foo()
         _29 = &(*_30)
         storage_live(_31)
         _31 = Option::None {  }
-        panic(assert_failed<'65, '66, '67, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, {impl#11}, {impl#11}](move _26, move _27, move _29, move _31))
+        panic(assert_failed<'34, '35, '36, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, {impl#11}, {impl#11}](move _26, move _27, move _29, move _31))
         ↳⚡ storage_dead(_32)
             storage_dead(_31)
             storage_dead(_30)
@@ -833,7 +833,7 @@ pub const test_crate::fool::{promoted_const}: str = "\n    // Fooled ya" with_me
 fn fool()
 {
     let mut _0: (); // return
-    let mut _1: &'1 str; // anonymous local
+    let mut _1: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()

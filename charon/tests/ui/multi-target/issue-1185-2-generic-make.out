@@ -24,11 +24,11 @@ where
     Outlives0: (H: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut State<H>; // arg #1
+    let _1: &'0 mut State<H>; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for H}::drop_glue<'2>] (*_1)._h
+    drop[{built_in impl Destruct for H}::drop_glue<'1>] (*_1)._h
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)

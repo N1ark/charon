@@ -25,7 +25,7 @@ where
 fn rej_sample<'_0>(a: &'_0 [u8]) -> usize
 {
     let mut _0: usize; // return
-    let a: &'1 [u8]; // arg #1
+    let a: &'0 [u8]; // arg #1
     let mut sampled: usize; // local
     let mut _3: bool; // anonymous local
     let mut _4: u8; // anonymous local

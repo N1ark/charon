@@ -238,14 +238,14 @@ struct () {}
 fn f<'_0>(blocks: &'_0 mut [u8])
 {
     let mut _0: (); // return
-    let blocks: &'1 mut [u8]; // arg #1
-    let mut _2: IterMut<'3, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _3: IterMut<'4, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _4: &'5 mut [u8]; // anonymous local
-    let mut iter: IterMut<'6, u8>[{built_in impl Sized for u8}]; // local
-    let mut _6: Option<&'15 mut u8>[{built_in impl Sized for &'15 mut u8}]; // anonymous local
-    let mut _7: &'21 mut IterMut<'22, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _8: &'23 mut IterMut<'24, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let blocks: &'0 mut [u8]; // arg #1
+    let mut _2: IterMut<'1, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _3: IterMut<'2, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _4: &'3 mut [u8]; // anonymous local
+    let mut iter: IterMut<'4, u8>[{built_in impl Sized for u8}]; // local
+    let mut _6: Option<&'5 mut u8>[{built_in impl Sized for &'5 mut u8}]; // anonymous local
+    let mut _7: &'9 mut IterMut<'10, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _8: &'11 mut IterMut<'12, u8>[{built_in impl Sized for u8}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -253,11 +253,11 @@ fn f<'_0>(blocks: &'_0 mut [u8])
     storage_live(_3)
     storage_live(_4)
     _4 = &two-phase-mut (*blocks) with_metadata(read blocks.metadata)
-    _3 = iter_mut<'28, u8>[{built_in impl Sized for u8}](move _4)
+    _3 = iter_mut<'13, u8>[{built_in impl Sized for u8}](move _4)
     ↳⚡ storage_dead(blocks)
         unwind_continue
     storage_dead(_4)
-    _2 = into_iter<IterMut<'40, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for IterMut<'40, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_IterMut<'40, u8>[{built_in impl Sized for u8}]](move _3)
+    _2 = into_iter<IterMut<'14, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for IterMut<'14, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_IterMut<'14, u8>[{built_in impl Sized for u8}]](move _3)
     ↳⚡ storage_dead(blocks)
         unwind_continue
     storage_dead(_3)
@@ -269,7 +269,7 @@ fn f<'_0>(blocks: &'_0 mut [u8])
         storage_live(_8)
         _8 = &mut iter
         _7 = &two-phase-mut (*_8)
-        _6 = impl_Iterator_for_IterMut::next<'60, '64, u8>[{built_in impl Sized for u8}](move _7)
+        _6 = impl_Iterator_for_IterMut::next<'21, '22, u8>[{built_in impl Sized for u8}](move _7)
         ↳⚡ storage_dead(blocks)
             unwind_continue
         storage_dead(_7)
@@ -297,18 +297,18 @@ fn f<'_0>(blocks: &'_0 mut [u8])
 fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
 {
     let mut _0: (); // return
-    let s0: &'1 [u8]; // arg #1
-    let s1: &'2 [u8]; // arg #2
-    let mut _3: Zip<Iter<'18, u8>[{built_in impl Sized for u8}], Iter<'19, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'18, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'19, u8>[{built_in impl Sized for u8}]}]; // anonymous local
-    let mut _4: Zip<Iter<'26, u8>[{built_in impl Sized for u8}], Iter<'27, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'26, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'27, u8>[{built_in impl Sized for u8}]}]; // anonymous local
-    let mut _5: Iter<'34, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _6: &'35 [u8]; // anonymous local
-    let mut _7: Iter<'36, u8>[{built_in impl Sized for u8}]; // anonymous local
-    let mut _8: &'37 [u8]; // anonymous local
-    let mut iter: Zip<Iter<'38, u8>[{built_in impl Sized for u8}], Iter<'39, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'38, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'39, u8>[{built_in impl Sized for u8}]}]; // local
-    let mut _10: Option<(&'102 u8, &'103 u8)>[{built_in impl Sized for (&'102 u8, &'103 u8)}]; // anonymous local
-    let mut _11: &'131 mut Zip<Iter<'132, u8>[{built_in impl Sized for u8}], Iter<'133, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'132, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'133, u8>[{built_in impl Sized for u8}]}]; // anonymous local
-    let mut _12: &'140 mut Zip<Iter<'141, u8>[{built_in impl Sized for u8}], Iter<'142, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'141, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'142, u8>[{built_in impl Sized for u8}]}]; // anonymous local
+    let s0: &'0 [u8]; // arg #1
+    let s1: &'1 [u8]; // arg #2
+    let mut _3: Zip<Iter<'2, u8>[{built_in impl Sized for u8}], Iter<'3, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'2, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'3, u8>[{built_in impl Sized for u8}]}]; // anonymous local
+    let mut _4: Zip<Iter<'10, u8>[{built_in impl Sized for u8}], Iter<'11, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'10, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'11, u8>[{built_in impl Sized for u8}]}]; // anonymous local
+    let mut _5: Iter<'18, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _6: &'19 [u8]; // anonymous local
+    let mut _7: Iter<'20, u8>[{built_in impl Sized for u8}]; // anonymous local
+    let mut _8: &'21 [u8]; // anonymous local
+    let mut iter: Zip<Iter<'22, u8>[{built_in impl Sized for u8}], Iter<'23, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'22, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'23, u8>[{built_in impl Sized for u8}]}]; // local
+    let mut _10: Option<(&'30 u8, &'31 u8)>[{built_in impl Sized for (&'30 u8, &'31 u8)}]; // anonymous local
+    let mut _11: &'50 mut Zip<Iter<'51, u8>[{built_in impl Sized for u8}], Iter<'52, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'51, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'52, u8>[{built_in impl Sized for u8}]}]; // anonymous local
+    let mut _12: &'59 mut Zip<Iter<'60, u8>[{built_in impl Sized for u8}], Iter<'61, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'60, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'61, u8>[{built_in impl Sized for u8}]}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -317,7 +317,7 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
     storage_live(_5)
     storage_live(_6)
     _6 = &(*s0) with_metadata(read s0.metadata)
-    _5 = iter<'152, u8>[{built_in impl Sized for u8}](move _6)
+    _5 = iter<'68, u8>[{built_in impl Sized for u8}](move _6)
     ↳⚡ storage_dead(s1)
         storage_dead(s0)
         unwind_continue
@@ -325,18 +325,18 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
     storage_live(_7)
     storage_live(_8)
     _8 = &(*s1) with_metadata(read s1.metadata)
-    _7 = iter<'155, u8>[{built_in impl Sized for u8}](move _8)
+    _7 = iter<'69, u8>[{built_in impl Sized for u8}](move _8)
     ↳⚡ storage_dead(s1)
         storage_dead(s0)
         unwind_continue
     storage_dead(_8)
-    _4 = impl_Iterator_for_Iter::zip<'186, u8, Iter<'187, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for u8}, {built_in impl Sized for Iter<'187, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'186, u8>[{built_in impl Sized for u8}]}, impl_IntoIterator_for_T<Iter<'187, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'187, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'187, u8>[{built_in impl Sized for u8}]]](move _5, move _7)
+    _4 = impl_Iterator_for_Iter::zip<'70, u8, Iter<'71, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for u8}, {built_in impl Sized for Iter<'71, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'70, u8>[{built_in impl Sized for u8}]}, impl_IntoIterator_for_T<Iter<'71, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'71, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'71, u8>[{built_in impl Sized for u8}]]](move _5, move _7)
     ↳⚡ storage_dead(s1)
         storage_dead(s0)
         unwind_continue
     storage_dead(_7)
     storage_dead(_5)
-    _3 = into_iter<Zip<Iter<'372, u8>[{built_in impl Sized for u8}], Iter<'375, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'372, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'375, u8>[{built_in impl Sized for u8}]}]>[{built_in impl Sized for Zip<Iter<'372, u8>[{built_in impl Sized for u8}], Iter<'375, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'372, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'375, u8>[{built_in impl Sized for u8}]}]}, impl_Iterator_for_Zip<Iter<'372, u8>[{built_in impl Sized for u8}], Iter<'375, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'372, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'375, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'372, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'375, u8>[{built_in impl Sized for u8}]]](move _4)
+    _3 = into_iter<Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}]>[{built_in impl Sized for Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}]}, impl_Iterator_for_Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'91, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'94, u8>[{built_in impl Sized for u8}]]](move _4)
     ↳⚡ storage_dead(s1)
         storage_dead(s0)
         unwind_continue
@@ -349,7 +349,7 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
         storage_live(_12)
         _12 = &mut iter
         _11 = &two-phase-mut (*_12)
-        _10 = impl_Iterator_for_Zip::next<'620, Iter<'585, u8>[{built_in impl Sized for u8}], Iter<'586, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'585, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'586, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'585, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'586, u8>[{built_in impl Sized for u8}]](move _11)
+        _10 = impl_Iterator_for_Zip::next<'159, Iter<'147, u8>[{built_in impl Sized for u8}], Iter<'148, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'147, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'148, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'147, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'148, u8>[{built_in impl Sized for u8}]](move _11)
         ↳⚡ storage_dead(s1)
             storage_dead(s0)
             unwind_continue

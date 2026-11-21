@@ -23,18 +23,18 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Self; // anonymous local
+    let mut _3: &'1 Self; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'3 Self; // anonymous local
+    let mut _5: &'2 Self; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self) with_metadata(read self.metadata)
-    _2 = TraitClause0::required<'5>(move _3)
+    _2 = TraitClause0::required<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -42,7 +42,7 @@ where
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self) with_metadata(read self.metadata)
-    _4 = TraitClause0::provided2<'7>(move _5)
+    _4 = TraitClause0::provided2<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -58,18 +58,18 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 Self; // arg #1
+    let self: &'0 Self; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Self; // anonymous local
+    let mut _3: &'1 Self; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'3 Self; // anonymous local
+    let mut _5: &'2 Self; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self) with_metadata(read self.metadata)
-    _2 = TraitClause0::required<'5>(move _3)
+    _2 = TraitClause0::required<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -77,7 +77,7 @@ where
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self) with_metadata(read self.metadata)
-    _4 = TraitClause0::provided1<'7>(move _5)
+    _4 = TraitClause0::provided1<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -94,18 +94,18 @@ struct Foo {}
 fn impl_Trait_for_Foo::provided1<'_0>(self: &'_0 Foo)
 {
     let mut _0: (); // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Foo; // anonymous local
+    let mut _3: &'1 Foo; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'3 Foo; // anonymous local
+    let mut _5: &'2 Foo; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Foo::required<'5>(move _3)
+    _2 = impl_Trait_for_Foo::required<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -113,7 +113,7 @@ fn impl_Trait_for_Foo::provided1<'_0>(self: &'_0 Foo)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
-    _4 = impl_Trait_for_Foo::provided2<'7>(move _5)
+    _4 = impl_Trait_for_Foo::provided2<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -127,18 +127,18 @@ fn impl_Trait_for_Foo::provided1<'_0>(self: &'_0 Foo)
 fn impl_Trait_for_Foo::provided2<'_0>(self: &'_0 Foo)
 {
     let mut _0: (); // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Foo; // anonymous local
+    let mut _3: &'1 Foo; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'3 Foo; // anonymous local
+    let mut _5: &'2 Foo; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Foo::required<'5>(move _3)
+    _2 = impl_Trait_for_Foo::required<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -146,7 +146,7 @@ fn impl_Trait_for_Foo::provided2<'_0>(self: &'_0 Foo)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
-    _4 = impl_Trait_for_Foo::provided1<'7>(move _5)
+    _4 = impl_Trait_for_Foo::provided1<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -160,16 +160,16 @@ fn impl_Trait_for_Foo::provided2<'_0>(self: &'_0 Foo)
 fn impl_Trait_for_Foo::required<'_0>(self: &'_0 Foo)
 {
     let mut _0: (); // return
-    let self: &'1 Foo; // arg #1
+    let self: &'0 Foo; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Foo; // anonymous local
+    let mut _3: &'1 Foo; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Foo::provided1<'6>(move _3)
+    _2 = impl_Trait_for_Foo::provided1<'2>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -195,18 +195,18 @@ struct Bar {}
 fn impl_Trait_for_Bar::provided2<'_0>(self: &'_0 Bar)
 {
     let mut _0: (); // return
-    let self: &'1 Bar; // arg #1
+    let self: &'0 Bar; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Bar; // anonymous local
+    let mut _3: &'1 Bar; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'3 Bar; // anonymous local
+    let mut _5: &'2 Bar; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Bar::required<'5>(move _3)
+    _2 = impl_Trait_for_Bar::required<'3>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -214,7 +214,7 @@ fn impl_Trait_for_Bar::provided2<'_0>(self: &'_0 Bar)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
-    _4 = impl_Trait_for_Bar::provided1<'7>(move _5)
+    _4 = impl_Trait_for_Bar::provided1<'4>(move _5)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_5)
@@ -228,16 +228,16 @@ fn impl_Trait_for_Bar::provided2<'_0>(self: &'_0 Bar)
 fn impl_Trait_for_Bar::required<'_0>(self: &'_0 Bar)
 {
     let mut _0: (); // return
-    let self: &'1 Bar; // arg #1
+    let self: &'0 Bar; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Bar; // anonymous local
+    let mut _3: &'1 Bar; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Bar::provided2<'6>(move _3)
+    _2 = impl_Trait_for_Bar::provided2<'2>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)
@@ -251,16 +251,16 @@ fn impl_Trait_for_Bar::required<'_0>(self: &'_0 Bar)
 fn impl_Trait_for_Bar::provided1<'_0>(self: &'_0 Bar)
 {
     let mut _0: (); // return
-    let self: &'1 Bar; // arg #1
+    let self: &'0 Bar; // arg #1
     let _2: (); // anonymous local
-    let mut _3: &'2 Bar; // anonymous local
+    let mut _3: &'1 Bar; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     storage_live(_3)
     _3 = &(*self)
-    _2 = impl_Trait_for_Bar::provided2<'6>(move _3)
+    _2 = impl_Trait_for_Bar::provided2<'2>(move _3)
     ↳⚡ storage_dead(self)
         unwind_continue
     storage_dead(_3)

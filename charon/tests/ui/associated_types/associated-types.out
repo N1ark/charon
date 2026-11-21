@@ -177,8 +177,8 @@ where
     TraitClause0: (T: Sized),
     Outlives0: (T: 'a),
 {
-    let mut _0: Option<&'8 T>[{built_in impl Sized for &'8 T}]; // return
-    let x: Option<&'12 T>[{built_in impl Sized for &'12 T}]; // arg #1
+    let mut _0: Option<&'0 T>[{built_in impl Sized for &'0 T}]; // return
+    let x: Option<&'4 T>[{built_in impl Sized for &'4 T}]; // arg #1
 
     storage_live(_0)
     _0 = copy x
@@ -275,7 +275,7 @@ where
 {
     let mut _0: Clause1_Item; // return
     let x: Clause1_Item; // arg #1
-    let mut _2: &'5 Clause1_Item; // anonymous local
+    let mut _2: &'2 Clause1_Item; // anonymous local
     let _3: Clause1_Item; // anonymous local
     let mut _4: Clause1_Item; // anonymous local
 
@@ -289,7 +289,7 @@ where
         unwind_continue
     _2 = &_3
     storage_dead(_4)
-    _0 = TraitClause2::ImpliedClause1::ImpliedClause1::clone<'33>(move _2)
+    _0 = TraitClause2::ImpliedClause1::ImpliedClause1::clone<'9>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)
@@ -302,16 +302,16 @@ where
 fn call_fn()
 {
     let mut _0: (); // return
-    let mut _1: Option<&'30 bool>[{built_in impl Sized for &'30 bool}]; // anonymous local
-    let mut _2: Option<&'34 bool>[{built_in impl Sized for &'34 bool}]; // anonymous local
+    let mut _1: Option<&'9 bool>[{built_in impl Sized for &'9 bool}]; // anonymous local
+    let mut _2: Option<&'13 bool>[{built_in impl Sized for &'13 bool}]; // anonymous local
 
     storage_live(_0)
     _0 = ()
-    set '21: '21
+    set '8: '8
     storage_live(_1)
     storage_live(_2)
     _2 = Option::None {  }
-    _1 = external_use_item<'21, &'21 bool, Option<&'21 bool>[{built_in impl Sized for &'21 bool}], &'21 bool>[{built_in impl Sized for &'21 bool}, {impl test_crate::Foo<'a, Option<&'a T>[{built_in impl Sized for &'a T}]> for &'a T}<'21, bool>[{built_in impl Sized for bool}], impl_Foo_for_Option<'21, &'21 bool>[{built_in impl Sized for &'21 bool}, {impl Copy for &'_0 T}<'21, bool>]](move _2)
+    _1 = external_use_item<'8, &'8 bool, Option<&'8 bool>[{built_in impl Sized for &'8 bool}], &'8 bool>[{built_in impl Sized for &'8 bool}, {impl test_crate::Foo<'a, Option<&'a T>[{built_in impl Sized for &'a T}]> for &'a T}<'8, bool>[{built_in impl Sized for bool}], impl_Foo_for_Option<'8, &'8 bool>[{built_in impl Sized for &'8 bool}, {impl Copy for &'_0 T}<'8, bool>]](move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     storage_dead(_1)
@@ -332,7 +332,7 @@ where
 
     storage_live(_0)
     _0 = move x
-    conditional_drop[{built_in impl Destruct for Clause2_Item}::drop_glue<'5>] x
+    conditional_drop[{built_in impl Destruct for Clause2_Item}::drop_glue<'3>] x
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(x)

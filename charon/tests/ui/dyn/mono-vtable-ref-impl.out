@@ -30,7 +30,7 @@ pub trait Trait<Self>
 pub fn method::<'_, u32><'_0>(self: &'_0 &'_ u32)
 {
     let mut _0: (); // return
-    let self: &'2 &'3 u32; // arg #1
+    let self: &'0 &'1 u32; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -87,21 +87,21 @@ impl Trait for &'_ u32 {
 // Full name: test_crate::f
 pub fn f<'a>(x: &'a &'a u32) -> &'a (dyn Trait + 'a)
 {
-    let mut _0: &'3 (dyn Trait + '4); // return
-    let x: &'8 &'9 u32; // arg #1
-    let mut _2: &'10 (dyn Trait + '11); // anonymous local
-    let _3: &'12 (dyn Trait + '13); // anonymous local
-    let mut _4: &'14 &'15 u32; // anonymous local
+    let mut _0: &'0 (dyn Trait + '1); // return
+    let x: &'2 &'3 u32; // arg #1
+    let mut _2: &'4 (dyn Trait + '5); // anonymous local
+    let _3: &'6 (dyn Trait + '7); // anonymous local
+    let mut _4: &'8 &'9 u32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)
     storage_live(_3)
     storage_live(_4)
     _4 = &(*x)
-    _3 = unsize_cast<&'17 (dyn Trait + '18), &{impl Trait for &'_ u32}::{vtable}::<'_, u32>>(move _4)
+    _3 = unsize_cast<&'11 (dyn Trait + '12), &{impl Trait for &'_ u32}::{vtable}::<'_, u32>>(move _4)
     storage_dead(_4)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _0 = unsize_cast<&'22 (dyn Trait + '23),  at []>(move _2)
+    _0 = unsize_cast<&'15 (dyn Trait + '16),  at []>(move _2)
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(x)

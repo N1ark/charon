@@ -59,11 +59,11 @@ where
     Outlives0: (S: '_0),
 {
     let mut _0: (); // return
-    let _1: &'1 mut HashMap<S>[TraitClause0]; // arg #1
+    let _1: &'0 mut HashMap<S>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()
-    drop[{built_in impl Destruct for S}::drop_glue<'2>] (*_1)._0
+    drop[{built_in impl Destruct for S}::drop_glue<'1>] (*_1)._0
     ↳⚡ storage_dead(_1)
         unwind_continue
     storage_dead(_1)

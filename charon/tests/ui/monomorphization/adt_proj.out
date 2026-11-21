@@ -43,7 +43,7 @@ fn main()
         where res :< Result::<u32, u32>;
         where res := Result::<u32, u32>;
     let n: u32; // local
-    let mut _3: &'1 str; // anonymous local
+    let mut _3: &'0 str; // anonymous local
 
     storage_live(_0)
     _0 = ()

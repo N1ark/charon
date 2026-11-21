@@ -2,6 +2,7 @@ use itertools::Itertools;
 use rustc_hash::FxHashMap as HashMap;
 use rustc_middle::ty;
 use rustc_trait_elaboration::ItemId;
+use std::mem;
 
 use super::translate_ctx::*;
 use crate::hax::{self, UnderOwnerState, Visibility};
@@ -30,6 +31,29 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             Region::Body(v.push(()))
         } else {
             Region::Erased
+        }
+    }
+
+    /// Inside bodies, run `f` with a separate freshener, so that the body regions it allocates
+    /// aren't added to the body. Use [`Self::import_body_regions`] on the parts of the result we
+    /// keep.
+    pub(crate) fn with_local_body_regions<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        let outer_freshener = self.lifetime_freshener.as_mut().map(mem::take);
+        let ret = f(self);
+        if outer_freshener.is_some() {
+            self.lifetime_freshener = outer_freshener;
+        }
+        ret
+    }
+
+    /// Give fresh body regions, in order of appearance, to the body regions of a value obtained
+    /// with [`Self::with_local_body_regions`].
+    pub(crate) fn import_body_regions<T: AstVisitable>(&mut self, x: &mut T) {
+        if let Some(freshener) = &mut self.lifetime_freshener {
+            let mut new_ids: HashMap<RegionId, RegionId> = HashMap::default();
+            map_body_regions(x, |id| {
+                *new_ids.entry(id).or_insert_with(|| freshener.push(()))
+            });
         }
     }
 
@@ -136,7 +160,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             self.t_ctx.cache_reuse_binder_ty(hax_ty);
             ty
         } else {
-            let ty = self.translate_ty_uncached(span, hax_ty);
+            // We refresh the regions of the result below, so we don't need its body regions.
+            let ty = self.with_local_body_regions(|this| this.translate_ty_uncached(span, hax_ty));
             self.innermost_binder_mut().type_trans_cache.insert(
                 hax_ty.clone(),
                 ty.clone().replace_erased_regions(|| Region::Erased),

@@ -24,9 +24,9 @@ struct Bar<'a> {
 // Full name: test_crate::{Bar<'a>}::new
 fn new<'a>(r: &'a i32) -> Bar<'a>
 {
-    let mut _0: Bar<'1>; // return
-    let r: &'3 i32; // arg #1
-    let mut _2: &'4 i32; // anonymous local
+    let mut _0: Bar<'0>; // return
+    let r: &'1 i32; // arg #1
+    let mut _2: &'2 i32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

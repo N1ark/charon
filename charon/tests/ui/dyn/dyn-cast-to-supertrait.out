@@ -70,7 +70,7 @@ struct HouseCat {}
 fn hunt<'_0>(self: &'_0 HouseCat)
 {
     let mut _0: (); // return
-    let self: &'1 HouseCat; // arg #1
+    let self: &'0 HouseCat; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -129,7 +129,7 @@ impl "impl_Feline_for_HouseCat" Feline for HouseCat {
 fn pet<'_0>(self: &'_0 HouseCat)
 {
     let mut _0: (); // return
-    let self: &'1 HouseCat; // arg #1
+    let self: &'0 HouseCat; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -188,7 +188,7 @@ impl "impl_Pettable_for_HouseCat" Pettable for HouseCat {
 fn meow<'_0>(self: &'_0 HouseCat)
 {
     let mut _0: (); // return
-    let self: &'1 HouseCat; // arg #1
+    let self: &'0 HouseCat; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -253,7 +253,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let mut _1: &'1 T; // arg #1
+    let mut _1: &'0 T; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -267,21 +267,21 @@ fn main()
 {
     let mut _0: (); // return
     let cat: HouseCat; // local
-    let dyn_cat: &'15 (dyn Cat + '16); // local
+    let dyn_cat: &'12 (dyn Cat + '13); // local
         where dyn_cat :< &'0 (dyn Cat + '1);
         where dyn_cat := &'2 (dyn Cat + '3);
-    let mut _3: &'18 HouseCat; // anonymous local
-    let _4: &'19 HouseCat; // anonymous local
-    let dyn_feline: &'23 (dyn Feline + '24); // local
+    let mut _3: &'14 HouseCat; // anonymous local
+    let _4: &'15 HouseCat; // anonymous local
+    let dyn_feline: &'16 (dyn Feline + '17); // local
         where dyn_feline :< &'4 (dyn Feline + '5);
         where dyn_feline := &'6 (dyn Feline + '7);
-    let mut _6: &'25 (dyn Cat + '26); // anonymous local
-    let dyn_pettable: &'30 (dyn Pettable + '31); // local
+    let mut _6: &'18 (dyn Cat + '19); // anonymous local
+    let dyn_pettable: &'20 (dyn Pettable + '21); // local
         where dyn_pettable :< &'8 (dyn Pettable + '9);
         where dyn_pettable := &'10 (dyn Pettable + '11);
-    let mut _8: &'32 (dyn Cat + '33); // anonymous local
+    let mut _8: &'22 (dyn Cat + '23); // anonymous local
     let _9: (); // anonymous local
-    let mut _10: &'34 (dyn Cat + '35); // anonymous local
+    let mut _10: &'24 (dyn Cat + '25); // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -299,26 +299,26 @@ fn main()
     storage_live(_4)
     _4 = &cat
     _3 = &(*_4)
-    dyn_cat = unsize_cast<&'36 (dyn Cat + '37), &impl_Cat_for_HouseCat::{vtable}>(move _3)
+    dyn_cat = unsize_cast<&'26 (dyn Cat + '27), &impl_Cat_for_HouseCat::{vtable}>(move _3)
     storage_dead(_3)
     fake_read(dyn_cat)
     storage_dead(_4)
     storage_live(dyn_feline)
     storage_live(_6)
     _6 = &(*dyn_cat) with_metadata(read dyn_cat.metadata)
-    dyn_feline = unsize_cast<&'39 (dyn Feline + '40),  at [5]>(move _6)
+    dyn_feline = unsize_cast<&'29 (dyn Feline + '30),  at [5]>(move _6)
     storage_dead(_6)
     fake_read(dyn_feline)
     storage_live(dyn_pettable)
     storage_live(_8)
     _8 = &(*dyn_cat) with_metadata(read dyn_cat.metadata)
-    dyn_pettable = unsize_cast<&'42 (dyn Pettable + '43),  at [6]>(move _8)
+    dyn_pettable = unsize_cast<&'32 (dyn Pettable + '33),  at [6]>(move _8)
     storage_dead(_8)
     fake_read(dyn_pettable)
     storage_live(_9)
     storage_live(_10)
     _10 = &(*dyn_cat) with_metadata(read dyn_cat.metadata)
-    _9 = takes_pettable<'69, (dyn Cat + '54)>[{built_in impl MetaSized for (dyn Cat + '56)}, Cat<(dyn Cat + '57)>::ImpliedClause2](move _10)
+    _9 = takes_pettable<'40, (dyn Cat + '35)>[{built_in impl MetaSized for (dyn Cat + '37)}, Cat<(dyn Cat + '38)>::ImpliedClause2](move _10)
     ↳⚡ unwind_continue
     storage_dead(_10)
     storage_dead(_9)

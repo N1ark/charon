@@ -60,7 +60,7 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut Empty<T>[TraitClause0]; // arg #1
+    let self: &'0 mut Empty<T>[TraitClause0]; // arg #1
 
     storage_live(_0)
     _0 = ()

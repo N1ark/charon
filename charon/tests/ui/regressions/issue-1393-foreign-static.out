@@ -84,7 +84,7 @@ fn foo() -> (u8, *const u8, u8)
     let mut _0: (u8, *const u8, u8); // return
     let mut _1: u8; // anonymous local
     let mut _2: *const u8; // anonymous local
-    let mut _3: &'1 Wrapper; // anonymous local
+    let mut _3: &'0 Wrapper; // anonymous local
 
     storage_live(_0)
     storage_live(_1)

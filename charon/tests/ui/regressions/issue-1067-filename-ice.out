@@ -108,10 +108,10 @@ fn main()
         where buf := Vec<u8>[{built_in impl Sized for u8}, {built_in impl Sized for Global}];
     let _2: (); // anonymous local
     let mut _3: Result<(), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}]; // anonymous local
-    let mut _4: &'1 mut Vec<u8>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]; // anonymous local
-    let mut _5: &'3 [u8]; // anonymous local
-    let mut _6: &'5 [u8; 5usize]; // anonymous local
-    let _7: &'6 [u8; 5usize]; // anonymous local
+    let mut _4: &'0 mut Vec<u8>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]; // anonymous local
+    let mut _5: &'1 [u8]; // anonymous local
+    let mut _6: &'2 [u8; 5usize]; // anonymous local
+    let _7: &'3 [u8; 5usize]; // anonymous local
     let mut _8: [u8; 5usize]; // anonymous local
 
     storage_live(_0)
@@ -135,17 +135,17 @@ fn main()
     _5 = as_slice<'_, u8, 5usize>[{built_in impl Sized for u8}](move _6)
     ↳⚡ undefined_behavior
     storage_dead(_6)
-    _3 = impl_Write_for_Vec_u8::write_all<'15, '16, Global>[{built_in impl Sized for Global}](move _4, move _5)
-    ↳⚡ conditional_drop[impl_Destruct_for_Vec::drop_glue<'17, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
+    _3 = impl_Write_for_Vec_u8::write_all<'6, '7, Global>[{built_in impl Sized for Global}](move _4, move _5)
+    ↳⚡ conditional_drop[impl_Destruct_for_Vec::drop_glue<'8, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_8)
         unwind_continue
     storage_dead(_5)
     storage_dead(_4)
     _2 = unwrap<(), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}, impl_Debug_for_Error](move _3)
-    ↳⚡ conditional_drop[impl_Destruct_for_Result::drop_glue<'18, (), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}]] _3
+    ↳⚡ conditional_drop[impl_Destruct_for_Result::drop_glue<'9, (), Error>[{built_in impl Sized for ()}, {built_in impl Sized for Error}]] _3
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Vec::drop_glue<'17, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
+        conditional_drop[impl_Destruct_for_Vec::drop_glue<'8, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_8)
         unwind_continue
@@ -153,7 +153,7 @@ fn main()
     storage_dead(_7)
     storage_dead(_2)
     _0 = ()
-    conditional_drop[impl_Destruct_for_Vec::drop_glue<'19, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
+    conditional_drop[impl_Destruct_for_Vec::drop_glue<'10, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] buf
     ↳⚡ storage_dead(_8)
         unwind_continue
     storage_dead(buf)

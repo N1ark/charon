@@ -383,7 +383,7 @@ struct test_attributes::tests::test_ignore::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_attributes::tests::test_ignore::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_ignore::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
 {
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
-    let mut _1: &'1 test_attributes::tests::test_ignore::{closure}; // arg #1
+    let mut _1: &'0 test_attributes::tests::test_ignore::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
     let mut _3: (); // anonymous local
 
@@ -419,12 +419,12 @@ extern "rust-call" fn {impl FnOnce<()> for test_attributes::tests::test_ignore::
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
     let mut _1: test_attributes::tests::test_ignore::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut test_attributes::tests::test_ignore::{closure}; // anonymous local
+    let _3: &'0 mut test_attributes::tests::test_ignore::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = {impl FnMut<()> for test_attributes::tests::test_ignore::{closure}}::call_mut<'3>(move _3, move _2)
+    _0 = {impl FnMut<()> for test_attributes::tests::test_ignore::{closure}}::call_mut<'1>(move _3, move _2)
     ↳⚡ unwind_continue
     return
 }
@@ -450,14 +450,14 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
     let mut _0: TestDescAndFn; // return
     let mut _1: TestDesc; // anonymous local
     let mut _2: TestName; // anonymous local
-    let mut _3: Option<&'8 str>[{built_in impl Sized for &'8 str}]; // anonymous local
+    let mut _3: Option<&'0 str>[{built_in impl Sized for &'0 str}]; // anonymous local
     let mut _4: ShouldPanic; // anonymous local
     let mut _5: TestType; // anonymous local
     let mut _6: TestFn; // anonymous local
     let mut _7: fn() -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // anonymous local
     let mut _8: test_attributes::tests::test_ignore::{closure}; // anonymous local
-    let mut _9: &'12 str; // anonymous local
-    let mut _10: &'20 str; // anonymous local
+    let mut _9: &'4 str; // anonymous local
+    let mut _10: &'9 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -477,8 +477,8 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
-    conditional_drop[impl_Destruct_for_TestName::drop_glue<'21>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
@@ -491,12 +491,12 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
     _6 = TestFn::StaticTestFn { _0: move _7 }
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
-    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'22>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_6)
-    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'24>] _1
+    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
@@ -515,8 +515,8 @@ fn test_attributes::tests::test_should_panic#1()
 {
     let mut _0: (); // return
     let _1: !; // anonymous local
-    let mut _2: Arguments<'2>; // anonymous local
-    let mut _3: &'7 str; // anonymous local
+    let mut _2: Arguments<'1>; // anonymous local
+    let mut _3: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -526,7 +526,7 @@ fn test_attributes::tests::test_should_panic#1()
     _3 = &test_attributes::tests::test_should_panic#1::{promoted_const} with_metadata(const 22usize)
     _2 = from_str<'0>(move _3)
     ↳⚡ unwind_continue
-    _1 = panic_fmt<'11>(move _2)
+    _1 = panic_fmt<'3>(move _2)
     ↳⚡ unwind_continue
 }
 
@@ -536,7 +536,7 @@ struct test_attributes::tests::test_should_panic::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_attributes::tests::test_should_panic::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_should_panic::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
 {
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
-    let mut _1: &'1 test_attributes::tests::test_should_panic::{closure}; // arg #1
+    let mut _1: &'0 test_attributes::tests::test_should_panic::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
     let mut _3: (); // anonymous local
 
@@ -572,12 +572,12 @@ extern "rust-call" fn {impl FnOnce<()> for test_attributes::tests::test_should_p
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
     let mut _1: test_attributes::tests::test_should_panic::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut test_attributes::tests::test_should_panic::{closure}; // anonymous local
+    let _3: &'0 mut test_attributes::tests::test_should_panic::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = {impl FnMut<()> for test_attributes::tests::test_should_panic::{closure}}::call_mut<'3>(move _3, move _2)
+    _0 = {impl FnMut<()> for test_attributes::tests::test_should_panic::{closure}}::call_mut<'1>(move _3, move _2)
     ↳⚡ unwind_continue
     return
 }
@@ -603,14 +603,14 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
     let mut _0: TestDescAndFn; // return
     let mut _1: TestDesc; // anonymous local
     let mut _2: TestName; // anonymous local
-    let mut _3: Option<&'8 str>[{built_in impl Sized for &'8 str}]; // anonymous local
+    let mut _3: Option<&'0 str>[{built_in impl Sized for &'0 str}]; // anonymous local
     let mut _4: ShouldPanic; // anonymous local
     let mut _5: TestType; // anonymous local
     let mut _6: TestFn; // anonymous local
     let mut _7: fn() -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // anonymous local
     let mut _8: test_attributes::tests::test_should_panic::{closure}; // anonymous local
-    let mut _9: &'12 str; // anonymous local
-    let mut _10: &'20 str; // anonymous local
+    let mut _9: &'4 str; // anonymous local
+    let mut _10: &'9 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -630,8 +630,8 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
-    conditional_drop[impl_Destruct_for_TestName::drop_glue<'21>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
@@ -644,12 +644,12 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
     _6 = TestFn::StaticTestFn { _0: move _7 }
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
-    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'22>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_6)
-    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'24>] _1
+    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
@@ -682,7 +682,7 @@ struct test_attributes::tests::test_foo::{closure} {}
 extern "rust-call" fn {impl Fn<()> for test_attributes::tests::test_foo::{closure}}::call<'_0>(_1: &'_0 test_attributes::tests::test_foo::{closure}, tupled_args: ()) -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]
 {
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
-    let mut _1: &'1 test_attributes::tests::test_foo::{closure}; // arg #1
+    let mut _1: &'0 test_attributes::tests::test_foo::{closure}; // arg #1
     let mut tupled_args: (); // arg #2
     let mut _3: (); // anonymous local
 
@@ -718,12 +718,12 @@ extern "rust-call" fn {impl FnOnce<()> for test_attributes::tests::test_foo::{cl
     let mut _0: Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // return
     let mut _1: test_attributes::tests::test_foo::{closure}; // arg #1
     let _2: (); // arg #2
-    let _3: &'1 mut test_attributes::tests::test_foo::{closure}; // anonymous local
+    let _3: &'0 mut test_attributes::tests::test_foo::{closure}; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _3 = &mut _1
-    _0 = {impl FnMut<()> for test_attributes::tests::test_foo::{closure}}::call_mut<'3>(move _3, move _2)
+    _0 = {impl FnMut<()> for test_attributes::tests::test_foo::{closure}}::call_mut<'1>(move _3, move _2)
     ↳⚡ unwind_continue
     return
 }
@@ -749,14 +749,14 @@ pub fn test_attributes::tests::test_foo() -> TestDescAndFn
     let mut _0: TestDescAndFn; // return
     let mut _1: TestDesc; // anonymous local
     let mut _2: TestName; // anonymous local
-    let mut _3: Option<&'8 str>[{built_in impl Sized for &'8 str}]; // anonymous local
+    let mut _3: Option<&'0 str>[{built_in impl Sized for &'0 str}]; // anonymous local
     let mut _4: ShouldPanic; // anonymous local
     let mut _5: TestType; // anonymous local
     let mut _6: TestFn; // anonymous local
     let mut _7: fn() -> Result<(), String>[{built_in impl Sized for ()}, {built_in impl Sized for String}]; // anonymous local
     let mut _8: test_attributes::tests::test_foo::{closure}; // anonymous local
-    let mut _9: &'12 str; // anonymous local
-    let mut _10: &'20 str; // anonymous local
+    let mut _9: &'4 str; // anonymous local
+    let mut _10: &'9 str; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
@@ -776,8 +776,8 @@ pub fn test_attributes::tests::test_foo() -> TestDescAndFn
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
-    conditional_drop[impl_Destruct_for_TestName::drop_glue<'21>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_2)
@@ -790,12 +790,12 @@ pub fn test_attributes::tests::test_foo() -> TestDescAndFn
     _6 = TestFn::StaticTestFn { _0: move _7 }
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
-    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'22>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'23>] _1
+    conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
+    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
     storage_dead(_6)
-    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'24>] _1
+    conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
@@ -807,19 +807,19 @@ pub static test_attributes::tests::test_foo: TestDescAndFn = test_attributes::te
 pub fn main()
 {
     let mut _0: (); // return
-    let mut _1: &'13 [&'14 TestDescAndFn]; // anonymous local
-    let mut _2: &'30 [&'31 TestDescAndFn; 3usize]; // anonymous local
-    let _3: &'35 [&'36 TestDescAndFn; 3usize]; // anonymous local
-    let _4: [&'40 TestDescAndFn; 3usize]; // anonymous local
-    let mut _5: &'44 TestDescAndFn; // anonymous local
-    let _6: &'45 TestDescAndFn; // anonymous local
-    let _7: &'46 TestDescAndFn; // anonymous local
-    let mut _8: &'47 TestDescAndFn; // anonymous local
-    let _9: &'48 TestDescAndFn; // anonymous local
-    let _10: &'49 TestDescAndFn; // anonymous local
-    let mut _11: &'50 TestDescAndFn; // anonymous local
-    let _12: &'51 TestDescAndFn; // anonymous local
-    let _13: &'52 TestDescAndFn; // anonymous local
+    let mut _1: &'0 [&'1 TestDescAndFn]; // anonymous local
+    let mut _2: &'5 [&'6 TestDescAndFn; 3usize]; // anonymous local
+    let _3: &'10 [&'11 TestDescAndFn; 3usize]; // anonymous local
+    let _4: [&'15 TestDescAndFn; 3usize]; // anonymous local
+    let mut _5: &'19 TestDescAndFn; // anonymous local
+    let _6: &'20 TestDescAndFn; // anonymous local
+    let _7: &'21 TestDescAndFn; // anonymous local
+    let mut _8: &'22 TestDescAndFn; // anonymous local
+    let _9: &'23 TestDescAndFn; // anonymous local
+    let _10: &'24 TestDescAndFn; // anonymous local
+    let mut _11: &'25 TestDescAndFn; // anonymous local
+    let _12: &'26 TestDescAndFn; // anonymous local
+    let _13: &'27 TestDescAndFn; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -851,9 +851,9 @@ pub fn main()
     storage_dead(_5)
     _3 = &_4
     _2 = &(*_3)
-    _1 = unsize_cast<&'61 [&'62 TestDescAndFn], 3usize>(move _2)
+    _1 = unsize_cast<&'36 [&'37 TestDescAndFn], 3usize>(move _2)
     storage_dead(_2)
-    _0 = test_main_env_args<'72, '73>(move _1)
+    _0 = test_main_env_args<'41, '42>(move _1)
     ↳⚡ unwind_continue
     storage_dead(_1)
     storage_dead(_13)

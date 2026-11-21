@@ -180,8 +180,8 @@ where
 // Full name: test_crate::f
 pub fn f<'a>(_1: &'a ()) -> Option<(&'a u8,)>[{built_in impl Sized for (&'a u8,)}]
 {
-    let mut _0: Option<(&'12 u8,)>[{built_in impl Sized for (&'12 u8,)}]; // return
-    let mut _1: &'17 (); // arg #1
+    let mut _0: Option<(&'0 u8,)>[{built_in impl Sized for (&'0 u8,)}]; // return
+    let mut _1: &'4 (); // arg #1
 
     storage_live(_0)
     _0 = Option::None {  }
@@ -274,7 +274,7 @@ where
     storage_live(_0)
     _0 = ()
     storage_live(_1)
-    _1 = needs_parent<T>[TraitClause0, TraitClause1::ImpliedClause1<'1>]()
+    _1 = needs_parent<T>[TraitClause0, TraitClause1::ImpliedClause1<'0>]()
     ↳⚡ unwind_continue
     storage_dead(_1)
     _0 = ()

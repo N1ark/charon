@@ -21,7 +21,7 @@ struct A {}
 fn method::<A><'_0>(self: &'_0 A)
 {
     let mut _0: (); // return
-    let self: &'1 A; // arg #1
+    let self: &'0 A; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -37,7 +37,7 @@ struct B {}
 fn method::<B><'_0>(self: &'_0 B)
 {
     let mut _0: (); // return
-    let self: &'1 B; // arg #1
+    let self: &'0 B; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -51,16 +51,16 @@ fn main()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: &'1 A; // anonymous local
+    let mut _2: &'0 A; // anonymous local
     let _3: (); // anonymous local
-    let mut _4: &'3 B; // anonymous local
-    let mut _5: &'4 B; // anonymous local
-    let mut _6: &'5 A; // anonymous local
-    let mut _7: &'6 A; // anonymous local
-    let mut _8: &'11 B; // anonymous local
-    let mut _9: &'16 A; // anonymous local
+    let mut _4: &'1 B; // anonymous local
+    let mut _5: &'2 B; // anonymous local
+    let mut _6: &'3 A; // anonymous local
+    let mut _7: &'4 A; // anonymous local
+    let mut _8: &'6 B; // anonymous local
+    let mut _9: &'8 A; // anonymous local
     let mut _10: A; // anonymous local
-    let mut _11: &'17 B; // anonymous local
+    let mut _11: &'9 B; // anonymous local
     let mut _12: B; // anonymous local
 
     storage_live(_7)
@@ -77,7 +77,7 @@ fn main()
     storage_live(_2)
     _6 = move _7
     _2 = &(*_6)
-    _1 = method::<A><'10>(move _2)
+    _1 = method::<A><'5>(move _2)
     ↳⚡ storage_dead(_6)
         storage_dead(_5)
         storage_dead(_12)
@@ -99,7 +99,7 @@ fn main()
     storage_live(_4)
     _5 = move _8
     _4 = &(*_5)
-    _3 = method::<B><'15>(move _4)
+    _3 = method::<B><'7>(move _4)
     ↳⚡ storage_dead(_6)
         storage_dead(_5)
         storage_dead(_12)

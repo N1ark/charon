@@ -97,8 +97,8 @@ where
 // Full name: test_crate::id
 fn id<'a>(x: &'a u8) -> &'a u8
 {
-    let mut _0: &'1 u8; // return
-    let x: &'2 u8; // arg #1
+    let mut _0: &'0 u8; // return
+    let x: &'1 u8; // arg #1
 
     storage_live(_0)
     _0 = copy x
@@ -113,13 +113,13 @@ where
     TraitClause1: for<'_0_1> (F: FnOnce<(&'_0_1 u8,)>),
     TypeConstraint0: for<'_0_1> TraitClause1<'_>::Output = &'_0_1 u8,
 {
-    let mut _0: &'1 u8; // return
+    let mut _0: &'0 u8; // return
     let f: F; // arg #1
-    let x: &'2 u8; // arg #2
-    let _3: &'3 u8; // anonymous local
+    let x: &'1 u8; // arg #2
+    let _3: &'2 u8; // anonymous local
     let mut _4: F; // anonymous local
-    let mut _5: (&'5 u8,); // anonymous local
-    let mut _6: &'6 u8; // anonymous local
+    let mut _5: (&'3 u8,); // anonymous local
+    let mut _6: &'4 u8; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -129,10 +129,10 @@ where
     storage_live(_6)
     _6 = &(*x)
     _5 = (move _6,)
-    _3 = TraitClause1<'12>::call_once(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'18>] _4
+    _3 = TraitClause1<'6>::call_once(move _4, move _5)
+    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'8>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'20>] f
+        conditional_drop[{built_in impl Destruct for F}::drop_glue<'10>] f
         ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(x)
         storage_dead(f)
@@ -142,7 +142,7 @@ where
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'19>] f
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'9>] f
     ↳⚡ storage_dead(x)
         storage_dead(f)
         unwind_continue
@@ -158,24 +158,24 @@ fn main()
     let f: fn<'a>(&'a u8) -> &'a u8; // local
         where f :< fn<'a>(&'a u8) -> &'a u8;
         where f := fn<'a>(&'a u8) -> &'a u8;
-    let _2: &'1 u8; // anonymous local
+    let _2: &'0 u8; // anonymous local
     let mut _3: fn<'a>(&'a u8) -> &'a u8; // anonymous local
-    let mut _4: &'2 u8; // anonymous local
-    let _5: &'3 u8; // anonymous local
+    let mut _4: &'1 u8; // anonymous local
+    let _5: &'2 u8; // anonymous local
     let g: fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8; // local
         where g :< fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8;
         where g := fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8;
-    let _7: &'4 u8; // anonymous local
+    let _7: &'3 u8; // anonymous local
     let mut _8: fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8; // anonymous local
-    let mut _9: &'5 u8; // anonymous local
-    let _10: &'6 u8; // anonymous local
-    let mut _11: &'7 u8; // anonymous local
-    let mut _12: &'8 u8; // anonymous local
-    let mut _13: &'12 u8; // anonymous local
-    let mut _14: &'46 u8; // anonymous local
-    let mut _15: &'78 u8; // anonymous local
+    let mut _9: &'4 u8; // anonymous local
+    let _10: &'5 u8; // anonymous local
+    let mut _11: &'6 u8; // anonymous local
+    let mut _12: &'7 u8; // anonymous local
+    let mut _13: &'10 u8; // anonymous local
+    let mut _14: &'19 u8; // anonymous local
+    let mut _15: &'26 u8; // anonymous local
     let mut _16: u8; // anonymous local
-    let mut _17: &'79 u8; // anonymous local
+    let mut _17: &'27 u8; // anonymous local
     let mut _18: u8; // anonymous local
 
     storage_live(_13)
@@ -189,7 +189,7 @@ fn main()
     storage_live(_12)
     _0 = ()
     storage_live(f)
-    f = fn_def_to_fn_ptr(const id<'11>)
+    f = fn_def_to_fn_ptr(const id<'9>)
     fake_read(f)
     storage_live(_2)
     storage_live(_3)
@@ -199,7 +199,7 @@ fn main()
     _12 = move _13
     _5 = &(*_12)
     _4 = &(*_5)
-    _2 = call<'43, fn<'a>(&'a u8) -> &'a u8>[{built_in impl Sized for fn<'a>(&'a u8) -> &'a u8}, for<'_0_1> {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(&'_0_1 A) -> &'_0_1 B}<'25, u8, u8>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for &'_0_2 u8}]](move _3, move _4)
+    _2 = call<'16, fn<'a>(&'a u8) -> &'a u8>[{built_in impl Sized for fn<'a>(&'a u8) -> &'a u8}, for<'_0_1> {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(&'_0_1 A) -> &'_0_1 B}<'11, u8, u8>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for &'_0_2 u8}]](move _3, move _4)
     ↳⚡ storage_dead(_12)
         storage_dead(_11)
         storage_dead(_18)
@@ -220,7 +220,7 @@ fn main()
     storage_dead(_5)
     storage_dead(_2)
     storage_live(g)
-    g = fn_def_to_fn_ptr(const id<'45>)
+    g = fn_def_to_fn_ptr(const id<'18>)
     fake_read(g)
     storage_live(_7)
     storage_live(_8)
@@ -230,7 +230,7 @@ fn main()
     _11 = move _14
     _10 = &(*_11)
     _9 = &(*_10)
-    _7 = call<'77, fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8>[{built_in impl Sized for fn<'_0_2>(&'_0_2 u8) -> &'_0_2 u8}, for<'_0_1> {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(&'_0_1 A) -> &'_0_1 B}<'59, u8, u8>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for &'_0_2 u8}]](move _8, move _9)
+    _7 = call<'25, fn<'_0_1>(&'_0_1 u8) -> &'_0_1 u8>[{built_in impl Sized for fn<'_0_2>(&'_0_2 u8) -> &'_0_2 u8}, for<'_0_1> {impl FnOnce<(&'_0 A,)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(&'_0_1 A) -> &'_0_1 B}<'20, u8, u8>[for<'_0_2> {built_in impl Sized for &'_0_2 u8}, for<'_0_2> {built_in impl Sized for &'_0_2 u8}]](move _8, move _9)
     ↳⚡ storage_dead(_12)
         storage_dead(_11)
         storage_dead(_18)

@@ -36,7 +36,7 @@ pub fn mod_reduce(a: u32) -> u32
     let mut _2: bool; // anonymous local
     let mut _3: u32; // anonymous local
     let mut _4: u32; // anonymous local
-    let mut _5: &'1 str; // anonymous local
+    let mut _5: &'0 str; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

@@ -27,7 +27,7 @@ where
     Outlives0: (T: 'a),
 {
     let mut _0: (); // return
-    let mut _1: fn(&'2 T); // arg #1
+    let mut _1: fn(&'0 T); // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -44,9 +44,9 @@ where
     Outlives0: ('_0: '_1),
 {
     let mut _0: (); // return
-    let mut _1: &'2 test_crate::main::{closure#1}<'_0>; // arg #1
+    let mut _1: &'0 test_crate::main::{closure#1}<'_0>; // arg #1
     let mut tupled_args: (&'_0 u16,); // arg #2
-    let mut _3: &'4 u16; // anonymous local
+    let mut _3: &'1 u16; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
@@ -89,14 +89,14 @@ extern "rust-call" fn {impl FnOnce<(&'_0 u16,)> for test_crate::main::{closure#1
 {
     let mut _0: (); // return
     let mut _1: test_crate::main::{closure#1}<'_0>; // arg #1
-    let _2: (&'3 u16,); // arg #2
-    let _3: &'5 mut test_crate::main::{closure#1}<'_0>; // anonymous local
+    let _2: (&'0 u16,); // arg #2
+    let _3: &'1 mut test_crate::main::{closure#1}<'_0>; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
     _0 = ()
     _3 = &mut _1
-    _0 = {impl FnMut<(&'_0 u16,)> for test_crate::main::{closure#1}<'_0>}::call_mut<'_0, '18>(move _3, move _2)
+    _0 = {impl FnMut<(&'_0 u16,)> for test_crate::main::{closure#1}<'_0>}::call_mut<'_0, '3>(move _3, move _2)
     ↳⚡ storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
@@ -140,8 +140,8 @@ fn main()
     let mut _0: (); // return
     let mut _1: test_crate::main::{closure}; // anonymous local
     let _2: (); // anonymous local
-    let mut _3: fn(&'2 u16); // anonymous local
-    let mut _4: test_crate::main::{closure#1}<'4>; // anonymous local
+    let mut _3: fn(&'0 u16); // anonymous local
+    let mut _4: test_crate::main::{closure#1}<'1>; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -152,9 +152,9 @@ fn main()
     storage_live(_3)
     storage_live(_4)
     _4 = test_crate::main::{closure#1} {  }
-    _3 = fn_def_to_fn_ptr(const {as_fn}<'7>)
+    _3 = fn_def_to_fn_ptr(const {as_fn}<'4>)
     storage_dead(_4)
-    _2 = make_early<'12, u16>[{built_in impl Sized for u16}](move _3)
+    _2 = make_early<'6, u16>[{built_in impl Sized for u16}](move _3)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_2)
@@ -166,9 +166,9 @@ fn main()
 extern "rust-call" fn {impl Fn<(&'_0 u8,)> for test_crate::main::{closure}}::call<'_0, '_1>(_1: &'_1 test_crate::main::{closure}, tupled_args: (&'_0 u8,))
 {
     let mut _0: (); // return
-    let mut _1: &'1 test_crate::main::{closure}; // arg #1
+    let mut _1: &'0 test_crate::main::{closure}; // arg #1
     let mut tupled_args: (&'_0 u8,); // arg #2
-    let mut _3: &'3 u8; // anonymous local
+    let mut _3: &'1 u8; // anonymous local
 
     storage_live(_0)
     storage_live(_3)

@@ -70,7 +70,7 @@ pub trait PanicPayload<Self>
 pub fn panic_abort::__rust_start_panic<'_0>(_payload: &'_0 mut (dyn PanicPayload + '_0)) -> u32
 {
     let mut _0: u32; // return
-    let _payload: &'3 mut (dyn PanicPayload + '4); // arg #1
+    let _payload: &'0 mut (dyn PanicPayload + '1); // arg #1
     let mut _2: !; // anonymous local
 
     storage_live(_0)

@@ -32,8 +32,8 @@ pub const test_crate::main::{promoted_const}: str = "O no" with_metadata(4usize)
 fn main()
 {
     let mut _0: (); // return
-    let mut _1: Arguments<'2>; // anonymous local
-    let mut _2: &'7 str; // anonymous local
+    let mut _1: Arguments<'1>; // anonymous local
+    let mut _2: &'2 str; // anonymous local
 
     storage_live(_0)
     _0 = ()
@@ -44,7 +44,7 @@ fn main()
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
-    panic(panic_fmt<'11>(move _1))
+    panic(panic_fmt<'3>(move _1))
     ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue

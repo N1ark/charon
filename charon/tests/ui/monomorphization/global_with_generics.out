@@ -43,7 +43,7 @@ fn main()
 {
     let mut _0: (); // return
     let _b: bool; // local
-    let mut _2: &'1 Foo::<bool>; // anonymous local
+    let mut _2: &'0 Foo::<bool>; // anonymous local
 
     storage_live(_0)
     _0 = ()

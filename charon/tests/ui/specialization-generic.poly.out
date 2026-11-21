@@ -44,7 +44,7 @@ where
     Outlives0: (S: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 S; // arg #1
+    let self: &'0 S; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -61,7 +61,7 @@ where
     Outlives0: (S: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 S; // arg #1
+    let self: &'0 S; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -91,7 +91,7 @@ where
     Outlives1: (T: 'a),
 {
     let mut _0: (); // return
-    let self: &'13 Pair<&'14 T, bool>[{built_in impl Sized for &'14 T}, {built_in impl Sized for bool}]; // arg #1
+    let self: &'0 Pair<&'1 T, bool>[{built_in impl Sized for &'1 T}, {built_in impl Sized for bool}]; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -118,22 +118,22 @@ fn main()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: &'83 Pair<&'84 u8, bool>[{built_in impl Sized for &'84 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let _3: &'88 Pair<&'89 u8, bool>[{built_in impl Sized for &'89 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _2: &'19 Pair<&'20 u8, bool>[{built_in impl Sized for &'20 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let _3: &'24 Pair<&'25 u8, bool>[{built_in impl Sized for &'25 u8}, {built_in impl Sized for bool}]; // anonymous local
     let _4: (); // anonymous local
-    let mut _5: &'98 Pair<&'99 u8, bool>[{built_in impl Sized for &'99 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let _6: &'103 Pair<&'104 u8, bool>[{built_in impl Sized for &'104 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _7: &'113 Pair<&'114 u8, bool>[{built_in impl Sized for &'114 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _8: &'118 Pair<&'119 u8, bool>[{built_in impl Sized for &'119 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _9: &'123 Pair<&'124 u8, bool>[{built_in impl Sized for &'124 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _10: &'253 Pair<&'254 u8, bool>[{built_in impl Sized for &'254 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _11: &'274 Pair<&'275 u8, bool>[{built_in impl Sized for &'275 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _12: Pair<&'279 u8, bool>[{built_in impl Sized for &'279 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _13: &'283 u8; // anonymous local
+    let mut _5: &'34 Pair<&'35 u8, bool>[{built_in impl Sized for &'35 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let _6: &'39 Pair<&'40 u8, bool>[{built_in impl Sized for &'40 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _7: &'49 Pair<&'50 u8, bool>[{built_in impl Sized for &'50 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _8: &'54 Pair<&'55 u8, bool>[{built_in impl Sized for &'55 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _9: &'59 Pair<&'60 u8, bool>[{built_in impl Sized for &'60 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _10: &'73 Pair<&'74 u8, bool>[{built_in impl Sized for &'74 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _11: &'87 Pair<&'88 u8, bool>[{built_in impl Sized for &'88 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _12: Pair<&'92 u8, bool>[{built_in impl Sized for &'92 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _13: &'96 u8; // anonymous local
     let mut _14: u8; // anonymous local
-    let mut _15: &'291 Pair<&'292 u8, bool>[{built_in impl Sized for &'292 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _16: Pair<&'296 u8, bool>[{built_in impl Sized for &'296 u8}, {built_in impl Sized for bool}]; // anonymous local
-    let mut _17: &'300 u8; // anonymous local
+    let mut _15: &'101 Pair<&'102 u8, bool>[{built_in impl Sized for &'102 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _16: Pair<&'106 u8, bool>[{built_in impl Sized for &'106 u8}, {built_in impl Sized for bool}]; // anonymous local
+    let mut _17: &'110 u8; // anonymous local
     let mut _18: u8; // anonymous local
 
     storage_live(_9)
@@ -156,7 +156,7 @@ fn main()
     _8 = move _9
     _3 = &(*_8)
     _2 = &(*_3)
-    _1 = inherited<'252, u32, Pair<&'49 u8, bool>[{built_in impl Sized for &'49 u8}, {built_in impl Sized for bool}]>[{built_in impl Sized for u32}, {built_in impl Sized for Pair<&'49 u8, bool>[{built_in impl Sized for &'49 u8}, {built_in impl Sized for bool}]}](move _2)
+    _1 = inherited<'72, u32, Pair<&'0 u8, bool>[{built_in impl Sized for &'0 u8}, {built_in impl Sized for bool}]>[{built_in impl Sized for u32}, {built_in impl Sized for Pair<&'0 u8, bool>[{built_in impl Sized for &'0 u8}, {built_in impl Sized for bool}]}](move _2)
     ↳⚡ storage_dead(_8)
         storage_dead(_7)
         storage_dead(_18)
@@ -189,7 +189,7 @@ fn main()
     _7 = move _10
     _6 = &(*_7)
     _5 = &(*_6)
-    _4 = impl_Tr_u32_for_Pair_bool::overridden<'68, '273, u8>[{built_in impl Sized for u8}](move _5)
+    _4 = impl_Tr_u32_for_Pair_bool::overridden<'17, '86, u8>[{built_in impl Sized for u8}](move _5)
     ↳⚡ storage_dead(_8)
         storage_dead(_7)
         storage_dead(_18)

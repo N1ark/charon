@@ -62,13 +62,13 @@ where
     Outlives0: (Self: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut Self; // arg #1
+    let self: &'0 mut Self; // arg #1
     let _f: F; // arg #2
 
     storage_live(_0)
     _0 = ()
     _0 = ()
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'2>] _f
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'1>] _f
     ↳⚡ storage_dead(_f)
         storage_dead(self)
         unwind_continue
@@ -95,13 +95,13 @@ where
     Outlives0: (T: '_0),
 {
     let mut _0: (); // return
-    let self: &'1 mut Empty<T>[TraitClause0]; // arg #1
+    let self: &'0 mut Empty<T>[TraitClause0]; // arg #1
     let _f: F; // arg #2
 
     storage_live(_0)
     _0 = ()
     _0 = ()
-    conditional_drop[{built_in impl Destruct for F}::drop_glue<'2>] _f
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'1>] _f
     ↳⚡ storage_dead(_f)
         storage_dead(self)
         unwind_continue
@@ -126,7 +126,7 @@ fn g()
 {
     let mut _0: (); // return
     let _1: (); // anonymous local
-    let mut _2: &'1 mut Empty<()>[{built_in impl Sized for ()}]; // anonymous local
+    let mut _2: &'0 mut Empty<()>[{built_in impl Sized for ()}]; // anonymous local
     let mut _3: Empty<()>[{built_in impl Sized for ()}]; // anonymous local
     let mut _4: [(); 0usize]; // anonymous local
     let mut _5: F; // anonymous local
@@ -143,7 +143,7 @@ fn g()
     storage_dead(_4)
     storage_live(_5)
     _5 = F {  }
-    _1 = impl_Iter_for_Empty::map<'5, (), (), F>[{built_in impl Sized for ()}, {built_in impl Sized for ()}, {built_in impl Sized for F}, impl_Apply_unit_for_F](move _2, move _5)
+    _1 = impl_Iter_for_Empty::map<'1, (), (), F>[{built_in impl Sized for ()}, {built_in impl Sized for ()}, {built_in impl Sized for F}, impl_Apply_unit_for_F](move _2, move _5)
     ↳⚡ unwind_continue
     storage_dead(_5)
     storage_dead(_2)
