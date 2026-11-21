@@ -3,7 +3,8 @@ use derive_generic_visitor::*;
 use index_vec::Idx;
 use itertools::Itertools;
 use petgraph::{graph::IndexType, unionfind::UnionFind};
-use std::{borrow::Cow, fmt::Display, mem};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::{borrow::Cow, cell::Cell, fmt::Display, mem};
 
 use crate::{
     ast::*,
@@ -54,6 +55,16 @@ struct TypeCheckVisitor<'a> {
     /// Some tests where this matters: default-method-with-item-bound.6.rs,
     /// issue-1403-default-method-with-item-constraint
     accept_type_errors: bool,
+    /// Identifies the binders we're under, innermost last. Empty binders bind nothing so they're
+    /// interchangeable: they get an id shared by all the empty binders with the same parent.
+    binder_ctx: Vec<u32>,
+    empty_binder_ctx: HashMap<u32, u32>,
+    last_binder_ctx: u32,
+    /// The types, trait refs and constants (by address) we checked without errors under a given
+    /// binder context and `accept_type_errors` mode: checking them again would do nothing.
+    checked: HashSet<(*const (), u32, bool)>,
+    /// The number of errors reported so far.
+    error_count: Cell<usize>,
 }
 
 impl VisitorWithSpan for TypeCheckVisitor<'_> {
@@ -107,6 +118,53 @@ impl TypeCheckVisitor<'_> {
         );
         // This is a fatal error: the output llbc is inconsistent and should not be used.
         self.ctx.span_err(self.span, &msg, Level::ERROR);
+        self.error_count.set(self.error_count.get() + 1);
+    }
+
+    /// Visit under a binder, tracking `binder_ctx`.
+    fn with_binder_ctx(
+        &mut self,
+        is_empty: bool,
+        f: impl FnOnce(&mut Self) -> ControlFlow<Infallible>,
+    ) -> ControlFlow<Infallible> {
+        let parent = *self.binder_ctx.last().unwrap();
+        let ctx = if is_empty && let Some(&ctx) = self.empty_binder_ctx.get(&parent) {
+            ctx
+        } else {
+            self.last_binder_ctx += 1;
+            if is_empty {
+                self.empty_binder_ctx.insert(parent, self.last_binder_ctx);
+            }
+            self.last_binder_ctx
+        };
+        self.binder_ctx.push(ctx);
+        let result = f(self);
+        self.binder_ctx.pop();
+        result
+    }
+
+    /// Check the hash-consed value at `addr` using `check`, unless it was already checked without
+    /// errors in the same context. The visitor explores trees, so values shared in a DAG (e.g.
+    /// deep trait proofs) would otherwise be checked once per occurrence.
+    fn check_once(
+        &mut self,
+        addr: *const (),
+        check: impl FnOnce(&mut Self) -> ControlFlow<Infallible>,
+    ) -> ControlFlow<Infallible> {
+        let key = (
+            addr,
+            *self.binder_ctx.last().unwrap(),
+            self.accept_type_errors,
+        );
+        if self.checked.contains(&key) {
+            return Continue(());
+        }
+        let errors_before = self.error_count.get();
+        check(self)?;
+        if self.error_count.get() == errors_before {
+            self.checked.insert(key);
+        }
+        Continue(())
     }
 
     /// The value of `var` in `env`, if `env` substitutes it.
@@ -167,6 +225,11 @@ impl TypeCheckVisitor<'_> {
     /// Compare two types for equality. Because we can't use the full power of rustc's type
     /// equality, we err on the side of accepting.
     fn match_tys(&mut self, a: &Ty, ea: Env<'_>, b: &Ty, eb: Env<'_>) -> Result<(), TypeError> {
+        // Equal types match (this compares addresses), without side effects, when we don't
+        // substitute their variables.
+        if a == b && ea.args.is_none() && eb.args.is_none() {
+            return Ok(());
+        }
         if let TyKind::TypeVar(var) = a.kind()
             && let Some(a) = self.lookup_var(*var, ea, |args| &args.types)?
         {
@@ -253,6 +316,9 @@ impl TypeCheckVisitor<'_> {
         b: &PolyTraitDeclRef,
         eb: Env<'_>,
     ) -> Result<(), TypeError> {
+        if a == b && ea.args.is_none() && eb.args.is_none() {
+            return Ok(());
+        }
         // Matching never looks at variables, so we can match under the binders instead of
         // instantiating them.
         self.match_trait_decl_refs(
@@ -379,6 +445,9 @@ impl TypeCheckVisitor<'_> {
         b: &GenericArgs,
         eb: Env<'_>,
     ) -> Result<(), TypeError> {
+        if a == b && ea.args.is_none() && eb.args.is_none() {
+            return Ok(());
+        }
         if a.regions.len() != b.regions.len()
             || a.types.len() != b.types.len()
             || a.const_generics.len() != b.const_generics.len()
@@ -689,9 +758,35 @@ impl VisitAst for TypeCheckVisitor<'_> {
         self.accept_type_errors |= matches!(&binder.kind, BinderKind::TraitMethod(..))
             && !self.ctx.options.lift_associated_types.is_empty()
             && !binder.params.trait_type_constraints.is_empty();
-        let result = self.visit_inner(binder);
+        let result =
+            self.with_binder_ctx(binder.params.is_empty(), |this| this.visit_inner(binder));
         self.accept_type_errors = old_accept_type_errors;
         result
+    }
+
+    fn visit_region_binder<T: AstVisitable>(
+        &mut self,
+        binder: &RegionBinder<T>,
+    ) -> ControlFlow<Self::Break> {
+        self.with_binder_ctx(binder.regions.is_empty(), |this| this.visit_inner(binder))
+    }
+
+    fn visit_ty(&mut self, x: &Ty) -> ControlFlow<Self::Break> {
+        self.check_once(x.0.inner() as *const _ as *const (), |this| {
+            this.visit_inner(x)
+        })
+    }
+    fn visit_trait_ref(&mut self, x: &TraitRef) -> ControlFlow<Self::Break> {
+        self.check_once(x.0.inner() as *const _ as *const (), |this| {
+            this.enter_trait_ref(x);
+            this.visit_inner(x)
+        })
+    }
+    fn visit_constant_expr(&mut self, x: &ConstantExpr) -> ControlFlow<Self::Break> {
+        self.check_once(x.0.inner() as *const _ as *const (), |this| {
+            this.enter_constant_expr(x);
+            this.visit_inner(x)
+        })
     }
 
     // Check that generics are correctly bound.
@@ -999,6 +1094,11 @@ impl TransformPass for Check {
                 pending_unifications: None,
                 needs_substitution: false,
                 accept_type_errors,
+                binder_ctx: vec![0],
+                empty_binder_ctx: HashMap::default(),
+                last_binder_ctx: 0,
+                checked: HashSet::default(),
+                error_count: Cell::new(0),
             };
             // Typecheck the item, and accumulate needed lifetime unifications.
             let _ = item.as_ref().drive(&mut visitor);
@@ -1006,12 +1106,27 @@ impl TransformPass for Check {
             if visitor.did_unify_lifetimes
                 && let ItemRefMut::Fun(fun_decl) = item
             {
-                let mut unifier = visitor.body_lt_unifier.take().unwrap();
-                fun_decl.body.dyn_visit_mut(|r: &mut Region| {
-                    if let Region::Body(body_id) = r {
-                        *body_id = unifier.find_mut(*body_id);
+                #[derive(Visitor)]
+                struct UnifyBodyRegions(UnionFind<RegionId>);
+                impl VisitAstMut for UnifyBodyRegions {
+                    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+                        &mut self,
+                        value: &mut HashConsed<WithCachedTypeInfo<T>>,
+                    ) -> ControlFlow<Self::Break> {
+                        // Avoid cloning and re-interning values without body regions.
+                        if !value.type_info().has_erased_or_body_regions() {
+                            return Continue(());
+                        }
+                        self.visit_inner(value)
                     }
-                });
+                    fn enter_region(&mut self, r: &mut Region) {
+                        if let Region::Body(body_id) = r {
+                            *body_id = self.0.find_mut(*body_id);
+                        }
+                    }
+                }
+                let unifier = visitor.body_lt_unifier.take().unwrap();
+                let _ = UnifyBodyRegions(unifier).visit(&mut fun_decl.body);
             }
         });
     }
