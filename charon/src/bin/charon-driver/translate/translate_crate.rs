@@ -803,8 +803,17 @@ impl<'tcx> TranslateCtx<'tcx> {
         } else if self.method_status.get(trait_id).is_some() {
             return Ok(());
         }
+        // Query rustc before taking the lock of the parallel translation: a thread waiting for a
+        // query may need a thread that blocks on that lock.
         let tcx = self.tcx;
         let rust_trait_id = trait_def_id.real_rust_def_id();
+        let mut items = vec![];
+        for item in tcx.associated_items(rust_trait_id).in_definition_order() {
+            let name = hax::assoc_item_name(tcx, item).map(|n| n.to_string().into());
+            let def_id: hax::DefId = item.def_id.sinto(&self.hax_state);
+            items.push((TraitItemName(name.unwrap_or_default()), item.kind, def_id));
+        }
+        let is_destruct = tcx.lang_items().destruct_trait() == Some(rust_trait_id);
         let par = self.par.clone();
         let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
         if let Some(methods) = &shared_methods
@@ -829,21 +838,16 @@ impl<'tcx> TranslateCtx<'tcx> {
             ),
         };
         let names = assoc_item_names.get_or_insert_with(trait_id, Default::default);
-        for item in tcx.associated_items(rust_trait_id).in_definition_order() {
-            let name = TraitItemName(
-                hax::assoc_item_name(tcx, item)
-                    .map(|n| n.to_string().into())
-                    .unwrap_or_default(),
-            );
-            let id: AssocItemId = match item.kind {
+        for (name, kind, def_id) in items {
+            let id: AssocItemId = match kind {
                 ty::AssocKind::Type { .. } => names.types.push(name).into(),
                 ty::AssocKind::Fn { .. } => names.methods.push(name).into(),
                 ty::AssocKind::Const { .. } => names.consts.push(name).into(),
             };
-            assoc_item_id_map.insert(item.def_id.sinto(&self.hax_state), id);
+            assoc_item_id_map.insert(def_id, id);
         }
         // Add a virtual method to the `Destruct` trait.
-        if tcx.lang_items().destruct_trait() == Some(rust_trait_id) {
+        if is_destruct {
             let method_name = TraitItemName("drop_glue".into());
             names.methods.push(method_name);
         }
