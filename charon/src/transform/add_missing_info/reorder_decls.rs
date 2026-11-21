@@ -8,7 +8,7 @@
 //! language with these properties.
 use crate::options::TranslateOptions;
 use crate::pretty::FmtWithCtx;
-use crate::pretty::formatter::IntoFormatter;
+use crate::pretty::formatter::{AstFormatter, FmtCtx, IntoFormatter};
 use crate::transform::TransformCtx;
 use crate::ullbc_ast::*;
 use crate::utils::*;
@@ -17,7 +17,8 @@ use itertools::Itertools;
 use petgraph::graphmap::DiGraphMap;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::fmt::{Debug, Display, Error};
+use std::cmp::Ordering;
+use std::fmt::{self, Debug, Display, Error, Write};
 use std::vec::Vec;
 
 use crate::transform::ctx::TransformPass;
@@ -470,6 +471,65 @@ fn compute_declarations_graph(
     graph
 }
 
+/// Sort `names` like their formatted strings; return their indices in that order. We format only
+/// as much as needed: the path elements two names start with print the same, and the rest usually
+/// differs early.
+fn sort_formatted_names(fmt: &FmtCtx<'_>, names: &[&Name]) -> Vec<usize> {
+    /// Collects the first `.1` bytes of what is written.
+    struct Prefix(Vec<u8>, usize);
+    impl fmt::Write for Prefix {
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            let room = self.1 - self.0.len();
+            self.0.extend_from_slice(&s.as_bytes()[..s.len().min(room)]);
+            if s.len() > room {
+                Err(fmt::Error)
+            } else {
+                Ok(())
+            }
+        }
+    }
+    // Print path elements like `Name` does, up to `len` bytes. Also return whether that's all
+    // of them.
+    let fmt = &fmt.no_generics();
+    let prefix = |elems: &[PathElem], len| {
+        let mut prefix = Prefix(Vec::new(), len);
+        let elems = elems.iter().map(|x| x.with_ctx(fmt)).format("::");
+        let whole = write!(prefix, "{elems}").is_ok();
+        (prefix.0, whole)
+    };
+    // The formatted rest of a name from some path element on, by name index and that element:
+    // its first bytes, or all of it once we needed more.
+    let mut rests: HashMap<(usize, usize), (Vec<u8>, bool)> = HashMap::default();
+    let mut order = (0..names.len()).collect_vec();
+    order.sort_by(|&i, &j| {
+        let (a, b) = (&names[i].name, &names[j].name);
+        let shared = a.iter().zip(b.iter()).take_while(|(x, y)| x == y).count();
+        if shared == a.len() || shared == b.len() {
+            return a.len().cmp(&b.len());
+        }
+        for len in [256, usize::MAX] {
+            for (k, elems) in [(i, a), (j, b)] {
+                let rest = rests.entry((k, shared)).or_default();
+                if !rest.1 && rest.0.len() < len {
+                    *rest = prefix(&elems[shared..], len);
+                }
+            }
+            let (a, a_whole) = &rests[&(i, shared)];
+            let (b, b_whole) = &rests[&(j, shared)];
+            let common = a.len().min(b.len());
+            let a_ended = *a_whole && a.len() == common;
+            let b_ended = *b_whole && b.len() == common;
+            match a[..common].cmp(&b[..common]) {
+                Ordering::Equal if !a_ended && !b_ended => {}
+                Ordering::Equal => return b_ended.cmp(&a_ended),
+                ord => return ord,
+            }
+        }
+        unreachable!("whole strings compare")
+    });
+    order
+}
+
 fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {
     // Build the graph of dependencies between items.
     let graph = compute_declarations_graph(ctx);
@@ -507,21 +567,31 @@ fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {
     let mut items: Vec<_> = ctx
         .translated
         .all_items()
-        .sorted_by_cached_key(sort_by)
+        .map(|item| (sort_by(&item), item))
         .collect();
+    items.sort_by(|(a, _), (b, _)| a.cmp(b));
     // Ids depend on the order of translation, names don't: we sort the items at the same place by
-    // name. Formatting names is costly, hence in parallel.
+    // name.
     let fmt = &ctx.into_fmt();
-    for items in items.chunk_by_mut(|a, b| sort_by(a) == sort_by(b)) {
-        if items.len() > 1 {
-            items.par_sort_by_cached_key(|item| item.item_meta().name.with_ctx(fmt).to_string());
-        }
-    }
+    let sorted: Vec<ItemId> = items
+        .chunk_by(|(a, _), (b, _)| a == b)
+        .collect_vec()
+        .into_par_iter()
+        .flat_map_iter(|items| {
+            let names = items
+                .iter()
+                .map(|(_, item)| &item.item_meta().name)
+                .collect_vec();
+            sort_formatted_names(fmt, &names)
+                .into_iter()
+                .map(|i| items[i].1.id())
+        })
+        .collect();
     // We record for each item the order in which we're sorting it, to make `sort_by` cheap.
-    let item_sorted_index: HashMap<ItemId, usize> = items
+    let item_sorted_index: HashMap<ItemId, usize> = sorted
         .into_iter()
         .enumerate()
-        .map(|(i, item)| (item.id(), i))
+        .map(|(i, id)| (id, i))
         .collect();
     let sort_by = |id: &ItemId| item_sorted_index.get(id).unwrap();
 
