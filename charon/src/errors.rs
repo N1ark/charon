@@ -12,7 +12,7 @@ use std::cmp::{Ord, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::ops::Range;
-use std::sync::{Arc, Mutex, PoisonError, mpsc};
+use std::sync::{Arc, LazyLock, Mutex, PoisonError, mpsc};
 use std::thread::JoinHandle;
 
 const BACKTRACE_ON_ERR: bool = false;
@@ -149,7 +149,7 @@ impl Error {
             }
         }
 
-        Renderer::styled().render(&[group]).to_string()
+        render_for_stderr(&[group])
     }
 }
 
@@ -183,6 +183,34 @@ fn covering_lines(source: &str, range: Range<usize>) -> (&str, usize, Range<usiz
     )
 }
 
+/// What stderr does with styling (colors etc).
+fn stderr_color_choice() -> anstream::ColorChoice {
+    static CHOICE: LazyLock<anstream::ColorChoice> =
+        LazyLock::new(|| anstream::AutoStream::choice(&std::io::stderr()));
+    *CHOICE
+}
+
+/// Whether `anstream`'s stripping of styling would change `s`: that removes escape sequences and
+/// control characters other than whitespace.
+fn stripping_changes(s: &str) -> bool {
+    s.bytes()
+        .any(|b| b == 0x7f || (b < 0x20 && !b.is_ascii_whitespace()))
+}
+
+/// Render a diagnostic to be printed to stderr. If stderr doesn't support styling, `anstream`
+/// strips it from what we print, so we don't produce it in the first place: this gives the same
+/// text unless it has something else that stripping would remove.
+fn render_for_stderr(groups: annotate_snippets::Report<'_>) -> String {
+    use annotate_snippets::Renderer;
+    if stderr_color_choice() == anstream::ColorChoice::Never {
+        let plain = Renderer::plain().render(groups);
+        if !stripping_changes(&plain) {
+            return plain;
+        }
+    }
+    Renderer::styled().render(groups)
+}
+
 /// Attach a source span to an error.
 pub trait ErrorContext<T> {
     fn context(self, span: Span) -> Result<T, Error>;
@@ -207,9 +235,7 @@ impl<T: ToString> From<T> for Error {
 pub fn display_unspanned_error(level: Level, msg: &str) {
     use annotate_snippets::*;
     let title = level.primary_title(msg);
-    let message = Renderer::styled()
-        .render(&[Group::with_title(title)])
-        .to_string();
+    let message = render_for_stderr(&[Group::with_title(title)]);
     anstream::eprintln!("{message}\n");
 }
 
@@ -238,7 +264,7 @@ pub fn display_spanned_error(krate: &TranslatedCrate, span: Span, title: &str, l
     }
 
     let diagnostic = [group];
-    anstream::eprintln!("{}", Renderer::styled().render(&diagnostic));
+    anstream::eprintln!("{}", render_for_stderr(&diagnostic));
 }
 
 /// We use this to save the origin of an id. This is useful for the external
@@ -327,10 +353,18 @@ pub struct ErrorCtx {
 /// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes
 /// every styled chunk separately.
 fn eprintln_at_once(msg: &str) {
-    let stderr = std::io::stderr();
-    let mut buffer = anstream::AutoStream::new(Vec::new(), anstream::AutoStream::choice(&stderr));
-    let _ = writeln!(buffer, "{msg}");
-    let buffer = buffer.into_inner();
+    let choice = stderr_color_choice();
+    let buffer = if choice == anstream::ColorChoice::Never && !stripping_changes(msg) {
+        // Stripping would leave the text unchanged.
+        let mut buffer = Vec::with_capacity(msg.len() + 1);
+        buffer.extend_from_slice(msg.as_bytes());
+        buffer.push(b'\n');
+        buffer
+    } else {
+        let mut buffer = anstream::AutoStream::new(Vec::new(), choice);
+        let _ = writeln!(buffer, "{msg}");
+        buffer.into_inner()
+    };
     let result = match &*STDERR_THREAD.lock().unwrap_or_else(PoisonError::into_inner) {
         // The thread only stops receiving once it was told to finish, under this lock.
         Some((sender, _)) => {
@@ -596,7 +630,7 @@ impl ErrorCtx {
             id.with_ctx(&krate.into_fmt())
         );
         let message = Group::with_title(level.primary_title(&msg)).elements(snippets);
-        let out = Renderer::styled().render(&[message]).to_string();
+        let out = render_for_stderr(&[message]);
         self.emit(out);
     }
 }
