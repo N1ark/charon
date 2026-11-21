@@ -516,7 +516,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                 self.name_for_item(&RustcItem::Poly(parent_id.clone()))?
             }
         } else {
-            Name { name: Vec::new() }
+            Name::default()
         };
         let span = self.def_span(def_id);
         let mut name = parent_name;
@@ -617,8 +617,6 @@ impl<'tcx> TranslateCtx<'tcx> {
                     .push(PathElem::Instantiated(Instantiation::new(binder)));
             }
         }
-        // Names are built by pushing onto the parent's name; we keep many of them.
-        name.name.shrink_to_fit();
         Ok(name)
     }
 

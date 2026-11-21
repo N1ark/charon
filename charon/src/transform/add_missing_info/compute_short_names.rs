@@ -79,10 +79,13 @@ impl TransformPass for Transform {
         let unique = unique
             .into_par_iter()
             .map(|(id, short)| {
-                let mut short_name = Name { name: vec![short] };
+                let mut short_name = vec![short];
                 if let [.., mono @ PathElem::Instantiated(..)] = item_names[&id].name.as_slice() {
-                    short_name.name.push(mono.clone());
+                    short_name.push(mono.clone());
                 }
+                let short_name = Name {
+                    name: short_name.into(),
+                };
                 (id, short_name)
             })
             .collect::<Vec<_>>();
@@ -112,7 +115,7 @@ fn name_candidates<'a>(
     {
         name_slice = &name.name[i..];
         trunc_name = Some(Name {
-            name: name_slice.to_vec(),
+            name: name_slice.to_vec().into(),
         });
     }
 

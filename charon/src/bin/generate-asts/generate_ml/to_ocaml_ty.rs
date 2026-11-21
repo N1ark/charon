@@ -12,6 +12,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
     ("ConstantExpr", "{ kind : constant_expr_kind; ty : ty }"),
     ("BoxedArgs", "generic_args"),
     ("Instantiation", "generic_args binder"),
+    ("PathElems", "path_elem list"),
     (
         "HashConsed",
         "'a0 (* Not actually hash-consed on the OCaml side *)",

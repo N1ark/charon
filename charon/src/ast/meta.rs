@@ -96,8 +96,10 @@ impl ItemMeta {
     pub fn renamed_name(&self) -> Name {
         let mut name = self.name.clone();
         if let Some(rename) = &self.attr_info.rename {
-            *name.name.last_mut().unwrap() =
-                PathElem::Ident(rename.as_str().into(), Disambiguator::new(0));
+            name.name.with_mut(|elems| {
+                *elems.last_mut().unwrap() =
+                    PathElem::Ident(rename.as_str().into(), Disambiguator::new(0))
+            });
         }
         name
     }

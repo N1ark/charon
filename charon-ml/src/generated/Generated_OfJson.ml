@@ -3855,7 +3855,7 @@ and metadata_value_of_json (ctx : of_json_ctx) (js : json) :
 and name_of_json (ctx : of_json_ctx) (js : json) : (name, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
-    | x -> list_of_json path_elem_of_json ctx x
+    | x -> path_elems_of_json ctx x
     | _ -> Error "")
 
 and offset_expr_of_json (ctx : of_json_ctx) (js : json) :
@@ -3977,6 +3977,13 @@ and path_elem_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = builtin_path_elem_of_json ctx _0 in
         let* _1 = disambiguator_of_json ctx _1 in
         Ok (PeBuiltin (_0, _1))
+    | _ -> Error "")
+
+and path_elems_of_json (ctx : of_json_ctx) (js : json) :
+    (path_elems, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | json -> list_of_json path_elem_of_json ctx json
     | _ -> Error "")
 
 and preset_of_json (ctx : of_json_ctx) (js : json) : (preset, string) result =

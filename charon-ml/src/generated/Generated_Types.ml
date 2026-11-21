@@ -1481,7 +1481,7 @@ and metadata_value =
 
     Also note that the first path element in the name is always the crate name.
 *)
-and name = (path_elem list[@visitors.opaque])
+and name = (path_elems[@visitors.opaque])
 
 (** An expression denoting an offset in bytes. *)
 and offset_expr = {
@@ -1517,6 +1517,9 @@ and path_elem =
       (** A path element that doesn't come from the source code: either a
           builtin type such as tuples, or an item that has no name of its own
           such as a closure or a vtable. *)
+
+(** The hash-consed path elements of a [[Name]]. *)
+and path_elems = path_elem list
 
 (** The metadata stored in a pointer. That's the information stored in pointers
     alongside their address. It's empty for [Sized] types, and interesting for

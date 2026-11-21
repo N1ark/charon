@@ -3037,8 +3037,7 @@ and metadata_value_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
 
 and name_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (name, string) result =
-  combine_error_msgs st __FUNCTION__
-    (list_of_postcard path_elem_of_postcard ctx st)
+  combine_error_msgs st __FUNCTION__ (path_elems_of_postcard ctx st)
 
 and offset_expr_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (offset_expr, string) result =
@@ -3158,6 +3157,11 @@ and path_elem_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _1 = disambiguator_of_postcard ctx st in
          Ok (PeBuiltin (_0, _1))
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
+
+and path_elems_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (path_elems, string) result =
+  combine_error_msgs st __FUNCTION__
+    (list_of_postcard path_elem_of_postcard ctx st)
 
 and preset_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (preset, string) result =

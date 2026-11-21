@@ -191,7 +191,91 @@ pub enum ImplElem {
 #[serde(transparent)]
 #[cfg_attr(feature = "charon_on_charon", charon::transparent)]
 pub struct Name {
-    pub name: Vec<PathElem>,
+    pub name: PathElems,
+}
+
+/// The hash-consed path elements of a [`Name`].
+#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Drive, DriveMut, DriveTwo)]
+pub struct PathElems(pub HashConsed<Vec<PathElem>>);
+
+impl PathElems {
+    pub fn new(elems: Vec<PathElem>) -> Self {
+        PathElems(HashConsed::new(elems))
+    }
+
+    /// Get mutable access to the path elements. This clones them and re-interns the modified value
+    /// at the end.
+    pub fn with_mut<R>(&mut self, f: impl FnOnce(&mut Vec<PathElem>) -> R) -> R {
+        self.0.with_inner_mut(|elems| {
+            let ret = f(elems);
+            // Interned values are never freed.
+            elems.shrink_to_fit();
+            ret
+        })
+    }
+
+    pub fn push(&mut self, elem: PathElem) {
+        self.with_mut(|elems| elems.push(elem))
+    }
+
+    pub fn pop(&mut self) -> Option<PathElem> {
+        self.with_mut(|elems| elems.pop())
+    }
+}
+
+impl Default for PathElems {
+    fn default() -> Self {
+        PathElems::new(Vec::new())
+    }
+}
+
+impl From<Vec<PathElem>> for PathElems {
+    fn from(elems: Vec<PathElem>) -> Self {
+        PathElems::new(elems)
+    }
+}
+
+impl std::ops::Deref for PathElems {
+    type Target = Vec<PathElem>;
+    fn deref(&self) -> &Self::Target {
+        self.0.inner()
+    }
+}
+
+/// Dummy impls, see the one on `Ty`.
+unsafe impl Send for PathElems {}
+unsafe impl Sync for PathElems {}
+
+impl std::fmt::Debug for PathElems {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+/// Serialized as the plain list.
+impl<State: ?Sized> SerializeState<State> for PathElems
+where
+    Vec<PathElem>: SerializeState<State>,
+{
+    fn serialize_state<S: serde::Serializer>(
+        &self,
+        state: &State,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_state(state, serializer)
+    }
+}
+impl<'de, State: ?Sized> DeserializeState<'de, State> for PathElems
+where
+    Vec<PathElem>: DeserializeState<'de, State>,
+{
+    fn deserialize_state<D: serde::Deserializer<'de>>(
+        state: &State,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        Vec::deserialize_state(state, deserializer).map(PathElems::new)
+    }
 }
 
 impl PathElem {
@@ -219,7 +303,8 @@ impl Name {
             name: path
                 .iter()
                 .map(|elem| PathElem::Ident(Ustr::from(*elem), Disambiguator::ZERO))
-                .collect(),
+                .collect::<Vec<_>>()
+                .into(),
         }
     }
 
@@ -234,12 +319,15 @@ impl Name {
     }
     /// If this item comes from monomorphization, modify the arguments used.
     pub fn with_mono_args_mut<R>(&mut self, f: impl FnOnce(&mut GenericArgs) -> R) -> Option<R> {
-        match self.name.last_mut()? {
-            PathElem::Instantiated(binder) if binder.params.is_empty() => {
-                Some(binder.with_mut(|binder| f(&mut binder.skip_binder)))
-            }
-            _ => None,
+        if !self.name.last()?.is_monomorphized() {
+            return None;
         }
+        self.name.with_mut(|elems| {
+            let Some(PathElem::Instantiated(binder)) = elems.last_mut() else {
+                unreachable!()
+            };
+            Some(binder.with_mut(|binder| f(&mut binder.skip_binder)))
+        })
     }
 
     /// Strip the trailing `PathElem::Target` from a name, if any.
@@ -292,12 +380,18 @@ impl Name {
     /// Created an instantiated version of this name by putting a `PathElem::Instantiated` last. If
     /// the item was already instantiated, this merges the two instantiations.
     pub fn instantiate(mut self, binder: Binder<GenericArgs>) -> Self {
-        if let [.., PathElem::Instantiated(x)] = self.name.as_mut_slice() {
-            x.with_mut(|x| {
-                // Put the new args in place; the params are what we want but the args are wrong.
-                let old_args = std::mem::replace(x, binder);
-                // Apply the new args to the old binder to get correct args.
-                x.skip_binder = old_args.apply(&x.skip_binder);
+        if let [.., PathElem::Instantiated(_)] = self.name.as_slice() {
+            self.name.with_mut(|elems| {
+                let Some(PathElem::Instantiated(x)) = elems.last_mut() else {
+                    unreachable!()
+                };
+                x.with_mut(|x| {
+                    // Put the new args in place; the params are what we want but the args are
+                    // wrong.
+                    let old_args = std::mem::replace(x, binder);
+                    // Apply the new args to the old binder to get correct args.
+                    x.skip_binder = old_args.apply(&x.skip_binder);
+                })
             });
         } else {
             self.name

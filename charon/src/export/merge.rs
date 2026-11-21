@@ -351,27 +351,29 @@ fn discover_groups<K: Clone + Eq + Hash>(
 
 /// Normalize a name for grouping across crates.
 fn normalize_impl_elems(mut name: Name, krate: &TranslatedCrate) -> Name {
-    for elem in &mut name.name {
-        if let PathElem::Impl(ImplElem::Trait(id)) = elem {
-            // Replace impl block references with something that contains the implemented trait
-            // predicate instead. That way, comparing names for equality compares trait predicates
-            // instead.
-            if let Some(timpl) = krate.trait_impls.get(*id) {
-                let mut params = GenericParams::default();
-                params.trait_clauses.push(TraitParam {
-                    clause_id: TraitClauseId::ZERO,
-                    span: None,
-                    origin: PredicateOrigin::WhereClauseOnImpl,
-                    trait_: RegionBinder::empty(timpl.impl_trait.clone()),
-                });
-                *elem = PathElem::Impl(ImplElem::Ty(Box::new(Binder {
-                    params,
-                    skip_binder: Ty::mk_unit(),
-                    kind: BinderKind::Other,
-                })));
+    name.name.with_mut(|elems| {
+        for elem in elems {
+            if let PathElem::Impl(ImplElem::Trait(id)) = elem {
+                // Replace impl block references with something that contains the implemented
+                // trait predicate instead. That way, comparing names for equality compares trait
+                // predicates instead.
+                if let Some(timpl) = krate.trait_impls.get(*id) {
+                    let mut params = GenericParams::default();
+                    params.trait_clauses.push(TraitParam {
+                        clause_id: TraitClauseId::ZERO,
+                        span: None,
+                        origin: PredicateOrigin::WhereClauseOnImpl,
+                        trait_: RegionBinder::empty(timpl.impl_trait.clone()),
+                    });
+                    *elem = PathElem::Impl(ImplElem::Ty(Box::new(Binder {
+                        params,
+                        skip_binder: Ty::mk_unit(),
+                        kind: BinderKind::Other,
+                    })));
+                }
             }
         }
-    }
+    });
     name
 }
 

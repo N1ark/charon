@@ -1520,7 +1520,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             return;
         };
         // Serialize without the name: it is recomputed when the item is registered.
-        let name = std::mem::replace(&mut item.item_meta().name, Name { name: vec![] });
+        let name = std::mem::replace(&mut item.item_meta().name, Name::default());
         let item = self.translated.get_item(id).unwrap();
         // Check that we recorded all the ids the item mentions.
         let mut collect = CollectIds {
