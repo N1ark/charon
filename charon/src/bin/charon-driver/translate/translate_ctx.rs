@@ -2,6 +2,7 @@
 use super::translate_crate::RustcItem;
 pub use super::translate_crate::{TransImplSource, TransItemSource, TransItemSourceKind};
 use super::translate_generics::{BindingLevel, LifetimeMutabilityComputer};
+use crate::driver::{BodyRequest, BodyRequests};
 use crate::hax;
 use crate::hax::SInto;
 use charon_lib::ast::*;
@@ -130,6 +131,10 @@ pub struct TranslateCtx<'tcx> {
     pub errors: RefCell<ErrorCtx>,
     /// The declarations we came accross and which we haven't translated yet.
     pub items_to_translate: VecDeque<TransItemSource<'tcx>>,
+    /// Where we ask rustc's other threads for the bodies we're going to need.
+    pub body_requests: Arc<BodyRequests<'tcx>>,
+    /// The bodies we asked rustc to prepare for the items in `items_to_translate`.
+    pub requested_bodies: HashMap<TransItemSource<'tcx>, BodyRequest<'tcx>>,
     /// The declaration we've already processed (successfully or not).
     pub processed: HashSet<TransItemSource<'tcx>>,
     /// While translating, record which item is "contained" by another, in the sense that

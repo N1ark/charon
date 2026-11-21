@@ -6,11 +6,14 @@ use crate::hax;
 use crate::hax::UnderOwnerState;
 use rustc_middle::mir;
 use rustc_middle::ty;
+use rustc_span::def_id::DefId;
 
 use charon_lib::ast::*;
 use charon_lib::options::MirLevel;
 
 use super::translate_ctx::ItemTransCtx;
+use crate::driver::BodyRequest;
+use rustc_hir::def::DefKind;
 
 impl<'tcx> ItemTransCtx<'tcx, '_> {
     pub fn get_mir(
@@ -39,6 +42,26 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let tcx = self.t_ctx.tcx;
         let mir_level = self.t_ctx.options.mir_level;
         let def_id = &item_ref.def_id;
+        if let hax::DefIdBase::Real(rust_def_id) = def_id.base {
+            let s = self.hax_state_with_id();
+            let args = item_ref.rustc_args(s);
+            let typing_env = s.typing_env();
+            let request = BodyRequest::Instantiated {
+                def_id: rust_def_id,
+                args,
+                typing_env,
+            };
+            if let Some(body) = self.t_ctx.body_requests.take(request) {
+                return Ok(body);
+            }
+            return Ok(instantiated_mir(
+                tcx,
+                rust_def_id,
+                args,
+                typing_env,
+                mir_level,
+            ));
+        }
         Ok(match get_mir_for_def_id_and_level(tcx, def_id, mir_level) {
             Some(body) => {
                 let s = self.hax_state_with_id();
@@ -51,6 +74,28 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
     }
 }
 
+/// Whether rustc's checks may steal the MIR of this local item at this level, in which case we only
+/// read it once they are done (see [`rustc_const_uneval::RUSTC_CHECKS_DONE`]).
+pub fn checks_may_steal_mir(tcx: ty::TyCtxt<'_>, def_id: DefId, level: MirLevel) -> bool {
+    // Const-eval steals the MIR of the consts and statics it evaluates, and the promoted MIR of
+    // const fns, but it clones their elaborated MIR.
+    rustc_const_uneval::may_be_const_evaluated(tcx, def_id)
+        && !(level == MirLevel::Elaborated && tcx.def_kind(def_id).is_fn_like())
+}
+
+/// The MIR of this item at this level, instantiated as the translation reads it. Returns `None` for
+/// a foreign body with no MIR available.
+pub fn instantiated_mir<'tcx>(
+    tcx: ty::TyCtxt<'tcx>,
+    def_id: DefId,
+    args: ty::GenericArgsRef<'tcx>,
+    typing_env: ty::TypingEnv<'tcx>,
+    level: MirLevel,
+) -> Option<mir::Body<'tcx>> {
+    let body = get_real_mir(tcx, def_id, level)?;
+    Some(hax::substitute(tcx, typing_env, Some(args), body))
+}
+
 /// Query the MIR for a function at a specific level. Return `None` in the case of a foreign body
 /// with no MIR available.
 #[tracing::instrument(skip(tcx))]
@@ -60,11 +105,26 @@ fn get_mir_for_def_id_and_level<'tcx>(
     level: MirLevel,
 ) -> Option<mir::Body<'tcx>> {
     match def_id.base {
-        hax::DefIdBase::Real(rust_def_id) => {
+        hax::DefIdBase::Real(rust_def_id) => get_real_mir(tcx, rust_def_id, level),
+        hax::DefIdBase::Promoted(rust_def_id, promoted_id) => {
+            let body =
+                rustc_const_uneval::promoted_body(tcx, rust_def_id, promoted_id, Clone::clone);
+            Some(body)
+        }
+        hax::DefIdBase::Alloc(..) => None,
+        _ => unreachable!(),
+    }
+}
+
+fn get_real_mir<'tcx>(
+    tcx: ty::TyCtxt<'tcx>,
+    rust_def_id: DefId,
+    level: MirLevel,
+) -> Option<mir::Body<'tcx>> {
+    {
+        {
             if let Some(local_def_id) = rust_def_id.as_local() {
-                // Const-eval clones the elaborated MIR of const fns instead of stealing it, so we
-                // can read it while rustc's checks run.
-                if level != MirLevel::Elaborated || !tcx.def_kind(rust_def_id).is_fn_like() {
+                if checks_may_steal_mir(tcx, rust_def_id, level) {
                     rustc_const_uneval::wait_for_rustc_checks(tcx, rust_def_id);
                 }
                 match level {
@@ -97,11 +157,12 @@ fn get_mir_for_def_id_and_level<'tcx>(
             // We pass `-Zalways-encode-mir` so that we get MIR for all the dependencies we compiled
             // ourselves. This doesn't apply to the stdlib; there we only get MIR for const items and
             // generic or inlineable functions.
+            let def_kind = tcx.def_kind(rust_def_id);
             let is_global = matches!(
-                def_id.kind,
-                hax::DefKind::Const | hax::DefKind::AnonConst | hax::DefKind::AssocConst
+                def_kind,
+                DefKind::Const | DefKind::AnonConst | DefKind::AssocConst
             );
-            let is_static = matches!(def_id.kind, hax::DefKind::Static { .. });
+            let is_static = matches!(def_kind, DefKind::Static { .. });
             let mir_available = tcx.is_mir_available(rust_def_id);
 
             if mir_available && !is_global && !is_static {
@@ -116,12 +177,5 @@ fn get_mir_for_def_id_and_level<'tcx>(
                 None
             }
         }
-        hax::DefIdBase::Promoted(rust_def_id, promoted_id) => {
-            let body =
-                rustc_const_uneval::promoted_body(tcx, rust_def_id, promoted_id, Clone::clone);
-            Some(body)
-        }
-        hax::DefIdBase::Alloc(..) => None,
-        _ => unreachable!(),
     }
 }

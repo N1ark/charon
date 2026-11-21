@@ -82,6 +82,9 @@ pub fn install_panic_hook() {
                 let msg = info.payload_as_str().unwrap_or("Box<dyn Any>");
                 format!("\nthread '{name}' panicked at {location}:\n{msg}")
             };
+            if SILENT_PANICS.get() {
+                return;
+            }
             let captured = capture
                 && ITEM_EFFECTS.with_borrow_mut(|effects| {
                     let Some(effects) = effects else {
@@ -103,6 +106,18 @@ pub fn install_panic_hook() {
             }
         }));
     });
+}
+
+thread_local! {
+    static SILENT_PANICS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Run `f` without printing the messages of the panics it causes: the caller handles them.
+pub fn without_panic_messages<R>(f: impl FnOnce() -> R) -> R {
+    let old = SILENT_PANICS.replace(true);
+    let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    SILENT_PANICS.set(old);
+    res.unwrap_or_else(|payload| std::panic::resume_unwind(payload))
 }
 
 /// The message of a panic captured by our hook, ready to print.

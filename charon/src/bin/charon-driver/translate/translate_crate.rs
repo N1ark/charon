@@ -23,10 +23,13 @@ use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::{def_id::DefId, sym};
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use super::get_mir::checks_may_steal_mir;
 use super::translate_ctx::*;
+use crate::driver::{BodyRequest, BodyRequests};
 use crate::hax;
-use crate::hax::{BaseState, SInto};
+use crate::hax::{BaseState, SInto, UnderOwnerState};
 use charon_lib::ast::*;
 use charon_lib::name_matcher::NamePattern;
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
@@ -577,6 +580,15 @@ impl<'tcx> TranslateCtx<'tcx> {
         dep_src: &Option<DepSource>,
         src: &TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
+        self.register(dep_src, src).0
+    }
+
+    /// Register this item source; also returns whether it is new.
+    fn register(
+        &mut self,
+        dep_src: &Option<DepSource>,
+        src: &TransItemSource<'tcx>,
+    ) -> (ItemOrModuleId, bool) {
         let mut is_new = false;
         let item_id = match self.id_map.get(src).copied() {
             Some(tid) => tid,
@@ -584,7 +596,10 @@ impl<'tcx> TranslateCtx<'tcx> {
             None => {
                 is_new = true;
                 let Some(trans_id) = self.reserve_item_id(src.kind) else {
-                    return ItemOrModuleId::Module(src.def_id().real_rust_def_id());
+                    return (
+                        ItemOrModuleId::Module(src.def_id().real_rust_def_id()),
+                        false,
+                    );
                 };
                 // Add the id to the queue of declarations to translate
                 self.id_map.insert(src.clone(), trans_id);
@@ -602,7 +617,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, item_id, src.def_id().is_local());
-        ItemOrModuleId::Item(item_id)
+        (ItemOrModuleId::Item(item_id), is_new)
     }
 
     /// Reserve an id for an item of this kind. Returns `None` for kinds we don't translate as items.
@@ -627,14 +642,46 @@ impl<'tcx> TranslateCtx<'tcx> {
         dep_src: &Option<DepSource>,
         item_src: TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
-        let id = self.register_no_enqueue(dep_src, &item_src);
+        let (id, is_new) = self.register(dep_src, &item_src);
         if let Some(item_id) = id.as_item() {
             self.cache_record_registration(item_id, &item_src, false, true);
+        }
+        if is_new {
+            self.request_body(&item_src);
         }
         self.items_to_translate.push_back(item_src);
         id
     }
 
+    /// Ask rustc's other threads to prepare the body of this new function ahead of time. Bodies
+    /// the checks may steal are only read once the checks are done, by which time rustc has
+    /// computed all the local bodies.
+    fn request_body(&mut self, item_src: &TransItemSource<'tcx>) {
+        if let TransItemSourceKind::Fun = item_src.kind
+            && let hax::DefIdBase::Real(def_id) = item_src.def_id().base
+            && !(def_id.is_local()
+                && checks_may_steal_mir(self.tcx, def_id, self.options.mir_level))
+        {
+            let request = match &item_src.item {
+                RustcItem::Mono(item_ref) => {
+                    let s = self.hax_state.with_hax_owner(&item_ref.def_id);
+                    BodyRequest::Instantiated {
+                        def_id,
+                        args: item_ref.rustc_args(&s),
+                        typing_env: s.typing_env(),
+                    }
+                }
+                RustcItem::Poly(..) if let Some(def_id) = def_id.as_local() => {
+                    BodyRequest::Local(def_id)
+                }
+                _ => return,
+            };
+            self.body_requests.request(request);
+            self.requested_bodies.insert(item_src.clone(), request);
+        }
+    }
+
+    /// Add this item to the queue of items to translate.
     /// Enqueue an item from its id.
     pub(crate) fn enqueue_id(&mut self, id: impl Into<ItemId>) {
         let id = id.into();
@@ -1292,12 +1339,13 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     }
 }
 
-#[tracing::instrument(skip(tcx, error_ctx))]
+#[tracing::instrument(skip(tcx, error_ctx, body_requests))]
 pub fn translate<'tcx>(
     tcx: TyCtxt<'tcx>,
     cli_options: &CliOpts,
     mut error_ctx: ErrorCtx,
     sysroot: PathBuf,
+    body_requests: Arc<BodyRequests<'tcx>>,
 ) -> Result<TransformCtx, Error> {
     let translate_options = TranslateOptions::new(&mut error_ctx, cli_options);
 
@@ -1362,6 +1410,8 @@ pub fn translate<'tcx>(
         reverse_id_map: Default::default(),
         file_to_id: Default::default(),
         items_to_translate: Default::default(),
+        body_requests,
+        requested_bodies: Default::default(),
         processed: Default::default(),
         containment_graph: Default::default(),
         translate_stack: Default::default(),
@@ -1531,6 +1581,9 @@ pub fn translate<'tcx>(
         if let Some(item_src) = ctx.items_to_translate.pop_front() {
             if ctx.processed.insert(item_src.clone()) {
                 ctx.translate_item(&item_src);
+            }
+            if let Some(key) = ctx.requested_bodies.remove(&item_src) {
+                ctx.body_requests.discard(key);
             }
         } else if let Some(id) = ctx.cache.as_mut().and_then(|c| c.pop_unbound()) {
             ctx.cache_translate_unbound(id);

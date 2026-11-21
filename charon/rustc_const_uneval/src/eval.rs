@@ -109,14 +109,18 @@ impl<'tcx> AllocTarget<'tcx> {
 /// if the checks had run first.
 pub static RUSTC_CHECKS_DONE: std::sync::OnceLock<()> = std::sync::OnceLock::new();
 
-/// Call before reading a MIR body that may get stolen, see [`RUSTC_CHECKS_DONE`].
-pub fn wait_for_rustc_checks(tcx: TyCtxt<'_>, def_id: DefId) {
+/// Whether const-eval may use the MIR of this item.
+pub fn may_be_const_evaluated(tcx: TyCtxt<'_>, def_id: DefId) -> bool {
     use rustc_hir::def::DefKind;
-    let may_be_const_evaluated = match tcx.def_kind(def_id) {
+    match tcx.def_kind(def_id) {
         DefKind::Fn | DefKind::AssocFn | DefKind::Closure => tcx.is_const_fn(def_id),
         _ => true,
-    };
-    if def_id.is_local() && may_be_const_evaluated {
+    }
+}
+
+/// Call before reading a MIR body that may get stolen, see [`RUSTC_CHECKS_DONE`].
+pub fn wait_for_rustc_checks(tcx: TyCtxt<'_>, def_id: DefId) {
+    if def_id.is_local() && may_be_const_evaluated(tcx, def_id) {
         use rustc_thread_pool::tlv::TLV;
         while RUSTC_CHECKS_DONE.get().is_none() {
             // Rather than blocking, help with pending work (which may be the checks themselves):

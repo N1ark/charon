@@ -1,6 +1,7 @@
 //! Run the rustc compiler with our custom options and hooks.
 use crate::CharonFailure;
 use crate::toolchain::CHARON_SYSROOT_VAR;
+use crate::translate::get_mir::instantiated_mir;
 use crate::translate::translate_crate;
 use charon_lib::errors::{DeferredOutput, ErrorCtx};
 use charon_lib::export::CrateData;
@@ -8,19 +9,24 @@ use charon_lib::options::{self, CliOpts, MirLevel, selected_crate_var};
 use charon_lib::transform::run_transformation_passes;
 use charon_lib::utils::arg_value;
 use itertools::Itertools;
-use rustc_data_structures::sync::IntoDynSyncSend;
+use rustc_data_structures::fx::{FxHashMap, FxHashSet};
+use rustc_data_structures::sync::{DynSync, IntoDynSyncSend};
 use rustc_driver::{Callbacks, Compilation};
+use rustc_hir::def::DefKind;
 use rustc_interface::Config;
 use rustc_interface::interface::Compiler;
-use rustc_middle::ty::{InstanceKind, TyCtxt};
+use rustc_middle::mir;
+use rustc_middle::ty::{GenericArgsRef, InstanceKind, TyCtxt, TypingEnv};
 use rustc_middle::util::Providers;
 use rustc_session::config::{OutputType, OutputTypes};
+use rustc_span::def_id::{DefId, LocalDefId};
 use rustc_span::{ErrorGuaranteed, Symbol};
+use std::collections::VecDeque;
 use std::num::NonZero;
 use std::panic;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::{env, fmt, thread};
 
@@ -137,17 +143,30 @@ fn setup_compiler(
     set_mir_options(config);
 }
 
-/// Run a couple of rustc queries that don't involve MIR (so that they don't steal it). Returns
-/// whether rustc reported errors. This lets us avoid running Charon translation on crates rustc
-/// already rejects.
-fn precheck_rustc_errors(tcx: TyCtxt<'_>) -> bool {
+/// Run the rustc checks that come before MIR building. Returns whether rustc reported errors. This
+/// lets us avoid running Charon translation on crates rustc already rejects. Between the items it
+/// checks, each thread runs `help_translation`.
+fn precheck_rustc_errors(tcx: TyCtxt<'_>, help_translation: &(impl Fn() + DynSync)) -> bool {
     type QueryResult = Result<(), ErrorGuaranteed>;
 
     tcx.par_hir_for_each_module(|module| {
+        help_translation();
         tcx.ensure_ok().check_mod_attrs(module);
         tcx.ensure_ok().check_mod_unstable_api_usage(module);
     });
 
+    // `check_type_wf` checks all items in parallel; we do the same first, with breaks.
+    let items = tcx.hir_crate_items(());
+    let check_wf = |def_id| {
+        help_translation();
+        tcx.ensure_result().check_well_formed(def_id)
+    };
+    let _ = items.par_items(|item| check_wf(item.owner_id.def_id));
+    let _ = items.par_impl_items(|item| check_wf(item.owner_id.def_id));
+    let _ = items.par_trait_items(|item| check_wf(item.owner_id.def_id));
+    let _ = items.par_foreign_items(|item| check_wf(item.owner_id.def_id));
+    let _ = items.par_nested_bodies(check_wf);
+    let _ = items.par_opaques(check_wf);
     let _: QueryResult = tcx.ensure_result().check_type_wf(());
     for &trait_def_id in tcx.all_local_trait_impls(()).keys() {
         let _: QueryResult = tcx.ensure_result().coherent_trait(trait_def_id);
@@ -156,10 +175,9 @@ fn precheck_rustc_errors(tcx: TyCtxt<'_>) -> bool {
     let _: QueryResult = tcx.ensure_result().crate_inherent_impls_overlap_check(());
 
     tcx.par_hir_body_owners(|def_id| {
+        help_translation();
         let def_kind = tcx.def_kind(def_id);
-        if !matches!(def_kind, rustc_hir::def::DefKind::AnonConst)
-            && !tcx.is_typeck_child(def_id.to_def_id())
-        {
+        if !matches!(def_kind, DefKind::AnonConst) && !tcx.is_typeck_child(def_id.to_def_id()) {
             tcx.ensure_ok().typeck(def_id);
         }
     });
@@ -167,21 +185,205 @@ fn precheck_rustc_errors(tcx: TyCtxt<'_>) -> bool {
     tcx.dcx().has_errors().is_some()
 }
 
-/// Compute the MIR bodies the translation will ask for, using rustc's parallel frontend. The
-/// translation would otherwise compute them one by one (for elaborated MIR this includes running
-/// borrowck); rustc computes them anyway after the translation.
-fn prefetch_local_mir(tcx: TyCtxt<'_>, level: MirLevel) {
-    tcx.par_hir_body_owners(|def_id| {
-        if matches!(tcx.def_kind(def_id), rustc_hir::def::DefKind::AnonConst) {
+/// The bodies the translation is going to read, in the order it will read them. Rustc's other
+/// threads prepare them ahead of the translation, a bounded number at a time.
+pub struct BodyRequests<'tcx> {
+    /// The local bodies we may compute: the body owners that have MIR.
+    owners: IntoDynSyncSend<FxHashSet<LocalDefId>>,
+    /// The thread that runs the translation.
+    translation_thread: thread::ThreadId,
+    requests: IntoDynSyncSend<Mutex<Requests<'tcx>>>,
+    /// Notified when `requests` changes.
+    requests_changed: IntoDynSyncSend<Condvar>,
+}
+
+/// A body the translation is going to read.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BodyRequest<'tcx> {
+    /// The MIR of a local item (we compute it in rustc's query cache).
+    Local(LocalDefId),
+    /// The MIR of `def_id` at the translation's level, instantiated with `args` in `typing_env`,
+    /// as [`instantiated_mir`] returns it.
+    Instantiated {
+        def_id: DefId,
+        args: GenericArgsRef<'tcx>,
+        typing_env: TypingEnv<'tcx>,
+    },
+}
+
+enum Prepared<'tcx> {
+    Queued,
+    InProgress,
+    /// The instantiated body, if any; `None` if computing it panicked.
+    Ready(Option<Option<mir::Body<'tcx>>>),
+}
+
+#[derive(Default)]
+struct Requests<'tcx> {
+    prepared: FxHashMap<BodyRequest<'tcx>, Prepared<'tcx>>,
+    queue: VecDeque<BodyRequest<'tcx>>,
+    /// The number of `Ready` bodies the translation hasn't read yet, which we bound so as to only
+    /// work a little ahead of it (that's both memory and work taken from rustc's checks).
+    ready: usize,
+    translation_done: bool,
+}
+
+/// How many bodies we prepare ahead of the translation.
+const MAX_READY_BODIES: usize = 64;
+
+impl<'tcx> BodyRequests<'tcx> {
+    fn new(tcx: TyCtxt<'tcx>) -> Self {
+        let owners = tcx
+            .hir_body_owners()
+            .filter(|&def_id| !matches!(tcx.def_kind(def_id), DefKind::AnonConst))
+            .collect();
+        BodyRequests {
+            owners: IntoDynSyncSend(owners),
+            translation_thread: thread::current().id(),
+            requests: IntoDynSyncSend(Default::default()),
+            requests_changed: IntoDynSyncSend(Condvar::new()),
+        }
+    }
+
+    /// Ask for this body to be prepared ahead of time.
+    pub fn request(&self, request: BodyRequest<'tcx>) {
+        // A local item without a body: rustc would ICE if we asked for its MIR.
+        let local_def_id = match request {
+            BodyRequest::Local(def_id) => Some(def_id),
+            BodyRequest::Instantiated { def_id, .. } => def_id.as_local(),
+        };
+        if let Some(def_id) = local_def_id
+            && !self.owners.contains(&def_id)
+        {
             return;
         }
-        match level {
-            MirLevel::Built => tcx.ensure_done().mir_built(def_id),
-            MirLevel::Promoted => tcx.ensure_done().mir_promoted(def_id),
-            MirLevel::Elaborated => tcx
-                .ensure_done()
-                .mir_drops_elaborated_and_const_checked(def_id),
-            MirLevel::Optimized => {}
+        let requests = &mut *self.requests.lock().unwrap();
+        if !requests.prepared.contains_key(&request) {
+            requests.prepared.insert(request, Prepared::Queued);
+            requests.queue.push_back(request);
+            self.requests_changed.notify_all();
+        }
+    }
+
+    /// Take this instantiated body if it was prepared, waiting for it if it is being prepared.
+    pub fn take(&self, request: BodyRequest<'tcx>) -> Option<Option<mir::Body<'tcx>>> {
+        let mut requests = self.requests.lock().unwrap();
+        loop {
+            match requests.prepared.get(&request)? {
+                Prepared::InProgress => {
+                    requests = self.requests_changed.wait(requests).unwrap();
+                    continue;
+                }
+                Prepared::Queued => {}
+                Prepared::Ready(_) => requests.ready -= 1,
+            }
+            let Prepared::Ready(body) = requests.prepared.remove(&request).unwrap() else {
+                return None;
+            };
+            self.requests_changed.notify_all();
+            return body;
+        }
+    }
+
+    /// Forget this body, which the translation won't read anymore.
+    pub fn discard(&self, request: BodyRequest<'tcx>) {
+        let requests = &mut *self.requests.lock().unwrap();
+        if let Some(Prepared::Ready(_)) = requests.prepared.remove(&request) {
+            requests.ready -= 1;
+            self.requests_changed.notify_all();
+        }
+    }
+
+    fn translation_done(&self) {
+        self.requests.lock().unwrap().translation_done = true;
+        self.requests_changed.notify_all();
+    }
+
+    /// Prepare the requested bodies until the translation is done.
+    fn prepare_bodies(&self, tcx: TyCtxt<'tcx>, level: MirLevel) {
+        // The translation may run this itself while it waits for the checks (see
+        // `wait_for_rustc_checks`): then we must not wait for it.
+        if thread::current().id() != self.translation_thread {
+            while self.prepare_next(tcx, level, true) {}
+        }
+    }
+
+    /// Prepare the requested bodies we can prepare now.
+    fn help_translation(&self, tcx: TyCtxt<'tcx>, level: MirLevel) {
+        while self.prepare_next(tcx, level, false) {}
+    }
+
+    /// Prepare the next requested body. Returns `false` if the translation is done, or if there
+    /// is nothing to prepare for now and `wait` is not set.
+    fn prepare_next(&self, tcx: TyCtxt<'tcx>, level: MirLevel, wait: bool) -> bool {
+        let request = {
+            let mut requests = self.requests.lock().unwrap();
+            loop {
+                if requests.translation_done {
+                    return false;
+                }
+                if requests.ready < MAX_READY_BODIES
+                    && let Some(request) = requests.queue.pop_front()
+                {
+                    if let Some(prepared @ Prepared::Queued) = requests.prepared.get_mut(&request) {
+                        *prepared = Prepared::InProgress;
+                        break request;
+                    }
+                    continue;
+                }
+                if !wait {
+                    return false;
+                }
+                requests = self.requests_changed.wait(requests).unwrap();
+            }
+        };
+        let body = match request {
+            BodyRequest::Local(def_id) => {
+                compute_mir(tcx, level, def_id);
+                Some(None)
+            }
+            // If this panics, the translation will compute the body itself and report the panic.
+            BodyRequest::Instantiated {
+                def_id,
+                args,
+                typing_env,
+            } => charon_lib::transform::ctx::without_panic_messages(|| {
+                panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                    instantiated_mir(tcx, def_id, args, typing_env, level)
+                }))
+                .ok()
+            }),
+        };
+        let requests = &mut *self.requests.lock().unwrap();
+        if let Some(prepared) = requests.prepared.get_mut(&request) {
+            *prepared = Prepared::Ready(body);
+            requests.ready += 1;
+        }
+        self.requests_changed.notify_all();
+        true
+    }
+}
+
+fn compute_mir(tcx: TyCtxt<'_>, level: MirLevel, def_id: LocalDefId) {
+    match level {
+        MirLevel::Built => tcx.ensure_done().mir_built(def_id),
+        MirLevel::Promoted => tcx.ensure_done().mir_promoted(def_id),
+        MirLevel::Elaborated => tcx
+            .ensure_done()
+            .mir_drops_elaborated_and_const_checked(def_id),
+        MirLevel::Optimized => {}
+    }
+}
+
+/// Compute the MIR bodies the translation will ask for, using rustc's parallel frontend, starting
+/// with the ones it requested. The translation would otherwise compute them one by one (for
+/// elaborated MIR this includes running borrowck); rustc computes them anyway after the
+/// translation.
+fn prefetch_local_mir<'tcx>(tcx: TyCtxt<'tcx>, level: MirLevel, requests: &BodyRequests<'tcx>) {
+    tcx.par_hir_body_owners(|def_id| {
+        requests.help_translation(tcx, level);
+        if requests.owners.contains(&def_id) {
+            compute_mir(tcx, level, def_id);
         }
     });
 }
@@ -439,22 +641,42 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         // checks pass; if they fail, we discard the translation, panics included.
         let deferred_output = Arc::new(Mutex::new(DeferredOutput::default()));
         error_ctx.deferred_output = Some(deferred_output.clone());
-        let rustc_checks = move || {
-            let _done = rustc_data_structures::defer(|| {
+        let body_requests = Arc::new(BodyRequests::new(tcx));
+        let translation_requests = body_requests.clone();
+        let rustc_checks = move |prepare_bodies: bool| {
+            let done = || {
                 let _ = rustc_const_uneval::RUSTC_CHECKS_DONE.set(());
-            });
-            if charon_lib::timing::time("rustc-precheck-errors", || precheck_rustc_errors(tcx)) {
+            };
+            let _done = rustc_data_structures::defer(done);
+            let level = options.mir_level();
+            // Computing the bodies the translation is about to need is what it would otherwise do
+            // in parallel with the checks.
+            let help_translation = || body_requests.help_translation(tcx, level);
+            if charon_lib::timing::time("rustc-precheck-errors", || {
+                precheck_rustc_errors(tcx, &help_translation)
+            }) {
                 return Err(());
             }
             deferred_output.lock().unwrap().release();
             charon_lib::timing::time("rustc-prefetch-mir", || {
-                prefetch_local_mir(tcx, options.mir_level())
+                prefetch_local_mir(tcx, level, &body_requests)
             });
+            if prepare_bodies {
+                done();
+                body_requests.prepare_bodies(tcx, level);
+            }
             Ok(())
         };
         let translate = move || {
+            let _done = rustc_data_structures::defer(|| translation_requests.translation_done());
             charon_lib::timing::time("translate-crate", || {
-                translate_crate::translate(tcx, options, error_ctx, sysroot)
+                translate_crate::translate(
+                    tcx,
+                    options,
+                    error_ctx,
+                    sysroot,
+                    translation_requests.clone(),
+                )
             })
         };
 
@@ -467,7 +689,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         {
             let (translated, checks) = rustc_data_structures::sync::par_join(
                 move || IntoDynSyncSend(panic::catch_unwind(panic::AssertUnwindSafe(translate))),
-                rustc_checks,
+                move || rustc_checks(true),
             );
             if checks.is_err() {
                 return Compilation::Continue;
@@ -475,7 +697,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
             translated
                 .0
                 .unwrap_or_else(|panic| panic::resume_unwind(panic))
-        } else if rustc_checks().is_ok() {
+        } else if rustc_checks(false).is_ok() {
             translate()
         } else {
             return Compilation::Continue;
