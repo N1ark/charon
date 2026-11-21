@@ -6,6 +6,7 @@ use std::mem;
 use crate::ast::*;
 use crate::transform::{TransformCtx, ctx::TransformPass};
 use crate::utils::CycleDetector;
+use rustc_hash::FxHashSet as HashSet;
 
 #[derive(Default)]
 struct OutlivesAtBinder {
@@ -44,6 +45,10 @@ struct OutlivesGatherer<'a> {
     /// How many of the binders we're under (excluding the outermost level) bind variables or
     /// have predicates.
     non_empty_binders: usize,
+    /// Types without non-empty binders that we explored under empty binders only, without
+    /// shorter regions, with the number of binders. Exploring them again in the same situation
+    /// would add nothing.
+    explored: HashSet<(Ty, usize)>,
 }
 
 impl<'a> OutlivesGatherer<'a> {
@@ -59,6 +64,7 @@ impl<'a> OutlivesGatherer<'a> {
             binders: BindingStack::new(OutlivesAtBinder::default()),
             discard_outermost: false,
             non_empty_binders: 0,
+            explored: HashSet::default(),
         }
     }
 
@@ -109,6 +115,145 @@ impl<'a> OutlivesGatherer<'a> {
         self.binders.innermost_mut().shorter_region = previous;
         result
     }
+
+    /// Add the predicates implied by the outer layer of a type, and return how to visit its
+    /// contents.
+    fn enter_ty(&mut self, ty: &Ty) -> TyContents {
+        if let TyKind::TraitType(proof, type_id, args) = ty.kind()
+            && let Some(decl) = self.trait_decls.get(proof.trait_id())
+            && let Some(assoc) = decl.types.get(*type_id)
+        {
+            // Instantiate the trait parameters under the GAT binder, then the GAT parameters.
+            let assoc = assoc.clone().substitute_with_tref(proof);
+            for pred in assoc.params.outlives.substitute_inner_binder(args) {
+                self.add_outlives(pred);
+            }
+        }
+        match ty.kind() {
+            TyKind::TypeVar(_) | TyKind::TraitType(..) => {
+                self.add_outliving_region(&Region::Lub(ty.clone()));
+                return TyContents::Opaque;
+            }
+            TyKind::Adt(type_ref) => {
+                if let Some(decl) = self.type_decls.get(type_ref.id) {
+                    let outlives = decl
+                        .generics
+                        .outlives
+                        .iter()
+                        .cloned()
+                        .map(|pred| pred.substitute(&type_ref.generics))
+                        .collect_vec();
+                    for pred in outlives {
+                        self.add_outlives(pred);
+                    }
+                }
+            }
+            _ => {}
+        }
+        match ty.kind() {
+            TyKind::Ref(region @ (Region::Static | Region::Var(_) | Region::Lub(_)), _, _) => {
+                TyContents::UnderRef(region.clone())
+            }
+            _ => TyContents::Plain,
+        }
+    }
+
+    /// Visit the contents of a type using `visit_inner`, as instructed by `enter_ty`.
+    fn visit_ty_contents(
+        &mut self,
+        contents: TyContents,
+        visit_inner: impl FnOnce(&mut Self) -> ControlFlow<Infallible>,
+    ) -> ControlFlow<Infallible> {
+        match contents {
+            TyContents::Plain => visit_inner(self),
+            TyContents::Opaque => {
+                // `T::Assoc: 'a` does not imply `T: 'a`. We temporarily remove `shorter_region`
+                // from all binders while we visit the type.
+                let shorter_regions = self
+                    .binders
+                    .iter_mut()
+                    .map(|binder| binder.shorter_region.take())
+                    .collect_vec();
+                let result = visit_inner(self);
+                for (binder, shorter) in self.binders.iter_mut().zip(shorter_regions) {
+                    binder.shorter_region = shorter;
+                }
+                result
+            }
+            TyContents::UnderRef(region) => self.with_shorter_region(region, visit_inner),
+        }
+    }
+
+    fn add_region_outlives(&mut self, region: &Region) {
+        if matches!(region, Region::Var(_) | Region::Lub(_)) {
+            self.add_outliving_region(region);
+        }
+    }
+}
+
+/// How to visit the contents of a type, see [`OutlivesGatherer::enter_ty`].
+enum TyContents {
+    Plain,
+    /// The contents of a type variable or associated type don't outlive the regions it outlives.
+    Opaque,
+    /// The contents of a reference outlive its region.
+    UnderRef(Region),
+}
+
+/// Gathers the predicates implied by a value that contains no non-empty binders: since these are
+/// the only places where we add predicates, the value can be explored without cloning and
+/// re-interning it. Its empty binders only matter to track the binding depth.
+#[derive(Visitor)]
+struct GatherOnly<'b, 'a>(&'b mut OutlivesGatherer<'a>);
+
+impl VisitAst for GatherOnly<'_, '_> {
+    fn visit_binder<T: AstVisitable>(&mut self, binder: &Binder<T>) -> ControlFlow<Self::Break> {
+        self.0.binders.push(OutlivesAtBinder::default());
+        let result = self.visit_inner(binder);
+        let binder_outlives = self.0.binders.pop().unwrap().outlives;
+        debug_assert!(binder_outlives.is_empty());
+        result
+    }
+
+    fn visit_region_binder<T: AstVisitable>(
+        &mut self,
+        binder: &RegionBinder<T>,
+    ) -> ControlFlow<Self::Break> {
+        self.0.binders.push(OutlivesAtBinder::default());
+        let result = self.visit_inner(binder);
+        let binder_outlives = self.0.binders.pop().unwrap().outlives;
+        debug_assert!(binder_outlives.is_empty());
+        result
+    }
+
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        if self.0.can_skip(value.type_info()) {
+            return Continue(());
+        }
+        self.visit_inner(value)
+    }
+
+    fn visit_ty(&mut self, ty: &Ty) -> ControlFlow<Self::Break> {
+        if self.0.can_skip(ty.type_info()) {
+            return Continue(());
+        }
+        if self.0.non_empty_binders == 0
+            && self.0.binders.iter().all(|b| b.shorter_region.is_none())
+            && !self.0.explored.insert((ty.clone(), self.0.binders.len()))
+        {
+            return Continue(());
+        }
+        let contents = self.0.enter_ty(ty);
+        self.0
+            .visit_ty_contents(contents, |this| GatherOnly(this).visit_inner(ty))
+    }
+
+    fn enter_region(&mut self, region: &Region) {
+        self.0.add_region_outlives(region);
+    }
 }
 
 impl VisitAstMut for OutlivesGatherer<'_> {
@@ -148,6 +293,9 @@ impl VisitAstMut for OutlivesGatherer<'_> {
         if self.can_skip(value.type_info()) {
             return Continue(());
         }
+        if !value.type_info().has_non_empty_binder() {
+            return GatherOnly(self).visit(&*value);
+        }
         self.visit_inner(value)
     }
 
@@ -155,60 +303,15 @@ impl VisitAstMut for OutlivesGatherer<'_> {
         if self.can_skip(ty.type_info()) {
             return Continue(());
         }
-        if let TyKind::TraitType(proof, type_id, args) = ty.kind()
-            && let Some(decl) = self.trait_decls.get(proof.trait_id())
-            && let Some(assoc) = decl.types.get(*type_id)
-        {
-            // Instantiate the trait parameters under the GAT binder, then the GAT parameters.
-            let assoc = assoc.clone().substitute_with_tref(proof);
-            for pred in assoc.params.outlives.substitute_inner_binder(args) {
-                self.add_outlives(pred);
-            }
+        if !ty.type_info().has_non_empty_binder() {
+            return GatherOnly(self).visit(&*ty);
         }
-        match ty.kind() {
-            TyKind::TypeVar(_) | TyKind::TraitType(..) => {
-                self.add_outliving_region(&Region::Lub(ty.clone()));
-                // `T::Assoc: 'a` does not imply `T: 'a`. We temporarily remove `shorter_region`
-                // from all binders while we visit the type.
-                let shorter_regions = self
-                    .binders
-                    .iter_mut()
-                    .map(|binder| binder.shorter_region.take())
-                    .collect_vec();
-                let result = self.visit_inner(ty);
-                for (binder, shorter) in self.binders.iter_mut().zip(shorter_regions) {
-                    binder.shorter_region = shorter;
-                }
-                return result;
-            }
-            TyKind::Adt(type_ref) => {
-                if let Some(decl) = self.type_decls.get(type_ref.id) {
-                    let outlives = decl
-                        .generics
-                        .outlives
-                        .iter()
-                        .cloned()
-                        .map(|pred| pred.substitute(&type_ref.generics))
-                        .collect_vec();
-                    for pred in outlives {
-                        self.add_outlives(pred);
-                    }
-                }
-            }
-            _ => {}
-        }
-        match ty.kind() {
-            TyKind::Ref(region @ (Region::Static | Region::Var(_) | Region::Lub(_)), _, _) => {
-                self.with_shorter_region(region.clone(), |this| this.visit_inner(ty))
-            }
-            _ => self.visit_inner(ty),
-        }
+        let contents = self.enter_ty(ty);
+        self.visit_ty_contents(contents, |this| this.visit_inner(ty))
     }
 
     fn enter_region(&mut self, region: &mut Region) {
-        if matches!(region, Region::Var(_) | Region::Lub(_)) {
-            self.add_outliving_region(region);
-        }
+        self.add_region_outlives(region);
     }
 }
 
