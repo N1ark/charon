@@ -603,6 +603,8 @@ impl<'tcx> TranslateCtx<'tcx> {
                                 return (id, false);
                             };
                             ids.insert(src.clone(), trans_id);
+                            // Before others can see the id.
+                            par.reverse_ids.insert(trans_id, src.clone());
                             (trans_id, true)
                         }
                     }
@@ -612,7 +614,6 @@ impl<'tcx> TranslateCtx<'tcx> {
                 // lookups need them.
                 if new {
                     is_new = true;
-                    par.reverse_ids.insert(trans_id, src.clone());
                     self.log_start_naming(trans_id);
                     let name = self.translate_name(src);
                     let named = name.is_ok();
