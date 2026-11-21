@@ -71,7 +71,9 @@
 //!   with an existing trait impl. See the `dictionary_passing_style_woes.rs` test file.
 use derive_generic_visitor::*;
 use itertools::Itertools;
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 
 use crate::{
@@ -734,10 +736,35 @@ impl ItemModifications {
     }
 }
 
+/// What `ComputeItemModifications::compute_non_trait_modifications` depends on: the clauses and the
+/// type constraints of the given parameters.
+struct NonTraitModificationsKey<'a>(&'a GenericParams);
+
+impl PartialEq for NonTraitModificationsKey<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        let (x, y) = (self.0, other.0);
+        x.trait_type_constraints == y.trait_type_constraints
+            && x.trait_clauses.len() == y.trait_clauses.len()
+            && std::iter::zip(&x.trait_clauses, &y.trait_clauses)
+                .all(|(x, y)| x.clause_id == y.clause_id && x.trait_ == y.trait_)
+    }
+}
+impl Eq for NonTraitModificationsKey<'_> {}
+impl std::hash::Hash for NonTraitModificationsKey<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.trait_type_constraints.hash(state);
+        for clause in &self.0.trait_clauses {
+            clause.clause_id.hash(state);
+            clause.trait_.hash(state);
+        }
+    }
+}
+
 struct ComputeItemModifications<'a> {
     ctx: &'a TransformCtx,
-    /// Records the modifications for each trait.
-    trait_modifications: IndexMap<TraitDeclId, CycleDetector<ItemModifications>>,
+    /// Records the modifications for each trait. Borrowed once all the modifications we will
+    /// need are computed.
+    trait_modifications: Cow<'a, IndexMap<TraitDeclId, CycleDetector<ItemModifications>>>,
     /// Records the set of known associated types for this trait impl, including parent impls and
     /// associated type constraints.
     impl_assoc_tys: IndexMap<TraitImplId, CycleDetector<TypeConstraintSet>>,
@@ -747,14 +774,50 @@ impl<'a> ComputeItemModifications<'a> {
     fn new(ctx: &'a TransformCtx) -> Self {
         ComputeItemModifications {
             ctx,
-            trait_modifications: ctx
-                .translated
-                .trait_decls
-                .map_ref_opt(|_| Some(CycleDetector::Unprocessed)),
+            trait_modifications: Cow::Owned(
+                ctx.translated
+                    .trait_decls
+                    .map_ref_opt(|_| Some(CycleDetector::Unprocessed)),
+            ),
             impl_assoc_tys: ctx
                 .translated
                 .trait_impls
                 .map_ref_opt(|_| Some(CycleDetector::Unprocessed)),
+        }
+    }
+
+    /// A computer that reads the trait modifications of `self`, which must contain all the ones we
+    /// will look at.
+    fn reader(&self) -> ComputeItemModifications<'_> {
+        ComputeItemModifications {
+            ctx: self.ctx,
+            trait_modifications: Cow::Borrowed(&self.trait_modifications),
+            impl_assoc_tys: self.impl_assoc_tys.clone(),
+        }
+    }
+
+    /// Compute the modifications of the traits that `compute_item_modifications` looks at for
+    /// this item, in the same order.
+    fn compute_traits_used_by(&mut self, item: ItemRef<'_>) {
+        let compute_clause_traits = |this: &mut Self, params: &GenericParams| {
+            for clause in &params.trait_clauses {
+                this.compute_trait_modifications(clause.trait_.skip_binder.id);
+            }
+        };
+        match item {
+            ItemRef::TraitDecl(tdecl) => {
+                self.compute_trait_modifications(tdecl.def_id);
+                for method in &tdecl.methods {
+                    compute_clause_traits(self, &method.params);
+                }
+            }
+            ItemRef::TraitImpl(timpl) => {
+                compute_clause_traits(self, &timpl.generics);
+                for tref in &timpl.implied_trait_refs {
+                    self.compute_trait_modifications(tref.0.skip_binder.trait_id());
+                }
+            }
+            _ => compute_clause_traits(self, item.generic_params()),
         }
     }
 
@@ -829,7 +892,19 @@ impl<'a> ComputeItemModifications<'a> {
         &mut self,
         id: TraitDeclId,
     ) -> &CycleDetector<ItemModifications> {
-        if self.trait_modifications[id].start_processing()
+        let trait_modifications = match &mut self.trait_modifications {
+            Cow::Owned(trait_modifications) => trait_modifications,
+            Cow::Borrowed(trait_modifications) => {
+                // We only read: the traits we look at must have been computed in item order.
+                assert!(
+                    !matches!(trait_modifications[id], CycleDetector::Unprocessed)
+                        || self.ctx.translated.trait_decls.get(id).is_none(),
+                    "trait modifications computed out of order"
+                );
+                return &trait_modifications[id];
+            }
+        };
+        if trait_modifications[id].start_processing()
             && let Some(tr) = self.ctx.translated.trait_decls.get(id)
         {
             // The heart of the recursion: we process the trait clauses, which recursively computes
@@ -913,7 +988,7 @@ impl<'a> ComputeItemModifications<'a> {
                 modifications.replace_path(path);
             }
 
-            self.trait_modifications[id] = CycleDetector::Processed(modifications);
+            self.trait_modifications.to_mut()[id] = CycleDetector::Processed(modifications);
         }
         &self.trait_modifications[id]
     }
@@ -1010,7 +1085,7 @@ struct UpdateItemBody<'a> {
     span: Span,
     // Whether the current item is a type alias, which affects error messages.
     is_type_alias: bool,
-    item_modifications: &'a HashMap<GenericsSource, ItemModifications>,
+    item_modifications: &'a HashMap<GenericsSource, &'a ItemModifications>,
     // It's a reversed stack, for when we go under binders.
     type_replacements: BindingStack<TypeConstraintSet>,
     memo: &'a mut HashConsMemo<()>,
@@ -1802,25 +1877,67 @@ impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
         // Compute all the necessary type info to be able to replace and normalize associated
         // types.
-        let item_modifications: HashMap<GenericsSource, ItemModifications> = {
+        let (job_results, job_of_source) = {
             let mut computer = ComputeItemModifications::new(ctx);
-            let mut item_modifications = HashMap::default();
+            // Which traits are found to be self-referential depends on where we enter their
+            // cycles: we compute the traits in the order the items reach them.
+            for item in ctx.translated.all_items() {
+                computer.compute_traits_used_by(item);
+            }
+            // The rest only reads the trait modifications, so we compute it in parallel. The
+            // modifications of a non-trait item only depend on its clauses and type constraints,
+            // which many items share, e.g. a method and its closures: we compute them once.
+            enum Job<'a> {
+                Item(ItemRef<'a>),
+                NonTrait(&'a GenericParams),
+            }
+            fn non_trait_job<'a>(
+                jobs: &mut Vec<Job<'a>>,
+                non_trait_jobs: &mut HashMap<NonTraitModificationsKey<'a>, usize>,
+                params: &'a GenericParams,
+            ) -> usize {
+                *non_trait_jobs
+                    .entry(NonTraitModificationsKey(params))
+                    .or_insert_with(|| {
+                        jobs.push(Job::NonTrait(params));
+                        jobs.len() - 1
+                    })
+            }
+            let mut jobs = vec![];
+            let mut non_trait_jobs = HashMap::default();
+            let mut job_of_source = vec![];
             for (id, item) in ctx.translated.all_items_with_ids() {
-                let modifications = computer.compute_item_modifications(item);
-                item_modifications.insert(GenericsSource::Item(id), modifications);
+                let job = if let ItemRef::TraitDecl(..) | ItemRef::TraitImpl(..) = item {
+                    jobs.push(Job::Item(item));
+                    jobs.len() - 1
+                } else {
+                    non_trait_job(&mut jobs, &mut non_trait_jobs, item.generic_params())
+                };
+                job_of_source.push((GenericsSource::Item(id), job));
                 if let ItemRef::TraitDecl(tdecl) = item {
                     for (method_id, method) in tdecl.methods.iter_enumerated() {
-                        let modifications =
-                            computer.compute_non_trait_modifications(&method.params);
-                        item_modifications.insert(
-                            GenericsSource::Method(tdecl.def_id, method_id),
-                            modifications,
-                        );
+                        let job = non_trait_job(&mut jobs, &mut non_trait_jobs, &method.params);
+                        job_of_source.push((GenericsSource::Method(tdecl.def_id, method_id), job));
                     }
                 }
             }
-            item_modifications
+            let job_results: Vec<ItemModifications> = jobs
+                .into_par_iter()
+                .with_min_len(64)
+                .map_init(
+                    || computer.reader(),
+                    |computer, job| match job {
+                        Job::Item(item) => computer.compute_item_modifications(item),
+                        Job::NonTrait(params) => computer.compute_non_trait_modifications(params),
+                    },
+                )
+                .collect();
+            (job_results, job_of_source)
         };
+        let item_modifications: HashMap<GenericsSource, &ItemModifications> = job_of_source
+            .into_iter()
+            .map(|(source, job)| (source, &job_results[job]))
+            .collect();
 
         // Apply the computed modifications to each item. The memos and the caches only depend on
         // `item_modifications` and on what they're keyed by, so each thread can have its own.

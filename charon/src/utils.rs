@@ -63,7 +63,7 @@ pub fn repeat_except_first<T: Clone>(x: T) -> impl Iterator<Item = Option<T>> {
 }
 
 /// An enum to manage potentially-cyclic computations.
-#[derive(Debug, EnumAsInner)]
+#[derive(Debug, Clone, EnumAsInner)]
 pub enum CycleDetector<T> {
     /// We haven't analyzed this yet.
     Unprocessed,
