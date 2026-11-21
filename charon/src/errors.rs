@@ -215,24 +215,40 @@ enum DepNode {
     Local(ItemId, Span),
 }
 
-/// Graph of dependencies between erroring definitions and the definitions they came from.
+/// Graph of dependencies between erroring definitions and the definitions they came from. Edges
+/// always start from an external item, so we store them by kind of target to keep them small.
 struct DepGraph {
-    edges: HashSet<(DepNode, DepNode)>,
+    /// Edges from an external item to the external items that registered it.
+    external_edges: HashSet<(ItemId, ItemId)>,
+    /// Edges from an external item to the places in local items that registered it.
+    local_edges: HashSet<(ItemId, ItemId, Span)>,
 }
 
 impl DepGraph {
     fn new() -> Self {
         DepGraph {
-            edges: Default::default(),
+            external_edges: Default::default(),
+            local_edges: Default::default(),
         }
     }
 
-    fn insert_edge(&mut self, from: DepNode, to: DepNode) {
-        self.edges.insert((from, to));
+    fn insert_edge(&mut self, from: ItemId, to: DepNode) {
+        match to {
+            DepNode::External(to) => self.external_edges.insert((from, to)),
+            DepNode::Local(to, span) => self.local_edges.insert((from, to, span)),
+        };
     }
 
     fn graph(&self) -> DiGraphMap<DepNode, (), rustc_hash::FxBuildHasher> {
-        DiGraphMap::from_edges(self.edges.iter().copied())
+        let external = self
+            .external_edges
+            .iter()
+            .map(|&(from, to)| (DepNode::External(from), DepNode::External(to)));
+        let local = self
+            .local_edges
+            .iter()
+            .map(|&(from, to, span)| (DepNode::External(from), DepNode::Local(to, span)));
+        DiGraphMap::from_edges(external.chain(local))
     }
 }
 
@@ -396,12 +412,11 @@ impl ErrorCtx {
             && src.src_id != item_id
             && !is_local
         {
-            let src_node = DepNode::External(item_id);
             let tgt_node = match src.span {
                 Some(span) => DepNode::Local(src.src_id, span),
                 None => DepNode::External(src.src_id),
             };
-            self.external_dep_graph.insert_edge(src_node, tgt_node)
+            self.external_dep_graph.insert_edge(item_id, tgt_node)
         }
     }
 

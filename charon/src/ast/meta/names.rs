@@ -32,7 +32,7 @@ pub enum PathElem {
     Instantiated(Instantiation),
     /// This item is only available on the given target. Only appears in multi-target mode.
     #[serde_state(stateless)]
-    Target(TargetTriple),
+    Target(Ustr),
     /// A path element that doesn't come from the source code: either a builtin type such as
     /// tuples, or an item that has no name of its own such as a closure or a vtable.
     #[serde_state(stateless)]
@@ -334,7 +334,7 @@ impl Name {
     pub fn strip_target_suffix(&self) -> Option<(Name, TargetTriple)> {
         match self.name.last() {
             Some(PathElem::Target(target)) => {
-                let target = target.clone();
+                let target = target.to_string();
                 let mut base = self.clone();
                 base.name.pop();
                 Some((base, target))
@@ -450,7 +450,7 @@ impl Name {
                     ImplElem::Ty(..) => "<inherent impl>".to_string(),
                 },
                 PathElem::Instantiated(..) => "<mono>".to_string(),
-                PathElem::Target(target) => target.clone(),
+                PathElem::Target(target) => target.to_string(),
                 PathElem::Builtin(builtin, _) => format!("<{}>", builtin.ident()),
             })
             .join("::")

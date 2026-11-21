@@ -32,7 +32,7 @@ impl merge::MergeStrategy for MultiTarget {
 
     /// Remember the source target in the names.
     fn name_suffix(&self, target: &TargetTriple) -> Option<PathElem> {
-        Some(PathElem::Target(target.clone()))
+        Some(PathElem::Target(target.as_str().into()))
     }
 
     /// Entrypoint: deduplicate items that are the same across targets. Each group contains the
