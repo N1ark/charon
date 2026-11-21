@@ -110,6 +110,9 @@ struct ParItemOutcome {
     first_fresh_ids: Option<FreshIds>,
 }
 
+/// How many items the parallel loops that move or copy the items transform at a time.
+const PAR_CHUNK: usize = 1024;
+
 /// One value per thread of rayon's pool, e.g. a cache used while transforming items in parallel.
 /// Use it from rayon's threads, or when no parallel loop is running.
 pub(crate) struct PerThread<T>(Box<[Mutex<T>]>);
@@ -485,78 +488,92 @@ impl TransformCtx {
     }
 
     /// Mutably iterate over the function declarations in parallel. `f` works on a copy of each
-    /// declaration; while it runs the crate contains each declaration with an `Opaque` body.
+    /// declaration; while it runs the crate contains this declaration with an `Opaque` body. We go
+    /// through the declarations in chunks of `PAR_CHUNK`.
     pub(crate) fn par_for_each_fun_decl(&mut self, f: impl Fn(&Self, &mut FunDecl) + Sync) {
-        let mut decls: Vec<FunDecl> = self
-            .translated
-            .fun_decls
-            .iter_mut()
-            .collect_vec()
-            .into_par_iter()
-            .map(|decl| {
-                let body = mem::replace(&mut decl.body, Body::Opaque);
-                let mut copy = decl.clone();
-                if !body.has_contents() {
-                    // Keep showing the bodies that aren't moved (e.g. `Body::Intrinsic`).
-                    decl.body = body.clone();
-                }
-                copy.body = body;
-                copy
-            })
-            .collect();
-        let temp_ids = self.translated.global_decls.slot_count();
-        let outcomes = self.par_with_def_ids(
-            &mut decls,
-            |decl| {
-                (
-                    decl.def_id.into(),
-                    decl.item_meta.is_local,
-                    decl.item_meta.span,
-                )
-            },
-            |ctx, decl| f(ctx, decl),
-        );
-        for (decl, outcome) in decls.iter_mut().zip(outcomes) {
-            decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
-            self.add_promoted_globals(temp_ids, decl.def_id, decl, outcome.new_globals);
-            decl.item_meta.has_errors |= outcome.has_errors;
+        let count = self.translated.fun_decls.iter().count();
+        for start in (0..count).step_by(PAR_CHUNK) {
+            let mut decls: Vec<FunDecl> = self
+                .translated
+                .fun_decls
+                .iter_mut()
+                .skip(start)
+                .take(PAR_CHUNK)
+                .collect_vec()
+                .into_par_iter()
+                .map(|decl| {
+                    let body = mem::replace(&mut decl.body, Body::Opaque);
+                    let mut copy = decl.clone();
+                    if !body.has_contents() {
+                        // Keep showing the bodies that aren't moved (e.g. `Body::Intrinsic`).
+                        decl.body = body.clone();
+                    }
+                    copy.body = body;
+                    copy
+                })
+                .collect();
+            let temp_ids = self.translated.global_decls.slot_count();
+            let outcomes = self.par_with_def_ids(
+                &mut decls,
+                |decl| {
+                    (
+                        decl.def_id.into(),
+                        decl.item_meta.is_local,
+                        decl.item_meta.span,
+                    )
+                },
+                |ctx, decl| f(ctx, decl),
+            );
+            for (decl, outcome) in decls.iter_mut().zip(outcomes) {
+                decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
+                self.add_promoted_globals(temp_ids, decl.def_id, decl, outcome.new_globals);
+                decl.item_meta.has_errors |= outcome.has_errors;
+            }
+            // Put the transformed declarations back, dropping the copies in parallel.
+            self.translated
+                .fun_decls
+                .iter_mut()
+                .skip(start)
+                .take(PAR_CHUNK)
+                .collect_vec()
+                .into_par_iter()
+                .zip(decls)
+                .for_each(|(slot, decl)| *slot = decl);
         }
-        // Put the transformed declarations back, dropping the copies in parallel.
-        self.translated
-            .fun_decls
-            .iter_mut()
-            .collect_vec()
-            .into_par_iter()
-            .zip(decls)
-            .for_each(|(slot, decl)| *slot = decl);
     }
 
     /// Mutably iterate in parallel over the items for which `select` returns true, like
-    /// `for_each_item_mut`. All of these items are missing from the crate while `f` runs, so `f`
-    /// must not look at them through `ctx`.
+    /// `for_each_item_mut`. We go through these items in chunks of `PAR_CHUNK`; the items of the
+    /// current chunk are missing from the crate while `f` runs, so `f` must not look at them
+    /// through `ctx`.
     pub(crate) fn par_for_each_item_mut_where(
         &mut self,
         select: impl Fn(ItemId) -> bool,
         f: impl Fn(&Self, ItemRefMut<'_>) + Sync,
     ) {
-        let mut items: Vec<(ItemId, ItemByVal)> = self
+        let ids = self
             .translated
             .all_ids()
             .filter(|&id| select(id))
-            .filter_map(|id| Some((id, self.translated.remove_item_temporarily(id)?)))
-            .collect();
-        let outcomes = self.par_with_def_ids(
-            &mut items,
-            |(id, item)| {
-                let meta = item.as_ref().item_meta();
-                (*id, meta.is_local, meta.span)
-            },
-            |ctx, (_, item)| f(ctx, item.as_mut()),
-        );
-        for ((id, mut item), outcome) in items.into_iter().zip(outcomes) {
-            assert!(outcome.new_globals.is_empty() && outcome.first_fresh_ids.is_none());
-            item.as_mut().item_meta().has_errors |= outcome.has_errors;
-            self.translated.put_item_back(id, item);
+            .collect_vec();
+        for ids in ids.chunks(PAR_CHUNK) {
+            let mut items: Vec<(ItemId, ItemByVal)> = ids
+                .iter()
+                .filter_map(|&id| Some((id, self.translated.remove_item_temporarily(id)?)))
+                .collect();
+            let outcomes = self.par_with_def_ids(
+                &mut items,
+                |(id, item)| {
+                    let meta = item.as_ref().item_meta();
+                    (*id, meta.is_local, meta.span)
+                },
+                |ctx, (_, item)| f(ctx, item.as_mut()),
+            );
+            for ((id, mut item), outcome) in items.into_iter().zip(outcomes) {
+                assert!(outcome.new_globals.is_empty() && outcome.first_fresh_ids.is_none());
+                item.as_mut().item_meta().has_errors |= outcome.has_errors;
+                self.translated.put_item_back(id, item);
+            }
         }
     }
 
