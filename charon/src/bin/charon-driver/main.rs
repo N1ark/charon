@@ -55,7 +55,7 @@ pub mod hax;
 mod toolchain;
 mod translate;
 
-use charon_lib::{export, logger};
+use charon_lib::logger;
 use std::{fmt, panic};
 
 pub enum CharonFailure {
@@ -95,22 +95,29 @@ impl fmt::Display for CharonFailure {
 fn run_charon() -> Result<usize, CharonFailure> {
     // Run the driver machinery. This translates the crate and runs the transformation passes, which
     // simplify the items and cleanup the bodies.
-    let Some((ctx, options)) = driver::run_rustc_driver()? else {
+    let Some((output, options)) = driver::run_rustc_driver()? else {
         // We didn't run charon.
         return Ok(0);
     };
+    let driver::TransformOutput {
+        crate_data,
+        error_count,
+        files,
+    } = output;
 
-    let error_count = ctx.error_ctx().error_count;
-
-    // # Final step: generate the files.
-    let targets = options.targets(&ctx.translated.crate_name);
-    trace!("Targets: {:?}", targets);
-    let crate_name = ctx.translated.crate_name.clone();
-    let crate_data = export::CrateData::new(ctx);
-    charon_lib::timing::time("serialize", || {
-        crate_data.serialize_to_files(targets, !options.no_dedup_serialized_ast)
-    })
-    .map_err(|()| CharonFailure::Serialize)?;
+    // # Final step: move the serialized files to their destination.
+    for (tmp, target) in files.map_err(|()| CharonFailure::Serialize)? {
+        if std::fs::rename(&tmp, &target).is_err() {
+            // E.g. the target is on another file system, or not a regular file.
+            let copied = std::fs::copy(&tmp, &target);
+            let _ = std::fs::remove_file(&tmp);
+            if copied.is_err() {
+                log::error!("Could not write to {target:?}");
+                return Err(CharonFailure::Serialize);
+            }
+        }
+    }
+    let crate_name = crate_data.translated.crate_name.clone();
     #[cfg(feature = "minirust")]
     if options.run_with_minirust {
         charon_lib::timing::time("run-with-minirust", || {

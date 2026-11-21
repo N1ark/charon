@@ -3,8 +3,9 @@ use crate::CharonFailure;
 use crate::toolchain::CHARON_SYSROOT_VAR;
 use crate::translate::translate_crate;
 use charon_lib::errors::{DeferredOutput, ErrorCtx};
+use charon_lib::export::CrateData;
 use charon_lib::options::{self, CliOpts, MirLevel, selected_crate_var};
-use charon_lib::transform::{TransformCtx, run_transformation_passes};
+use charon_lib::transform::run_transformation_passes;
 use charon_lib::utils::arg_value;
 use itertools::Itertools;
 use rustc_data_structures::sync::IntoDynSyncSend;
@@ -17,6 +18,7 @@ use rustc_session::config::{OutputType, OutputTypes};
 use rustc_span::{ErrorGuaranteed, Symbol};
 use std::num::NonZero;
 use std::panic;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
@@ -197,9 +199,9 @@ fn check_late_rustc_errors(tcx: TyCtxt<'_>) {
 }
 
 /// Run the rustc driver with our custom hooks. Returns `None` if the crate was not compiled with
-/// charon (e.g. because it was a dependency). Otherwise returns the translated crate, ready for
-/// post-processing transformations.
-pub fn run_rustc_driver() -> Result<Option<(TransformCtx, CliOpts)>, CharonFailure> {
+/// charon (e.g. because it was a dependency). Otherwise returns the transformed crate and its
+/// serialized output.
+pub fn run_rustc_driver() -> Result<Option<(TransformOutput, CliOpts)>, CharonFailure> {
     // Retreive the command-line arguments pased to `charon_driver`. The first arg is the path to
     // the current executable, we skip it.
     let mut compiler_args: Vec<String> = env::args().skip(1).collect();
@@ -297,17 +299,27 @@ pub fn run_rustc_driver() -> Result<Option<(TransformCtx, CliOpts)>, CharonFailu
             error_ctx: Some(error_ctx),
             transform: None,
         };
-        charon_lib::timing::time("rustc-driver", || {
+        let result = charon_lib::timing::time("rustc-driver", || {
             run_compiler_with_callbacks(compiler_args, &mut callback)
-        })?;
+        });
         // If `transform` is not set here, there was a fatal error. On failure we exit without
-        // waiting for the transformation passes; their output stays held back.
-        let (transform, transform_output) = callback.transform.ok_or(CharonFailure::RustcError)?;
-        transform_output.lock().unwrap().release();
-        let ctx = transform
+        // waiting for the transformation passes; their output stays held back and their files are
+        // discarded.
+        let transform = match (result, callback.transform) {
+            (Ok(()), Some(transform)) => transform,
+            (result, transform) => {
+                if let Some(transform) = transform {
+                    transform.discard_files();
+                }
+                return Err(result.err().unwrap_or(CharonFailure::RustcError));
+            }
+        };
+        transform.output.lock().unwrap().release();
+        let output = transform
+            .thread
             .join()
             .unwrap_or_else(|payload| panic::resume_unwind(payload));
-        Some((ctx, options))
+        Some((output, options))
     };
     Ok(output)
 }
@@ -322,9 +334,75 @@ pub struct CharonCallbacks<'a> {
     codegen: bool,
     /// Context for errors; `take()`n by translation.
     error_ctx: Option<ErrorCtx>,
-    /// The thread that runs the transformation passes on the translated crate, and their held-back
-    /// output. `None` at the start or if we couldn't translate anything.
-    transform: Option<(JoinHandle<TransformCtx>, Arc<Mutex<DeferredOutput>>)>,
+    /// The thread that runs the transformation passes on the translated crate. `None` at the start
+    /// or if we couldn't translate anything.
+    transform: Option<Transformation>,
+}
+
+/// The transformation passes and the serialization of their result, which run alongside the end
+/// of rustc's compilation.
+struct Transformation {
+    thread: JoinHandle<TransformOutput>,
+    /// The messages of the passes, held back until rustc is done.
+    output: Arc<Mutex<DeferredOutput>>,
+    files: Arc<Mutex<OutputFiles>>,
+}
+
+/// The output files are serialized to temporary files, which only become the real output once
+/// rustc succeeded.
+#[derive(PartialEq)]
+enum OutputFiles {
+    NotStarted,
+    Writing,
+    Discarded,
+}
+
+/// The result of the transformation thread.
+pub struct TransformOutput {
+    pub crate_data: CrateData,
+    pub error_count: usize,
+    /// The serialized output, as pairs of a temporary file and the destination it should be moved
+    /// to. `Err` if serialization failed.
+    pub files: Result<Vec<(PathBuf, PathBuf)>, ()>,
+}
+
+impl Transformation {
+    /// Make sure no output file is left behind, because rustc failed.
+    fn discard_files(self) {
+        let mut files = self.files.lock().unwrap();
+        if *files == OutputFiles::NotStarted {
+            *files = OutputFiles::Discarded;
+            return;
+        }
+        drop(files);
+        if let Ok(output) = self.thread.join() {
+            for (tmp, _) in output.files.into_iter().flatten() {
+                let _ = std::fs::remove_file(tmp);
+            }
+        }
+    }
+}
+
+/// Serialize the crate to temporary files next to its targets.
+fn serialize_to_temp_files(
+    crate_data: &CrateData,
+    options: &CliOpts,
+) -> Result<Vec<(PathBuf, PathBuf)>, ()> {
+    let targets = options.targets(&crate_data.translated.crate_name);
+    trace!("Targets: {:?}", targets);
+    let mut files = vec![];
+    for (target, format) in targets {
+        let tmp = target.with_added_extension(format!("{}.tmp", std::process::id()));
+        files.push((tmp.clone(), target));
+        let result = crate_data.serialize_to_file(&tmp, format, !options.no_dedup_serialized_ast);
+        if result.is_err() {
+            for (tmp, _) in files {
+                let _ = std::fs::remove_file(tmp);
+            }
+            return Err(());
+        }
+    }
+    Ok(files)
 }
 impl<'a> Callbacks for CharonCallbacks<'a> {
     fn config(&mut self, config: &mut Config) {
@@ -402,20 +480,45 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         // The rest of the compilation can't affect the translated crate, so we run the
         // transformation passes alongside it. Their errors are held back until rustc is done, so
         // that they come after rustc's own as if we ran them sequentially.
-        let transform_output = Arc::new(Mutex::new(DeferredOutput::default()));
-        ctx.errors.get_mut().unwrap().deferred_output = Some(transform_output.clone());
+        // We also serialize the result before rustc is done, to temporary files.
+        let output = Arc::new(Mutex::new(DeferredOutput::default()));
+        ctx.errors.get_mut().unwrap().deferred_output = Some(output.clone());
+        let files = Arc::new(Mutex::new(OutputFiles::NotStarted));
+        let thread_files = files.clone();
         let options = options.clone();
-        let transform = thread::Builder::new()
+        let thread = thread::Builder::new()
             .name("charon".to_owned())
             .stack_size(rustc_interface::util::DEFAULT_STACK_SIZE)
             .spawn(move || {
                 charon_lib::timing::time("transformation-passes", || {
                     run_transformation_passes(&options, &mut ctx)
                 });
-                ctx
+                let error_count = ctx.error_ctx().error_count;
+                let crate_data = CrateData::new(ctx);
+                let files = {
+                    let mut files = thread_files.lock().unwrap();
+                    if *files == OutputFiles::Discarded {
+                        Ok(vec![])
+                    } else {
+                        *files = OutputFiles::Writing;
+                        drop(files);
+                        charon_lib::timing::time("serialize", || {
+                            serialize_to_temp_files(&crate_data, &options)
+                        })
+                    }
+                };
+                TransformOutput {
+                    crate_data,
+                    error_count,
+                    files,
+                }
             })
             .unwrap();
-        self.transform = Some((transform, transform_output));
+        self.transform = Some(Transformation {
+            thread,
+            output,
+            files,
+        });
 
         Compilation::Continue
     }
