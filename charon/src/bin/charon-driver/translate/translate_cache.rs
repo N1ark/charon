@@ -476,21 +476,43 @@ pub(crate) struct ItemKey {
     encoded: Vec<u8>,
 }
 
+impl<'tcx> KeyEncoder<'tcx> {
+    fn new(tcx: TyCtxt<'tcx>) -> Self {
+        KeyEncoder {
+            tcx,
+            buf: Vec::new(),
+            unencodable: false,
+            mentions_local: false,
+            mentions_alloc: false,
+            type_shorthands: Default::default(),
+            predicate_shorthands: Default::default(),
+        }
+    }
+}
+
+/// A hash of the contents of an immutable allocation (with those of the allocations it points to)
+/// and of the type we view it at: equal hashes mean equal translations. `None` if the allocation
+/// is mutable.
+pub(crate) fn anon_alloc_contents<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    alloc_id: AllocId,
+    view: Option<ty::Ty<'tcx>>,
+) -> Option<Fingerprint> {
+    let mut e = KeyEncoder::new(tcx);
+    alloc_id.encode(&mut e);
+    view.encode(&mut e);
+    let mut hasher = StableHasher::new();
+    std::hash::Hasher::write(&mut hasher, &e.buf);
+    (!e.unencodable).then(|| hasher.finish())
+}
+
 /// Encode the source without the choice of resolution. Returns `None` if that's not possible.
 fn encode_src<'tcx>(
     tcx: TyCtxt<'tcx>,
     s: &hax::StateWithBase<'tcx>,
     src: &TransItemSource<'tcx>,
 ) -> Option<KeyEncoder<'tcx>> {
-    let mut e = KeyEncoder {
-        tcx,
-        buf: Vec::new(),
-        unencodable: false,
-        mentions_local: false,
-        mentions_alloc: false,
-        type_shorthands: Default::default(),
-        predicate_shorthands: Default::default(),
-    };
+    let mut e = KeyEncoder::new(tcx);
     encode_kind(&mut e, src.kind);
     match &src.item {
         RustcItem::Poly(def_id) => {

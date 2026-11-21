@@ -453,9 +453,29 @@ impl DefId {
         contents.make_def_id(s)
     }
 
-    /// The global standing for an anonymous allocation.
+    /// The global standing for an anonymous allocation. Immutable allocations with the same
+    /// contents that we view at the same type are the same global: nothing tells them apart (Rust
+    /// doesn't give constants unique addresses), and that makes their identity independent of the
+    /// session.
     pub fn make_anon_alloc<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
-        s.global_cache().anon_allocs.lock().insert(alloc_id);
+        let cache = s.global_cache();
+        let known = cache.anon_alloc_classes.lock().0.get(&alloc_id).copied();
+        let alloc_id = known.unwrap_or_else(|| {
+            // Reading a pointer to the allocation decides its view; for the other references (e.g.
+            // pointers in raw memory), the first reference decides it.
+            cache.alloc_types.decide_view(alloc_id, None);
+            let view = cache.alloc_types.decided_view(alloc_id).unwrap();
+            let contents =
+                crate::translate::translate_cache::anon_alloc_contents(s.base().tcx, alloc_id, view);
+            let mut classes = cache.anon_alloc_classes.lock();
+            let class = match contents {
+                Some(contents) => *classes.1.entry(contents).or_insert(alloc_id),
+                None => alloc_id,
+            };
+            classes.0.insert(alloc_id, class);
+            class
+        });
+        cache.anon_allocs.lock().insert(alloc_id);
         Self::make_anon_alloc_unnumbered(s, alloc_id)
     }
 

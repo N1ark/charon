@@ -99,6 +99,12 @@ mod base {
         /// Anonymous allocations we turned into globals, in encounter order. Used to keep
         /// the order of globals stable across runs.
         pub anon_allocs: Lock<indexmap::IndexSet<RAllocId>>,
+        /// The allocation that stands for each immutable allocation, see
+        /// `DefId::make_anon_alloc`, and the allocation that stands for each contents.
+        pub anon_alloc_classes: Lock<(
+            FxHashMap<RAllocId, RAllocId>,
+            FxHashMap<rustc_data_structures::fingerprint::Fingerprint, RAllocId>,
+        )>,
         /// The types at which we view anonymous allocations.
         pub alloc_types: rustc_const_uneval::AllocTypes<'tcx>,
         /// Cached names and disambiguators for crate names.
@@ -116,6 +122,7 @@ mod base {
                 def_ids: Default::default(),
                 synthetic_item_data: Default::default(),
                 anon_allocs: Default::default(),
+                anon_alloc_classes: Default::default(),
                 alloc_types: Default::default(),
                 disambiguated_crate_names: Default::default(),
             }
