@@ -669,7 +669,14 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         // mode they aren't in the generics. So ensure it's been translated!
         let tuple_id = tupled_args_ty.as_adt().unwrap().id;
         let _ = self.get_or_translate(ItemId::Type(tuple_id))?;
-        let arg_tys = tupled_args_ty.as_tuple_fields(&self.t_ctx.translated);
+        let t_ctx = &*self.t_ctx;
+        let arg_tys = tupled_args_ty.as_tuple_fields_with(&t_ctx.translated, |id| {
+            t_ctx
+                .translated
+                .type_decls
+                .get(id)
+                .or_else(|| t_ctx.par_items.types.get(&id))
+        });
 
         let args = arg_tys
             .into_iter()

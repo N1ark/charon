@@ -434,7 +434,20 @@ impl<'tcx> TranslateCtx<'tcx> {
             }
             self.log_recorded_errors();
         };
-        self.log.as_mut().unwrap().replay = Some(replay);
+        // Free what renumbering doesn't need.
+        let log = &mut **self.log.as_mut().unwrap();
+        let errors = std::mem::take(&mut log.errors);
+        let dep_edges = std::mem::take(&mut log.dep_edges);
+        let vtables = std::mem::take(&mut log.vtables);
+        let mut replay = replay;
+        replay.reverse_ids = Default::default();
+        *log = TranslationLog {
+            errors,
+            dep_edges,
+            vtables,
+            replay: Some(replay),
+            ..Default::default()
+        };
     }
 
     /// Renumber items and files as the sequential translation would have, using the result of

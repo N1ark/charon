@@ -67,8 +67,12 @@ impl<'tcx> TranslateCtx<'tcx> {
         {
             if let Some(mut item) = self.translated.get_item_mut(trans_id) {
                 item.item_meta().has_errors = true;
-            } else if let Some(item_meta) = self.par_items.item_meta_mut(trans_id) {
-                item_meta.has_errors = true;
+            } else if let Some(id) = trans_id.as_type()
+                && let Some(decl) = self.par_items.types.get_mut(id)
+            {
+                decl.item_meta.has_errors = true;
+            } else if let Some(par) = &self.par {
+                par.set_has_errors(trans_id);
             }
         }
         self.log_finish_item();
@@ -243,31 +247,38 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Store the translation of an item.
     fn store_item(&mut self, id: impl Into<ItemId>, item: ItemByVal) {
         let id = id.into();
-        let parallel = self.par.is_some();
         let krate = &mut self.translated;
-        let items = &mut self.par_items;
-        match item {
-            // While translating in parallel, we keep the items that translation doesn't look up
-            // out of `translated`: its slots for all the ids would take a lot of memory in each
-            // worker.
-            ItemByVal::Fun(decl) if parallel => items.funs.push((*id.as_fun().unwrap(), decl)),
-            ItemByVal::Global(decl) if parallel => {
-                items.globals.push((*id.as_global().unwrap(), decl))
+        match (item, &self.par) {
+            // While translating in parallel, we keep the items out of the workers' `translated`:
+            // its slots for all the ids would take a lot of memory in each worker. The items that
+            // translation doesn't look up go straight to the shared crate.
+            (ItemByVal::Type(decl), Some(_)) => {
+                self.par_items.types.insert(*id.as_type().unwrap(), decl);
             }
-            ItemByVal::TraitImpl(decl) if parallel => {
-                items.impls.push((*id.as_trait_impl().unwrap(), decl))
+            (ItemByVal::Fun(decl), Some(par)) => {
+                par.funs.lock().set_slot_extend(*id.as_fun().unwrap(), decl)
             }
-            ItemByVal::Type(decl) => krate
+            (ItemByVal::Global(decl), Some(par)) => par
+                .globals
+                .lock()
+                .set_slot_extend(*id.as_global().unwrap(), decl),
+            (ItemByVal::TraitImpl(decl), Some(par)) => par
+                .impls
+                .lock()
+                .set_slot_extend(*id.as_trait_impl().unwrap(), decl),
+            (ItemByVal::Type(decl), None) => krate
                 .type_decls
                 .set_slot_extend(*id.as_type().unwrap(), decl),
-            ItemByVal::Fun(decl) => krate.fun_decls.set_slot_extend(*id.as_fun().unwrap(), decl),
-            ItemByVal::Global(decl) => krate
+            (ItemByVal::Fun(decl), None) => {
+                krate.fun_decls.set_slot_extend(*id.as_fun().unwrap(), decl)
+            }
+            (ItemByVal::Global(decl), None) => krate
                 .global_decls
                 .set_slot_extend(*id.as_global().unwrap(), decl),
-            ItemByVal::TraitDecl(decl) => krate
+            (ItemByVal::TraitDecl(decl), _) => krate
                 .trait_decls
                 .set_slot_extend(*id.as_trait_decl().unwrap(), decl),
-            ItemByVal::TraitImpl(decl) => krate
+            (ItemByVal::TraitImpl(decl), None) => krate
                 .trait_impls
                 .set_slot_extend(*id.as_trait_impl().unwrap(), decl),
         }
@@ -282,10 +293,13 @@ impl<'tcx> TranslateCtx<'tcx> {
         self.cache_decode_now(id);
         // We have to call `get_item` a few times because we're running into the classic `Polonius`
         // problem case.
-        if self.translated.get_item(id).is_none() {
+        let is_translated = |this: &Self| {
+            this.translated.get_item(id).is_some() || this.par_items.get(id).is_some()
+        };
+        if !is_translated(self) {
             let item_source = self.source_of(id);
             self.translate_item(&item_source);
-            if self.translated.get_item(id).is_none() {
+            if !is_translated(self) {
                 let span = self.def_span(item_source.def_id());
                 let name = id.to_string_with_ctx(&self.into_fmt());
                 // Not a real error, its message won't be displayed.
@@ -305,8 +319,11 @@ impl<'tcx> TranslateCtx<'tcx> {
                 }
             }
         }
-        let item = self.translated.get_item(id);
-        Ok(item.unwrap())
+        if self.translated.get_item(id).is_some() {
+            Ok(self.translated.get_item(id).unwrap())
+        } else {
+            Ok(self.par_items.get(id).unwrap())
+        }
     }
 
     /// Record that `method_id` is an implementation of the given method of the trait. If the

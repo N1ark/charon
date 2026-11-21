@@ -42,6 +42,10 @@ pub(crate) struct ParShared<'tcx> {
     /// See `TranslateCtx::requested_bodies`.
     pub(crate) requested_bodies: Lock<HashMap<TransItemSource<'tcx>, BodyRequest<'tcx>>>,
     pub(crate) methods: Lock<Methods>,
+    /// The translated items that translation doesn't look up.
+    pub(crate) funs: Lock<IndexMap<FunDeclId, FunDecl>>,
+    pub(crate) globals: Lock<IndexMap<GlobalDeclId, GlobalDecl>>,
+    pub(crate) impls: Lock<IndexMap<TraitImplId, TraitImpl>>,
     pub(crate) files: Lock<Files>,
     /// See `TranslateCtx::cached_names`.
     pub(crate) cached_names: ShardedMap<RustcItem<'tcx>, (Name, Option<MemoRef>)>,
@@ -74,33 +78,15 @@ pub(crate) struct Methods {
     pub(crate) assoc_item_names: IndexMap<TraitDeclId, AssocItemNames>,
 }
 
-/// The items a worker translated that aren't in its `translated` crate.
+/// The items a worker translated that aren't in its `translated` crate nor in the shared one.
 #[derive(Default)]
 pub(crate) struct ParItems {
-    pub(crate) funs: Vec<(FunDeclId, FunDecl)>,
-    pub(crate) globals: Vec<(GlobalDeclId, GlobalDecl)>,
-    pub(crate) impls: Vec<(TraitImplId, TraitImpl)>,
+    pub(crate) types: HashMap<TypeDeclId, TypeDecl>,
 }
 
 impl ParItems {
-    pub(crate) fn item_meta_mut(&mut self, id: ItemId) -> Option<&mut ItemMeta> {
-        match id {
-            ItemId::Fun(id) => {
-                Some(&mut self.funs.iter_mut().rfind(|(i, _)| *i == id)?.1.item_meta)
-            }
-            ItemId::Global(id) => Some(
-                &mut self
-                    .globals
-                    .iter_mut()
-                    .rfind(|(i, _)| *i == id)?
-                    .1
-                    .item_meta,
-            ),
-            ItemId::TraitImpl(id) => {
-                Some(&mut self.impls.iter_mut().rfind(|(i, _)| *i == id)?.1.item_meta)
-            }
-            _ => None,
-        }
+    pub(crate) fn get(&self, id: ItemId) -> Option<ItemRef<'_>> {
+        Some(ItemRef::Type(self.types.get(id.as_type()?)?))
     }
 }
 
@@ -142,6 +128,22 @@ thread_local! {
     static SCOPE: std::cell::Cell<*const ()> = const { std::cell::Cell::new(std::ptr::null()) };
 }
 
+/// Return the memory freed so far to the OS. Freeing the workers' state leaves memory that the
+/// allocator would otherwise keep around.
+pub(crate) fn purge_freed_memory() {
+    #[cfg(all(feature = "jemalloc", not(windows)))]
+    // SAFETY: `arena.<MALLCTL_ARENAS_ALL>.purge` takes no arguments.
+    unsafe {
+        tikv_jemalloc_sys::mallctl(
+            c"arena.4096.purge".as_ptr(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            0,
+        );
+    }
+}
+
 /// Run `f`, during which this thread doesn't run translation workers.
 pub(crate) fn without_translation_jobs<R>(f: impl FnOnce() -> R) -> R {
     let outer = TRANSLATING.replace(true);
@@ -181,6 +183,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             queue: Default::default(),
             requested_bodies: Default::default(),
             methods: Default::default(),
+            funs: Default::default(),
+            globals: Default::default(),
+            impls: Default::default(),
             files: Default::default(),
             cached_names: Default::default(),
             mono_types: Default::default(),
@@ -229,8 +234,10 @@ impl<'tcx> TranslateCtx<'tcx> {
         for worker in &mut workers {
             worker.par = None;
         }
+        purge_freed_memory();
         let shared = Arc::into_inner(shared).expect("the workers are done");
         charon_lib::timing::time("translate-merge", || self.merge_workers(shared, workers));
+        purge_freed_memory();
     }
 
     /// Move the state the workers share from this context to `shared`.
@@ -265,6 +272,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             assoc_item_id_map: std::mem::take(&mut self.assoc_item_id_map),
             assoc_item_names: std::mem::take(&mut krate.assoc_item_names),
         };
+        *shared.funs.lock() = std::mem::take(&mut krate.fun_decls);
+        *shared.globals.lock() = std::mem::take(&mut krate.global_decls);
+        *shared.impls.lock() = std::mem::take(&mut krate.trait_impls);
         *shared.files.lock() = Files {
             file_to_id: std::mem::take(&mut self.file_to_id),
             files: std::mem::take(&mut krate.files),
@@ -289,6 +299,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             names,
             queue,
             methods,
+            funs,
+            globals,
+            impls,
             files,
             ..
         } = shared;
@@ -304,6 +317,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         let krate = &mut self.translated;
         krate.assoc_item_names = methods.assoc_item_names;
         krate.files = files.files;
+        krate.fun_decls = funs.into_inner();
+        krate.global_decls = globals.into_inner();
+        krate.trait_impls = impls.into_inner();
         for (id, name) in names.into_entries() {
             krate.item_names.insert(id, name);
         }
@@ -360,19 +376,9 @@ impl<'tcx> TranslateCtx<'tcx> {
     fn merge_par_items(&mut self, items: ParItems) {
         // An item may have been translated by several workers, which got the same result.
         let krate = &mut self.translated;
-        for (id, decl) in items.funs {
-            if krate.fun_decls.get(id).is_none() {
-                krate.fun_decls.set_slot_extend(id, decl);
-            }
-        }
-        for (id, decl) in items.globals {
-            if krate.global_decls.get(id).is_none() {
-                krate.global_decls.set_slot_extend(id, decl);
-            }
-        }
-        for (id, decl) in items.impls {
-            if krate.trait_impls.get(id).is_none() {
-                krate.trait_impls.set_slot_extend(id, decl);
+        for (id, decl) in items.types {
+            if krate.type_decls.get(id).is_none() {
+                krate.type_decls.set_slot_extend(id, decl);
             }
         }
     }
@@ -403,6 +409,22 @@ impl<'tcx> TranslateCtx<'tcx> {
 }
 
 impl<'tcx> ParShared<'tcx> {
+    /// Mark this item of the shared crate as having errors.
+    pub(crate) fn set_has_errors(&self, id: ItemId) {
+        let mut funs = self.funs.lock();
+        let mut globals = self.globals.lock();
+        let mut impls = self.impls.lock();
+        let item_meta = match id {
+            ItemId::Fun(id) => funs.get_mut(id).map(|decl| &mut decl.item_meta),
+            ItemId::Global(id) => globals.get_mut(id).map(|decl| &mut decl.item_meta),
+            ItemId::TraitImpl(id) => impls.get_mut(id).map(|decl| &mut decl.item_meta),
+            _ => None,
+        };
+        if let Some(item_meta) = item_meta {
+            item_meta.has_errors = true;
+        }
+    }
+
     /// Reserve an id for an item of this kind, see `TranslateCtx::reserve_item_id`.
     pub(crate) fn reserve_item_id(&self, kind: TransItemSourceKind) -> Option<ItemId> {
         use TransItemSourceKind::*;

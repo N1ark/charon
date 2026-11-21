@@ -1820,6 +1820,7 @@ pub fn translate<'tcx>(
     ctx.compute_started_from();
     if ctx.is_logging() {
         charon_lib::timing::time("translate-renumber", || ctx.renumber_as_sequential());
+        super::translate_par::purge_freed_memory();
     }
     ctx.cache_store_names();
     if let Some(cache) = &mut ctx.cache {

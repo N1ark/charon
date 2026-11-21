@@ -329,6 +329,15 @@ impl Ty {
     /// The field types of a tuple, in order. Panics if the type is not a tuple,
     /// or if the type declaration is not found in the crate.
     pub fn as_tuple_fields(&self, translated: &TranslatedCrate) -> Vec<Ty> {
+        self.as_tuple_fields_with(translated, |id| translated.type_decls.get(id))
+    }
+
+    /// Like `as_tuple_fields`, getting the declarations of types from `decl`.
+    pub fn as_tuple_fields_with<'a>(
+        &self,
+        translated: &TranslatedCrate,
+        decl: impl FnOnce(TypeDeclId) -> Option<&'a TypeDecl>,
+    ) -> Vec<Ty> {
         let Some(tref) = self.as_adt().filter(|tref| tref.is_tuple()) else {
             unreachable!("as_tuple_fields called on non-tuple type {:?}", self);
         };
@@ -345,9 +354,7 @@ impl Ty {
             return tref.generics.types.as_vec().clone();
         }
 
-        translated
-            .type_decls
-            .get(tref.id)
+        decl(tref.id)
             .and_then(|decl| decl.kind.as_struct())
             .expect("the declaration of specialized tuple {tref:?} is missing")
             .iter()
