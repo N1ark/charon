@@ -1000,6 +1000,8 @@ struct UpdateItemBody<'a> {
     /// states.
     binder_states: HashMap<(u32, u32), u32>,
     binder_state: u32,
+    /// The replacement ids (as above) of the binders we're under, outermost first.
+    set_ids: Vec<u32>,
     pushed_sets: u32,
     caches: &'a RefCell<Caches>,
     /// Whether we reported an error while visiting this item.
@@ -1016,6 +1018,65 @@ struct Caches {
     impl_lookups: HashMap<(AssocTypePath, TraitRef), Ty>,
     /// `Ty::move_under_binders`.
     moved: HashMap<(Ty, DeBruijnId), Ty>,
+    /// `escaping_levels`, keyed by the address of the value.
+    escaping_levels: HashMap<usize, u64>,
+}
+
+/// The binder levels that `x` mentions from the outside, as a bitmask; the last bit stands for all
+/// the levels from 63 on.
+fn escaping_levels<T: AstVisitable + HashConsable>(
+    cache: &mut HashMap<usize, u64>,
+    x: &HashConsed<WithCachedTypeInfo<T>>,
+) -> u64 {
+    match x.type_info().max_de_bruijn_id() {
+        None => return 0,
+        Some(DeBruijnId::ZERO) => return 1,
+        Some(_) => {}
+    }
+    let key = std::ptr::from_ref(x.inner()).addr();
+    if let Some(&levels) = cache.get(&key) {
+        return levels;
+    }
+    #[derive(Visitor)]
+    struct EscapingLevels<'a> {
+        cache: &'a mut HashMap<usize, u64>,
+        depth: DeBruijnId,
+        levels: u64,
+    }
+    impl VisitorWithBinderDepth for EscapingLevels<'_> {
+        fn binder_depth_mut(&mut self) -> &mut DeBruijnId {
+            &mut self.depth
+        }
+    }
+    impl VisitAst for EscapingLevels<'_> {
+        fn visit<T: AstVisitable>(&mut self, x: &T) -> ControlFlow<Self::Break> {
+            VisitWithBinderDepth::new(self).visit(x)
+        }
+        fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+            &mut self,
+            x: &HashConsed<WithCachedTypeInfo<T>>,
+        ) -> ControlFlow<Self::Break> {
+            let inner = escaping_levels(self.cache, x);
+            let depth = self.depth.index.min(63);
+            self.levels |= (inner >> depth) | (inner & (1 << 63));
+            Continue(())
+        }
+        fn visit_de_bruijn_id(&mut self, id: &DeBruijnId) -> ControlFlow<Self::Break> {
+            if let Some(id) = id.sub(self.depth) {
+                self.levels |= 1 << id.index.min(63);
+            }
+            Continue(())
+        }
+    }
+    let mut visitor = EscapingLevels {
+        cache,
+        depth: DeBruijnId::ZERO,
+        levels: 0,
+    };
+    let _ = visitor.visit_inner(x);
+    let levels = visitor.levels;
+    cache.insert(key, levels);
+    levels
 }
 
 impl Visitor for UpdateItemBody<'_> {
@@ -1047,17 +1108,47 @@ impl UpdateItemBody<'_> {
             self.pushed_sets += 1;
             self.pushed_sets
         };
-        let next_state = self.binder_states.len() as u32 + 1;
-        let state = *self
-            .binder_states
-            .entry((self.binder_state, set_id))
-            .or_insert(next_state);
+        let state = self.binder_state_id(self.binder_state, set_id);
         let outer_state = std::mem::replace(&mut self.binder_state, state);
+        self.set_ids.push(set_id);
         self.type_replacements.push(repls);
         let ret = f(self);
         self.type_replacements.pop();
+        self.set_ids.pop();
         self.binder_state = outer_state;
         ret
+    }
+
+    fn binder_state_id(&mut self, outer_state: u32, set_id: u32) -> u32 {
+        let next_state = self.binder_states.len() as u32 + 1;
+        *self
+            .binder_states
+            .entry((outer_state, set_id))
+            .or_insert(next_state)
+    }
+
+    /// The binder state that the rewrite of `x` depends on: the replacements of the binders whose
+    /// variables `x` doesn't mention don't matter, except for the outermost ones, which apply to
+    /// `Self` and the like.
+    fn memo_state<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> u32 {
+        if self.set_ids.iter().all(|&set_id| set_id == 0) {
+            return self.binder_state;
+        }
+        let levels = escaping_levels(&mut self.caches.borrow_mut().escaping_levels, x);
+        let mut state = 0;
+        for i in 0..self.set_ids.len() {
+            let level = (self.set_ids.len() - 1 - i).min(63);
+            let set_id = if levels & (1 << level) != 0 {
+                self.set_ids[i]
+            } else {
+                0
+            };
+            state = self.binder_state_id(state, set_id);
+        }
+        state
     }
 
     fn lookup_type_replacement(&self, path: &AssocTypePath) -> Option<Ty> {
@@ -1527,7 +1618,7 @@ impl VisitAstMut for UpdateItemBody<'_> {
         }
         // Within an item, the rewrite of a value that mentions its environment only depends on
         // the value and on `type_replacements`.
-        let state = Some(self.binder_state);
+        let state = Some(self.memo_state(x));
         if let Some(new) = self.item_memo.get(x, state) {
             *x = new;
             return Continue(());
@@ -1667,6 +1758,7 @@ impl TransformPass for Transform {
                 item_memo: Default::default(),
                 binder_states: Default::default(),
                 binder_state: 0,
+                set_ids: vec![],
                 pushed_sets: 0,
                 caches: &caches.get(),
                 reported_error: Cell::new(false),
