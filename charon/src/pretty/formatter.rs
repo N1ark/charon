@@ -395,16 +395,16 @@ pub fn compute_local_names(locals: &Locals) -> IndexVec<LocalId, String> {
             .entry(local_names[local.index].clone())
             .or_default() += 1;
         if let Some(name) = &local.name {
-            *name_counts.entry(name.clone()).or_default() += 1;
+            *name_counts.entry(name.to_string()).or_default() += 1;
         }
     }
 
     for (id, local) in locals.locals.iter_enumerated() {
         if let Some(name) = &local.name
             && !name.is_empty()
-            && name_counts[name] == 1
+            && name_counts[name.as_str()] == 1
         {
-            local_names[id] = name.clone();
+            local_names[id] = name.to_string();
         }
     }
     local_names

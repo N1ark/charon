@@ -49,10 +49,10 @@ impl<'a> PythonTranspiler<'a> {
     }
 
     fn local(&self, id: LocalId) -> String {
-        self.locals.unwrap().locals[id]
-            .name
-            .clone()
-            .unwrap_or_else(|| format!("_{id}"))
+        match self.locals.unwrap().locals[id].name {
+            Some(name) => name.to_string(),
+            None => format!("_{id}"),
+        }
     }
 
     fn place(&self, place: &Place) -> String {

@@ -83,7 +83,7 @@ impl<'tcx, 'tctx, 'ictx> BodyTransCtx<'tcx, 'tctx, 'ictx> {
         // Translate the parameters
         for (index, var) in body.local_decls.iter_enumerated() {
             // Find the name of the variable
-            let name = local_names[index].map(|name| name.to_string());
+            let name = local_names[index].map(|name| name.as_str().into());
 
             // Translate the type
             let span = i_ctx.translate_span(&var.source_info.span);

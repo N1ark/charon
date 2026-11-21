@@ -4,6 +4,7 @@ use crate::ids::IndexVec;
 use crate::llbc_ast;
 use crate::ullbc_ast;
 use crate::utils::serialize_map_to_array::SeqHashMapToArray;
+use crate::utils::ustr::Ustr;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use serde_state::DeserializeState;
@@ -151,7 +152,8 @@ pub struct Local {
     pub index: LocalId,
     /// Variable name - may be `None` if the variable was introduced by Rust
     /// through desugaring.
-    pub name: Option<String>,
+    #[serde_state(stateless)]
+    pub name: Option<Ustr>,
     /// Span of the variable declaration.
     pub span: Span,
     /// The variable type
@@ -424,7 +426,7 @@ impl Locals {
     pub fn new_var(&mut self, name: Option<String>, ty: Ty) -> Place {
         let local_id = self.locals.push_with(|index| Local {
             index,
-            name,
+            name: name.map(Ustr::from),
             span: Span::dummy(),
             ty: ty.clone(),
             mutable: true,

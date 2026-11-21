@@ -453,6 +453,7 @@ impl<K: BodyVisitable + Hash + Eq, T: BodyVisitable + MergeValue> BodyVisitable
         ScalarTy,
         Span,
         String,
+        crate::utils::ustr::Ustr,
         thin_vec::ThinVec<String>,
         thin_vec::ThinVec<FieldId>,
         TraitRef,
