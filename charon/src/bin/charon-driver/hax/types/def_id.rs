@@ -84,11 +84,42 @@ pub struct DefId {
     pub(crate) contents: HashConsed<DefIdContents>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct DefIdContents {
     pub base: DefIdBase,
     /// The kind of definition this `DefId` points to.
     pub kind: crate::hax::DefKind,
+    /// Facts about this definition, computed on first use.
+    facts: DefIdFacts,
+}
+
+impl std::fmt::Debug for DefIdContents {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DefIdContents")
+            .field("base", &self.base)
+            .field("kind", &self.kind)
+            .finish()
+    }
+}
+
+/// Facts about a definition that rustc would otherwise look up in its query caches on each use.
+/// They are determined by the rest of the `DefIdContents`.
+#[derive(Default, Clone)]
+struct DefIdFacts {
+    def_span: std::sync::OnceLock<Span>,
+    rustc_def_kind: std::sync::OnceLock<hir::def::DefKind>,
+    /// The parent of the generics of this item, and their total count.
+    generics_parent_and_count: std::sync::OnceLock<(Option<RDefId>, usize)>,
+}
+
+impl PartialEq for DefIdFacts {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+impl Eq for DefIdFacts {}
+impl std::hash::Hash for DefIdFacts {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -374,6 +405,7 @@ impl DefId {
         let contents = DefIdContents {
             base,
             kind: get_def_kind(tcx, def_id).sinto(s),
+            facts: Default::default(),
         };
         contents.make_def_id(s)
     }
@@ -386,6 +418,7 @@ impl DefId {
         let contents = DefIdContents {
             base: DefIdBase::Synthetic(synthetic),
             kind,
+            facts: Default::default(),
         };
         contents.make_def_id(s)
     }
@@ -400,6 +433,7 @@ impl DefId {
         let contents = DefIdContents {
             base: DefIdBase::Promoted(self.real_rust_def_id(), promoted_id),
             kind: DefKind::PromotedConst,
+            facts: Default::default(),
         };
         contents.make_def_id(s)
     }
@@ -412,6 +446,7 @@ impl DefId {
         let contents = DefIdContents {
             base: DefIdBase::ImplAssocItem(vitem),
             kind: get_def_kind(tcx, vitem.item_decl_id).sinto(s),
+            facts: Default::default(),
         };
         contents.make_def_id(s)
     }
@@ -433,6 +468,7 @@ impl DefId {
                 mutability,
                 nested: true,
             },
+            facts: Default::default(),
         };
         contents.make_def_id(s)
     }
@@ -462,6 +498,10 @@ impl DefId {
     /// Get the span of the definition of this item. This is the span used in diagnostics when
     /// referring to the item.
     pub fn def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
+        *self.facts.def_span.get_or_init(|| self.compute_def_span(s))
+    }
+
+    fn compute_def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
         use DefKind::*;
         let tcx = s.base().tcx;
         match self.base {
@@ -548,16 +588,49 @@ impl DefId {
 
 impl DefId {
     pub fn can_have_generics<'tcx>(&self, s: &impl BaseState<'tcx>) -> bool {
-        let tcx = s.base().tcx;
+        use DefKind::*;
         match self.base {
-            DefIdBase::Real(def_id)
-            | DefIdBase::Promoted(def_id, ..)
-            | DefIdBase::ImplAssocItem(VirtualImplAssocItem {
-                item_decl_id: def_id,
-                ..
-            }) => can_have_generics(tcx, def_id),
+            // Promoted constants and their parents can have generics, and `ImplAssocItem`s have
+            // the kind of the item declaration.
+            DefIdBase::Real(..) | DefIdBase::Promoted(..) | DefIdBase::ImplAssocItem(..) => {
+                !matches!(
+                    self.kind,
+                    ConstParam
+                        | ExternCrate
+                        | ForeignMod
+                        | GlobalAsm
+                        | LifetimeParam
+                        | Macro(..)
+                        | Mod
+                        | TyParam
+                        | Use
+                )
+            }
             DefIdBase::Synthetic(synthetic) => synthetic.can_have_generics(s),
             DefIdBase::Alloc(..) => false,
+        }
+    }
+
+    /// The rustc `DefKind` of this item, which must be a real rustc item.
+    pub fn rustc_def_kind<'tcx>(&self, s: &impl BaseState<'tcx>) -> hir::def::DefKind {
+        *self
+            .facts
+            .rustc_def_kind
+            .get_or_init(|| get_def_kind(s.base().tcx, self.real_rust_def_id()))
+    }
+
+    /// The `parent` and `count()` of `self.generics_of(s)`.
+    pub fn generics_parent_and_count<'tcx>(
+        &self,
+        s: &impl BaseState<'tcx>,
+    ) -> (Option<RDefId>, usize) {
+        let compute = || {
+            let generics = self.generics_of(s);
+            (generics.parent, generics.count())
+        };
+        match self.base {
+            DefIdBase::Real(..) => *self.facts.generics_parent_and_count.get_or_init(compute),
+            _ => compute(),
         }
     }
 
@@ -625,9 +698,17 @@ impl DefId {
     pub fn identity_args<'tcx>(&self, s: &impl BaseState<'tcx>) -> ty::GenericArgsRef<'tcx> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
-                    identity_args_with_inferred(tcx, def_id)
+            DefIdBase::Real(def_id) => {
+                if self.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &self.kind)
+                } else {
+                    ty::GenericArgsRef::default()
+                }
+            }
+            DefIdBase::Promoted(def_id, ..) => {
+                let parent: DefId = def_id.sinto(s);
+                if parent.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &parent.kind)
                 } else {
                     ty::GenericArgsRef::default()
                 }
@@ -643,6 +724,21 @@ impl DefId {
 
     /// The identity arguments, with any erased lifetimes replaced with placeholders regions.
     pub fn identity_args_with_extra_regions<'tcx>(
+        &self,
+        s: &impl UnderOwnerState<'tcx>,
+    ) -> (ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>) {
+        if s.owner() != *self {
+            return self.compute_identity_args_with_extra_regions(s);
+        }
+        if let Some(cached) = &s.owner_cache().borrow().identity_args {
+            return cached.clone();
+        }
+        let ret = self.compute_identity_args_with_extra_regions(s);
+        s.with_cache(|cache| cache.identity_args = Some(ret.clone()));
+        ret
+    }
+
+    fn compute_identity_args_with_extra_regions<'tcx>(
         &self,
         s: &impl UnderOwnerState<'tcx>,
     ) -> (ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>) {
@@ -669,7 +765,7 @@ impl DefId {
                 param_env_from_clauses(tcx, impl_predicates.chain(item_predicates))
             }
             DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
+                if self.can_have_generics(s) {
                     tcx.param_env(def_id)
                 } else {
                     ty::ParamEnv::empty()

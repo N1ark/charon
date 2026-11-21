@@ -158,13 +158,13 @@ where
             diagnostic_item = Default::default();
         }
         DefIdBase::Real(rust_def_id) => {
+            let typing_parent = this.typing_parent(s);
             let mut param_env = if def_id.can_have_generics(s) {
-                get_param_env(s, args, this.typing_parent(s))
+                get_param_env(s, args, typing_parent.clone())
             } else {
                 ParamEnv::empty(s, None)
             };
-            let (soft_parent, _, _) = this.soft_typing_parent(s);
-            param_env.soft_parent = soft_parent;
+            param_env.soft_parent = this.soft_typing_parent_given(s, typing_parent);
             if def_id.is_typeck_child(s) {
                 // Record the value of the inference-only type vars.
                 let identity_args = this.rustc_args(s);
@@ -184,14 +184,10 @@ where
 
             kind = translate_full_def_kind(s, &this, args, param_env);
 
-            source_span = rust_def_id.as_local().map(|ldid| tcx.source_span(ldid));
-            lang_item = s
-                .base()
-                .tcx
-                .as_lang_item(rust_def_id)
-                .map(|litem| litem.name())
-                .sinto(s);
-            diagnostic_item = tcx.get_diagnostic_name(rust_def_id).sinto(s);
+            let info = def_info(s, rust_def_id);
+            source_span = info.source_span;
+            lang_item = info.lang_item;
+            diagnostic_item = info.diagnostic_item;
         }
         DefIdBase::Alloc(alloc_id) => {
             kind = FullDefKind::Static(Static {
@@ -214,12 +210,17 @@ where
         }
     }
 
-    let attributes = def_id.attrs(tcx);
-    let visibility = def_id.visibility(tcx);
+    let (attributes, visibility) = match def_id.base {
+        DefIdBase::Real(rust_def_id) => {
+            let info = def_info(s, rust_def_id);
+            (info.attributes, info.visibility)
+        }
+        _ => (def_id.attrs(tcx), def_id.visibility(tcx)),
+    };
     FullDef {
         this,
         span: def_id.def_span(s),
-        source_span: source_span.sinto(s),
+        source_span,
         attributes,
         visibility,
         lang_item,
@@ -227,6 +228,25 @@ where
         kind,
         virtual_impls: Default::default(),
     }
+}
+
+/// The parts of the `FullDef` of the current owner that don't depend on generic arguments, computed
+/// once per owner.
+fn def_info<'tcx, S: UnderOwnerState<'tcx>>(s: &S, rust_def_id: RDefId) -> DefInfo<'tcx> {
+    if let Some(info) = s.owner_cache().borrow().def_info {
+        return info;
+    }
+    let tcx = s.base().tcx;
+    let def_id = s.owner();
+    let info = DefInfo {
+        source_span: rust_def_id.as_local().map(|ldid| tcx.source_span(ldid)),
+        attributes: def_id.attrs(tcx),
+        visibility: def_id.visibility(tcx),
+        lang_item: tcx.as_lang_item(rust_def_id).map(|litem| litem.name()),
+        diagnostic_item: tcx.get_diagnostic_name(rust_def_id),
+    };
+    s.with_cache(|cache| cache.def_info = Some(info));
+    info
 }
 
 impl DefId {
@@ -388,7 +408,7 @@ impl<'tcx> ParamEnv<'tcx> {
             generics: TyGenerics {
                 parent: parent.map(|p| p.def_id.clone()),
                 parent_count: parent
-                    .map(|parent| parent.def_id.generics_of(s).count())
+                    .map(|parent| parent.def_id.generics_parent_and_count(s).1)
                     .unwrap_or(0),
                 params: vec![],
             },
@@ -1239,7 +1259,7 @@ where
         let args = args_or_default;
         inst_binder(tcx, s.typing_env(), Some(args), hax_def_id.type_of(s))
     };
-    match get_def_kind(tcx, def_id) {
+    match hax_def_id.rustc_def_kind(s) {
         RDefKind::Struct { .. } | RDefKind::Union { .. } | RDefKind::Enum { .. } => {
             let def = tcx.adt_def(def_id);
             let variants = def
@@ -1904,10 +1924,9 @@ fn get_param_env<'tcx, S: UnderOwnerState<'tcx>>(
     parent: Option<ItemRef<'tcx>>,
 ) -> ParamEnv<'tcx> {
     let owner = s.owner();
-    let generics = owner.generics_of(s).sinto(s);
     match args {
         None => ParamEnv {
-            generics,
+            generics: owner.generics_of(s).sinto(s),
             late_bound: Binder::empty(),
             extra_early_regions: vec![],
             predicates: owner.required_predicates(s).sinto(s),
@@ -1917,9 +1936,9 @@ fn get_param_env<'tcx, S: UnderOwnerState<'tcx>>(
         // An instantiated item is monomorphic.
         Some(_) => ParamEnv {
             generics: TyGenerics {
+                parent: owner.generics_parent_and_count(s).0.sinto(s),
                 parent_count: 0,
                 params: Default::default(),
-                ..generics
             },
             late_bound: Binder::empty(),
             extra_early_regions: vec![],

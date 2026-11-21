@@ -1,6 +1,5 @@
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
-use rustc_hir::def::DefKind as RDefKind;
 use rustc_middle::infer::canonical::QueryRegionConstraints;
 use rustc_middle::ty::relate::{
     Relate, RelateResult, TypeRelation, relate_args_with_variances, structurally_relate_consts,
@@ -384,9 +383,10 @@ where
 pub fn identity_args_with_inferred<'tcx>(
     tcx: ty::TyCtxt<'tcx>,
     def_id: RDefId,
+    def_kind: &DefKind,
 ) -> ty::GenericArgsRef<'tcx> {
-    match tcx.def_kind(def_id) {
-        RDefKind::Closure | RDefKind::SyntheticCoroutineBody => {
+    match def_kind {
+        DefKind::Closure | DefKind::SyntheticCoroutineBody => {
             let type_of = tcx
                 .type_of(def_id)
                 .instantiate_identity()
@@ -399,7 +399,7 @@ pub fn identity_args_with_inferred<'tcx>(
             let parent = tcx.generics_of(def_id).parent.unwrap();
             args.rebase_onto(tcx, parent, ty::GenericArgs::identity_for_item(tcx, parent))
         }
-        RDefKind::AnonConst
+        DefKind::AnonConst
             if tcx.anon_const_kind(def_id) == ty::AnonConstKind::NonTypeSystemInline =>
         {
             // `tcx.type_of` fetches its result from the provided arguments, which circularly can't
@@ -568,23 +568,6 @@ impl<'tcx, T: ty::TypeFoldable<ty::TyCtxt<'tcx>>> ty::Binder<'tcx, T> {
             .instantiate(tcx, generics)
             .skip_normalization()
     }
-}
-
-/// Whether the item can have generic parameters.
-pub(crate) fn can_have_generics<'tcx>(tcx: ty::TyCtxt<'tcx>, def_id: RDefId) -> bool {
-    use RDefKind::*;
-    !matches!(
-        get_def_kind(tcx, def_id),
-        ConstParam
-            | ExternCrate
-            | ForeignMod
-            | GlobalAsm
-            | LifetimeParam
-            | Macro(..)
-            | Mod
-            | TyParam
-            | Use
-    )
 }
 
 pub(crate) fn get_variant_kind<'s, S: UnderOwnerState<'s>>(

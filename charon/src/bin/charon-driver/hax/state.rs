@@ -94,9 +94,25 @@ mod base {
         pub trait_proofs: HashMap<ty::PolyTraitRef<'tcx>, crate::hax::traits::TraitProof<'tcx>>,
         /// Generics for this item, if it is virtual.
         pub virtual_generics: Option<&'tcx ty::Generics>,
+        /// The `ParamEnv` of this item, see [`UnderOwnerState::param_env`].
+        pub param_env: Option<ty::ParamEnv<'tcx>>,
+        /// See [`DefId::identity_args_with_extra_regions`].
+        pub identity_args: Option<(ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>)>,
+        /// The parts of the `FullDef`s of this item that don't depend on generic arguments.
+        pub def_info: Option<DefInfo<'tcx>>,
         /// Whether this item uses the shared cache for parameter-free values, see
         /// [`UnderOwnerState::with_cache_for`].
         pub uses_shared_cache: Option<bool>,
+    }
+
+    /// The parts of a `FullDef` that don't depend on generic arguments.
+    #[derive(Clone, Copy)]
+    pub struct DefInfo<'tcx> {
+        pub source_span: Option<Span>,
+        pub attributes: &'tcx [rustc_hir::Attribute],
+        pub visibility: Option<bool>,
+        pub lang_item: Option<Symbol>,
+        pub diagnostic_item: Option<Symbol>,
     }
 
     #[derive(Clone)]
@@ -196,10 +212,15 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>>;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
-        self.owner().param_env(self)
+        if let Some(param_env) = self.owner_cache().borrow().param_env {
+            return param_env;
+        }
+        let param_env = self.owner().param_env(self);
+        self.with_cache(|cache| cache.param_env = Some(param_env));
+        param_env
     }
     fn typing_env(&self) -> ty::TypingEnv<'tcx> {
-        self.owner().typing_env(self)
+        ty::TypingEnv::new(self.param_env(), ty::TypingMode::PostAnalysis)
     }
 
     fn as_state_with_owner(&self) -> StateWithOwner<'tcx> {
