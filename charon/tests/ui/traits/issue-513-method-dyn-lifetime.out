@@ -2,14 +2,14 @@
 
 struct () {}
 
+// Full name: test_crate::Trait
+trait Trait<Self>
+
 struct test_crate::Trait::{vtable} {
   size: usize,
   align: usize,
   drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
 }
-
-// Full name: test_crate::Trait
-trait Trait<Self>
 
 // Full name: test_crate::Use
 trait Use<Self, C>

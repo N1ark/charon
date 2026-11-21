@@ -154,12 +154,6 @@ struct Foo {
   _0: u32,
 }
 
-// Full name: test_crate::{impl StructuralPartialEq for Foo}
-impl "impl_StructuralPartialEq_for_Foo" StructuralPartialEq for Foo {
-    proof ImpliedClause0: (Foo: MetaSized) = {built_in impl MetaSized for Foo}
-    vtable: lazy
-}
-
 // Full name: test_crate::{impl PartialEq<Foo> for Foo}::eq
 #[inline(hint)]
 pub fn impl_PartialEq_Foo_for_Foo::eq<'_0, '_1>(self: &'_0 Foo, other: &'_1 Foo) -> bool
@@ -186,6 +180,12 @@ pub fn impl_PartialEq_Foo_for_Foo::eq<'_0, '_1>(self: &'_0 Foo, other: &'_1 Foo)
 // Full name: test_crate::{impl PartialEq<Foo> for Foo}
 impl "impl_PartialEq_Foo_for_Foo" PartialEq<Foo> for Foo {
     fn eq<'_0_1, '_1_1> = impl_PartialEq_Foo_for_Foo::eq<'_0_1, '_1_1>
+    vtable: lazy
+}
+
+// Full name: test_crate::{impl StructuralPartialEq for Foo}
+impl "impl_StructuralPartialEq_for_Foo" StructuralPartialEq for Foo {
+    proof ImpliedClause0: (Foo: MetaSized) = {built_in impl MetaSized for Foo}
     vtable: lazy
 }
 

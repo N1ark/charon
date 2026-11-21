@@ -87,8 +87,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -115,6 +113,8 @@ pub trait FnMut<Self, Args>
     fn call_mut<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
+
+opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
 
 // Full name: core::ops::function::Fn
 #[fundamental]
@@ -362,9 +362,9 @@ fn foo()
     return
 }
 
-pub const test_attributes::tests::test_ignore::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
-
 pub const test_attributes::tests::test_ignore::{promoted_const}: str = "tests::test_ignore" with_metadata(18usize)
+
+pub const test_attributes::tests::test_ignore::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
 
 #[ignore]
 fn test_attributes::tests::test_ignore#1()
@@ -504,9 +504,9 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
 
 pub static test_attributes::tests::test_ignore: TestDescAndFn = test_attributes::tests::test_ignore()
 
-pub const test_attributes::tests::test_should_panic::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
-
 pub const test_attributes::tests::test_should_panic::{promoted_const}: str = "tests::test_should_panic" with_metadata(24usize)
+
+pub const test_attributes::tests::test_should_panic::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
 
 pub const test_attributes::tests::test_should_panic#1::{promoted_const}: str = "This test should panic" with_metadata(22usize)
 
@@ -657,9 +657,9 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
 
 pub static test_attributes::tests::test_should_panic: TestDescAndFn = test_attributes::tests::test_should_panic()
 
-pub const test_attributes::tests::test_foo::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
-
 pub const test_attributes::tests::test_foo::{promoted_const}: str = "tests::test_foo" with_metadata(15usize)
+
+pub const test_attributes::tests::test_foo::{promoted_const#1}: str = "src/lib.rs" with_metadata(10usize)
 
 fn test_attributes::tests::test_foo#1()
 {

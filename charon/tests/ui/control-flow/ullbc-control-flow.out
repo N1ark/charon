@@ -149,12 +149,8 @@ pub trait Step<Self>
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for i32}::backward_overflowing
-pub fn impl_Step_for_i32::backward_overflowing(_1: i32, _2: usize) -> (i32, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for i32}::backward_checked
-pub fn impl_Step_for_i32::backward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
+// Full name: core::iter::range::{impl Step for i32}::steps_between
+pub fn impl_Step_for_i32::steps_between<'_0, '_1>(_1: &'_0 i32, _2: &'_1 i32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for i32}::forward_overflowing
@@ -165,8 +161,12 @@ pub fn impl_Step_for_i32::forward_overflowing(_1: i32, _2: usize) -> (i32, bool)
 pub fn impl_Step_for_i32::forward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for i32}::steps_between
-pub fn impl_Step_for_i32::steps_between<'_0, '_1>(_1: &'_0 i32, _2: &'_1 i32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+// Full name: core::iter::range::{impl Step for i32}::backward_overflowing
+pub fn impl_Step_for_i32::backward_overflowing(_1: i32, _2: usize) -> (i32, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for i32}::backward_checked
+pub fn impl_Step_for_i32::backward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for i32}
@@ -182,12 +182,8 @@ impl "impl_Step_for_i32" Step for i32 {
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
-pub fn impl_Step_for_usize::backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::backward_checked
-pub fn impl_Step_for_usize::backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
+// Full name: core::iter::range::{impl Step for usize}::steps_between
+pub fn impl_Step_for_usize::steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}::forward_overflowing
@@ -198,8 +194,12 @@ pub fn impl_Step_for_usize::forward_overflowing(_1: usize, _2: usize) -> (usize,
 pub fn impl_Step_for_usize::forward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for usize}::steps_between
-pub fn impl_Step_for_usize::steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
+pub fn impl_Step_for_usize::backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::backward_checked
+pub fn impl_Step_for_usize::backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}

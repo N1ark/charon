@@ -22,28 +22,6 @@ pub fn wrapping_add(self: u8, rhs: u8) -> u8
     return
 }
 
-// Full name: core::num::{u8}::wrapping_sub
-pub fn wrapping_sub(self: u8, rhs: u8) -> u8
-{
-    let mut _0: u8; // return
-    let self: u8; // arg #1
-    let rhs: u8; // arg #2
-    let mut _3: u8; // anonymous local
-    let mut _4: u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_3)
-    _3 = copy self
-    storage_live(_4)
-    _4 = copy rhs
-    _0 = move _3 wrap.- move _4
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(rhs)
-    storage_dead(self)
-    return
-}
-
 // Full name: core::num::{u8}::wrapping_mul
 pub fn wrapping_mul(self: u8, rhs: u8) -> u8
 {
@@ -59,6 +37,28 @@ pub fn wrapping_mul(self: u8, rhs: u8) -> u8
     storage_live(_4)
     _4 = copy rhs
     _0 = move _3 wrap.* move _4
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(rhs)
+    storage_dead(self)
+    return
+}
+
+// Full name: core::num::{u8}::wrapping_sub
+pub fn wrapping_sub(self: u8, rhs: u8) -> u8
+{
+    let mut _0: u8; // return
+    let self: u8; // arg #1
+    let rhs: u8; // arg #2
+    let mut _3: u8; // anonymous local
+    let mut _4: u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = copy self
+    storage_live(_4)
+    _4 = copy rhs
+    _0 = move _3 wrap.- move _4
     storage_dead(_4)
     storage_dead(_3)
     storage_dead(rhs)

@@ -47,8 +47,6 @@ struct str {
   _0: [u8],
 }
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 12usize]>[{built_in impl Sized for [u8; 12usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, --, 0x03, 0x00, 0x04, 0x00, --, --)
-
 static test_crate::{promoted_const#1}: MaybeUninit<[u8; 3usize]>[{built_in impl Sized for [u8; 3usize]}] = RawMemory(0x05, 0x61, 0x62)
 
 static test_crate::{promoted_const#2}: u8 = 8u8
@@ -58,6 +56,8 @@ static test_crate::{promoted_const#3}: i32 = 42i32
 static test_crate::{promoted_const#4}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x09, 0x0a)
 
 static test_crate::{promoted_const#5}: u8 = 11u8
+
+static test_crate::{promoted_const}: MaybeUninit<[u8; 12usize]>[{built_in impl Sized for [u8; 12usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, --, 0x03, 0x00, 0x04, 0x00, --, --)
 
 // Full name: test_crate::Wrap
 pub struct Wrap<T>
@@ -104,20 +104,20 @@ pub static SIZED: Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize
 // Full name: test_crate::SIZED_INTERIOR
 pub static SIZED_INTERIOR: &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Wrap<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const SIZED.w)
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::marker::Sync::{vtable},
-}
-
 // Full name: test_crate::Trait
 pub trait Trait<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self: Sync)
     vtable: test_crate::Trait::{vtable}
+}
+
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::marker::Sync::{vtable},
 }
 
 // Full name: test_crate::{impl Trait for u8}::{vtable_drop_shim}

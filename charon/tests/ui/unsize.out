@@ -204,6 +204,17 @@ where
     vtable: lazy
 }
 
+// Full name: test_crate::{impl CoerceUnsized<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]}
+impl<T, __S> "impl_CoerceUnsized_MyPtr_for_MyPtr" CoerceUnsized<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (__S: MetaSized),
+    TraitClause2: (T: Unsize<__S>),
+{
+    proof ImpliedClause0: (MyPtr<T>[TraitClause0]: Sized) = {built_in impl Sized for MyPtr<T>[TraitClause0]}
+    non-dyn-compatible
+}
+
 // Full name: test_crate::{impl DispatchFromDyn<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]}
 impl<T, __S> "impl_DispatchFromDyn_MyPtr_for_MyPtr" DispatchFromDyn<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]
 where
@@ -213,17 +224,6 @@ where
 {
     proof ImpliedClause0: (MyPtr<T>[TraitClause0]: Sized) = {built_in impl Sized for MyPtr<T>[TraitClause0]}
     proof ImpliedClause1: (MyPtr<__S>[TraitClause1]: Sized) = {built_in impl Sized for MyPtr<__S>[TraitClause1]}
-    non-dyn-compatible
-}
-
-// Full name: test_crate::{impl CoerceUnsized<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]}
-impl<T, __S> "impl_CoerceUnsized_MyPtr_for_MyPtr" CoerceUnsized<MyPtr<__S>[TraitClause1]> for MyPtr<T>[TraitClause0]
-where
-    TraitClause0: (T: MetaSized),
-    TraitClause1: (__S: MetaSized),
-    TraitClause2: (T: Unsize<__S>),
-{
-    proof ImpliedClause0: (MyPtr<T>[TraitClause0]: Sized) = {built_in impl Sized for MyPtr<T>[TraitClause0]}
     non-dyn-compatible
 }
 

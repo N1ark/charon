@@ -37,14 +37,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
-  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -59,13 +51,12 @@ pub trait FnOnce<Self, Args>
     vtable: core::ops::function::FnOnce::{vtable}<Args, Self::Output>
 }
 
-struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
+struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
-  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
+  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::FnMut
@@ -81,13 +72,13 @@ pub trait FnMut<Self, Args>
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
 
-struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
-  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
+  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
+  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::Fn
@@ -103,14 +94,19 @@ pub trait Fn<Self, Args>
     vtable: core::ops::function::Fn::{vtable}<Args, Self::ImpliedClause1::ImpliedClause1::Output>
 }
 
+struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
+  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
+}
+
 // Full name: core::panicking::panic_in_cleanup
 #[lang_item(PanicInCleanup)]
 fn panic_in_cleanup() -> !
 = <opaque>
-
-struct (_,)<A> {
-  _0: A,
-}
 
 struct (_, _)<A, B>
 where
@@ -120,67 +116,49 @@ where
   _1: B,
 }
 
-// Full name: test_crate::Trait
-trait Trait<Self>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    vtable: test_crate::Trait::{vtable}
-}
-
-// Full name: test_crate::Adt
-struct Adt<'a, T>
+// Full name: (_, _)::{impl Destruct for (A, B)}::drop_glue
+unsafe fn {impl Destruct for (A, B)}::drop_glue<'_0, A, B>(_1: &'_0 mut (A, B))
 where
-    TraitClause0: (T: Sized),
-    TraitClause1: (T: Trait),
-    Outlives0: (T: 'a),
-{
-  _0: &'a T,
-}
-
-// Full name: {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once
-extern "rust-call" fn {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once<'_0, A, B>(fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5], args: (Adt<'_0, A>[TraitClause2, TraitClause3],)) -> Adt<'_0, B>[TraitClause4, TraitClause5]
-where
-    TraitClause0: for<'_0_1> (Adt<'_0_1, A>[TraitClause2, TraitClause3]: Sized),
-    TraitClause1: for<'_0_1> (Adt<'_0_1, B>[TraitClause4, TraitClause5]: Sized),
-    TraitClause2: (A: Sized),
-    TraitClause3: (A: Trait),
-    TraitClause4: (B: Sized),
-    TraitClause5: (B: Trait),
+    TraitClause0: (A: Sized),
     Outlives0: (A: '_0),
     Outlives1: (B: '_0),
 {
-    let mut _0: Adt<'_0, B>[TraitClause4, TraitClause5]; // return
-    let mut fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]; // arg #1
-    let mut args: (Adt<'_0, A>[TraitClause2, TraitClause3],); // arg #2
+    let mut _0: (); // return
+    let _1: &'0 mut (A, B); // arg #1
 
     storage_live(_0)
-    _0 = (copy fn_ptr)<'_0>(move args._0)
-    ↳⚡ storage_dead(args)
-        storage_dead(fn_ptr)
+    _0 = ()
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
+    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(_1)
         unwind_continue
-    storage_dead(args)
-    storage_dead(fn_ptr)
+    drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
     return
 }
 
-// Full name: {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}
-impl<'_0, A, B> FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]
+struct (_,)<A> {
+  _0: A,
+}
+
+// Full name: (_,)::{impl Destruct for (A,)}::drop_glue
+unsafe fn {impl Destruct for (A,)}::drop_glue<'_0, A>(_1: &'_0 mut (A,))
 where
-    TraitClause0: for<'_0_1> (Adt<'_0_1, A>[TraitClause2, TraitClause3]: Sized),
-    TraitClause1: for<'_0_1> (Adt<'_0_1, B>[TraitClause4, TraitClause5]: Sized),
-    TraitClause2: (A: Sized),
-    TraitClause3: (A: Trait),
-    TraitClause4: (B: Sized),
-    TraitClause5: (B: Trait),
     Outlives0: (A: '_0),
 {
-    proof ImpliedClause0: (fn<'_0_2>(Adt<'_0_2, A>[TraitClause2, TraitClause3]) -> Adt<'_0_2, B>[TraitClause4, TraitClause5]: MetaSized) = {built_in impl MetaSized for fn<'_0_2>(Adt<'_0_2, A>[TraitClause2, TraitClause3]) -> Adt<'_0_2, B>[TraitClause4, TraitClause5]}
-    proof ImpliedClause1: ((Adt<'_0, A>[TraitClause2, TraitClause3],): Sized) = {built_in impl Sized for (Adt<'_0, A>[TraitClause2, TraitClause3],)}
-    proof ImpliedClause2: ((Adt<'_0, A>[TraitClause2, TraitClause3],): Tuple) = {built_in impl Tuple for (Adt<'_0, A>[TraitClause2, TraitClause3],)}
-    proof ImpliedClause3: (Adt<'_0, B>[TraitClause4, TraitClause5]: Sized) = TraitClause1<'_0>
-    type Output = Adt<'_0, B>[TraitClause4, TraitClause5]
-    fn call_once = {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once<'_0, A, B>[for<'_0_2> TraitClause0<'_0_2>, for<'_0_2> TraitClause1<'_0_2>, TraitClause2, TraitClause3, TraitClause4, TraitClause5]
-    vtable: lazy
+    let mut _0: (); // return
+    let _1: &'0 mut (A,); // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
 }
 
 // Full name: {impl FnOnce<(A,)> for fn(A) -> B}::call_once
@@ -271,127 +249,6 @@ where
     vtable: {impl FnOnce<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1]
 }
 
-// Full name: {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once
-extern "rust-call" fn {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once<'_0, A, B, C>(fn_ptr: fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C, args: (A, &'_0 B)) -> &'_0 C
-where
-    TraitClause0: for<'_0_1> (A: Sized),
-    TraitClause1: for<'_0_1> (&'_0_1 B: Sized),
-    TraitClause2: for<'_0_1> (&'_0_1 C: Sized),
-    Outlives0: (B: '_0),
-    Outlives1: (C: '_0),
-{
-    let mut _0: &'_0 C; // return
-    let mut fn_ptr: fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C; // arg #1
-    let mut args: (A, &'_0 B); // arg #2
-
-    storage_live(_0)
-    _0 = (copy fn_ptr)<'_0>(move args._0, move args._1)
-    ↳⚡ storage_dead(args)
-        storage_dead(fn_ptr)
-        unwind_continue
-    storage_dead(args)
-    storage_dead(fn_ptr)
-    return
-}
-
-// Full name: {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}
-impl<'_0, A, B, C> FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C
-where
-    TraitClause0: for<'_0_1> (A: Sized),
-    TraitClause1: for<'_0_1> (&'_0_1 B: Sized),
-    TraitClause2: for<'_0_1> (&'_0_1 C: Sized),
-    Outlives0: (B: '_0),
-{
-    proof ImpliedClause0: (fn<'_0_2>(A, &'_0_2 B) -> &'_0_2 C: MetaSized) = {built_in impl MetaSized for fn<'_0_2>(A, &'_0_2 B) -> &'_0_2 C}
-    proof ImpliedClause1: ((A, &'_0 B): Sized) = {built_in impl Sized for (A, &'_0 B)}
-    proof ImpliedClause2: ((A, &'_0 B): Tuple) = {built_in impl Tuple for (A, &'_0 B)}
-    proof ImpliedClause3: (&'_0 C: Sized) = TraitClause2<'_0>
-    type Output = &'_0 C
-    fn call_once = {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once<'_0, A, B, C>[for<'_0_2> TraitClause0<'_>, for<'_0_2> TraitClause1<'_0_2>, for<'_0_2> TraitClause2<'_0_2>]
-    vtable: lazy
-}
-
-// Full name: {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once
-extern "rust-call" fn {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once<'_0, A, B, const C2 : usize, const C3 : usize>(fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3], args: ([&'_0 A; C2],)) -> [&'_0 B; C3]
-where
-    TraitClause0: for<'_0_1> ([&'_0_1 A; C2]: Sized),
-    TraitClause1: for<'_0_1> ([&'_0_1 B; C3]: Sized),
-    Outlives0: (A: '_0),
-    Outlives1: (B: '_0),
-{
-    let mut _0: [&'_0 B; C3]; // return
-    let mut fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]; // arg #1
-    let mut args: ([&'_0 A; C2],); // arg #2
-
-    storage_live(_0)
-    _0 = (copy fn_ptr)<'_0>(move args._0)
-    ↳⚡ storage_dead(args)
-        storage_dead(fn_ptr)
-        unwind_continue
-    storage_dead(args)
-    storage_dead(fn_ptr)
-    return
-}
-
-// Full name: {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}
-impl<'_0, A, B, const C2 : usize, const C3 : usize> FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]
-where
-    TraitClause0: for<'_0_1> ([&'_0_1 A; C2]: Sized),
-    TraitClause1: for<'_0_1> ([&'_0_1 B; C3]: Sized),
-    Outlives0: (A: '_0),
-{
-    proof ImpliedClause0: (fn<'_0_2>([&'_0_2 A; C2]) -> [&'_0_2 B; C3]: MetaSized) = {built_in impl MetaSized for fn<'_0_2>([&'_0_2 A; C2]) -> [&'_0_2 B; C3]}
-    proof ImpliedClause1: (([&'_0 A; C2],): Sized) = {built_in impl Sized for ([&'_0 A; C2],)}
-    proof ImpliedClause2: (([&'_0 A; C2],): Tuple) = {built_in impl Tuple for ([&'_0 A; C2],)}
-    proof ImpliedClause3: ([&'_0 B; C3]: Sized) = TraitClause1<'_0>
-    type Output = [&'_0 B; C3]
-    fn call_once = {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once<'_0, A, B, C2, C3>[for<'_0_2> TraitClause0<'_0_2>, for<'_0_2> TraitClause1<'_0_2>]
-    vtable: lazy
-}
-
-// Full name: {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once
-extern "rust-call" fn {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once<'_0, '_1, A, B, C, D>(fn_ptr: fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D), args: (&'_0 A, &'_1 B)) -> (&'_1 C, &'_0 D)
-where
-    TraitClause0: for<'_0_1, '_1_1> (&'_0_1 A: Sized),
-    TraitClause1: for<'_0_1, '_1_1> (&'_1_1 B: Sized),
-    TraitClause2: for<'_0_1, '_1_1> ((&'_1_1 C, &'_0_1 D): Sized),
-    Outlives0: (A: '_0),
-    Outlives1: (B: '_1),
-    Outlives2: (C: '_1),
-    Outlives3: (D: '_0),
-{
-    let mut _0: (&'_1 C, &'_0 D); // return
-    let mut fn_ptr: fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D); // arg #1
-    let mut args: (&'_0 A, &'_1 B); // arg #2
-
-    storage_live(_0)
-    _0 = (copy fn_ptr)<'_0, '_1>(move args._0, move args._1)
-    ↳⚡ storage_dead(args)
-        storage_dead(fn_ptr)
-        unwind_continue
-    storage_dead(args)
-    storage_dead(fn_ptr)
-    return
-}
-
-// Full name: {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}
-impl<'_0, '_1, A, B, C, D> FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)
-where
-    TraitClause0: for<'_0_1, '_1_1> (&'_0_1 A: Sized),
-    TraitClause1: for<'_0_1, '_1_1> (&'_1_1 B: Sized),
-    TraitClause2: for<'_0_1, '_1_1> ((&'_1_1 C, &'_0_1 D): Sized),
-    Outlives0: (A: '_0),
-    Outlives1: (B: '_1),
-{
-    proof ImpliedClause0: (fn<'_0_2, '_1_2>(&'_0_2 A, &'_1_2 B) -> (&'_1_2 C, &'_0_2 D): MetaSized) = {built_in impl MetaSized for fn<'_0_2, '_1_2>(&'_0_2 A, &'_1_2 B) -> (&'_1_2 C, &'_0_2 D)}
-    proof ImpliedClause1: ((&'_0 A, &'_1 B): Sized) = {built_in impl Sized for (&'_0 A, &'_1 B)}
-    proof ImpliedClause2: ((&'_0 A, &'_1 B): Tuple) = {built_in impl Tuple for (&'_0 A, &'_1 B)}
-    proof ImpliedClause3: ((&'_1 C, &'_0 D): Sized) = TraitClause2<'_0, '_1>
-    type Output = (&'_1 C, &'_0 D)
-    fn call_once = {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once<'_0, '_1, A, B, C, D>[for<'_0_2, '_1_2> TraitClause0<'_, '_>, for<'_0_2, '_1_2> TraitClause1<'_, '_>, for<'_0_2, '_1_2> TraitClause2<'_0_2, '_1_2>]
-    vtable: lazy
-}
-
 // Full name: {impl FnMut<(A,)> for fn(A) -> B}::call_mut
 extern "rust-call" fn call_mut<'_0, A, B>(fn_ptr: &'_0 mut fn(A) -> B, args: (A,)) -> B
 where
@@ -468,6 +325,20 @@ where
     TraitClause0: (A: Sized),
     TraitClause1: (B: Sized),
  = core::ops::function::FnMut::{vtable} { size: size_of::<fn(A) -> B>(), align: align_of::<fn(A) -> B>(), drop: fnptr({impl FnMut<(A,)> for fn(A) -> B}::{vtable_drop_shim}<'_, A, B>[TraitClause0, TraitClause1]), method_call_mut: fnptr({impl FnMut<(A,)> for fn(A) -> B}::{vtable_method}<'_, A, B>[TraitClause0, TraitClause1]), super_trait_0: &core::marker::MetaSized::{vtable}<fn(A) -> B>, super_trait_1: &{impl FnOnce<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1] }
+
+// Full name: {impl FnMut<(A,)> for fn(A) -> B}
+impl<A, B> FnMut<(A,)> for fn(A) -> B
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (B: Sized),
+{
+    proof ImpliedClause0: (fn(A) -> B: MetaSized) = {built_in impl MetaSized for fn(A) -> B}
+    proof ImpliedClause1: (fn(A) -> B: FnOnce<(A,)>) = {impl FnOnce<(A,)> for fn(A) -> B}<A, B>[TraitClause0, TraitClause1]
+    proof ImpliedClause2: ((A,): Sized) = {built_in impl Sized for (A,)}
+    proof ImpliedClause3: ((A,): Tuple) = {built_in impl Tuple for (A,)}
+    fn call_mut<'_0_1> = call_mut<'_0_1, A, B>[TraitClause0, TraitClause1]
+    vtable: {impl FnMut<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1]
+}
 
 // Full name: {impl Fn<(A,)> for fn(A) -> B}::call
 extern "rust-call" fn call<'_0, A, B>(fn_ptr: &'_0 fn(A) -> B, args: (A,)) -> B
@@ -546,20 +417,6 @@ where
     TraitClause1: (B: Sized),
  = core::ops::function::Fn::{vtable} { size: size_of::<fn(A) -> B>(), align: align_of::<fn(A) -> B>(), drop: fnptr({impl Fn<(A,)> for fn(A) -> B}::{vtable_drop_shim}<'_, A, B>[TraitClause0, TraitClause1]), method_call: fnptr({impl Fn<(A,)> for fn(A) -> B}::{vtable_method}<'_, A, B>[TraitClause0, TraitClause1]), super_trait_0: &core::marker::MetaSized::{vtable}<fn(A) -> B>, super_trait_1: &{impl FnMut<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1] }
 
-// Full name: {impl FnMut<(A,)> for fn(A) -> B}
-impl<A, B> FnMut<(A,)> for fn(A) -> B
-where
-    TraitClause0: (A: Sized),
-    TraitClause1: (B: Sized),
-{
-    proof ImpliedClause0: (fn(A) -> B: MetaSized) = {built_in impl MetaSized for fn(A) -> B}
-    proof ImpliedClause1: (fn(A) -> B: FnOnce<(A,)>) = {impl FnOnce<(A,)> for fn(A) -> B}<A, B>[TraitClause0, TraitClause1]
-    proof ImpliedClause2: ((A,): Sized) = {built_in impl Sized for (A,)}
-    proof ImpliedClause3: ((A,): Tuple) = {built_in impl Tuple for (A,)}
-    fn call_mut<'_0_1> = call_mut<'_0_1, A, B>[TraitClause0, TraitClause1]
-    vtable: {impl FnMut<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1]
-}
-
 // Full name: {impl Fn<(A,)> for fn(A) -> B}
 impl<A, B> Fn<(A,)> for fn(A) -> B
 where
@@ -574,45 +431,188 @@ where
     vtable: {impl Fn<(A,)> for fn(A) -> B}::{vtable}<A, B>[TraitClause0, TraitClause1]
 }
 
-// Full name: (_,)::{impl Destruct for (A,)}::drop_glue
-unsafe fn {impl Destruct for (A,)}::drop_glue<'_0, A>(_1: &'_0 mut (A,))
+// Full name: {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once
+extern "rust-call" fn {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once<'_0, '_1, A, B, C, D>(fn_ptr: fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D), args: (&'_0 A, &'_1 B)) -> (&'_1 C, &'_0 D)
 where
+    TraitClause0: for<'_0_1, '_1_1> (&'_0_1 A: Sized),
+    TraitClause1: for<'_0_1, '_1_1> (&'_1_1 B: Sized),
+    TraitClause2: for<'_0_1, '_1_1> ((&'_1_1 C, &'_0_1 D): Sized),
     Outlives0: (A: '_0),
+    Outlives1: (B: '_1),
+    Outlives2: (C: '_1),
+    Outlives3: (D: '_0),
 {
-    let mut _0: (); // return
-    let _1: &'0 mut (A,); // arg #1
+    let mut _0: (&'_1 C, &'_0 D); // return
+    let mut fn_ptr: fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D); // arg #1
+    let mut args: (&'_0 A, &'_1 B); // arg #2
 
     storage_live(_0)
-    _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
-    ↳⚡ storage_dead(_1)
+    _0 = (copy fn_ptr)<'_0, '_1>(move args._0, move args._1)
+    ↳⚡ storage_dead(args)
+        storage_dead(fn_ptr)
         unwind_continue
-    storage_dead(_1)
+    storage_dead(args)
+    storage_dead(fn_ptr)
     return
 }
 
-// Full name: (_, _)::{impl Destruct for (A, B)}::drop_glue
-unsafe fn {impl Destruct for (A, B)}::drop_glue<'_0, A, B>(_1: &'_0 mut (A, B))
+// Full name: {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}
+impl<'_0, '_1, A, B, C, D> FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)
 where
-    TraitClause0: (A: Sized),
+    TraitClause0: for<'_0_1, '_1_1> (&'_0_1 A: Sized),
+    TraitClause1: for<'_0_1, '_1_1> (&'_1_1 B: Sized),
+    TraitClause2: for<'_0_1, '_1_1> ((&'_1_1 C, &'_0_1 D): Sized),
+    Outlives0: (A: '_0),
+    Outlives1: (B: '_1),
+{
+    proof ImpliedClause0: (fn<'_0_2, '_1_2>(&'_0_2 A, &'_1_2 B) -> (&'_1_2 C, &'_0_2 D): MetaSized) = {built_in impl MetaSized for fn<'_0_2, '_1_2>(&'_0_2 A, &'_1_2 B) -> (&'_1_2 C, &'_0_2 D)}
+    proof ImpliedClause1: ((&'_0 A, &'_1 B): Sized) = {built_in impl Sized for (&'_0 A, &'_1 B)}
+    proof ImpliedClause2: ((&'_0 A, &'_1 B): Tuple) = {built_in impl Tuple for (&'_0 A, &'_1 B)}
+    proof ImpliedClause3: ((&'_1 C, &'_0 D): Sized) = TraitClause2<'_0, '_1>
+    type Output = (&'_1 C, &'_0 D)
+    fn call_once = {impl FnOnce<(&'_0 A, &'_1 B)> for fn<'_0_1, '_1_1 where A: '_0_1, B: '_1_1, C: '_1_1, D: '_0_1>(&'_0_1 A, &'_1_1 B) -> (&'_1_1 C, &'_0_1 D)}::call_once<'_0, '_1, A, B, C, D>[for<'_0_2, '_1_2> TraitClause0<'_, '_>, for<'_0_2, '_1_2> TraitClause1<'_, '_>, for<'_0_2, '_1_2> TraitClause2<'_0_2, '_1_2>]
+    vtable: lazy
+}
+
+// Full name: {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once
+extern "rust-call" fn {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once<'_0, A, B, C>(fn_ptr: fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C, args: (A, &'_0 B)) -> &'_0 C
+where
+    TraitClause0: for<'_0_1> (A: Sized),
+    TraitClause1: for<'_0_1> (&'_0_1 B: Sized),
+    TraitClause2: for<'_0_1> (&'_0_1 C: Sized),
+    Outlives0: (B: '_0),
+    Outlives1: (C: '_0),
+{
+    let mut _0: &'_0 C; // return
+    let mut fn_ptr: fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C; // arg #1
+    let mut args: (A, &'_0 B); // arg #2
+
+    storage_live(_0)
+    _0 = (copy fn_ptr)<'_0>(move args._0, move args._1)
+    ↳⚡ storage_dead(args)
+        storage_dead(fn_ptr)
+        unwind_continue
+    storage_dead(args)
+    storage_dead(fn_ptr)
+    return
+}
+
+// Full name: {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}
+impl<'_0, A, B, C> FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C
+where
+    TraitClause0: for<'_0_1> (A: Sized),
+    TraitClause1: for<'_0_1> (&'_0_1 B: Sized),
+    TraitClause2: for<'_0_1> (&'_0_1 C: Sized),
+    Outlives0: (B: '_0),
+{
+    proof ImpliedClause0: (fn<'_0_2>(A, &'_0_2 B) -> &'_0_2 C: MetaSized) = {built_in impl MetaSized for fn<'_0_2>(A, &'_0_2 B) -> &'_0_2 C}
+    proof ImpliedClause1: ((A, &'_0 B): Sized) = {built_in impl Sized for (A, &'_0 B)}
+    proof ImpliedClause2: ((A, &'_0 B): Tuple) = {built_in impl Tuple for (A, &'_0 B)}
+    proof ImpliedClause3: (&'_0 C: Sized) = TraitClause2<'_0>
+    type Output = &'_0 C
+    fn call_once = {impl FnOnce<(A, &'_0 B)> for fn<'_0_1 where B: '_0_1, C: '_0_1>(A, &'_0_1 B) -> &'_0_1 C}::call_once<'_0, A, B, C>[for<'_0_2> TraitClause0<'_>, for<'_0_2> TraitClause1<'_0_2>, for<'_0_2> TraitClause2<'_0_2>]
+    vtable: lazy
+}
+
+// Full name: test_crate::Trait
+trait Trait<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    vtable: test_crate::Trait::{vtable}
+}
+
+// Full name: test_crate::Adt
+struct Adt<'a, T>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Trait),
+    Outlives0: (T: 'a),
+{
+  _0: &'a T,
+}
+
+// Full name: {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once
+extern "rust-call" fn {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once<'_0, A, B>(fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5], args: (Adt<'_0, A>[TraitClause2, TraitClause3],)) -> Adt<'_0, B>[TraitClause4, TraitClause5]
+where
+    TraitClause0: for<'_0_1> (Adt<'_0_1, A>[TraitClause2, TraitClause3]: Sized),
+    TraitClause1: for<'_0_1> (Adt<'_0_1, B>[TraitClause4, TraitClause5]: Sized),
+    TraitClause2: (A: Sized),
+    TraitClause3: (A: Trait),
+    TraitClause4: (B: Sized),
+    TraitClause5: (B: Trait),
     Outlives0: (A: '_0),
     Outlives1: (B: '_0),
 {
-    let mut _0: (); // return
-    let _1: &'0 mut (A, B); // arg #1
+    let mut _0: Adt<'_0, B>[TraitClause4, TraitClause5]; // return
+    let mut fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]; // arg #1
+    let mut args: (Adt<'_0, A>[TraitClause2, TraitClause3],); // arg #2
 
     storage_live(_0)
-    _0 = ()
-    drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
-    ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
+    _0 = (copy fn_ptr)<'_0>(move args._0)
+    ↳⚡ storage_dead(args)
+        storage_dead(fn_ptr)
         unwind_continue
-    drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
-    storage_dead(_1)
+    storage_dead(args)
+    storage_dead(fn_ptr)
     return
+}
+
+// Full name: {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}
+impl<'_0, A, B> FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]
+where
+    TraitClause0: for<'_0_1> (Adt<'_0_1, A>[TraitClause2, TraitClause3]: Sized),
+    TraitClause1: for<'_0_1> (Adt<'_0_1, B>[TraitClause4, TraitClause5]: Sized),
+    TraitClause2: (A: Sized),
+    TraitClause3: (A: Trait),
+    TraitClause4: (B: Sized),
+    TraitClause5: (B: Trait),
+    Outlives0: (A: '_0),
+{
+    proof ImpliedClause0: (fn<'_0_2>(Adt<'_0_2, A>[TraitClause2, TraitClause3]) -> Adt<'_0_2, B>[TraitClause4, TraitClause5]: MetaSized) = {built_in impl MetaSized for fn<'_0_2>(Adt<'_0_2, A>[TraitClause2, TraitClause3]) -> Adt<'_0_2, B>[TraitClause4, TraitClause5]}
+    proof ImpliedClause1: ((Adt<'_0, A>[TraitClause2, TraitClause3],): Sized) = {built_in impl Sized for (Adt<'_0, A>[TraitClause2, TraitClause3],)}
+    proof ImpliedClause2: ((Adt<'_0, A>[TraitClause2, TraitClause3],): Tuple) = {built_in impl Tuple for (Adt<'_0, A>[TraitClause2, TraitClause3],)}
+    proof ImpliedClause3: (Adt<'_0, B>[TraitClause4, TraitClause5]: Sized) = TraitClause1<'_0>
+    type Output = Adt<'_0, B>[TraitClause4, TraitClause5]
+    fn call_once = {impl FnOnce<(Adt<'_0, A>[TraitClause2, TraitClause3],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>(Adt<'_0_1, A>[TraitClause2, TraitClause3]) -> Adt<'_0_1, B>[TraitClause4, TraitClause5]}::call_once<'_0, A, B>[for<'_0_2> TraitClause0<'_0_2>, for<'_0_2> TraitClause1<'_0_2>, TraitClause2, TraitClause3, TraitClause4, TraitClause5]
+    vtable: lazy
+}
+
+// Full name: {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once
+extern "rust-call" fn {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once<'_0, A, B, const C2 : usize, const C3 : usize>(fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3], args: ([&'_0 A; C2],)) -> [&'_0 B; C3]
+where
+    TraitClause0: for<'_0_1> ([&'_0_1 A; C2]: Sized),
+    TraitClause1: for<'_0_1> ([&'_0_1 B; C3]: Sized),
+    Outlives0: (A: '_0),
+    Outlives1: (B: '_0),
+{
+    let mut _0: [&'_0 B; C3]; // return
+    let mut fn_ptr: fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]; // arg #1
+    let mut args: ([&'_0 A; C2],); // arg #2
+
+    storage_live(_0)
+    _0 = (copy fn_ptr)<'_0>(move args._0)
+    ↳⚡ storage_dead(args)
+        storage_dead(fn_ptr)
+        unwind_continue
+    storage_dead(args)
+    storage_dead(fn_ptr)
+    return
+}
+
+// Full name: {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}
+impl<'_0, A, B, const C2 : usize, const C3 : usize> FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]
+where
+    TraitClause0: for<'_0_1> ([&'_0_1 A; C2]: Sized),
+    TraitClause1: for<'_0_1> ([&'_0_1 B; C3]: Sized),
+    Outlives0: (A: '_0),
+{
+    proof ImpliedClause0: (fn<'_0_2>([&'_0_2 A; C2]) -> [&'_0_2 B; C3]: MetaSized) = {built_in impl MetaSized for fn<'_0_2>([&'_0_2 A; C2]) -> [&'_0_2 B; C3]}
+    proof ImpliedClause1: (([&'_0 A; C2],): Sized) = {built_in impl Sized for ([&'_0 A; C2],)}
+    proof ImpliedClause2: (([&'_0 A; C2],): Tuple) = {built_in impl Tuple for ([&'_0 A; C2],)}
+    proof ImpliedClause3: ([&'_0 B; C3]: Sized) = TraitClause1<'_0>
+    type Output = [&'_0 B; C3]
+    fn call_once = {impl FnOnce<([&'_0 A; C2],)> for fn<'_0_1 where A: '_0_1, B: '_0_1>([&'_0_1 A; C2]) -> [&'_0_1 B; C3]}::call_once<'_0, A, B, C2, C3>[for<'_0_2> TraitClause0<'_0_2>, for<'_0_2> TraitClause1<'_0_2>]
+    vtable: lazy
 }
 
 // Full name: test_crate::{impl Trait for u32}

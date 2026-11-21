@@ -39,14 +39,6 @@ impl "impl_Foo_for_unit" Foo for () {
     vtable: lazy
 }
 
-struct test_crate::Broken::{vtable}<Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Broken<Assoc = Ty0>)),
-  method_broken: fn<'_0_1>(&'_0_1 (dyn Broken<Assoc = Ty0>)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Broken
 pub trait Broken<Self>
 {
@@ -55,6 +47,14 @@ pub trait Broken<Self>
     type Assoc
     fn broken<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Broken::{vtable}<Self::Assoc>
+}
+
+struct test_crate::Broken::{vtable}<Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Broken<Assoc = Ty0>)),
+  method_broken: fn<'_0_1>(&'_0_1 (dyn Broken<Assoc = Ty0>)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::{impl Broken for T}::broken

@@ -1,12 +1,12 @@
-// Full name: test_crate::{impl HasSize for usize}::SIZE::<usize>::x86_64-unknown-linux-gnu
-const impl_HasSize_for_usize::SIZE::<usize>::x86_64-unknown-linux-gnu: usize = 8usize
-
 // Full name: test_crate::{impl HasSize for usize}::SIZE::<usize>::i686-unknown-linux-gnu
 const impl_HasSize_for_usize::SIZE::<usize>::i686-unknown-linux-gnu: usize = 4usize
 
-const test_crate::USIZE_SIZE::x86_64-unknown-linux-gnu: usize = 8usize
+// Full name: test_crate::{impl HasSize for usize}::SIZE::<usize>::x86_64-unknown-linux-gnu
+const impl_HasSize_for_usize::SIZE::<usize>::x86_64-unknown-linux-gnu: usize = 8usize
 
 const test_crate::USIZE_SIZE::i686-unknown-linux-gnu: usize = 4usize
+
+const test_crate::USIZE_SIZE::x86_64-unknown-linux-gnu: usize = 8usize
 
 pub fn test_crate::usize_size::x86_64-unknown-linux-gnu() -> usize
 {

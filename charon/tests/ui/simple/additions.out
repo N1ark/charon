@@ -165,28 +165,6 @@ impl "impl_Copy_for_u8" Copy for u8 {
     non-dyn-compatible
 }
 
-// Full name: core::num::{u8}::wrapping_add
-pub fn wrapping_add(self: u8, rhs: u8) -> u8
-{
-    let mut _0: u8; // return
-    let self: u8; // arg #1
-    let rhs: u8; // arg #2
-    let mut _3: u8; // anonymous local
-    let mut _4: u8; // anonymous local
-
-    storage_live(_0)
-    storage_live(_3)
-    _3 = copy self
-    storage_live(_4)
-    _4 = copy rhs
-    _0 = move _3 wrap.+ move _4
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(rhs)
-    storage_dead(self)
-    return
-}
-
 // Full name: core::num::{u8}::overflowing_add
 pub fn overflowing_add(self: u8, rhs: u8) -> (u8, bool)
 {
@@ -245,6 +223,28 @@ pub fn core::num::{u8}::saturating_add(self: u8, rhs: u8) -> u8
     _4 = copy rhs
     _0 = core::intrinsics::saturating_add<u8>[{built_in impl Sized for u8}, impl_Copy_for_u8](move _3, move _4)
     ↳⚡ undefined_behavior
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(rhs)
+    storage_dead(self)
+    return
+}
+
+// Full name: core::num::{u8}::wrapping_add
+pub fn wrapping_add(self: u8, rhs: u8) -> u8
+{
+    let mut _0: u8; // return
+    let self: u8; // arg #1
+    let rhs: u8; // arg #2
+    let mut _3: u8; // anonymous local
+    let mut _4: u8; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = copy self
+    storage_live(_4)
+    _4 = copy rhs
+    _0 = move _3 wrap.+ move _4
     storage_dead(_4)
     storage_dead(_3)
     storage_dead(rhs)

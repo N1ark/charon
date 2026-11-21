@@ -12,11 +12,11 @@ pub trait Sized<Self>
     non-dyn-compatible
 }
 
+struct () {}
+
 // Full name: core::num::{u32}::MAX
 pub fn MAX() -> u32
 = <opaque>
-
-struct () {}
 
 // Full name: core::num::{u32}::MAX
 pub const MAX: u32 = MAX()

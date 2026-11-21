@@ -1,10 +1,10 @@
 # Final LLBC before serialization:
 
+struct () {}
+
 // Full name: core::num::{u32}::MAX
 pub fn MAX() -> u32
 = <opaque>
-
-struct () {}
 
 // Full name: core::num::{u32}::MAX
 pub const MAX: u32 = MAX()

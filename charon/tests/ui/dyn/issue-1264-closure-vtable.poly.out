@@ -52,14 +52,6 @@ where
     Outlives0: (Self: '_0),
 = <opaque>
 
-struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
-  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -74,13 +66,12 @@ pub trait FnOnce<Self, Args>
     vtable: core::ops::function::FnOnce::{vtable}<Args, Self::Output>
 }
 
-struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
+struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
-  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
+  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::FnMut
@@ -96,13 +87,13 @@ pub trait FnMut<Self, Args>
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
 
-struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
-  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
+  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
+  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::Fn
@@ -116,6 +107,15 @@ pub trait Fn<Self, Args>
     proof ImpliedClause3: (Args: Tuple)
     fn call<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::Fn::{vtable}<Args, Self::ImpliedClause1::ImpliedClause1::Output>
+}
+
+struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
+  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::panicking::panic_in_cleanup

@@ -34,8 +34,6 @@ struct str {
   _0: [u8],
 }
 
-static test_crate::{promoted_const}: i32 = 42i32
-
 static test_crate::{promoted_const#1}: [i32; 3usize] = [1i32, 2i32, 3i32]
 
 static test_crate::{promoted_const#2}: [u8; 5usize] = [104u8, 101u8, 108u8, 108u8, 111u8]
@@ -47,6 +45,8 @@ static test_crate::{promoted_const#4}: i32 = 5i32
 static test_crate::{promoted_const#5}: [bool; 2usize] = [true, false]
 
 static test_crate::{promoted_const#6}: [char; 2usize] = ['a', '🦀']
+
+static test_crate::{promoted_const}: i32 = 42i32
 
 const test_crate::promoted_scalar::{promoted_const}: &'_ i32 = &test_crate::{promoted_const}
 

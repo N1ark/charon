@@ -16,6 +16,18 @@ pub trait Sized<Self>
 
 #[fundamental]
 #[lang_item(MetaSized)]
+pub trait core::marker::MetaSized::<&_ mut &_ mut _><'_0, '_1, T0>
+
+#[fundamental]
+#[lang_item(Sized)]
+pub trait core::marker::Sized::<&_ mut &_ mut _><'_0, '_1, T0>
+{
+    proof ImpliedClause0: (T0: core::marker::MetaSized::<&_ mut &_ mut _><'_0, '_1>)
+    non-dyn-compatible
+}
+
+#[fundamental]
+#[lang_item(MetaSized)]
 pub trait core::marker::MetaSized::<&_ mut _><'_0, T0>
 
 #[fundamental]
@@ -28,13 +40,57 @@ pub trait core::marker::Sized::<&_ mut _><'_0, T0>
 
 #[fundamental]
 #[lang_item(MetaSized)]
-pub trait core::marker::MetaSized::<&_ mut &_ mut _><'_0, '_1, T0>
+pub trait core::marker::MetaSized::<Iter<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
 
 #[fundamental]
 #[lang_item(Sized)]
-pub trait core::marker::Sized::<&_ mut &_ mut _><'_0, '_1, T0>
+pub trait core::marker::Sized::<Iter<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
 {
-    proof ImpliedClause0: (T0: core::marker::MetaSized::<&_ mut &_ mut _><'_0, '_1>)
+    proof ImpliedClause0: (T0: core::marker::MetaSized::<Iter<_, _>[TraitClause0]><'_0>[TraitClause0])
+    non-dyn-compatible
+}
+
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait core::marker::MetaSized::<IterMut<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
+    Outlives1: (T0: '_0),
+
+#[fundamental]
+#[lang_item(Sized)]
+pub trait core::marker::Sized::<IterMut<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
+    Outlives1: (T0: '_0),
+{
+    proof ImpliedClause0: (T0: core::marker::MetaSized::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause0])
+    non-dyn-compatible
+}
+
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait core::marker::MetaSized::<IterWrapper<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
+
+#[fundamental]
+#[lang_item(Sized)]
+pub trait core::marker::Sized::<IterWrapper<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
+{
+    proof ImpliedClause0: (T0: core::marker::MetaSized::<IterWrapper<_, _>[TraitClause0]><'_0>[TraitClause0])
     non-dyn-compatible
 }
 
@@ -74,62 +130,6 @@ where
 
 #[fundamental]
 #[lang_item(MetaSized)]
-pub trait core::marker::MetaSized::<Iter<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-
-#[fundamental]
-#[lang_item(Sized)]
-pub trait core::marker::Sized::<Iter<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-{
-    proof ImpliedClause0: (T0: core::marker::MetaSized::<Iter<_, _>[TraitClause0]><'_0>[TraitClause0])
-    non-dyn-compatible
-}
-
-#[fundamental]
-#[lang_item(MetaSized)]
-pub trait core::marker::MetaSized::<IterWrapper<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-
-#[fundamental]
-#[lang_item(Sized)]
-pub trait core::marker::Sized::<IterWrapper<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-{
-    proof ImpliedClause0: (T0: core::marker::MetaSized::<IterWrapper<_, _>[TraitClause0]><'_0>[TraitClause0])
-    non-dyn-compatible
-}
-
-#[fundamental]
-#[lang_item(MetaSized)]
-pub trait core::marker::MetaSized::<IterMut<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-    Outlives1: (T0: '_0),
-
-#[fundamental]
-#[lang_item(Sized)]
-pub trait core::marker::Sized::<IterMut<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-    Outlives1: (T0: '_0),
-{
-    proof ImpliedClause0: (T0: core::marker::MetaSized::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause0])
-    non-dyn-compatible
-}
-
-#[fundamental]
-#[lang_item(MetaSized)]
 pub trait core::marker::MetaSized::<test_crate::List::<&_ mut _><_, _>[TraitClause0]><'_0, T0>
 where
     TraitClause0: (T0: core::marker::Sized::<&_ mut _><'_0>),
@@ -148,6 +148,24 @@ pub trait Destruct<Self>
 pub trait core::marker::Destruct::<&_ mut _><'_0, T0>
 {
     fn drop_glue<'_0_1, Outlives0: (&'_0 mut T0: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::slice::iter::IterMut
+pub opaque type IterMut<mut 'a, T>
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: 'a),
+    Outlives1: (T: 'a),
+
+#[lang_item(Destruct)]
+pub trait core::marker::Destruct::<IterMut<_, _>[TraitClause0]><'_0, T0>
+where
+    TraitClause0: (T0: Sized),
+    Outlives0: (T0: '_0),
+    Outlives1: (T0: '_0),
+{
+    fn drop_glue<'_0_1, Outlives0: (IterMut<'_0, T0>[TraitClause0]: '_0_1)>;
     non-dyn-compatible
 }
 
@@ -188,24 +206,6 @@ where
     TraitClause1: (T0: core::marker::Sized::<&_ mut _><'_0>),
 {
     fn drop_glue<'_0_1, Outlives0: (core::option::Option::<core::option::Option::<&_ mut _><_, _>[TraitClause1]><'_0, T0>[TraitClause0, TraitClause1]: '_0_1)>;
-    non-dyn-compatible
-}
-
-// Full name: core::slice::iter::IterMut
-pub opaque type IterMut<mut 'a, T>
-where
-    TraitClause0: (T: Sized),
-    Outlives0: (T: 'a),
-    Outlives1: (T: 'a),
-
-#[lang_item(Destruct)]
-pub trait core::marker::Destruct::<IterMut<_, _>[TraitClause0]><'_0, T0>
-where
-    TraitClause0: (T0: Sized),
-    Outlives0: (T0: '_0),
-    Outlives1: (T0: '_0),
-{
-    fn drop_glue<'_0_1, Outlives0: (IterMut<'_0, T0>[TraitClause0]: '_0_1)>;
     non-dyn-compatible
 }
 
@@ -420,39 +420,6 @@ where
     return
 }
 
-// Full name: test_crate::{impl FnOnce<(T,)> for identity<T>[TraitClause0]}::call_once
-extern "rust-call" fn call_once<T>(state: identity<T>[TraitClause0], args: (T,)) -> T
-where
-    TraitClause0: (T: Sized),
-{
-    let mut _0: T; // return
-    let mut state: identity<T>[TraitClause0]; // arg #1
-    let mut args: (T,); // arg #2
-
-    storage_live(_0)
-    _0 = identity<T>[TraitClause0](move args._0)
-    ↳⚡ storage_dead(args)
-        storage_dead(state)
-        unwind_continue
-    storage_dead(args)
-    storage_dead(state)
-    return
-}
-
-// Full name: test_crate::{impl FnOnce<(T,)> for identity<T>[TraitClause0]}
-impl<T> FnOnce<(T,)> for identity<T>[TraitClause0]
-where
-    TraitClause0: (T: Sized),
-{
-    proof ImpliedClause0: (identity<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for identity<T>[TraitClause0]}
-    proof ImpliedClause1: ((T,): Sized) = {built_in impl Sized for (T,)}
-    proof ImpliedClause2: ((T,): Tuple) = {built_in impl Tuple for (T,)}
-    proof ImpliedClause3: (T: Sized) = TraitClause0
-    type Output = T
-    fn call_once = call_once<T>[TraitClause0]
-    vtable: lazy
-}
-
 fn test_crate::identity::<&_ mut _><'_0, T0>(x: &'_0 mut T0) -> &'_0 mut T0
 where
     TraitClause0: (T0: core::marker::Sized::<&_ mut _><'_0>),
@@ -463,6 +430,25 @@ where
     storage_live(_0)
     _0 = move x
     conditional_drop[{built_in impl core::marker::Destruct::<&_ mut _><'_0> for T0}::drop_glue<'0>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
+}
+
+fn test_crate::identity::<IterMut<_, _>[TraitClause1]><'_0, T0>(x: IterMut<'_0, T0>[TraitClause1]) -> IterMut<'_0, T0>[TraitClause1]
+where
+    TraitClause0: (T0: core::marker::Sized::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause1]),
+    TraitClause1: (T0: Sized),
+    Outlives0: (T0: '_0),
+    Outlives1: (T0: '_0),
+{
+    let mut _0: IterMut<'_0, T0>[TraitClause1]; // return
+    let x: IterMut<'_0, T0>[TraitClause1]; // arg #1
+
+    storage_live(_0)
+    _0 = move x
+    conditional_drop[{built_in impl core::marker::Destruct::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause1] for T0}::drop_glue<'0>] x
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(x)
@@ -504,23 +490,37 @@ where
     return
 }
 
-fn test_crate::identity::<IterMut<_, _>[TraitClause1]><'_0, T0>(x: IterMut<'_0, T0>[TraitClause1]) -> IterMut<'_0, T0>[TraitClause1]
+// Full name: test_crate::{impl FnOnce<(T,)> for identity<T>[TraitClause0]}::call_once
+extern "rust-call" fn call_once<T>(state: identity<T>[TraitClause0], args: (T,)) -> T
 where
-    TraitClause0: (T0: core::marker::Sized::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause1]),
-    TraitClause1: (T0: Sized),
-    Outlives0: (T0: '_0),
-    Outlives1: (T0: '_0),
+    TraitClause0: (T: Sized),
 {
-    let mut _0: IterMut<'_0, T0>[TraitClause1]; // return
-    let x: IterMut<'_0, T0>[TraitClause1]; // arg #1
+    let mut _0: T; // return
+    let mut state: identity<T>[TraitClause0]; // arg #1
+    let mut args: (T,); // arg #2
 
     storage_live(_0)
-    _0 = move x
-    conditional_drop[{built_in impl core::marker::Destruct::<IterMut<_, _>[TraitClause0]><'_0>[TraitClause1] for T0}::drop_glue<'0>] x
-    ↳⚡ storage_dead(x)
+    _0 = identity<T>[TraitClause0](move args._0)
+    ↳⚡ storage_dead(args)
+        storage_dead(state)
         unwind_continue
-    storage_dead(x)
+    storage_dead(args)
+    storage_dead(state)
     return
+}
+
+// Full name: test_crate::{impl FnOnce<(T,)> for identity<T>[TraitClause0]}
+impl<T> FnOnce<(T,)> for identity<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (identity<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for identity<T>[TraitClause0]}
+    proof ImpliedClause1: ((T,): Sized) = {built_in impl Sized for (T,)}
+    proof ImpliedClause2: ((T,): Tuple) = {built_in impl Tuple for (T,)}
+    proof ImpliedClause3: (T: Sized) = TraitClause0
+    type Output = T
+    fn call_once = call_once<T>[TraitClause0]
+    vtable: lazy
 }
 
 // Full name: test_crate::mutable_identity

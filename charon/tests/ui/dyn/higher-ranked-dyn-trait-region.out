@@ -18,18 +18,18 @@ pub trait Sized<Self>
 
 struct () {}
 
-struct test_crate::Trait::{vtable}<'a> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait<'a>)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Trait
 pub trait Trait<'a, Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     vtable: test_crate::Trait::{vtable}<'a>
+}
+
+struct test_crate::Trait::{vtable}<'a> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait<'a>)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::use_type

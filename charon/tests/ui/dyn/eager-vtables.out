@@ -35,20 +35,20 @@ struct str {
   _0: [u8],
 }
 
-struct test_crate::Foo::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Foo)),
-  method_bar: fn<'_0_1>(&'_0_1 (dyn Foo)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Foo
 trait Foo<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     fn bar<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Foo::{vtable}
+}
+
+struct test_crate::Foo::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Foo)),
+  method_bar: fn<'_0_1>(&'_0_1 (dyn Foo)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::S

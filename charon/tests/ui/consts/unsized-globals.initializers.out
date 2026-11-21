@@ -290,20 +290,20 @@ pub fn SIZED_INTERIOR() -> &'static Wrap<[u16]>[{built_in impl MetaSized for [u1
 // Full name: test_crate::SIZED_INTERIOR
 pub static SIZED_INTERIOR: &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}] = SIZED_INTERIOR()
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::marker::Sync::{vtable},
-}
-
 // Full name: test_crate::Trait
 pub trait Trait<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self: Sync)
     vtable: test_crate::Trait::{vtable}
+}
+
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::marker::Sync::{vtable},
 }
 
 // Full name: test_crate::{impl Trait for u8}::{vtable_drop_shim}

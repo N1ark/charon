@@ -94,12 +94,8 @@ pub trait Step<Self>
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
-pub fn backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::backward_checked
-pub fn backward_checked(_1: usize, _2: usize) -> Option<usize>
+// Full name: core::iter::range::{impl Step for usize}::steps_between
+pub fn steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>)
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}::forward_overflowing
@@ -110,8 +106,12 @@ pub fn forward_overflowing(_1: usize, _2: usize) -> (usize, bool)
 pub fn forward_checked(_1: usize, _2: usize) -> Option<usize>
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for usize}::steps_between
-pub fn steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>)
+// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
+pub fn backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::backward_checked
+pub fn backward_checked(_1: usize, _2: usize) -> Option<usize>
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}

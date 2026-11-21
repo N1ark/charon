@@ -47,17 +47,6 @@ pub trait Clone<Self>
     non-dyn-compatible
 }
 
-// Full name: core::clone::impls::{impl Clone for u32}::clone
-pub fn impl_Clone_for_u32::clone<'_0>(_1: &'_0 u32) -> u32
-= <opaque>
-
-// Full name: core::clone::impls::{impl Clone for u32}
-impl "impl_Clone_for_u32" Clone for u32 {
-    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
-    fn clone<'_0_1> = impl_Clone_for_u32::clone<'_0_1>
-    non-dyn-compatible
-}
-
 // Full name: core::clone::impls::{impl Clone for i32}::clone
 pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 = <opaque>
@@ -66,6 +55,17 @@ pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 impl "impl_Clone_for_i32" Clone for i32 {
     proof ImpliedClause0: (i32: Sized) = {built_in impl Sized for i32}
     fn clone<'_0_1> = impl_Clone_for_i32::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u32}::clone
+pub fn impl_Clone_for_u32::clone<'_0>(_1: &'_0 u32) -> u32
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u32}
+impl "impl_Clone_for_u32" Clone for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    fn clone<'_0_1> = impl_Clone_for_u32::clone<'_0_1>
     non-dyn-compatible
 }
 
@@ -128,16 +128,6 @@ impl "impl_PartialEq_i32_for_i32" PartialEq<i32> for i32 {
     vtable: lazy
 }
 
-// Full name: core::cmp::impls::{impl PartialEq<usize> for usize}::eq
-pub fn impl_PartialEq_usize_for_usize::eq<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> bool
-= <opaque>
-
-// Full name: core::cmp::impls::{impl PartialEq<usize> for usize}
-impl "impl_PartialEq_usize_for_usize" PartialEq<usize> for usize {
-    fn eq<'_0_1, '_1_1> = impl_PartialEq_usize_for_usize::eq<'_0_1, '_1_1>
-    vtable: lazy
-}
-
 // Full name: core::cmp::impls::{impl PartialEq<u32> for u32}::eq
 pub fn impl_PartialEq_u32_for_u32::eq<'_0, '_1>(_1: &'_0 u32, _2: &'_1 u32) -> bool
 = <opaque>
@@ -145,6 +135,16 @@ pub fn impl_PartialEq_u32_for_u32::eq<'_0, '_1>(_1: &'_0 u32, _2: &'_1 u32) -> b
 // Full name: core::cmp::impls::{impl PartialEq<u32> for u32}
 impl "impl_PartialEq_u32_for_u32" PartialEq<u32> for u32 {
     fn eq<'_0_1, '_1_1> = impl_PartialEq_u32_for_u32::eq<'_0_1, '_1_1>
+    vtable: lazy
+}
+
+// Full name: core::cmp::impls::{impl PartialEq<usize> for usize}::eq
+pub fn impl_PartialEq_usize_for_usize::eq<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> bool
+= <opaque>
+
+// Full name: core::cmp::impls::{impl PartialEq<usize> for usize}
+impl "impl_PartialEq_usize_for_usize" PartialEq<usize> for usize {
+    fn eq<'_0_1, '_1_1> = impl_PartialEq_usize_for_usize::eq<'_0_1, '_1_1>
     vtable: lazy
 }
 
@@ -159,17 +159,6 @@ impl "impl_PartialOrd_i32_for_i32" PartialOrd<i32> for i32 {
     vtable: lazy
 }
 
-// Full name: core::cmp::impls::{impl PartialOrd<usize> for usize}::partial_cmp
-pub fn impl_PartialOrd_usize_for_usize::partial_cmp<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> Option<Ordering>[{built_in impl Sized for Ordering}]
-= <opaque>
-
-// Full name: core::cmp::impls::{impl PartialOrd<usize> for usize}
-impl "impl_PartialOrd_usize_for_usize" PartialOrd<usize> for usize {
-    proof ImpliedClause0: (usize: PartialEq<usize>) = impl_PartialEq_usize_for_usize
-    fn partial_cmp<'_0_1, '_1_1> = impl_PartialOrd_usize_for_usize::partial_cmp<'_0_1, '_1_1>
-    vtable: lazy
-}
-
 // Full name: core::cmp::impls::{impl PartialOrd<u32> for u32}::partial_cmp
 pub fn impl_PartialOrd_u32_for_u32::partial_cmp<'_0, '_1>(_1: &'_0 u32, _2: &'_1 u32) -> Option<Ordering>[{built_in impl Sized for Ordering}]
 = <opaque>
@@ -178,6 +167,17 @@ pub fn impl_PartialOrd_u32_for_u32::partial_cmp<'_0, '_1>(_1: &'_0 u32, _2: &'_1
 impl "impl_PartialOrd_u32_for_u32" PartialOrd<u32> for u32 {
     proof ImpliedClause0: (u32: PartialEq<u32>) = impl_PartialEq_u32_for_u32
     fn partial_cmp<'_0_1, '_1_1> = impl_PartialOrd_u32_for_u32::partial_cmp<'_0_1, '_1_1>
+    vtable: lazy
+}
+
+// Full name: core::cmp::impls::{impl PartialOrd<usize> for usize}::partial_cmp
+pub fn impl_PartialOrd_usize_for_usize::partial_cmp<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> Option<Ordering>[{built_in impl Sized for Ordering}]
+= <opaque>
+
+// Full name: core::cmp::impls::{impl PartialOrd<usize> for usize}
+impl "impl_PartialOrd_usize_for_usize" PartialOrd<usize> for usize {
+    proof ImpliedClause0: (usize: PartialEq<usize>) = impl_PartialEq_usize_for_usize
+    fn partial_cmp<'_0_1, '_1_1> = impl_PartialOrd_usize_for_usize::partial_cmp<'_0_1, '_1_1>
     vtable: lazy
 }
 
@@ -204,12 +204,8 @@ pub trait Step<Self>
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for i32}::backward_overflowing
-pub fn impl_Step_for_i32::backward_overflowing(_1: i32, _2: usize) -> (i32, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for i32}::backward_checked
-pub fn impl_Step_for_i32::backward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
+// Full name: core::iter::range::{impl Step for i32}::steps_between
+pub fn impl_Step_for_i32::steps_between<'_0, '_1>(_1: &'_0 i32, _2: &'_1 i32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for i32}::forward_overflowing
@@ -220,8 +216,12 @@ pub fn impl_Step_for_i32::forward_overflowing(_1: i32, _2: usize) -> (i32, bool)
 pub fn impl_Step_for_i32::forward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for i32}::steps_between
-pub fn impl_Step_for_i32::steps_between<'_0, '_1>(_1: &'_0 i32, _2: &'_1 i32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+// Full name: core::iter::range::{impl Step for i32}::backward_overflowing
+pub fn impl_Step_for_i32::backward_overflowing(_1: i32, _2: usize) -> (i32, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for i32}::backward_checked
+pub fn impl_Step_for_i32::backward_checked(_1: i32, _2: usize) -> Option<i32>[{built_in impl Sized for i32}]
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for i32}
@@ -237,45 +237,8 @@ impl "impl_Step_for_i32" Step for i32 {
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
-pub fn impl_Step_for_usize::backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::backward_checked
-pub fn impl_Step_for_usize::backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::forward_overflowing
-pub fn impl_Step_for_usize::forward_overflowing(_1: usize, _2: usize) -> (usize, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::forward_checked
-pub fn impl_Step_for_usize::forward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::steps_between
-pub fn impl_Step_for_usize::steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}
-impl "impl_Step_for_usize" Step for usize {
-    proof ImpliedClause0: (usize: Sized) = {built_in impl Sized for usize}
-    proof ImpliedClause1: (usize: Clone) = impl_Clone_for_usize
-    proof ImpliedClause2: (usize: PartialOrd<usize>) = impl_PartialOrd_usize_for_usize
-    fn steps_between<'_0_1, '_1_1> = impl_Step_for_usize::steps_between<'_0_1, '_1_1>
-    fn forward_checked = impl_Step_for_usize::forward_checked
-    fn forward_overflowing = impl_Step_for_usize::forward_overflowing
-    fn backward_checked = impl_Step_for_usize::backward_checked
-    fn backward_overflowing = impl_Step_for_usize::backward_overflowing
-    non-dyn-compatible
-}
-
-// Full name: core::iter::range::{impl Step for u32}::backward_overflowing
-pub fn impl_Step_for_u32::backward_overflowing(_1: u32, _2: usize) -> (u32, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for u32}::backward_checked
-pub fn impl_Step_for_u32::backward_checked(_1: u32, _2: usize) -> Option<u32>[{built_in impl Sized for u32}]
+// Full name: core::iter::range::{impl Step for u32}::steps_between
+pub fn impl_Step_for_u32::steps_between<'_0, '_1>(_1: &'_0 u32, _2: &'_1 u32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for u32}::forward_overflowing
@@ -286,8 +249,12 @@ pub fn impl_Step_for_u32::forward_overflowing(_1: u32, _2: usize) -> (u32, bool)
 pub fn impl_Step_for_u32::forward_checked(_1: u32, _2: usize) -> Option<u32>[{built_in impl Sized for u32}]
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for u32}::steps_between
-pub fn impl_Step_for_u32::steps_between<'_0, '_1>(_1: &'_0 u32, _2: &'_1 u32) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+// Full name: core::iter::range::{impl Step for u32}::backward_overflowing
+pub fn impl_Step_for_u32::backward_overflowing(_1: u32, _2: usize) -> (u32, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for u32}::backward_checked
+pub fn impl_Step_for_u32::backward_checked(_1: u32, _2: usize) -> Option<u32>[{built_in impl Sized for u32}]
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for u32}
@@ -300,6 +267,39 @@ impl "impl_Step_for_u32" Step for u32 {
     fn forward_overflowing = impl_Step_for_u32::forward_overflowing
     fn backward_checked = impl_Step_for_u32::backward_checked
     fn backward_overflowing = impl_Step_for_u32::backward_overflowing
+    non-dyn-compatible
+}
+
+// Full name: core::iter::range::{impl Step for usize}::steps_between
+pub fn impl_Step_for_usize::steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::forward_overflowing
+pub fn impl_Step_for_usize::forward_overflowing(_1: usize, _2: usize) -> (usize, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::forward_checked
+pub fn impl_Step_for_usize::forward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
+pub fn impl_Step_for_usize::backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::backward_checked
+pub fn impl_Step_for_usize::backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}
+impl "impl_Step_for_usize" Step for usize {
+    proof ImpliedClause0: (usize: Sized) = {built_in impl Sized for usize}
+    proof ImpliedClause1: (usize: Clone) = impl_Clone_for_usize
+    proof ImpliedClause2: (usize: PartialOrd<usize>) = impl_PartialOrd_usize_for_usize
+    fn steps_between<'_0_1, '_1_1> = impl_Step_for_usize::steps_between<'_0_1, '_1_1>
+    fn forward_checked = impl_Step_for_usize::forward_checked
+    fn forward_overflowing = impl_Step_for_usize::forward_overflowing
+    fn backward_checked = impl_Step_for_usize::backward_checked
+    fn backward_overflowing = impl_Step_for_usize::backward_overflowing
     non-dyn-compatible
 }
 

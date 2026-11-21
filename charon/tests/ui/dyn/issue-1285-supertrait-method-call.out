@@ -9,14 +9,6 @@ pub trait MetaSized<Self>
 
 struct () {}
 
-struct test_crate::Supertrait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Supertrait)),
-  method_super_method: fn<'_0_1>(&'_0_1 (dyn Supertrait)) -> u32,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Supertrait
 pub trait Supertrait<Self>
 {
@@ -25,12 +17,12 @@ pub trait Supertrait<Self>
     vtable: test_crate::Supertrait::{vtable}
 }
 
-struct test_crate::Subtrait::{vtable} {
+struct test_crate::Supertrait::{vtable} {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Subtrait)),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Supertrait)),
+  method_super_method: fn<'_0_1>(&'_0_1 (dyn Supertrait)) -> u32,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Supertrait::{vtable},
 }
 
 // Full name: test_crate::Subtrait
@@ -39,6 +31,14 @@ pub trait Subtrait<Self>
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self: Supertrait)
     vtable: test_crate::Subtrait::{vtable}
+}
+
+struct test_crate::Subtrait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Subtrait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static test_crate::Supertrait::{vtable},
 }
 
 // Full name: test_crate::call_super

@@ -42,16 +42,6 @@ pub trait Clone<Self>
     non-dyn-compatible
 }
 
-// Full name: core::marker::Copy
-#[lang_item(Copy)]
-#[diagnostic_item("Copy")]
-pub trait Copy<Self>
-{
-    proof ImpliedClause0: (Self: MetaSized)
-    proof ImpliedClause1: (Self: Clone)
-    non-dyn-compatible
-}
-
 // Full name: core::core_arch::arm_shared::neon::{impl Clone for uint16x8_t}::clone
 pub fn impl_Clone_for_uint16x8_t::clone<'_0>(_1: &'_0 uint16x8_t) -> uint16x8_t
 = <opaque>
@@ -60,6 +50,16 @@ pub fn impl_Clone_for_uint16x8_t::clone<'_0>(_1: &'_0 uint16x8_t) -> uint16x8_t
 impl "impl_Clone_for_uint16x8_t" Clone for uint16x8_t {
     proof ImpliedClause0: (uint16x8_t: Sized) = {built_in impl Sized for uint16x8_t}
     fn clone<'_0_1> = impl_Clone_for_uint16x8_t::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Copy
+#[lang_item(Copy)]
+#[diagnostic_item("Copy")]
+pub trait Copy<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Clone)
     non-dyn-compatible
 }
 
@@ -258,12 +258,8 @@ pub trait Step<Self>
     non-dyn-compatible
 }
 
-// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
-pub fn backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
-= <opaque>
-
-// Full name: core::iter::range::{impl Step for usize}::backward_checked
-pub fn backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
+// Full name: core::iter::range::{impl Step for usize}::steps_between
+pub fn steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}::forward_overflowing
@@ -274,8 +270,12 @@ pub fn forward_overflowing(_1: usize, _2: usize) -> (usize, bool)
 pub fn forward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
 = <opaque>
 
-// Full name: core::iter::range::{impl Step for usize}::steps_between
-pub fn steps_between<'_0, '_1>(_1: &'_0 usize, _2: &'_1 usize) -> (usize, Option<usize>[{built_in impl Sized for usize}])
+// Full name: core::iter::range::{impl Step for usize}::backward_overflowing
+pub fn backward_overflowing(_1: usize, _2: usize) -> (usize, bool)
+= <opaque>
+
+// Full name: core::iter::range::{impl Step for usize}::backward_checked
+pub fn backward_checked(_1: usize, _2: usize) -> Option<usize>[{built_in impl Sized for usize}]
 = <opaque>
 
 // Full name: core::iter::range::{impl Step for usize}

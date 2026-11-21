@@ -67,12 +67,6 @@ enum Enum {
   None,
 }
 
-// Full name: test_crate::{impl StructuralPartialEq for Enum}
-impl "impl_StructuralPartialEq_for_Enum" StructuralPartialEq for Enum {
-    proof ImpliedClause0: (Enum: MetaSized) = {built_in impl MetaSized for Enum}
-    vtable: lazy
-}
-
 // Full name: test_crate::{impl PartialEq<Enum> for Enum}::eq
 #[inline(hint)]
 pub fn impl_PartialEq_Enum_for_Enum::eq<'_0, '_1>(self: &'_0 Enum, other: &'_1 Enum) -> bool
@@ -178,6 +172,12 @@ pub fn impl_PartialEq_Enum_for_Enum::eq<'_0, '_1>(self: &'_0 Enum, other: &'_1 E
 // Full name: test_crate::{impl PartialEq<Enum> for Enum}
 impl "impl_PartialEq_Enum_for_Enum" PartialEq<Enum> for Enum {
     fn eq<'_0_1, '_1_1> = impl_PartialEq_Enum_for_Enum::eq<'_0_1, '_1_1>
+    vtable: lazy
+}
+
+// Full name: test_crate::{impl StructuralPartialEq for Enum}
+impl "impl_StructuralPartialEq_for_Enum" StructuralPartialEq for Enum {
+    proof ImpliedClause0: (Enum: MetaSized) = {built_in impl MetaSized for Enum}
     vtable: lazy
 }
 

@@ -42,9 +42,9 @@ where
   _1: B,
 }
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
-
 static test_crate::{promoted_const#1}: MaybeUninit<[u8; 2usize]>[{built_in impl Sized for [u8; 2usize]}] = RawMemory(0x2a, 0x0c)
+
+static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00)
 
 struct test_crate::Sync<T>
 where
@@ -97,20 +97,20 @@ static ANON: &'static (u32, u32) = cast<&'_ (u32, u32)>(&raw const test_crate::{
 // Full name: test_crate::ANON_SECOND
 static ANON_SECOND: &'static u32 = &test_crate::{promoted_const}.offset!(1isize * size_of::<u32>())
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::marker::Sync::{vtable},
-}
-
 // Full name: test_crate::Trait
 trait Trait<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self: core::marker::Sync)
     vtable: test_crate::Trait::{vtable}
+}
+
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::marker::Sync::{vtable},
 }
 
 // Full name: test_crate::{impl Trait for u8}::{vtable_drop_shim}

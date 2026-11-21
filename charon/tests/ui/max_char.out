@@ -1,5 +1,7 @@
 # Final LLBC before serialization:
 
+struct () {}
+
 // Full name: core::char::MAX
 #[deprecated(since = "future", note = "replaced by the `MAX` associated constant on `char`")]
 pub fn MAX() -> char
@@ -10,8 +12,6 @@ pub fn MAX() -> char
     _0 = noretag const '\u{10ffff}'
     return
 }
-
-struct () {}
 
 // Full name: core::char::MAX
 #[deprecated(since = "future", note = "replaced by the `MAX` associated constant on `char`")]

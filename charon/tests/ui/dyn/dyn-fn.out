@@ -58,15 +58,6 @@ pub trait FnMut<Self, Args>
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
 
-struct core::ops::function::Fn::{vtable}<Args, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
-  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
-}
-
 // Full name: core::ops::function::Fn
 #[fundamental]
 #[lang_item(Fn)]
@@ -78,6 +69,15 @@ pub trait Fn<Self, Args>
     proof ImpliedClause3: (Args: Tuple)
     fn call<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::Fn::{vtable}<Args, Self::ImpliedClause1::ImpliedClause1::Output>
+}
+
+struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
+  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
 }
 
 struct (_,)<A> {
@@ -135,9 +135,6 @@ fn takes_fn<'_0>(f: &'_0 (dyn for<'a> Fn<(&'a mut u32,), ImpliedClause1::Implied
     storage_dead(f)
     return
 }
-
-// Full name: test_crate::gives_fn::{impl FnMut<(&'_0 mut u32,)> for {closure}}::{vtable}
-vtable impl_FnMut_tuple_for_closure::{vtable}<'_0>: core::ops::function::FnMut::{vtable}<(&'_0 mut u32,), bool> = Opaque(VTable was chosen to be opaque)
 
 // Full name: test_crate::gives_fn::{closure}
 struct {closure} {}
@@ -206,6 +203,9 @@ where
     storage_dead(dyn_self)
     return
 }
+
+// Full name: test_crate::gives_fn::{impl FnMut<(&'_0 mut u32,)> for {closure}}::{vtable}
+vtable impl_FnMut_tuple_for_closure::{vtable}<'_0>: core::ops::function::FnMut::{vtable}<(&'_0 mut u32,), bool> = Opaque(VTable was chosen to be opaque)
 
 // Full name: test_crate::gives_fn::{impl Fn<(&'_0 mut u32,)> for {closure}}::{vtable}
 vtable impl_Fn_tuple_for_closure::{vtable}<'_0>: core::ops::function::Fn::{vtable}<(&'_0 mut u32,), bool> = core::ops::function::Fn::{vtable} { size: size_of::<{closure}>(), align: align_of::<{closure}>(), drop: fnptr({vtable_drop_shim}<'_0, '_>), method_call: fnptr({vtable_method}<'_0, '_>), super_trait_0: &core::marker::MetaSized::{vtable}<{closure}>, super_trait_1: &impl_FnMut_tuple_for_closure::{vtable}<'_0> }

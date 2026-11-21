@@ -300,18 +300,18 @@ where
     return
 }
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Trait
 trait Trait<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     vtable: test_crate::Trait::{vtable}
+}
+
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::{impl Trait for u32}::{vtable_drop_shim}

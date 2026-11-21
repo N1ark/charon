@@ -25,8 +25,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -53,6 +51,8 @@ pub trait FnMut<Self, Args>
     fn call_mut<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
+
+opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
 
 // Full name: core::ops::function::Fn
 #[fundamental]
@@ -114,13 +114,6 @@ pub fn hrtb_dyn_fn<'_0>(_1: &'_0 (dyn for<'a, '_1_2 where 'a: '_1_2> Fn<(&'_1_2 
     return
 }
 
-struct test_crate::Obj::{vtable}<'a, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Obj<'a, V = Ty0>)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Obj
 pub trait Obj<'a, Self>
 {
@@ -128,6 +121,13 @@ pub trait Obj<'a, Self>
     proof ImpliedClause1: (Self::V: Sized)
     type V
     vtable: test_crate::Obj::{vtable}<'a, Self::V>
+}
+
+struct test_crate::Obj::{vtable}<'a, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Obj<'a, V = Ty0>)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::f

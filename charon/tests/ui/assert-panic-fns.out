@@ -90,18 +90,6 @@ impl "impl_Copy_for_i32" Copy for i32 {
 pub fn panic_const_add_overflow() -> !
 = <opaque>
 
-// Full name: core::panicking::panic_const::panic_const_sub_overflow
-#[track_caller]
-#[lang_item(PanicSubOverflow)]
-pub fn panic_const_sub_overflow() -> !
-= <opaque>
-
-// Full name: core::panicking::panic_const::panic_const_mul_overflow
-#[track_caller]
-#[lang_item(PanicMulOverflow)]
-pub fn panic_const_mul_overflow() -> !
-= <opaque>
-
 // Full name: core::panicking::panic_const::panic_const_div_by_zero
 #[track_caller]
 #[lang_item(PanicDivZero)]
@@ -112,6 +100,18 @@ pub fn panic_const_div_by_zero() -> !
 #[track_caller]
 #[lang_item(PanicDivOverflow)]
 pub fn panic_const_div_overflow() -> !
+= <opaque>
+
+// Full name: core::panicking::panic_const::panic_const_mul_overflow
+#[track_caller]
+#[lang_item(PanicMulOverflow)]
+pub fn panic_const_mul_overflow() -> !
+= <opaque>
+
+// Full name: core::panicking::panic_const::panic_const_neg_overflow
+#[track_caller]
+#[lang_item(PanicNegOverflow)]
+pub fn panic_const_neg_overflow() -> !
 = <opaque>
 
 // Full name: core::panicking::panic_const::panic_const_rem_by_zero
@@ -138,10 +138,10 @@ pub fn panic_const_shl_overflow() -> !
 pub fn panic_const_shr_overflow() -> !
 = <opaque>
 
-// Full name: core::panicking::panic_const::panic_const_neg_overflow
+// Full name: core::panicking::panic_const::panic_const_sub_overflow
 #[track_caller]
-#[lang_item(PanicNegOverflow)]
-pub fn panic_const_neg_overflow() -> !
+#[lang_item(PanicSubOverflow)]
+pub fn panic_const_sub_overflow() -> !
 = <opaque>
 
 // Full name: core::panicking::panic_bounds_check

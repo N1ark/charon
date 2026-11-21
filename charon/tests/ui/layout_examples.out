@@ -114,17 +114,6 @@ pub trait Clone<Self>
     non-dyn-compatible
 }
 
-// Full name: core::clone::impls::{impl Clone for u32}::clone
-pub fn impl_Clone_for_u32::clone<'_0>(_1: &'_0 u32) -> u32
-= <opaque>
-
-// Full name: core::clone::impls::{impl Clone for u32}
-impl "impl_Clone_for_u32" Clone for u32 {
-    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
-    fn clone<'_0_1> = impl_Clone_for_u32::clone<'_0_1>
-    non-dyn-compatible
-}
-
 // Full name: core::clone::impls::{impl Clone for i32}::clone
 pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 = <opaque>
@@ -133,6 +122,17 @@ pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 impl "impl_Clone_for_i32" Clone for i32 {
     proof ImpliedClause0: (i32: Sized) = {built_in impl Sized for i32}
     fn clone<'_0_1> = impl_Clone_for_i32::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u32}::clone
+pub fn impl_Clone_for_u32::clone<'_0>(_1: &'_0 u32) -> u32
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u32}
+impl "impl_Clone_for_u32" Clone for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    fn clone<'_0_1> = impl_Clone_for_u32::clone<'_0_1>
     non-dyn-compatible
 }
 
@@ -192,17 +192,17 @@ pub trait Copy<Self>
     non-dyn-compatible
 }
 
-// Full name: core::marker::{impl Copy for u32}
-impl "impl_Copy_for_u32" Copy for u32 {
-    proof ImpliedClause0: (u32: MetaSized) = {built_in impl MetaSized for u32}
-    proof ImpliedClause1: (u32: Clone) = impl_Clone_for_u32
-    non-dyn-compatible
-}
-
 // Full name: core::marker::{impl Copy for i32}
 impl "impl_Copy_for_i32" Copy for i32 {
     proof ImpliedClause0: (i32: MetaSized) = {built_in impl MetaSized for i32}
     proof ImpliedClause1: (i32: Clone) = impl_Clone_for_i32
+    non-dyn-compatible
+}
+
+// Full name: core::marker::{impl Copy for u32}
+impl "impl_Copy_for_u32" Copy for u32 {
+    proof ImpliedClause0: (u32: MetaSized) = {built_in impl MetaSized for u32}
+    proof ImpliedClause1: (u32: Clone) = impl_Clone_for_u32
     non-dyn-compatible
 }
 
@@ -212,22 +212,6 @@ pub opaque type ManuallyDrop<T>
 where
     TraitClause0: (T: MetaSized),
 // layout: none
-
-// Full name: core::num::niche_types::NonZeroU32Inner
-pub opaque type NonZeroU32Inner
-// layout:
-//     size: 4usize,
-//     align: 4usize,
-//     discriminator: @Variant0,
-//     inhabited: true,
-//     variants: [
-//         @Variant0: {
-//             offset of 0: 0,
-//             inhabited: true,
-//             tagger: [],
-//         },
-//     ],
-//     repr(Rust, transparent),
 
 // Full name: core::num::niche_types::NonZeroI32Inner
 pub opaque type NonZeroI32Inner
@@ -245,23 +229,21 @@ pub opaque type NonZeroI32Inner
 //     ],
 //     repr(Rust, transparent),
 
-// Full name: core::num::niche_types::{impl Clone for NonZeroU32Inner}::clone
-pub fn impl_Clone_for_NonZeroU32Inner::clone<'_0>(_1: &'_0 NonZeroU32Inner) -> NonZeroU32Inner
-= <opaque>
-
-// Full name: core::num::niche_types::{impl Clone for NonZeroU32Inner}
-impl "impl_Clone_for_NonZeroU32Inner" Clone for NonZeroU32Inner {
-    proof ImpliedClause0: (NonZeroU32Inner: Sized) = {built_in impl Sized for NonZeroU32Inner}
-    fn clone<'_0_1> = impl_Clone_for_NonZeroU32Inner::clone<'_0_1>
-    non-dyn-compatible
-}
-
-// Full name: core::num::niche_types::{impl Copy for NonZeroU32Inner}
-impl "impl_Copy_for_NonZeroU32Inner" Copy for NonZeroU32Inner {
-    proof ImpliedClause0: (NonZeroU32Inner: MetaSized) = {built_in impl MetaSized for NonZeroU32Inner}
-    proof ImpliedClause1: (NonZeroU32Inner: Clone) = impl_Clone_for_NonZeroU32Inner
-    non-dyn-compatible
-}
+// Full name: core::num::niche_types::NonZeroU32Inner
+pub opaque type NonZeroU32Inner
+// layout:
+//     size: 4usize,
+//     align: 4usize,
+//     discriminator: @Variant0,
+//     inhabited: true,
+//     variants: [
+//         @Variant0: {
+//             offset of 0: 0,
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust, transparent),
 
 // Full name: core::num::niche_types::{impl Clone for NonZeroI32Inner}::clone
 pub fn impl_Clone_for_NonZeroI32Inner::clone<'_0>(_1: &'_0 NonZeroI32Inner) -> NonZeroI32Inner
@@ -274,10 +256,28 @@ impl "impl_Clone_for_NonZeroI32Inner" Clone for NonZeroI32Inner {
     non-dyn-compatible
 }
 
+// Full name: core::num::niche_types::{impl Clone for NonZeroU32Inner}::clone
+pub fn impl_Clone_for_NonZeroU32Inner::clone<'_0>(_1: &'_0 NonZeroU32Inner) -> NonZeroU32Inner
+= <opaque>
+
+// Full name: core::num::niche_types::{impl Clone for NonZeroU32Inner}
+impl "impl_Clone_for_NonZeroU32Inner" Clone for NonZeroU32Inner {
+    proof ImpliedClause0: (NonZeroU32Inner: Sized) = {built_in impl Sized for NonZeroU32Inner}
+    fn clone<'_0_1> = impl_Clone_for_NonZeroU32Inner::clone<'_0_1>
+    non-dyn-compatible
+}
+
 // Full name: core::num::niche_types::{impl Copy for NonZeroI32Inner}
 impl "impl_Copy_for_NonZeroI32Inner" Copy for NonZeroI32Inner {
     proof ImpliedClause0: (NonZeroI32Inner: MetaSized) = {built_in impl MetaSized for NonZeroI32Inner}
     proof ImpliedClause1: (NonZeroI32Inner: Clone) = impl_Clone_for_NonZeroI32Inner
+    non-dyn-compatible
+}
+
+// Full name: core::num::niche_types::{impl Copy for NonZeroU32Inner}
+impl "impl_Copy_for_NonZeroU32Inner" Copy for NonZeroU32Inner {
+    proof ImpliedClause0: (NonZeroU32Inner: MetaSized) = {built_in impl MetaSized for NonZeroU32Inner}
+    proof ImpliedClause1: (NonZeroU32Inner: Clone) = impl_Clone_for_NonZeroU32Inner
     non-dyn-compatible
 }
 
@@ -292,16 +292,6 @@ pub unsafe trait ZeroablePrimitive<Self>
     non-dyn-compatible
 }
 
-// Full name: core::num::nonzero::{impl ZeroablePrimitive for u32}
-unsafe impl "impl_ZeroablePrimitive_for_u32" ZeroablePrimitive for u32 {
-    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
-    proof ImpliedClause1: (u32: Copy) = impl_Copy_for_u32
-    proof ImpliedClause2: (NonZeroU32Inner: Sized) = {built_in impl Sized for NonZeroU32Inner}
-    proof ImpliedClause3: (NonZeroU32Inner: Copy) = impl_Copy_for_NonZeroU32Inner
-    type NonZeroInner = NonZeroU32Inner
-    non-dyn-compatible
-}
-
 // Full name: core::num::nonzero::{impl ZeroablePrimitive for i32}
 unsafe impl "impl_ZeroablePrimitive_for_i32" ZeroablePrimitive for i32 {
     proof ImpliedClause0: (i32: Sized) = {built_in impl Sized for i32}
@@ -309,6 +299,16 @@ unsafe impl "impl_ZeroablePrimitive_for_i32" ZeroablePrimitive for i32 {
     proof ImpliedClause2: (NonZeroI32Inner: Sized) = {built_in impl Sized for NonZeroI32Inner}
     proof ImpliedClause3: (NonZeroI32Inner: Copy) = impl_Copy_for_NonZeroI32Inner
     type NonZeroInner = NonZeroI32Inner
+    non-dyn-compatible
+}
+
+// Full name: core::num::nonzero::{impl ZeroablePrimitive for u32}
+unsafe impl "impl_ZeroablePrimitive_for_u32" ZeroablePrimitive for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    proof ImpliedClause1: (u32: Copy) = impl_Copy_for_u32
+    proof ImpliedClause2: (NonZeroU32Inner: Sized) = {built_in impl Sized for NonZeroU32Inner}
+    proof ImpliedClause3: (NonZeroU32Inner: Copy) = impl_Copy_for_NonZeroU32Inner
+    type NonZeroInner = NonZeroU32Inner
     non-dyn-compatible
 }
 

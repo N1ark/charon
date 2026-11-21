@@ -9,20 +9,20 @@ pub trait MetaSized<Self>
 
 struct () {}
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
-  method_foo: fn<'_0_1>(&'_0_1 (dyn Trait)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Trait
 trait Trait<Self>
 {
     proof ImpliedClause0: (Self: MetaSized)
     fn foo<'a, '_1_1, Outlives0: (Self: 'a), Outlives1: (Self: '_1_1)>;
     vtable: test_crate::Trait::{vtable}
+}
+
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait)),
+  method_foo: fn<'_0_1>(&'_0_1 (dyn Trait)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::foo

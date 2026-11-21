@@ -41,14 +41,6 @@ impl "impl_Clone_for_i32" Clone for i32 {
     non-dyn-compatible
 }
 
-struct test_crate::Modifiable::{vtable}<T> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Modifiable<T>)),
-  method_modify: fn<'_0_1, '_1_1>(&'_0_1 mut (dyn Modifiable<T>), &'_1_1 T) -> T,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Modifiable
 trait Modifiable<Self, T>
 {
@@ -56,6 +48,14 @@ trait Modifiable<Self, T>
     proof ImpliedClause1: (T: Sized)
     fn modify<'_0_1, '_1_1, Outlives0: (Self: '_0_1), Outlives1: (T: '_1_1)>;
     vtable: test_crate::Modifiable::{vtable}<T>
+}
+
+struct test_crate::Modifiable::{vtable}<T> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Modifiable<T>)),
+  method_modify: fn<'_0_1, '_1_1>(&'_0_1 mut (dyn Modifiable<T>), &'_1_1 T) -> T,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::{impl Modifiable<T> for i32}::modify

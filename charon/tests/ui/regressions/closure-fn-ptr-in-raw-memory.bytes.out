@@ -66,6 +66,10 @@ where
     return
 }
 
+static test_crate::{promoted_const#1}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&{built_in impl Clone for (u8, u8)}::clone<'_>[0], &{built_in impl Clone for (u8, u8)}::clone<'_>[1], &{built_in impl Clone for (u8, u8)}::clone<'_>[2], &{built_in impl Clone for (u8, u8)}::clone<'_>[3], &{built_in impl Clone for (u8, u8)}::clone<'_>[4], &{built_in impl Clone for (u8, u8)}::clone<'_>[5], &{built_in impl Clone for (u8, u8)}::clone<'_>[6], &{built_in impl Clone for (u8, u8)}::clone<'_>[7])
+
+static test_crate::{promoted_const#2}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][0], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][1], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][2], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][3], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][4], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][5], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][6], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][7])
+
 struct test_crate::CLOSURE_STATELESS::{closure} {}
 
 // Full name: test_crate::CLOSURE_STATELESS::{impl Fn<()> for test_crate::CLOSURE_STATELESS::{closure}}::call
@@ -147,10 +151,6 @@ fn test_crate::CLOSURE_STATELESS::{closure}::{as_fn}() -> u8
 }
 
 static test_crate::{promoted_const}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[0], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[1], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[2], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[3], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[4], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[5], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[6], &test_crate::CLOSURE_STATELESS::{closure}::{as_fn}[7])
-
-static test_crate::{promoted_const#1}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&{built_in impl Clone for (u8, u8)}::clone<'_>[0], &{built_in impl Clone for (u8, u8)}::clone<'_>[1], &{built_in impl Clone for (u8, u8)}::clone<'_>[2], &{built_in impl Clone for (u8, u8)}::clone<'_>[3], &{built_in impl Clone for (u8, u8)}::clone<'_>[4], &{built_in impl Clone for (u8, u8)}::clone<'_>[5], &{built_in impl Clone for (u8, u8)}::clone<'_>[6], &{built_in impl Clone for (u8, u8)}::clone<'_>[7])
-
-static test_crate::{promoted_const#2}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(&{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][0], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][1], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][2], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][3], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][4], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][5], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][6], &{impl Fn<(A,)> for fn(A) -> B}::call<'_, u8, u8>[{built_in impl Sized for u8}, {built_in impl Sized for u8}][7])
 
 // Full name: test_crate::A
 struct A {

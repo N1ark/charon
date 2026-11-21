@@ -1,7 +1,5 @@
 # Final LLBC before serialization:
 
-opaque type core::future::future::Future::{vtable}<Ty0>
-
 // Full name: core::task::wake::Context
 #[lang_item(Context)]
 pub opaque type Context<mut 'a>
@@ -36,6 +34,8 @@ where
 pub opaque type Pin<Ptr>
 where
     TraitClause0: (Ptr: Sized),
+
+opaque type core::future::future::Future::{vtable}<Ty0>
 
 // Full name: core::future::future::Future
 #[lang_item(Future)]

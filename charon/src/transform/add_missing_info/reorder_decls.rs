@@ -7,6 +7,8 @@
 //! to be explicit about mutual recursion. This should come useful for translation to any other
 //! language with these properties.
 use crate::options::TranslateOptions;
+use crate::pretty::FmtWithCtx;
+use crate::pretty::formatter::IntoFormatter;
 use crate::transform::TransformCtx;
 use crate::ullbc_ast::*;
 use crate::utils::*;
@@ -500,14 +502,24 @@ fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {
             file_name_order,
             span.beg,
             item_meta.name.mono_args().cloned(),
-            item.id(),
         )
     };
-    // We record for each item the order in which we're sorting it, to make `sort_by` cheap.
-    let item_sorted_index: HashMap<ItemId, usize> = ctx
+    let mut items: Vec<_> = ctx
         .translated
         .all_items()
         .sorted_by_cached_key(sort_by)
+        .collect();
+    // Ids depend on the order of translation, names don't: we sort the items at the same place by
+    // name. Formatting names is costly, hence in parallel.
+    let fmt = &ctx.into_fmt();
+    for items in items.chunk_by_mut(|a, b| sort_by(a) == sort_by(b)) {
+        if items.len() > 1 {
+            items.par_sort_by_cached_key(|item| item.item_meta().name.with_ctx(fmt).to_string());
+        }
+    }
+    // We record for each item the order in which we're sorting it, to make `sort_by` cheap.
+    let item_sorted_index: HashMap<ItemId, usize> = items
+        .into_iter()
         .enumerate()
         .map(|(i, item)| (item.id(), i))
         .collect();

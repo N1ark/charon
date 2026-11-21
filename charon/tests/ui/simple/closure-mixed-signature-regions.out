@@ -78,16 +78,16 @@ pub trait Fn<Self, Args>
 fn panic_in_cleanup() -> !
 = <opaque>
 
-struct (_,)<A> {
-  _0: A,
-}
-
 struct (_, _)<A, B>
 where
     TraitClause0: (A: Sized),
 {
   _0: A,
   _1: B,
+}
+
+struct (_,)<A> {
+  _0: A,
 }
 
 // Full name: test_crate::Provide

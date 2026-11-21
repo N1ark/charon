@@ -11,14 +11,6 @@ struct () {}
 
 vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
-struct test_crate::Feline::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Feline)),
-  method_hunt: fn<'_0_1>(&'_0_1 (dyn Feline)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Feline
 trait Feline<Self>
 {
@@ -27,11 +19,11 @@ trait Feline<Self>
     vtable: test_crate::Feline::{vtable}
 }
 
-struct test_crate::Pettable::{vtable} {
+struct test_crate::Feline::{vtable} {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Pettable)),
-  method_pet: fn<'_0_1>(&'_0_1 (dyn Pettable)),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Feline)),
+  method_hunt: fn<'_0_1>(&'_0_1 (dyn Feline)),
   super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
@@ -43,14 +35,12 @@ trait Pettable<Self>
     vtable: test_crate::Pettable::{vtable}
 }
 
-struct test_crate::Cat::{vtable} {
+struct test_crate::Pettable::{vtable} {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Cat)),
-  method_meow: fn<'_0_1>(&'_0_1 (dyn Cat)),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Pettable)),
+  method_pet: fn<'_0_1>(&'_0_1 (dyn Pettable)),
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Feline::{vtable},
-  super_trait_2: &'static test_crate::Pettable::{vtable},
 }
 
 // Full name: test_crate::Cat
@@ -61,6 +51,16 @@ trait Cat<Self>
     proof ImpliedClause2: (Self: Pettable)
     fn meow<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Cat::{vtable}
+}
+
+struct test_crate::Cat::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Cat)),
+  method_meow: fn<'_0_1>(&'_0_1 (dyn Cat)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static test_crate::Feline::{vtable},
+  super_trait_2: &'static test_crate::Pettable::{vtable},
 }
 
 // Full name: test_crate::HouseCat

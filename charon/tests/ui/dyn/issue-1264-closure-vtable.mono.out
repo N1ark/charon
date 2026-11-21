@@ -53,24 +53,6 @@ struct core::ops::function::FnOnce::{vtable} {
   super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
-struct core::ops::function::FnMut::{vtable} {
-  size: usize,
-  align: usize,
-  drop: *const (),
-  method_call_mut: *const (),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnOnce::{vtable},
-}
-
-struct core::ops::function::Fn::{vtable} {
-  size: usize,
-  align: usize,
-  drop: *const (),
-  method_call: *const (),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -80,6 +62,15 @@ pub trait FnOnce<Self, Args>
     proof ImpliedClause1: (Args: Sized)
     proof ImpliedClause2: (Args: Tuple)
     vtable: core::ops::function::FnOnce::{vtable}
+}
+
+struct core::ops::function::FnMut::{vtable} {
+  size: usize,
+  align: usize,
+  drop: *const (),
+  method_call_mut: *const (),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnOnce::{vtable},
 }
 
 // Full name: core::ops::function::FnMut
@@ -92,6 +83,15 @@ pub trait FnMut<Self, Args>
     proof ImpliedClause2: (Args: Sized)
     proof ImpliedClause3: (Args: Tuple)
     vtable: core::ops::function::FnMut::{vtable}
+}
+
+struct core::ops::function::Fn::{vtable} {
+  size: usize,
+  align: usize,
+  drop: *const (),
+  method_call: *const (),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable},
 }
 
 // Full name: core::ops::function::Fn
