@@ -749,6 +749,11 @@ impl<'tcx> TranslationCache<'tcx> {
     /// Set up the cache if `CHARON_TRANSLATION_CACHE` is set.
     pub(crate) fn new(tcx: TyCtxt<'tcx>, options: &CliOpts) -> Option<Self> {
         let root = std::env::var_os("CHARON_TRANSLATION_CACHE")?;
+        // Otherwise the items the cache can hold, foreign items, are translated without their bodies
+        // by default, which takes no longer than loading them.
+        if !options.extract_opaque_bodies {
+            return None;
+        }
         let mut hasher = StableHasher::new();
         let mut hash_str = |s: &str| std::hash::Hasher::write(&mut hasher, s.as_bytes());
         // The charon binary.
