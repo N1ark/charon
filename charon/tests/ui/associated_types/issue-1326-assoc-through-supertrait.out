@@ -73,8 +73,7 @@ where
     _2 = &f
     _0 = TraitClause2::ImpliedClause1::ImpliedClause1::method<'3>(move _2)
     ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'4>] f
-        ↳⚡ storage_dead(f)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(f)
         unwind_continue
     storage_dead(_2)

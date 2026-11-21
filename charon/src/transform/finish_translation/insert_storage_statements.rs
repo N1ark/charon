@@ -2,7 +2,8 @@
 //! no StorageLive and StorageDead instructions associated; this always includes the arguments
 //! and the return local, but also sometimes includes other locals. We make sure these additional
 //! locals get initialised at the start of the function if they're used anywhere.
-//! With `--deallocate-all-locals`, we also deallocate them before every function exit.
+//! With `--deallocate-all-locals`, we also deallocate them before every function exit (but not
+//! before an `UnwindTerminate`, which aborts the program).
 use derive_generic_visitor::Visitor;
 
 use crate::ast::*;
@@ -114,9 +115,7 @@ impl Transform {
             for block in &mut body.body {
                 if matches!(
                     block.terminator.kind,
-                    TerminatorKind::UnwindTerminate(..)
-                        | TerminatorKind::Return
-                        | TerminatorKind::UnwindResume
+                    TerminatorKind::Return | TerminatorKind::UnwindResume
                 ) {
                     let span = block.terminator.span;
                     block
@@ -159,9 +158,7 @@ impl Transform {
             body.body.transform_sequences(|statements| {
                 if !matches!(
                     &statements[0].kind,
-                    llbc_ast::StatementKind::UnwindTerminate(..)
-                        | llbc_ast::StatementKind::Return
-                        | llbc_ast::StatementKind::UnwindResume
+                    llbc_ast::StatementKind::Return | llbc_ast::StatementKind::UnwindResume
                 ) {
                     return Vec::new();
                 }
