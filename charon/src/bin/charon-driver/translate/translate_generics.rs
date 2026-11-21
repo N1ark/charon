@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fmt::Debug;
 use std::mem;
@@ -10,7 +11,6 @@ use rustc_span::def_id::DefId as RDefId;
 use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::{ItemTransCtx, TransImplSource, TransItemSourceKind};
 use charon_lib::ast::*;
-use charon_lib::utils::CycleDetector;
 
 /// A level of binding for type-level variables. Each item has a top-level binding level
 /// corresponding to the parameters and clauses to the items. We may then encounter inner binding
@@ -755,7 +755,24 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
 /// Struct to compute the "mutability" of each lifetime.
 #[derive(Default)]
 pub struct LifetimeMutabilityComputer {
-    lt_mutability: HashMap<hax::DefId, CycleDetector<HashSet<u32>>>,
+    /// The lifetimes of each analyzed ADT that are (recursively) used in a `&'a mut T`.
+    lt_mutability: HashMap<hax::DefId, HashSet<u32>>,
+}
+
+/// How the fields of an ADT use its lifetimes.
+struct LifetimeUses {
+    /// The lifetimes used in a `&'a mut T`.
+    in_mut_refs: HashSet<u32>,
+    /// The ADTs the fields mention, with the lifetimes passed to them.
+    adts: Vec<(hax::DefId, Vec<u32>)>,
+}
+
+/// The state of Tarjan's algorithm for one ADT.
+struct TarjanNode {
+    uses: LifetimeUses,
+    index: usize,
+    lowlink: usize,
+    on_stack: bool,
 }
 
 impl LifetimeMutabilityComputer {
@@ -791,77 +808,150 @@ impl LifetimeMutabilityComputer {
         ) {
             return None;
         }
-        if self
-            .lt_mutability
-            .entry(item.clone())
-            .or_default()
-            .start_processing()
-        {
-            use crate::hax::SInto;
-            use ty::{TypeSuperVisitable, TypeVisitable};
-
-            struct LtMutabilityVisitor<'a, S> {
-                s: &'a S,
-                computer: &'a mut LifetimeMutabilityComputer,
-                set: HashSet<u32>,
-            }
-            impl<'tcx, S: BaseState<'tcx>> ty::TypeVisitor<ty::TyCtxt<'tcx>> for LtMutabilityVisitor<'_, S> {
-                fn visit_ty(&mut self, ty: ty::Ty<'tcx>) {
-                    match ty.kind() {
-                        ty::Ref(r, _, ty::Mutability::Mut)
-                            if let ty::RegionKind::ReEarlyParam(r) = r.kind() =>
-                        {
-                            self.set.insert(r.index);
-                        }
-                        ty::Adt(adt, args) => {
-                            let item = adt.did().sinto(self.s);
-                            if let Some(mutabilities) =
-                                self.computer.compute_lifetime_mutabilities(self.s, &item)
-                            {
-                                for arg in args.iter() {
-                                    if let Some(r) = arg.as_region()
-                                        && let ty::RegionKind::ReEarlyParam(r) = r.kind()
-                                        && mutabilities.contains(&r.index)
-                                    {
-                                        self.set.insert(r.index);
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                    ty.super_visit_with(self)
-                }
-            }
-            let mut visitor = LtMutabilityVisitor {
-                s,
-                computer: self,
-                set: HashSet::default(),
-            };
-
-            let tcx = s.base().tcx;
-            if matches!(item.as_synthetic(s), Some(hax::SyntheticItem::FnPtr(_))) {
-                item.type_of(s)
-                    .instantiate_identity()
-                    .skip_normalization()
-                    .visit_with(&mut visitor);
-            } else {
-                let def_id = item.real_rust_def_id();
-                let adt_def = tcx.adt_def(def_id);
-                let generics = item.identity_args(s);
-                for variant in adt_def.variants() {
-                    for field in &variant.fields {
-                        field.ty(tcx, generics).visit_with(&mut visitor);
-                    }
-                }
-            }
-            let set = visitor.set;
-
-            self.lt_mutability
-                .get_mut(item)
-                .unwrap()
-                .done_processing(set);
+        if !self.lt_mutability.contains_key(item) {
+            let mut nodes = HashMap::default();
+            self.strong_connect(s, item, &mut nodes, &mut Vec::new());
         }
-        self.lt_mutability.get(item)?.as_processed()
+        self.lt_mutability.get(item)
+    }
+
+    /// Tarjan's algorithm: the ADTs that mention each other recursively get their mutabilities
+    /// computed together, as a fixpoint. This way the result doesn't depend on which one we start
+    /// from.
+    fn strong_connect<'tcx>(
+        &mut self,
+        s: &impl BaseState<'tcx>,
+        item: &hax::DefId,
+        nodes: &mut HashMap<hax::DefId, TarjanNode>,
+        stack: &mut Vec<hax::DefId>,
+    ) {
+        let index = nodes.len();
+        let uses = Self::lifetime_uses(s, item);
+        let successors = uses.adts.iter().map(|(adt, _)| adt.clone()).collect_vec();
+        nodes.insert(
+            item.clone(),
+            TarjanNode {
+                uses,
+                index,
+                lowlink: index,
+                on_stack: true,
+            },
+        );
+        stack.push(item.clone());
+        for adt in successors {
+            if self.lt_mutability.contains_key(&adt) {
+                continue;
+            }
+            let lowlink = match nodes.get(&adt) {
+                None => {
+                    self.strong_connect(s, &adt, nodes, stack);
+                    nodes[&adt].lowlink
+                }
+                Some(node) if node.on_stack => node.index,
+                // Its component is done, hence in `lt_mutability`.
+                Some(_) => continue,
+            };
+            let node = nodes.get_mut(item).unwrap();
+            node.lowlink = node.lowlink.min(lowlink);
+        }
+        if nodes[item].lowlink != index {
+            return;
+        }
+        // `item` is the root of a strongly connected component, made of the nodes above it on the
+        // stack. The ADTs they mention outside of it are done.
+        let pos = stack.iter().rposition(|x| x == item).unwrap();
+        let component = stack.split_off(pos);
+        for adt in &component {
+            let node = nodes.get_mut(adt).unwrap();
+            node.on_stack = false;
+            self.lt_mutability
+                .insert(adt.clone(), node.uses.in_mut_refs.clone());
+        }
+        loop {
+            let mut changed = false;
+            for adt in &component {
+                for (other, lifetimes) in &nodes[adt].uses.adts {
+                    let Some(other_mutabilities) = self.lt_mutability.get(other) else {
+                        continue;
+                    };
+                    let new = lifetimes
+                        .iter()
+                        .copied()
+                        .filter(|lt| other_mutabilities.contains(lt))
+                        .collect_vec();
+                    let set = self.lt_mutability.get_mut(adt).unwrap();
+                    for lt in new {
+                        changed |= set.insert(lt);
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+    }
+
+    /// Collect how the fields of this ADT use its lifetimes.
+    fn lifetime_uses<'tcx>(s: &impl BaseState<'tcx>, item: &hax::DefId) -> LifetimeUses {
+        use crate::hax::SInto;
+        use ty::{TypeSuperVisitable, TypeVisitable};
+
+        struct LtUsesVisitor<'a, S> {
+            s: &'a S,
+            uses: LifetimeUses,
+        }
+        impl<'tcx, S: BaseState<'tcx>> ty::TypeVisitor<ty::TyCtxt<'tcx>> for LtUsesVisitor<'_, S> {
+            fn visit_ty(&mut self, ty: ty::Ty<'tcx>) {
+                match ty.kind() {
+                    ty::Ref(r, _, ty::Mutability::Mut)
+                        if let ty::RegionKind::ReEarlyParam(r) = r.kind() =>
+                    {
+                        self.uses.in_mut_refs.insert(r.index);
+                    }
+                    ty::Adt(adt, args) => {
+                        let lifetimes = args
+                            .iter()
+                            .filter_map(|arg| {
+                                if let Some(r) = arg.as_region()
+                                    && let ty::RegionKind::ReEarlyParam(r) = r.kind()
+                                {
+                                    Some(r.index)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        self.uses.adts.push((adt.did().sinto(self.s), lifetimes));
+                    }
+                    _ => {}
+                }
+                ty.super_visit_with(self)
+            }
+        }
+        let mut visitor = LtUsesVisitor {
+            s,
+            uses: LifetimeUses {
+                in_mut_refs: Default::default(),
+                adts: Default::default(),
+            },
+        };
+
+        let tcx = s.base().tcx;
+        if matches!(item.as_synthetic(s), Some(hax::SyntheticItem::FnPtr(_))) {
+            item.type_of(s)
+                .instantiate_identity()
+                .skip_normalization()
+                .visit_with(&mut visitor);
+        } else {
+            let def_id = item.real_rust_def_id();
+            let adt_def = tcx.adt_def(def_id);
+            let generics = item.identity_args(s);
+            for variant in adt_def.variants() {
+                for field in &variant.fields {
+                    field.ty(tcx, generics).visit_with(&mut visitor);
+                }
+            }
+        }
+        visitor.uses
     }
 }
