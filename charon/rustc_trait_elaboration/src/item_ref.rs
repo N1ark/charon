@@ -244,7 +244,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         // we only cache them in the shared cache.
         let concrete = self.has_no_concrete_clauses && !generics.has_non_region_param();
         if concrete {
-            if let Some(entry) = self.elab_ctx.concrete_item_refs().borrow().get(&key) {
+            if let Some(entry) = self.elab_ctx.concrete_item_refs().lock().get(&key) {
                 return entry.clone();
             }
         } else if let Some(entry) = self.item_refs_cache.get(&key) {
@@ -255,7 +255,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         if concrete {
             self.elab_ctx
                 .concrete_item_refs()
-                .borrow_mut()
+                .lock()
                 .insert(key, item_ref.clone());
         } else {
             self.item_refs_cache.insert(key, item_ref.clone());

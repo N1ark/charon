@@ -524,7 +524,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         // cache them in the shared cache.
         let concrete = self.has_no_concrete_clauses && !tref.has_non_region_param();
         if concrete {
-            if let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().borrow().get(tref) {
+            if let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().lock().get(tref) {
                 return *trait_proof;
             }
         } else if let Some(trait_proof) = self.trait_proofs_cache.get(tref).copied() {
@@ -534,7 +534,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         if concrete {
             self.elab_ctx
                 .concrete_trait_proofs()
-                .borrow_mut()
+                .lock()
                 .insert(*tref, trait_proof);
         }
         trait_proof

@@ -7,8 +7,8 @@ use rustc_middle::mir;
 use rustc_middle::ty;
 use rustc_middle::ty::Interner;
 use rustc_span::def_id::DefId as RDefId;
-use std::cell::OnceCell;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 /// Gathers a lot of definition information about a [`rustc_hir::def_id::DefId`].
 #[derive(Debug, Clone)]
@@ -30,7 +30,7 @@ pub struct FullDef<'tcx> {
     pub diagnostic_item: Option<Symbol>,
     pub kind: FullDefKind<'tcx>,
     /// Computed on demand, see [`FullDef::virtual_impl`].
-    virtual_impls: [OnceCell<Box<VirtualTraitImpl<'tcx>>>; VirtualTrait::COUNT],
+    virtual_impls: [OnceLock<Box<VirtualTraitImpl<'tcx>>>; VirtualTrait::COUNT],
 }
 
 /// The built-in traits for which we construct virtual impls, see [`FullDef::virtual_impl`].
@@ -233,7 +233,7 @@ where
 /// The parts of the `FullDef` of the current owner that don't depend on generic arguments, computed
 /// once per owner.
 fn def_info<'tcx, S: UnderOwnerState<'tcx>>(s: &S, rust_def_id: RDefId) -> DefInfo<'tcx> {
-    if let Some(info) = s.owner_cache().borrow().def_info {
+    if let Some(info) = s.owner_cache().lock().def_info {
         return info;
     }
     let tcx = s.base().tcx;
@@ -267,14 +267,17 @@ impl DefId {
     where
         S: BaseState<'tcx>,
     {
+        // The type of an anonymous allocation depends on the view the translation decides for
+        // it, see `AllocTypes`. Its translation is cheap, so we don't cache it.
+        if matches!(self.base, DefIdBase::Alloc(_)) {
+            return Arc::new(translate_full_def(&s.with_hax_owner(self), self, args));
+        }
         let cache_key = (self.clone(), args);
-        if let Some(def) = s.with_global_cache(|cache| cache.full_defs.get(&cache_key).cloned()) {
+        if let Some(def) = s.global_cache().full_defs.get(&cache_key) {
             return def;
         }
         let def = Arc::new(translate_full_def(&s.with_hax_owner(self), self, args));
-        s.with_global_cache(|cache| {
-            cache.full_defs.insert(cache_key, def.clone());
-        });
+        s.global_cache().full_defs.insert(cache_key, def.clone());
         def
     }
 }
@@ -618,9 +621,9 @@ pub struct Trait<'tcx> {
     /// trait is dyn-compatible.
     dyn_self: Option<Ty<'tcx>>,
     /// Computed on demand, see [`Trait::implied_trait_proofs`].
-    implied_trait_proofs: OnceCell<Vec<TraitProof<'tcx>>>,
+    implied_trait_proofs: OnceLock<Vec<TraitProof<'tcx>>>,
     /// Computed on demand, see [`Trait::items`].
-    items: OnceCell<Vec<AssocItem<'tcx>>>,
+    items: OnceLock<Vec<AssocItem<'tcx>>>,
 }
 
 impl<'tcx> Trait<'tcx> {
@@ -706,7 +709,7 @@ pub struct TraitImpl<'tcx> {
     /// ```
     implied_trait_proofs: Vec<TraitProof<'tcx>>,
     /// Computed on demand, see [`TraitImpl::items`].
-    items: OnceCell<Vec<ImplAssocItem<'tcx>>>,
+    items: OnceLock<Vec<ImplAssocItem<'tcx>>>,
 }
 
 impl<'tcx> TraitImpl<'tcx> {
@@ -815,7 +818,7 @@ pub struct InherentImpl<'tcx> {
     /// The type to which this block applies.
     ty: Ty<'tcx>,
     /// Computed on demand, see [`InherentImpl::items`].
-    items: OnceCell<Vec<AssocItem<'tcx>>>,
+    items: OnceLock<Vec<AssocItem<'tcx>>>,
 }
 
 impl<'tcx> InherentImpl<'tcx> {
@@ -1071,7 +1074,7 @@ impl<'tcx> Static<'tcx> {
 pub struct Mod {
     def_id: DefId,
     /// Computed on demand, see [`Mod::items`].
-    items: OnceCell<Vec<(Option<Ident>, DefId)>>,
+    items: OnceLock<Vec<(Option<Ident>, DefId)>>,
 }
 
 impl Mod {
@@ -1316,8 +1319,8 @@ where
             implied_predicates: get_implied_predicates(s, args),
             self_predicate: get_self_predicate(s, args),
             dyn_self: get_trait_decl_dyn_self_ty(s, args).sinto(s),
-            implied_trait_proofs: OnceCell::new(),
-            items: OnceCell::new(),
+            implied_trait_proofs: OnceLock::new(),
+            items: OnceLock::new(),
         }),
         RDefKind::TraitAlias { .. } => FullDefKind::TraitAlias(TraitAlias {
             param_env,
@@ -1332,7 +1335,7 @@ where
                     args,
                     param_env,
                     ty: type_of_self().sinto(s),
-                    items: OnceCell::new(),
+                    items: OnceLock::new(),
                 })
             } else {
                 let trait_ref = tcx.impl_trait_ref(def_id);
@@ -1353,7 +1356,7 @@ where
                     trait_pred,
                     is_unsafe: tcx.impl_trait_header(def_id).safety.is_unsafe(),
                     implied_trait_proofs: required_trait_proofs,
-                    items: OnceCell::new(),
+                    items: OnceLock::new(),
                 })
             }
         }
@@ -1440,7 +1443,7 @@ where
         RDefKind::Use => FullDefKind::Use,
         RDefKind::Mod { .. } => FullDefKind::Mod(Mod {
             def_id: hax_def_id.clone(),
-            items: OnceCell::new(),
+            items: OnceLock::new(),
         }),
         RDefKind::ForeignMod { .. } => FullDefKind::ForeignMod(ForeignMod {
             items: get_foreign_mod_children(tcx, def_id).sinto(s),
@@ -1568,7 +1571,7 @@ pub struct VirtualTraitImpl<'tcx> {
     /// The trait ref of the implemented trait, for `dyn_data`.
     trait_ref: ty::TraitRef<'tcx>,
     /// Computed on demand, see [`VirtualTraitImpl::dyn_self`].
-    dyn_data: OnceCell<Option<(Ty<'tcx>, Vec<PolyFnSig<'tcx>>)>>,
+    dyn_data: OnceLock<Option<(Ty<'tcx>, Vec<PolyFnSig<'tcx>>)>>,
 }
 
 /// A method of a virtual trait impl.

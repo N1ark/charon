@@ -252,7 +252,9 @@ impl rustc_trait_elaboration::ItemId for DefId {
     fn self_pred<'tcx>(&self, s: &Self::State<'tcx>) -> Option<ty::PolyTraitRef<'tcx>> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) if matches!(self.kind, DefKind::Trait | DefKind::TraitAlias) => {
+            DefIdBase::Real(def_id)
+                if matches!(self.kind, DefKind::Trait | DefKind::TraitAlias) =>
+            {
                 Some(self_predicate(tcx, def_id))
             }
             _ => None,
@@ -453,7 +455,7 @@ impl DefId {
 
     /// The global standing for an anonymous allocation.
     pub fn make_anon_alloc<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
-        s.with_global_cache(|cache| cache.anon_allocs.insert(alloc_id));
+        s.global_cache().anon_allocs.lock().insert(alloc_id);
         Self::make_anon_alloc_unnumbered(s, alloc_id)
     }
 
@@ -483,11 +485,11 @@ impl DefId {
             | DefIdBase::ImplAssocItem(VirtualImplAssocItem {
                 trait_impl_id: def_id,
                 ..
-            }) => s.with_global_cache(|cache| cache.crate_name(tcx, def_id.krate)),
+            }) => s.global_cache().crate_name(tcx, def_id.krate),
             DefIdBase::Synthetic(..) => (Symbol::intern(SYNTHETIC_CRATE_NAME), 0),
-            DefIdBase::Alloc(..) => {
-                s.with_global_cache(|cache| cache.crate_name(tcx, rustc_hir::def_id::LOCAL_CRATE))
-            }
+            DefIdBase::Alloc(..) => s
+                .global_cache()
+                .crate_name(tcx, rustc_hir::def_id::LOCAL_CRATE),
         }
     }
 
@@ -566,9 +568,12 @@ impl DefId {
             DefIdBase::Alloc(alloc_id) => DisambiguatedDefPathItem {
                 data: DefPathItem::PromotedConst,
                 // Number anonymous allocations in the order we encountered them.
-                disambiguator: s.with_global_cache(|cache| {
-                    cache.anon_allocs.get_index_of(&alloc_id).unwrap() as u32
-                }),
+                disambiguator: s
+                    .global_cache()
+                    .anon_allocs
+                    .lock()
+                    .get_index_of(&alloc_id)
+                    .unwrap() as u32,
             },
         }
     }
@@ -730,7 +735,7 @@ impl DefId {
         if s.owner() != *self {
             return self.compute_identity_args_with_extra_regions(s);
         }
-        if let Some(cached) = &s.owner_cache().borrow().identity_args {
+        if let Some(cached) = &s.owner_cache().lock().identity_args {
             return cached.clone();
         }
         let ret = self.compute_identity_args_with_extra_regions(s);
@@ -794,9 +799,9 @@ impl DefId {
             DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => tcx.type_of(def_id),
             DefIdBase::Synthetic(synthetic) => synthetic.type_of(s),
             DefIdBase::ImplAssocItem(id) => tcx.type_of(id.item_decl_id),
-            DefIdBase::Alloc(alloc_id) => s.with_global_cache(|cache| {
-                ty::EarlyBinder::bind(tcx, cache.alloc_types.ty(tcx, alloc_id))
-            }),
+            DefIdBase::Alloc(alloc_id) => {
+                ty::EarlyBinder::bind(tcx, s.global_cache().alloc_types.ty(tcx, alloc_id))
+            }
         }
     }
 }
@@ -972,13 +977,11 @@ pub(crate) fn get_def_kind<'tcx>(tcx: ty::TyCtxt<'tcx>, def_id: RDefId) -> hir::
 
 impl<'s, S: BaseState<'s>> SInto<S, DefId> for RDefId {
     fn sinto(&self, s: &S) -> DefId {
-        if let Some(def_id) = s.with_global_cache(|cache| cache.def_ids.get(self).cloned()) {
+        if let Some(def_id) = s.global_cache().def_ids.get(self) {
             return def_id;
         }
         let def_id = DefId::make(s, *self);
-        s.with_global_cache(|cache| {
-            cache.def_ids.insert(*self, def_id.clone());
-        });
+        s.global_cache().def_ids.insert(*self, def_id.clone());
         def_id
     }
 }

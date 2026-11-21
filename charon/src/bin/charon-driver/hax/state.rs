@@ -1,45 +1,108 @@
 use crate::hax::prelude::*;
 use annotate_snippets::Level;
+use rustc_data_structures::sync::Lock;
 use rustc_middle::ty::{self, TyCtxt};
-use std::cell::RefCell;
 
 mod base {
     use crate::hax::prelude::*;
     use itertools::Itertools;
+    use rustc_data_structures::sync::Lock;
     use rustc_hash::FxHashMap;
     use rustc_hir::def_id::{CrateNum, LOCAL_CRATE};
     use rustc_middle::ty;
     use rustc_span::symbol::Symbol;
     use rustc_trait_elaboration::{ElaborationCtx, ItemRefKey, intern::Interner};
-    use std::{cell::RefCell, sync::Arc};
+    use std::sync::Arc;
+
+    /// A hash map split into independently locked shards, for maps accessed from many threads.
+    pub struct ShardedMap<K, V> {
+        shards: Box<[Lock<HashMap<K, V>>]>,
+    }
+
+    const SHARDS: usize = 64;
+
+    fn shard_index(hash: u64) -> usize {
+        // The hash maps use the low bits.
+        (hash >> 58) as usize % SHARDS
+    }
+
+    pub fn hash_of(x: &impl std::hash::Hash) -> u64 {
+        use std::hash::BuildHasher;
+        rustc_hash::FxBuildHasher.hash_one(x)
+    }
+
+    impl<K, V> Default for ShardedMap<K, V> {
+        fn default() -> Self {
+            Self {
+                shards: (0..SHARDS).map(|_| Lock::new(HashMap::default())).collect(),
+            }
+        }
+    }
+
+    impl<K: std::hash::Hash + Eq, V: Clone> ShardedMap<K, V> {
+        pub fn shard(&self, k: &K) -> &Lock<HashMap<K, V>> {
+            &self.shards[shard_index(hash_of(k))]
+        }
+        pub fn get(&self, k: &K) -> Option<V> {
+            self.shard(k).lock().get(k).cloned()
+        }
+        pub fn into_entries(self) -> impl Iterator<Item = (K, V)> {
+            self.shards
+                .into_iter()
+                .flat_map(|shard| shard.into_inner().into_iter())
+        }
+        pub fn insert(&self, k: K, v: V) {
+            self.shard(&k).lock().insert(k, v);
+        }
+    }
 
     /// Global caches
-    #[derive(Default)]
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
-        pub per_item: HashMap<DefId, Rc<RefCell<ItemCache<'tcx>>>>,
+        pub per_item: ShardedMap<DefId, Arc<Lock<ItemCache<'tcx>>>>,
         /// The translated definitions, optionally instantiated with generic arguments.
-        pub full_defs: HashMap<(DefId, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
+        pub full_defs: ShardedMap<(DefId, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Cache of parameter-free values, shared by the owners that translate these the same way.
-        /// See [`UnderOwnerState::with_cache_for`].
-        pub shared: ItemCache<'tcx>,
+        /// See [`UnderOwnerState::with_cache_for`]. Sharded by the hash of the value.
+        pub shared: Box<[Lock<ItemCache<'tcx>>]>,
         /// Map rustc def ids to their hax counterpart.
-        pub def_ids: HashMap<RDefId, DefId>,
+        pub def_ids: ShardedMap<RDefId, DefId>,
         /// Data for synthetic items. See the `synthetic_items` module.
-        pub synthetic_item_data: HashMap<SyntheticItem, SyntheticItemData<'tcx>>,
+        pub synthetic_item_data: Lock<HashMap<SyntheticItem, SyntheticItemData<'tcx>>>,
         /// Anonymous allocations we turned into globals, in encounter order. Used to keep
         /// the order of globals stable across runs.
-        pub anon_allocs: indexmap::IndexSet<RAllocId>,
+        pub anon_allocs: Lock<indexmap::IndexSet<RAllocId>>,
         /// The types at which we view anonymous allocations.
         pub alloc_types: rustc_const_uneval::AllocTypes<'tcx>,
         /// Cached names and disambiguators for crate names.
-        pub disambiguated_crate_names: Option<FxHashMap<CrateNum, (Symbol, u32)>>,
+        pub disambiguated_crate_names: std::sync::OnceLock<FxHashMap<CrateNum, (Symbol, u32)>>,
+    }
+
+    impl<'tcx> Default for GlobalCache<'tcx> {
+        fn default() -> Self {
+            Self {
+                per_item: Default::default(),
+                full_defs: Default::default(),
+                shared: (0..SHARDS)
+                    .map(|_| Lock::new(ItemCache::default()))
+                    .collect(),
+                def_ids: Default::default(),
+                synthetic_item_data: Default::default(),
+                anon_allocs: Default::default(),
+                alloc_types: Default::default(),
+                disambiguated_crate_names: Default::default(),
+            }
+        }
     }
 
     impl<'tcx> GlobalCache<'tcx> {
-        pub fn crate_name(&mut self, tcx: ty::TyCtxt<'tcx>, krate: CrateNum) -> (Symbol, u32) {
+        pub fn shared_cache_for(&self, hash: u64) -> &Lock<ItemCache<'tcx>> {
+            &self.shared[shard_index(hash)]
+        }
+
+        pub fn crate_name(&self, tcx: ty::TyCtxt<'tcx>, krate: CrateNum) -> (Symbol, u32) {
             self.disambiguated_crate_names
-                .get_or_insert_with(|| {
+                .get_or_init(|| {
                     std::iter::once(LOCAL_CRATE)
                         .chain(tcx.crates(()).iter().copied())
                         .into_group_map_by(|&cnum| tcx.crate_name(cnum))
@@ -120,8 +183,8 @@ mod base {
         pub ty_interner: &'tcx Interner<'tcx, TyKind<'tcx>>,
         pub trait_proof_interner: &'tcx Interner<'tcx, TraitProofContents<'tcx>>,
         pub item_ref_interner: &'tcx Interner<'tcx, ItemRefContents<'tcx>>,
-        pub options: Rc<crate::hax::options::Options>,
-        pub cache: Rc<RefCell<GlobalCache<'tcx>>>,
+        pub options: Arc<crate::hax::options::Options>,
+        pub cache: Arc<GlobalCache<'tcx>>,
         pub elab_ctx: crate::hax::traits::ElaborationCtx<'tcx, DefId>,
         pub tcx: ty::TyCtxt<'tcx>,
     }
@@ -138,7 +201,7 @@ mod base {
                 trait_proof_interner: Box::leak(Box::default()),
                 item_ref_interner: Box::leak(Box::default()),
                 cache: Default::default(),
-                options: Rc::new(options),
+                options: Arc::new(options),
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
@@ -209,29 +272,34 @@ pub trait BaseState<'tcx>: Sized {
         }
     }
 
-    /// Access the global cache. You must not call `sinto` within this function as this will likely
-    /// result in `BorrowMut` panics.
-    fn with_global_cache<T>(&self, f: impl FnOnce(&mut GlobalCache<'tcx>) -> T) -> T {
-        f(&mut self.base().cache.borrow_mut())
+    /// The global caches.
+    fn global_cache(&self) -> &GlobalCache<'tcx> {
+        &self.base().cache
     }
     /// The cache for a given item.
-    fn item_cache(&self, def_id: &DefId) -> Rc<RefCell<ItemCache<'tcx>>> {
-        self.with_global_cache(|cache| cache.per_item.entry(def_id.clone()).or_default().clone())
+    fn item_cache(&self, def_id: &DefId) -> Arc<Lock<ItemCache<'tcx>>> {
+        self.global_cache()
+            .per_item
+            .shard(def_id)
+            .lock()
+            .entry(def_id.clone())
+            .or_default()
+            .clone()
     }
     /// Access the cache for a given item. You must not call `sinto` within this function as this
     /// will likely result in `BorrowMut` panics.
     fn with_item_cache<T>(&self, def_id: &DefId, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        f(&mut self.item_cache(def_id).borrow_mut())
+        f(&mut self.item_cache(def_id).lock())
     }
 }
 
 pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner(&self) -> DefId;
     /// The cache of the current owner.
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>>;
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>>;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
-        if let Some(param_env) = self.owner_cache().borrow().param_env {
+        if let Some(param_env) = self.owner_cache().lock().param_env {
             return param_env;
         }
         let param_env = self.owner().param_env(self);
@@ -255,7 +323,7 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     /// Access the cache for the current item. You must not call `sinto` within this function as
     /// this will likely result in `BorrowMut` panics.
     fn with_cache<T>(&self, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        f(&mut self.owner_cache().borrow_mut())
+        f(&mut self.owner_cache().lock())
     }
     /// Access the cache in which to store the translation of `value` in the current owner.
     ///
@@ -270,7 +338,7 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     /// panics.
     fn with_cache_for<T>(
         &self,
-        value: impl ty::TypeVisitable<TyCtxt<'tcx>>,
+        value: impl ty::TypeVisitable<TyCtxt<'tcx>> + std::hash::Hash,
         f: impl FnOnce(&mut ItemCache<'tcx>) -> T,
     ) -> T {
         let uses_shared_cache = match self.with_cache(|cache| cache.uses_shared_cache) {
@@ -282,7 +350,7 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
             }
         };
         if uses_shared_cache && !ty::TypeVisitableExt::has_non_region_param(&value) {
-            self.with_global_cache(|cache| f(&mut cache.shared))
+            f(&mut self.global_cache().shared_cache_for(hash_of(&value)).lock())
         } else {
             self.with_cache(f)
         }
@@ -310,7 +378,7 @@ pub struct State<'tcx, Owner> {
 #[derive(Clone)]
 pub struct Owner<'tcx> {
     def_id: DefId,
-    cache: Rc<RefCell<ItemCache<'tcx>>>,
+    cache: Arc<Lock<ItemCache<'tcx>>>,
 }
 
 pub type StateWithBase<'tcx> = State<'tcx, ()>;
@@ -337,7 +405,7 @@ impl<'tcx> UnderOwnerState<'tcx> for StateWithOwner<'tcx> {
     fn owner(&self) -> DefId {
         self.owner.def_id.clone()
     }
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
         &self.owner.cache
     }
 }
@@ -351,7 +419,7 @@ impl<'tcx, A: UnderOwnerState<'tcx>, B> UnderOwnerState<'tcx> for (A, B) {
     fn owner(&self) -> DefId {
         self.0.owner()
     }
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
         self.0.owner_cache()
     }
 }

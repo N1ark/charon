@@ -205,22 +205,30 @@ impl SyntheticItem {
     }
 
     fn data<'tcx>(&self, s: &impl BaseState<'tcx>) -> SyntheticItemData<'tcx> {
-        if let Some(data) = s.with_global_cache(|c| c.synthetic_item_data.get(self).copied()) {
+        if let Some(data) = s
+            .global_cache()
+            .synthetic_item_data
+            .lock()
+            .get(self)
+            .copied()
+        {
             return data;
         }
         let borrowed_param_def_ids = GenericParamDefIds::construct(s);
-        s.with_global_cache(|c| c.synthetic_data(s, *self, borrowed_param_def_ids))
+        s.global_cache()
+            .synthetic_data(s, *self, borrowed_param_def_ids)
     }
 }
 
 impl<'tcx> GlobalCache<'tcx> {
     fn synthetic_data(
-        &mut self,
+        &self,
         s: &impl BaseState<'tcx>,
         item: SyntheticItem,
         borrowed_param_def_ids: GenericParamDefIds,
     ) -> SyntheticItemData<'tcx> {
-        if let Some(data) = self.synthetic_item_data.get(&item) {
+        let mut synthetic_item_data = self.synthetic_item_data.lock();
+        if let Some(data) = synthetic_item_data.get(&item) {
             return *data;
         }
         let tcx = s.base().tcx;
@@ -443,7 +451,7 @@ impl<'tcx> GlobalCache<'tcx> {
             late_bound_scope: matches!(item, SyntheticItem::FnPtr(_))
                 .then(|| tcx.parent(borrowed_param_def_ids.lt)),
         };
-        self.synthetic_item_data.insert(item, data);
+        synthetic_item_data.insert(item, data);
         data
     }
 }

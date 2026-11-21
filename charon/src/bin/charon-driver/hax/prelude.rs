@@ -2,7 +2,7 @@ pub use crate::hax::*;
 pub use rustc_hash::FxHashMap as HashMap;
 pub use rustc_index::IndexVec;
 pub use std::path::PathBuf;
-pub use std::rc::Rc;
+pub use std::sync::Arc;
 
 pub use crate::hax::constant_utils::*;
 pub use crate::hax::traits::*;

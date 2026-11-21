@@ -42,14 +42,55 @@ impl GlobalRef {
 }
 
 impl<'tcx> AllocTypes<'tcx> {
+    /// The view of this allocation, deciding it with `default` if it has none yet.
+    fn lookup(
+        &self,
+        alloc_id: interpret::AllocId,
+        default: impl FnOnce() -> AllocView<'tcx>,
+    ) -> AllocView<'tcx> {
+        let mut data = self.0.lock();
+        let data = &mut *data;
+        let Some(lookups) = &mut data.lookups else {
+            return *data.views.entry(alloc_id).or_insert_with(default);
+        };
+        let default = default();
+        let view = *data.views.entry(alloc_id).or_insert(default);
+        let lookups = lookups.entry(std::thread::current().id()).or_default();
+        lookups.push(ViewLookup {
+            alloc_id,
+            default,
+            view,
+        });
+        view
+    }
+
     /// Gets the view for this allocation; if none had been decided, it is now viewed untyped.
     pub(crate) fn get(&self, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
-        *self.0.borrow_mut().entry(alloc_id).or_default()
+        self.lookup(alloc_id, || AllocView::Untyped)
+    }
+
+    /// Start recording the lookups of views.
+    pub fn record_lookups(&self) {
+        self.0.lock().lookups.get_or_insert_default();
+    }
+
+    /// Take the lookups this thread recorded so far.
+    pub fn take_lookups(&self) -> Vec<ViewLookup<'tcx>> {
+        let mut data = self.0.lock();
+        let lookups = data.lookups.as_mut().unwrap();
+        lookups
+            .remove(&std::thread::current().id())
+            .unwrap_or_default()
+    }
+
+    /// Set the view of this allocation, even if it had one.
+    pub fn force_view(&self, alloc_id: interpret::AllocId, view: AllocView<'tcx>) {
+        self.0.lock().views.insert(alloc_id, view);
     }
 
     /// The view decided for this allocation, if any: `Some(None)` if it is viewed untyped.
     pub fn decided_view(&self, alloc_id: interpret::AllocId) -> Option<Option<Ty<'tcx>>> {
-        self.0.borrow().get(&alloc_id).map(|view| match view {
+        self.0.lock().views.get(&alloc_id).map(|view| match view {
             AllocView::Untyped => None,
             AllocView::Typed(ty) => Some(*ty),
         })
@@ -68,7 +109,7 @@ impl<'tcx> AllocTypes<'tcx> {
         alloc_id: interpret::AllocId,
         f: impl FnOnce() -> AllocView<'tcx>,
     ) {
-        self.0.borrow_mut().entry(alloc_id).or_insert_with(f);
+        self.lookup(alloc_id, f);
     }
 
     pub(crate) fn is_typed(&self, alloc_id: interpret::AllocId) -> bool {
@@ -203,7 +244,9 @@ impl<'tcx> ConstReader<'tcx> {
                     .type_of(def_id)
                     .instantiate_identity()
                     .skip_normalization();
-                let val = tcx.const_eval_resolve(self.eval_typing_env(args), uv, span).ok();
+                let val = tcx
+                    .const_eval_resolve(self.eval_typing_env(args), uv, span)
+                    .ok();
                 let evaluated = val.map(|val| (val, ty));
                 // Otherwise, we can still read the value of "trivial" consts, which rustc
                 // stores directly. This works even for generic consts.

@@ -371,7 +371,7 @@ fn encode_def_id<'tcx>(
         DefIdBase::Alloc(alloc_id) => {
             // The translation of the allocation depends on the type we view it at, which is
             // decided when we first read it. We can't encode it until then.
-            match s.with_global_cache(|cache| cache.alloc_types.decided_view(alloc_id)) {
+            match s.global_cache().alloc_types.decided_view(alloc_id) {
                 Some(view) => {
                     e.emit_u8(4);
                     alloc_id.encode(e);
@@ -424,7 +424,7 @@ fn decode_def_id<'tcx>(
         4 => {
             let alloc_id = AllocId::decode(d);
             let view = Option::<ty::Ty<'tcx>>::decode(d);
-            s.with_global_cache(|cache| cache.alloc_types.decide_view(alloc_id, view));
+            s.global_cache().alloc_types.decide_view(alloc_id, view);
             if number_allocs {
                 hax::DefId::make_anon_alloc(s, alloc_id)
             } else {

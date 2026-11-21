@@ -3,7 +3,7 @@ use crate::hax::prelude::*;
 use rustc_data_structures::intern::Interned;
 use rustc_middle::ty;
 use rustc_span::def_id::DefId as RDefId;
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 /// Reference to an item, with generics. Basically any mention of an item (function, type, etc)
 /// uses this.
@@ -65,7 +65,7 @@ pub struct ItemRefContents<'tcx> {
     /// See [`ItemRefContents::trait_proofs`].
     #[value(match &self.trait_proofs {
         Some(trait_proofs) => TraitProofs::Resolved(self.assoc_trait_proofs(trait_proofs).sinto(s)),
-        None => TraitProofs::Lazy(self.clone(), OnceCell::new()),
+        None => TraitProofs::Lazy(self.clone(), OnceLock::new()),
     })]
     trait_proofs: TraitProofs<'tcx>,
     /// If we're referring to a trait associated item, this gives the trait clause/impl we're
@@ -91,7 +91,7 @@ enum TraitProofs<'tcx> {
     Resolved(Vec<TraitProof<'tcx>>),
     Lazy(
         rustc_trait_elaboration::ItemRef<'tcx, DefId>,
-        OnceCell<Vec<TraitProof<'tcx>>>,
+        OnceLock<Vec<TraitProof<'tcx>>>,
     ),
 }
 
@@ -236,7 +236,7 @@ impl<'tcx> ItemRef<'tcx> {
         // Use the same representation as other parameter-free references.
         let trait_proofs = TraitProofs::Lazy(
             rustc_trait_elaboration::ItemRef::dummy_without_generics(def_id.clone()),
-            OnceCell::new(),
+            OnceLock::new(),
         );
         let content = ItemRefContents {
             def_id,

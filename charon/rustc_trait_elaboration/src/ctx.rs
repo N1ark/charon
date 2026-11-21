@@ -1,10 +1,10 @@
 use rustc_data_structures::sharded::ShardedHashMap;
+use rustc_data_structures::sync::{Lock, LockGuard};
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
 use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty;
 use rustc_trait_selection::traits::ImplSource;
-use std::cell::{RefCell, RefMut};
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
@@ -13,7 +13,6 @@ use crate::{
 };
 
 pub mod intern {
-    use rustc_arena::TypedArena;
     use rustc_data_structures::intern::Interned;
     use rustc_data_structures::sharded::{IntoPointer, ShardedHashMap};
     use std::borrow::Borrow;
@@ -22,14 +21,12 @@ pub mod intern {
     /// Storage for deduplicated values. The values handed out are compared by address.
     pub struct Interner<'tcx, T: Eq + Hash> {
         values: ShardedHashMap<InternedValue<'tcx, T>, ()>,
-        arena: TypedArena<T>,
     }
 
     impl<'tcx, T: Eq + Hash> Default for Interner<'tcx, T> {
         fn default() -> Self {
             Self {
                 values: Default::default(),
-                arena: Default::default(),
             }
         }
     }
@@ -38,7 +35,7 @@ pub mod intern {
         pub fn intern(&'tcx self, value: T) -> Interned<'tcx, T> {
             let interned = self
                 .values
-                .intern(value, |value| InternedValue(self.arena.alloc(value)));
+                .intern(value, |value| InternedValue(Box::leak(Box::new(value))));
             Interned::new_unchecked(interned.0)
         }
     }
@@ -103,14 +100,14 @@ pub(crate) type Selection<'tcx> = Result<ImplSource<'tcx, ()>, CodegenObligation
 struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
-    predicate_searchers: RefCell<PredicateSearchers<'tcx, Id>>,
-    empty_env_searcher: RefCell<Option<PredicateSearcher<'tcx, Id>>>,
-    concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
-    concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
+    predicate_searchers: Lock<PredicateSearchers<'tcx, Id>>,
+    empty_env_searcher: Lock<Option<PredicateSearcher<'tcx, Id>>>,
+    concrete_item_refs: Lock<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
+    concrete_trait_proofs: Lock<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
     /// The trait clauses of each environment, normalized and erased like the trait refs we resolve.
-    caller_bound_trefs: RefCell<FxHashMap<ty::ParamEnv<'tcx>, FxHashSet<ty::PolyTraitRef<'tcx>>>>,
+    caller_bound_trefs: Lock<FxHashMap<ty::ParamEnv<'tcx>, FxHashSet<ty::PolyTraitRef<'tcx>>>>,
     /// The results of rustc's trait selection.
-    selections: RefCell<FxHashMap<(ty::ParamEnv<'tcx>, ty::PolyTraitRef<'tcx>), Selection<'tcx>>>,
+    selections: Lock<FxHashMap<(ty::ParamEnv<'tcx>, ty::PolyTraitRef<'tcx>), Selection<'tcx>>>,
     required_predicates: PredicateCache<'tcx, Id>,
     required_recursively_predicates: PredicateCache<'tcx, Id>,
     implied_predicates: PredicateCache<'tcx, Id>,
@@ -137,9 +134,11 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
 /// The predicate searchers of the items we've seen. Items with the same `SearcherKey` share a
 /// searcher, and thus the resolutions it caches.
 struct PredicateSearchers<'tcx, Id: ItemId> {
-    of_item: FxHashMap<Id, usize>,
-    of_key: FxHashMap<SearcherKey<'tcx, Id>, usize>,
-    searchers: Vec<PredicateSearcher<'tcx, Id>>,
+    of_item: FxHashMap<Id, &'tcx Lock<PredicateSearcher<'tcx, Id>>>,
+    of_key: FxHashMap<SearcherKey<'tcx, Id>, &'tcx Lock<PredicateSearcher<'tcx, Id>>>,
+    /// The searchers, boxed so that the references above stay valid.
+    #[allow(clippy::vec_box)]
+    searchers: Vec<Box<Lock<PredicateSearcher<'tcx, Id>>>>,
 }
 
 impl<'tcx, Id: ItemId> Default for PredicateSearchers<'tcx, Id> {
@@ -218,13 +217,13 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
 
     pub(crate) fn concrete_item_refs(
         &self,
-    ) -> &'tcx RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>> {
+    ) -> &'tcx Lock<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>> {
         &self.data.concrete_item_refs
     }
 
     pub(crate) fn concrete_trait_proofs(
         &self,
-    ) -> &'tcx RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>> {
+    ) -> &'tcx Lock<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>> {
         &self.data.concrete_trait_proofs
     }
 
@@ -242,7 +241,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         tref: ty::PolyTraitRef<'tcx>,
     ) -> bool {
         let tcx = self.tcx;
-        let mut caller_bound_trefs = self.data.caller_bound_trefs.borrow_mut();
+        let mut caller_bound_trefs = self.data.caller_bound_trefs.lock();
         caller_bound_trefs
             .entry(typing_env.param_env)
             .or_insert_with(|| {
@@ -267,13 +266,13 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         param_env: ty::ParamEnv<'tcx>,
         tref: ty::PolyTraitRef<'tcx>,
     ) -> Selection<'tcx> {
-        if let Some(selection) = self.data.selections.borrow().get(&(param_env, tref)) {
+        if let Some(selection) = self.data.selections.lock().get(&(param_env, tref)) {
             return selection.clone();
         }
         let selection = shallow_resolve_trait_ref(self.tcx, param_env, tref);
         self.data
             .selections
-            .borrow_mut()
+            .lock()
             .insert((param_env, tref), selection.clone());
         selection
     }
@@ -282,27 +281,37 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> RefMut<'_, PredicateSearcher<'tcx, Id>> {
-        let mut searchers = self.data.predicate_searchers.borrow_mut();
-        let index = match searchers.of_item.get(&def_id) {
-            Some(&index) => index,
+    ) -> LockGuard<'tcx, PredicateSearcher<'tcx, Id>> {
+        let searchers = &self.data.predicate_searchers;
+        let found = searchers.lock().of_item.get(&def_id).copied();
+        let searcher = match found {
+            Some(searcher) => searcher,
             None => {
+                // We build searchers without holding the lock: this may take a while.
                 let key = SearcherKey::for_owner(*self, state, &def_id);
-                let index = match searchers.of_key.get(&key) {
-                    Some(&index) => index,
+                let found = searchers.lock().of_key.get(&key).copied();
+                let searcher = match found {
+                    Some(searcher) => searcher,
                     None => {
-                        let index = searchers.searchers.len();
-                        let searcher = PredicateSearcher::new(*self, state, &key);
-                        searchers.searchers.push(searcher);
-                        searchers.of_key.insert(key, index);
-                        index
+                        let new = Box::new(Lock::new(PredicateSearcher::new(*self, state, &key)));
+                        let mut searchers = searchers.lock();
+                        match searchers.of_key.get(&key) {
+                            Some(searcher) => *searcher,
+                            None => {
+                                // SAFETY: the box lives as long as `self.data`.
+                                let searcher: &'tcx Lock<_> = unsafe { &*(&*new as *const _) };
+                                searchers.searchers.push(new);
+                                searchers.of_key.insert(key, searcher);
+                                searcher
+                            }
+                        }
                     }
                 };
-                searchers.of_item.insert(def_id, index);
-                index
+                searchers.lock().of_item.insert(def_id, searcher);
+                searcher
             }
         };
-        RefMut::map(searchers, |searchers| &mut searchers.searchers[index])
+        searcher.lock()
     }
 
     /// Resolve the trait proofs of an item reference that left them unresolved. Since they don't
@@ -324,7 +333,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         def_id: &Id,
         generics: ty::GenericArgsRef<'tcx>,
     ) -> Vec<TraitProof<'tcx, Id>> {
-        let mut searcher = self.data.empty_env_searcher.borrow_mut();
+        let mut searcher = self.data.empty_env_searcher.lock();
         searcher
             .get_or_insert_with(|| PredicateSearcher::new_empty(*self))
             .resolve_item_required_predicates(state, def_id.clone(), generics)

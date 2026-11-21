@@ -7,6 +7,7 @@
 extern crate rustc_abi;
 extern crate rustc_attr_ir;
 extern crate rustc_const_eval;
+extern crate rustc_data_structures;
 extern crate rustc_hir;
 extern crate rustc_middle;
 extern crate rustc_span;
@@ -34,18 +35,36 @@ pub struct Config {
 }
 
 /// How we view an anonymous allocation
-#[derive(Clone, Copy, Default)]
-enum AllocView<'tcx> {
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum AllocView<'tcx> {
     #[default]
     Untyped,
     Typed(Ty<'tcx>),
 }
 
-/// The types at which we view anonymous allocations.
+/// The types at which we view anonymous allocations. The first lookup of an allocation decides its
+/// view.
 #[derive(Default, Clone)]
 pub struct AllocTypes<'tcx>(
-    std::rc::Rc<std::cell::RefCell<FxHashMap<interpret::AllocId, AllocView<'tcx>>>>,
+    std::sync::Arc<rustc_data_structures::sync::Lock<AllocTypesData<'tcx>>>,
 );
+
+#[derive(Default)]
+struct AllocTypesData<'tcx> {
+    views: FxHashMap<interpret::AllocId, AllocView<'tcx>>,
+    /// If set, the lookups of views of each thread, in order.
+    lookups: Option<FxHashMap<std::thread::ThreadId, Vec<ViewLookup<'tcx>>>>,
+}
+
+/// A lookup of the view of an allocation.
+#[derive(Debug, Clone, Copy)]
+pub struct ViewLookup<'tcx> {
+    pub alloc_id: interpret::AllocId,
+    /// The view the lookup decides if the allocation has none yet.
+    pub default: AllocView<'tcx>,
+    /// The view it got.
+    pub view: AllocView<'tcx>,
+}
 
 /// Evaluates and reads constants in a given typing environment.
 pub struct ConstReader<'tcx> {
