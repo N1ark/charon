@@ -76,6 +76,7 @@ use std::cell::{Cell, RefCell};
 
 use crate::{
     ast::*,
+    errors::Level,
     formatter::IntoFormatter,
     ids::IndexMap,
     pretty::FmtWithCtx,
@@ -1006,7 +1007,20 @@ struct UpdateItemBody<'a> {
     caches: &'a RefCell<Caches>,
     /// Whether we reported an error while visiting this item.
     reported_error: Cell<bool>,
+    /// The messages of the "could not compute" errors reported in this item, keyed by what they
+    /// mention. An item often runs into the same error many times.
+    error_msgs: RefCell<HashMap<ErrorMsgKey, String>>,
 }
+
+/// The path, base trait ref, target, arguments so far, binder state and `Self` trait ref.
+type ErrorMsgKey = (
+    AssocTypePath,
+    TraitRef,
+    GenericsSource,
+    GenericArgs,
+    u32,
+    Option<TraitRef>,
+);
 
 /// Caches for operations that walk whole types or trait refs, which can be big. The same inputs
 /// recur a lot across the crate.
@@ -1341,25 +1355,35 @@ impl UpdateItemBody<'_> {
                         Either stop using this option or `--exclude` this trait."
                     );
                 } else {
-                    let path_fmt = path
-                        .on_real_tref(&self.ctx.translated, base_tref.clone())
-                        .map(|ty| ty.to_string_with_ctx(fmt_ctx))
-                        .unwrap_or_else(|| path_fmt.to_string());
-                    let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
-                    let base_tref = base_tref.with_ctx(fmt_ctx);
-                    let args = args.with_ctx(fmt_ctx);
-                    register_error!(
-                        self.ctx,
-                        self.span,
-                        "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
-                    item reference {item_name}{args}.\
-                    \nConstraints in scope:\n{}",
-                        self.type_replacements
-                            .iter()
-                            .flat_map(|x| x.iter())
-                            .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
-                            .join("\n"),
+                    let key = (
+                        path.clone(),
+                        base_tref.clone(),
+                        target.clone(),
+                        args.clone(),
+                        self.binder_state,
+                        self_path.clone(),
                     );
+                    let mut error_msgs = self.error_msgs.borrow_mut();
+                    let msg = error_msgs.entry(key).or_insert_with(|| {
+                        let path_fmt = path
+                            .on_real_tref(&self.ctx.translated, base_tref.clone())
+                            .map(|ty| ty.to_string_with_ctx(fmt_ctx))
+                            .unwrap_or_else(|| path_fmt.to_string());
+                        let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
+                        let base_tref = base_tref.with_ctx(fmt_ctx);
+                        let args = args.with_ctx(fmt_ctx);
+                        format!(
+                            "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
+                        item reference {item_name}{args}.\
+                        \nConstraints in scope:\n{}",
+                            self.type_replacements
+                                .iter()
+                                .flat_map(|x| x.iter())
+                                .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
+                                .join("\n"),
+                        )
+                    });
+                    self.ctx.span_err(self.span, msg, Level::WARNING);
                 }
                 self.reported_error.set(true);
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
@@ -1777,6 +1801,7 @@ impl TransformPass for Transform {
                 pushed_sets: 0,
                 caches: &caches.get(),
                 reported_error: Cell::new(false),
+                error_msgs: Default::default(),
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(
