@@ -33,7 +33,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         self.translate_stack.push(trans_id);
         if let Some(id) = trans_id.as_item()
             && self.cache.is_some()
-            && (self.translated.get_item(id).is_some() || self.cache_load(id))
+            && (self.is_translated(id) || self.cache_load(id))
         {
             self.translate_stack.pop();
             return;
@@ -236,6 +236,7 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn get_or_translate(&mut self, id: ItemId) -> Result<ItemRef<'_>, Error> {
         // A replay of the translation in progress must translate this item too.
         self.cache_record_use(id);
+        self.cache_decode_now(id);
         // We have to call `get_item` a few times because we're running into the classic `Polonius`
         // problem case.
         if self.translated.get_item(id).is_none() {

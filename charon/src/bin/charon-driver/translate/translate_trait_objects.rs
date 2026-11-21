@@ -747,7 +747,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             }),
             _ => self.t_ctx.cache_taint("vtable of another impl"),
         }
-        if self.translated.global_decls.get(vtable.id).is_none() {
+        if !self.t_ctx.is_translated(vtable.id.into()) {
             Ok(VTableDecl::Lazy)
         } else {
             Ok(VTableDecl::VTable(vtable))

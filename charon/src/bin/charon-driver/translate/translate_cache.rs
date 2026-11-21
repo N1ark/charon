@@ -17,12 +17,17 @@
 //! costly, as it resolves trait references. We decode the source of an unbound item only when we
 //! need it, e.g. to translate the item if its translation isn't cached.
 //!
+//! Translation rarely reads translated items, so loading an item only replays its registrations
+//! and effects: we decode most items at the end of the translation, in parallel (see
+//! [`PendingItem`]).
+//!
 //! Entries live in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else the
 //! translation depends on: the charon binary, the options and the upstream crates.
 use std::borrow::Cow;
 use std::cell::Cell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use rustc_data_structures::fingerprint::Fingerprint;
 use rustc_data_structures::fx::FxHashMap;
@@ -39,6 +44,7 @@ use rustc_span::{
     AttrId, BlobDecoder, ByteSymbol, DUMMY_SP, ExpnId, Span, SpanDecoder, SpanEncoder, Symbol,
     SyntaxContext,
 };
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use serde_state_perfect_derive as serde_state;
@@ -615,8 +621,8 @@ struct CachedRef<'a> {
 }
 
 /// An entry is: this head, the length of the serialized name and the name if `name_refs` is
-/// `Some`, and if `has_body`, the references of the item (`Vec<CachedRef>`) and its
-/// `CachedBody`.
+/// `Some`, and if `has_body`, the references of the item (`Vec<CachedRef>`), the length of its
+/// serialized effects (`Vec<Effect>`), its effects and the item (`CachedItem`).
 #[derive(Serialize, Deserialize)]
 struct EntryHead<'a> {
     /// The id of the item itself in the session that stored it.
@@ -626,12 +632,6 @@ struct EntryHead<'a> {
     /// The registrations made to compute the name of the item, if we stored its name.
     #[serde(borrow)]
     name_refs: Option<Vec<CachedRef<'a>>>,
-}
-
-#[derive(SerializeState, DeserializeState)]
-struct CachedBody {
-    item: CachedItem,
-    effects: Vec<Effect>,
 }
 
 #[derive(SerializeState, DeserializeState)]
@@ -655,7 +655,7 @@ pub(crate) struct CacheStats {
 
 /// The bytes of an entry, in the pack that holds them.
 struct EntryBytes {
-    pack: Rc<Mmap>,
+    pack: Arc<Mmap>,
     range: std::ops::Range<usize>,
 }
 
@@ -678,7 +678,7 @@ const PACK_MAGIC: &[u8; 8] = b"CHRNPAK1";
 pub(crate) struct TranslationCache<'tcx> {
     dir: PathBuf,
     /// The pack files of the cache, and the entries they contain.
-    packs: Vec<Rc<Mmap>>,
+    packs: Vec<Arc<Mmap>>,
     index: HashMap<u128, EntryLoc>,
     /// The entries stored by this session, written to a new pack at the end.
     new_pack: Vec<u8>,
@@ -702,7 +702,28 @@ pub(crate) struct TranslationCache<'tcx> {
     stored: rustc_hash::FxHashSet<u128>,
     /// The files of the local crate.
     pub(crate) local_files: rustc_hash::FxHashSet<FileId>,
+    /// The loaded items we haven't decoded yet, and those whose decoding failed.
+    pending: HashMap<ItemId, PendingItem>,
+    failed: rustc_hash::FxHashSet<ItemId>,
     stats: CacheStats,
+}
+
+/// An item loaded from the cache whose registrations and effects we replayed, and that we decode
+/// later. Trait impls are never pending: the effects of other items update them, and the names of
+/// items mention them.
+struct PendingItem {
+    bytes: EntryBytes,
+    /// Where the serialized `CachedItem` starts in `bytes`.
+    item_start: usize,
+    id_map: HashMap<ItemId, ItemId>,
+    files: Vec<FileId>,
+    name: Name,
+}
+
+impl PendingItem {
+    fn decode(&self) -> Option<CachedItem> {
+        decode_entry_value(&self.bytes[self.item_start..], &self.id_map, &self.files)
+    }
 }
 
 /// Read the index of a pack.
@@ -785,7 +806,7 @@ impl<'tcx> TranslationCache<'tcx> {
                         index.insert(hash, loc);
                     }
                 }
-                packs.push(Rc::new(pack));
+                packs.push(Arc::new(pack));
             }
         }
         Some(Self {
@@ -804,6 +825,8 @@ impl<'tcx> TranslationCache<'tcx> {
             processed_unbound: Default::default(),
             stored: Default::default(),
             local_files: Default::default(),
+            pending: Default::default(),
+            failed: Default::default(),
             stats: Default::default(),
         })
     }
@@ -1113,7 +1136,17 @@ impl<'tcx> TranslateCtx<'tcx> {
             .collect()
     }
 
-    /// Try to get the translation of this item from the cache. Returns whether it succeeded.
+    /// Whether this item is translated, or loaded from the cache and waiting to be decoded.
+    pub(crate) fn is_translated(&self, id: ItemId) -> bool {
+        self.translated.get_item(id).is_some()
+            || self
+                .cache
+                .as_ref()
+                .is_some_and(|cache| cache.pending.contains_key(&id))
+    }
+
+    /// Try to get the translation of this item from the cache. Returns whether it succeeded. The
+    /// item itself is decoded later, see [`PendingItem`].
     pub(crate) fn cache_load(&mut self, id: ItemId) -> bool {
         let Some(cache) = &mut self.cache else {
             return false;
@@ -1121,6 +1154,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         let Some(key) = cache.keys.get(&id) else {
             return false;
         };
+        if cache.failed.contains(&id) {
+            return false;
+        }
         // The name was computed when we registered the item.
         let Some(name) = self.translated.item_names.get(&id).cloned() else {
             return false;
@@ -1141,10 +1177,13 @@ impl<'tcx> TranslateCtx<'tcx> {
             }
             let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
             let rest = rest.get(4 + name_len..)?;
-            let (refs, body) = postcard::take_from_bytes::<Vec<CachedRef>>(rest).ok()?;
-            Some((head, refs, body))
+            let (refs, rest) = postcard::take_from_bytes::<Vec<CachedRef>>(rest).ok()?;
+            let effects_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
+            let effects = rest.get(4..4 + effects_len)?;
+            let item_start = bytes.len() - (rest.len() - 4 - effects_len);
+            Some((head, refs, effects, item_start))
         })();
-        let Some((head, refs, body)) = parsed else {
+        let Some((head, refs, effects, item_start)) = parsed else {
             cache.stats.misses += 1;
             return false;
         };
@@ -1167,27 +1206,28 @@ impl<'tcx> TranslateCtx<'tcx> {
         id_map.insert(head.self_id, id);
         id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
         let files = self.cache_register_files(head.files);
-        let Some(CachedBody { item, effects }) = decode_entry_value(body, &id_map, &files) else {
+        let Some(effects) = decode_entry_value::<Vec<Effect>>(effects, &id_map, &files) else {
             self.cache.as_mut().unwrap().recorders.pop();
             self.cache.as_mut().unwrap().stats.misses += 1;
             return false;
         };
-
-        macro_rules! finish {
-            ($decl:expr, $slots:ident) => {{
-                let mut decl = $decl;
-                decl.item_meta.name = name;
-                self.translated
-                    .$slots
-                    .set_slot(id.try_into().ok().unwrap(), decl);
-            }};
-        }
-        match item {
-            CachedItem::Type(decl) => finish!(decl, type_decls),
-            CachedItem::Fun(decl) => finish!(decl, fun_decls),
-            CachedItem::Global(decl) => finish!(decl, global_decls),
-            CachedItem::TraitDecl(decl) => finish!(decl, trait_decls),
-            CachedItem::TraitImpl(decl) => finish!(decl, trait_impls),
+        let pending = PendingItem {
+            item_start,
+            bytes,
+            id_map,
+            files,
+            name,
+        };
+        if id.is_trait_impl() {
+            let item = pending.decode();
+            if item.is_none() {
+                self.cache.as_mut().unwrap().recorders.pop();
+                self.cache.as_mut().unwrap().stats.misses += 1;
+                return false;
+            }
+            self.cache_finish_pending(id, pending, item);
+        } else {
+            self.cache.as_mut().unwrap().pending.insert(id, pending);
         }
 
         for effect in effects {
@@ -1202,7 +1242,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                     self.mark_method_as_used(trait_id, method_id);
                 }
                 Effect::ImplVTable(impl_id, vtable) => {
-                    let translated = self.translated.global_decls.get(vtable.id).is_some();
+                    let translated = self.is_translated(vtable.id.into());
                     if let Some(timpl) = self.translated.trait_impls.get_mut(impl_id)
                         && matches!(timpl.vtable, VTableDecl::Lazy | VTableDecl::VTable(_))
                     {
@@ -1224,6 +1264,70 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         self.cache.as_mut().unwrap().recorders.pop();
         self.cache.as_mut().unwrap().stats.hits += 1;
+        true
+    }
+
+    /// Put a decoded pending item in the translated crate, or mark it as failed if it couldn't be
+    /// decoded.
+    fn cache_finish_pending(&mut self, id: ItemId, pending: PendingItem, item: Option<CachedItem>) {
+        let cache = self.cache.as_mut().unwrap();
+        let Some(item) = item else {
+            cache.stats.hits -= 1;
+            cache.stats.misses += 1;
+            cache.failed.insert(id);
+            return;
+        };
+        let name = pending.name;
+        macro_rules! finish {
+            ($decl:expr, $slots:ident) => {{
+                let mut decl = $decl;
+                decl.item_meta.name = name;
+                self.translated
+                    .$slots
+                    .set_slot(id.try_into().ok().unwrap(), decl);
+            }};
+        }
+        match item {
+            CachedItem::Type(decl) => finish!(decl, type_decls),
+            CachedItem::Fun(decl) => finish!(decl, fun_decls),
+            CachedItem::Global(decl) => finish!(decl, global_decls),
+            CachedItem::TraitDecl(decl) => finish!(decl, trait_decls),
+            CachedItem::TraitImpl(decl) => finish!(decl, trait_impls),
+        }
+    }
+
+    /// Decode this item now if it is pending. If that fails, the item is left untranslated.
+    pub(crate) fn cache_decode_now(&mut self, id: ItemId) {
+        if let Some(pending) = self.cache.as_mut().and_then(|c| c.pending.remove(&id)) {
+            let item = pending.decode();
+            self.cache_finish_pending(id, pending, item);
+        }
+    }
+
+    /// Decode all the pending items, in parallel. The items that fail to decode get translated.
+    /// Returns whether there were pending items.
+    pub(crate) fn cache_decode_pending(&mut self) -> bool {
+        let Some(cache) = &mut self.cache else {
+            return false;
+        };
+        if cache.pending.is_empty() {
+            return false;
+        }
+        let _guard = charon_lib::timing::scope("cache-decode");
+        let mut pending: Vec<_> = cache.pending.drain().collect();
+        pending.sort_unstable_by_key(|(id, _)| *id);
+        let items: Vec<_> = pending.par_iter().map(|(_, p)| p.decode()).collect();
+        let mut failed = vec![];
+        for ((id, pending), item) in pending.into_iter().zip(items) {
+            if item.is_none() {
+                failed.push(id);
+            }
+            self.cache_finish_pending(id, pending, item);
+        }
+        for id in failed {
+            let src = self.source_of(id);
+            self.translate_item(&src);
+        }
         true
     }
 
@@ -1472,14 +1576,11 @@ impl<'tcx> TranslateCtx<'tcx> {
                     CachedItem::TraitImpl(d) => cache.only_stored_files(d),
                 };
                 // Effects only mention vtable refs, which have no spans.
-                only_stored_files.then(|| CachedBody {
-                    item,
-                    effects: recorder.effects.clone(),
-                })
+                only_stored_files.then_some(item)
             })
             .flatten();
         self.translated.get_item_mut(id).unwrap().item_meta().name = name;
-        let bytes = serialized.and_then(|body| {
+        let bytes = serialized.and_then(|item| {
             // The name section may add files.
             let name_section = self.cache_name_section(id, &mut files);
             let head = EntryHead {
@@ -1497,7 +1598,13 @@ impl<'tcx> TranslateCtx<'tcx> {
             bytes.extend_from_slice(&name_bytes);
             bytes = postcard::to_extend(&refs, bytes).ok()?;
             let state = DedupSerializer::default();
-            postcard::to_extend(&serde_state::WithState::new(&body, &state), bytes).ok()
+            let effects =
+                postcard::to_allocvec(&serde_state::WithState::new(&recorder.effects, &state))
+                    .ok()?;
+            bytes.extend_from_slice(&(effects.len() as u32).to_le_bytes());
+            bytes.extend_from_slice(&effects);
+            let state = DedupSerializer::default();
+            postcard::to_extend(&serde_state::WithState::new(&item, &state), bytes).ok()
         });
         let cache = self.cache.as_mut().unwrap();
         match bytes {

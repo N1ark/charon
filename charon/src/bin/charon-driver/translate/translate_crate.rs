@@ -639,7 +639,7 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn enqueue_id(&mut self, id: impl Into<ItemId>) {
         let id = id.into();
         self.cache_taint("enqueue by id");
-        if self.translated.get_item(id).is_none() {
+        if !self.is_translated(id) {
             match self.reverse_id_map.get(&id) {
                 Some(item_src) => self.items_to_translate.push_back(item_src.clone()),
                 None => self.cache_enqueue_unbound(id),
@@ -1527,7 +1527,7 @@ pub fn translate<'tcx>(
             }
         } else if let Some(id) = ctx.cache.as_mut().and_then(|c| c.pop_unbound()) {
             ctx.cache_translate_unbound(id);
-        } else {
+        } else if !ctx.cache_decode_pending() {
             break;
         }
     }
