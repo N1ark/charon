@@ -11,6 +11,7 @@ use index_vec::Idx;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 
+use crate::utils::ustr::Ustr;
 use crate::{ast::*, impl_from_enum};
 
 /// The index of a binder, counting from the innermost. See [`DeBruijnVar`] for details.
@@ -117,7 +118,7 @@ pub struct TypeParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: TypeVarId,
     /// Variable name
-    pub name: String,
+    pub name: Ustr,
     /// Variance of this parameter.
     pub variance: Variance,
 }
@@ -129,7 +130,7 @@ pub struct RegionParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: RegionId,
     /// Region name
-    pub name: Option<String>,
+    pub name: Option<Ustr>,
     /// Variance of this parameter.
     pub variance: Variance,
     /// Whether this lifetime is (recursively) used in a `&'a mut T` type. Only `true` if this
@@ -163,7 +164,8 @@ pub struct ConstGenericParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: ConstGenericVarId,
     /// Const generic name
-    pub name: String,
+    #[serde_state(stateless)]
+    pub name: Ustr,
     /// Type of the const generic
     pub ty: Ty,
 }
@@ -233,10 +235,10 @@ pub enum PredicateOrigin {
 }
 
 impl TypeParam {
-    pub fn new(index: TypeVarId, name: String, variance: Variance) -> Self {
+    pub fn new(index: TypeVarId, name: impl Into<Ustr>, variance: Variance) -> Self {
         Self {
             index,
-            name,
+            name: name.into(),
             variance,
         }
     }
@@ -246,7 +248,7 @@ impl RegionParam {
     pub fn new(index: RegionId, name: Option<String>, variance: Variance) -> Self {
         Self {
             index,
-            name,
+            name: name.map(Ustr::from),
             variance,
             mutability: LifetimeMutability::Unknown,
             late_bound: false,
@@ -255,8 +257,12 @@ impl RegionParam {
 }
 
 impl ConstGenericParam {
-    pub fn new(index: ConstGenericVarId, name: String, ty: Ty) -> Self {
-        Self { index, name, ty }
+    pub fn new(index: ConstGenericVarId, name: impl Into<Ustr>, ty: Ty) -> Self {
+        Self {
+            index,
+            name: name.into(),
+            ty,
+        }
     }
 }
 

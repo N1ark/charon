@@ -11,6 +11,7 @@ use rustc_span::def_id::DefId as RDefId;
 use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::{ItemTransCtx, TransImplSource, TransItemSourceKind};
 use charon_lib::ast::*;
+use charon_lib::utils::ustr::Ustr;
 
 /// A level of binding for type-level variables. Each item has a top-level binding level
 /// corresponding to the parameters and clauses to the items. We may then encounter inner binding
@@ -126,7 +127,7 @@ impl<'tcx> BindingLevel<'tcx> {
         );
         let rid = self.params.regions.push_with(|index| RegionParam {
             index,
-            name,
+            name: name.map(Ustr::from),
             variance,
             mutability,
             late_bound: false,
@@ -196,7 +197,7 @@ impl<'tcx> BindingLevel<'tcx> {
         }
         let var_id = self.params.types.push_with(|index| TypeParam {
             index,
-            name,
+            name: name.into(),
             variance,
         });
         self.type_vars_map.insert(rid, Some(var_id));
@@ -209,7 +210,7 @@ impl<'tcx> BindingLevel<'tcx> {
             .const_generics
             .push_with(|index| ConstGenericParam {
                 index,
-                name: name.to_string(),
+                name: name.to_string().into(),
                 ty,
             });
         self.const_generic_vars_map.insert(rid, var_id);

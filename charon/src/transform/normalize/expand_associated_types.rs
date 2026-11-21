@@ -81,7 +81,7 @@ use crate::{
     ids::IndexMap,
     pretty::FmtWithCtx,
     register_error,
-    utils::{CycleDetector, StackDepthLimitExceeded, try_ensure_sufficient_stack},
+    utils::{CycleDetector, StackDepthLimitExceeded, try_ensure_sufficient_stack, ustr::Ustr},
 };
 
 use crate::transform::{
@@ -1053,7 +1053,7 @@ struct Caches {
     /// `escaping_levels`, keyed by the address of the value.
     escaping_levels: HashMap<usize, u64>,
     /// `AssocTypePath::to_name`.
-    path_names: HashMap<AssocTypePath, String>,
+    path_names: HashMap<AssocTypePath, Ustr>,
     /// The types of the type variables at binder level zero, by variable id.
     type_vars: Vec<Ty>,
     /// The item-level replacements of the items that the ids below are for.
@@ -1094,12 +1094,12 @@ impl Caches {
             .or_insert(next_state)
     }
 
-    fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> String {
+    fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> Ustr {
         if let Some(name) = self.path_names.get(path) {
-            return name.clone();
+            return *name;
         }
-        let name = path.to_name(krate);
-        self.path_names.insert(path.clone(), name.clone());
+        let name = Ustr::from(path.to_name(krate));
+        self.path_names.insert(path.clone(), name);
         name
     }
 }
@@ -1377,7 +1377,9 @@ impl UpdateItemBody<'_> {
         // from the same clause.
         let mut last_clause: Option<(TraitClauseId, TraitRef)> = None;
         args.with_mut(|args| {
-            args.types.reserve(modifications.required_extra_params().count());
+            args.types
+                .raw
+                .reserve_exact(modifications.required_extra_params().count());
             for path in modifications.required_extra_params() {
                 let mut path = path.clone();
                 let base_tref = match path.tref.base {
@@ -1541,6 +1543,10 @@ impl VisitAstMut for UpdateItemBody<'_> {
             generics.trait_type_constraints.swap_remove(*cid);
         }
         let krate = &self.ctx.translated;
+        generics
+            .types
+            .raw
+            .reserve_exact(modifications.required_extra_paths.len());
         let replacements = modifications.compute_replacements(|path| {
             let mut caches = self.caches.borrow_mut();
             let name = caches.path_name(path, krate);
@@ -1839,6 +1845,10 @@ impl TransformPass for Transform {
             let type_replacements = type_replacements.unwrap_or_else(|| {
                 let caches = caches.get();
                 let mut caches = caches.borrow_mut();
+                item.generic_params()
+                    .types
+                    .raw
+                    .reserve_exact(modifications.required_extra_paths.len());
                 modifications.compute_replacements(|path| {
                     let name = caches.path_name(path, &ctx.translated);
                     let var_id = item

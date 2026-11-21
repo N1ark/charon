@@ -543,7 +543,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for ClauseDbVar {
 
 impl<C: AstFormatter> FmtWithCtx<C> for ConstGenericDbVar {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        ctx.format_bound_var(f, *self, "@ConstGeneric", |v| Some(v.name.clone()))
+        ctx.format_bound_var(f, *self, "@ConstGeneric", |v| Some(v.name.to_string()))
     }
 }
 
@@ -1631,18 +1631,18 @@ impl<C: AstFormatter> FmtWithCtx<C> for PathElem {
             }
             PathElem::Instantiated(binder) => {
                 // Anonymize all parameters.
-                let underscore = "_".to_string();
+                let underscore = crate::utils::ustr::Ustr::from("_");
                 let params = GenericParams {
                     regions: binder.params.regions.map_ref(|x| RegionParam {
-                        name: Some(underscore.clone()),
+                        name: Some(underscore),
                         ..*x
                     }),
                     types: binder.params.types.map_ref(|x| TypeParam {
-                        name: underscore.clone(),
+                        name: underscore,
                         ..*x
                     }),
                     const_generics: binder.params.const_generics.map_ref(|x| ConstGenericParam {
-                        name: underscore.clone(),
+                        name: underscore,
                         ty: x.ty.clone(),
                         index: x.index,
                     }),
@@ -3315,7 +3315,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for TypePattern {
 
 impl<C: AstFormatter> FmtWithCtx<C> for TypeDbVar {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        ctx.format_bound_var(f, *self, "@Type", |v| Some(v.name.clone()))
+        ctx.format_bound_var(f, *self, "@Type", |v| Some(v.name.to_string()))
     }
 }
 
