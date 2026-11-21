@@ -958,7 +958,44 @@ impl Renumber<'_> {
         }
         krate.files = new_files.into_iter().collect::<IndexVec<FileId, File>>();
 
+        // The items are independent: we renumber them in parallel, then the rest of the crate.
+        fn renumber_items<I: charon_lib::ids::Idx, T: AstVisitable + Send>(
+            this: &Renumber<'_>,
+            items: &mut IndexMap<I, T>,
+        ) {
+            use rayon::prelude::*;
+            let items: Vec<&mut T> = items.iter_mut().collect();
+            items.into_par_iter().for_each_init(
+                || Renumber {
+                    ids: this.ids,
+                    files: this.files,
+                    memo: Default::default(),
+                },
+                |renumber, item| {
+                    let _ = VisitAstMut::visit(renumber, item);
+                },
+            );
+        }
+        renumber_items(self, &mut krate.type_decls);
+        renumber_items(self, &mut krate.fun_decls);
+        renumber_items(self, &mut krate.global_decls);
+        renumber_items(self, &mut krate.trait_decls);
+        renumber_items(self, &mut krate.trait_impls);
+        let items = (
+            std::mem::take(&mut krate.type_decls),
+            std::mem::take(&mut krate.fun_decls),
+            std::mem::take(&mut krate.global_decls),
+            std::mem::take(&mut krate.trait_decls),
+            std::mem::take(&mut krate.trait_impls),
+        );
         let _ = krate.drive_mut(self);
+        (
+            krate.type_decls,
+            krate.fun_decls,
+            krate.global_decls,
+            krate.trait_decls,
+            krate.trait_impls,
+        ) = items;
     }
 }
 
