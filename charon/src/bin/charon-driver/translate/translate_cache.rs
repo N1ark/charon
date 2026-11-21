@@ -1245,6 +1245,15 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
     }
 
+    /// Whether we're recording a computation memoized across items. Such a recording doesn't see
+    /// what reusing a value from a cache of the current item skips, so it shouldn't reuse them.
+    pub(crate) fn cache_recording_memo(&self) -> bool {
+        self.cache
+            .as_ref()
+            .and_then(|cache| cache.recorders.last())
+            .is_some_and(|recorder| recorder.memo)
+    }
+
     /// Record that we reuse the translation of `hax_ty` from the cache of the current binder. The
     /// item recorded what the translation did, but a memoized computation in progress didn't.
     pub(crate) fn cache_reuse_binder_ty(&mut self, hax_ty: &hax::Ty<'tcx>) {

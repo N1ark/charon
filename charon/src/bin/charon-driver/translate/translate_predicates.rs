@@ -282,9 +282,12 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             self.error_on_trait_proof_error,
             self.lifetime_freshener.is_some(),
         );
-        let mut tref = if let Some((tref, mentioned_items)) =
+        let cached = if self.t_ctx.cache_recording_memo() {
+            None
+        } else {
             self.innermost_binder().trait_proof_trans_cache.get(&key)
-        {
+        };
+        let mut tref = if let Some((tref, mentioned_items)) = cached {
             let tref = tref.clone();
             // Record the uses of other items that translating the proof would have recorded.
             if !mentioned_items.is_empty() {
