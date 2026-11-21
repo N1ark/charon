@@ -3,6 +3,7 @@ use derive_generic_visitor::*;
 use index_vec::Idx;
 use itertools::Itertools;
 use petgraph::{graph::IndexType, unionfind::UnionFind};
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::{borrow::Cow, cell::Cell, fmt::Display, mem};
 
@@ -1321,12 +1322,18 @@ impl TransformPass for Check {
                 }
             }
         }
-        for (id, unifier) in unifications {
-            if let Some(Some(unifier)) = unifier
-                && let ItemId::Fun(id) = id
-            {
-                let _ = UnifyBodyRegions(unifier).visit(&mut ctx.translated.fun_decls[id].body);
-            }
-        }
+        let mut unifiers: HashMap<FunDeclId, UnionFind<RegionId>> = unifications
+            .into_iter()
+            .filter_map(|(id, unifier)| Some((*id.as_fun()?, unifier??)))
+            .collect();
+        ctx.translated
+            .fun_decls
+            .iter_mut()
+            .filter_map(|decl| Some((unifiers.remove(&decl.def_id)?, &mut decl.body)))
+            .collect_vec()
+            .into_par_iter()
+            .for_each(|(unifier, body)| {
+                let _ = UnifyBodyRegions(unifier).visit(body);
+            });
     }
 }

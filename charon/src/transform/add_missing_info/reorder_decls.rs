@@ -13,6 +13,7 @@ use crate::utils::*;
 use derive_generic_visitor::*;
 use itertools::Itertools;
 use petgraph::graphmap::DiGraphMap;
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fmt::{Debug, Display, Error};
 use std::vec::Vec;
@@ -137,21 +138,15 @@ impl Display for DeclarationGroup {
     }
 }
 
-#[derive(Default)]
-pub struct Deps {
-    /// The dependency graph between translated items. We're careful to only add items that got
-    /// translated.
-    graph: DiGraphMap<ItemId, (), rustc_hash::FxBuildHasher>,
-    unprocessed: Vec<ItemId>,
-    visited: HashSet<ItemId>,
-}
-
 /// We use this when computing the graph
 #[derive(Visitor)]
 pub struct DepsForItem<'a> {
     ctx: &'a TransformCtx,
-    deps: &'a mut Deps,
     current_id: ItemId,
+    /// The items the current item depends on; may contain duplicates.
+    edges: Vec<ItemId>,
+    /// The items reachable from the current item; may contain duplicates.
+    reachable: Vec<ItemId>,
     // Each item countains its own id; we dont' want to count that as a self-reference. Hence the
     // first time we see its own id, we skip.
     seen_current_id: bool,
@@ -205,18 +200,13 @@ pub struct DepsForItem<'a> {
     explored: HashMap<*const (), bool>,
 }
 
-impl Deps {
-    fn visitor_for_item<'a>(
-        &'a mut self,
-        ctx: &'a TransformCtx,
-        item: ItemRef<'_>,
-    ) -> DepsForItem<'a> {
+impl<'a> DepsForItem<'a> {
+    fn new(ctx: &'a TransformCtx, item: ItemRef<'_>) -> Self {
         let current_id = item.id();
-        self.graph.add_node(current_id);
-
         let mut for_item = DepsForItem {
             ctx,
-            deps: self,
+            edges: Vec::new(),
+            reachable: Vec::new(),
             seen_current_id: false,
             current_id,
             parent_trait_impl: None,
@@ -261,14 +251,12 @@ impl Deps {
 
         for_item
     }
-}
 
-impl DepsForItem<'_> {
     fn insert_node(&mut self, tgt: impl Into<ItemId>) {
         let tgt = tgt.into();
         // Only add translated items.
-        if self.ctx.translated.get_item(tgt).is_some() && !self.deps.visited.contains(&tgt) {
-            self.deps.unprocessed.push(tgt);
+        if self.ctx.translated.get_item(tgt).is_some() {
+            self.reachable.push(tgt);
         }
     }
     fn insert_edge(&mut self, tgt: impl Into<ItemId>) {
@@ -285,7 +273,7 @@ impl DepsForItem<'_> {
         self.insert_node(tgt);
         // Only add translated items.
         if self.ctx.translated.get_item(tgt).is_some() {
-            self.deps.graph.add_edge(self.current_id, tgt, ());
+            self.edges.push(tgt);
         }
     }
 }
@@ -434,27 +422,41 @@ impl VisitAst for DepsForItem<'_> {
 fn compute_declarations_graph(
     ctx: &TransformCtx,
 ) -> DiGraphMap<ItemId, (), rustc_hash::FxBuildHasher> {
-    let mut deps = Deps::default();
+    let mut graph = DiGraphMap::default();
     // Start from the items selected as starting points. We've mostly only translated items
     // accessible from those, but some passes render items inaccessible again, which we filter out
     // here.
-    deps.unprocessed = ctx
+    let mut frontier: Vec<ItemId> = ctx
         .translated
         .all_items()
         .filter(|item| item.item_meta().started_from)
         .map(|item| item.id())
         .collect();
+    let mut visited: HashSet<ItemId> = HashSet::default();
 
-    // Explore reachable items.
-    while let Some(id) = deps.unprocessed.pop() {
-        if deps.visited.insert(id)
-            && let Some(item) = ctx.translated.get_item(id)
-        {
-            let mut visitor = deps.visitor_for_item(ctx, item);
-            item.drive(&mut visitor);
+    // Explore reachable items, computing the dependencies of each layer of newly-reached items in
+    // parallel. The graph doesn't depend on the order of exploration.
+    while !frontier.is_empty() {
+        frontier.retain(|&id| visited.insert(id));
+        let deps: Vec<_> = frontier
+            .par_iter()
+            .filter_map(|&id| {
+                let item = ctx.translated.get_item(id)?;
+                let mut visitor = DepsForItem::new(ctx, item);
+                item.drive(&mut visitor);
+                Some((id, visitor.edges, visitor.reachable))
+            })
+            .collect();
+        frontier.clear();
+        for (id, edges, reachable) in deps {
+            graph.add_node(id);
+            for tgt in edges {
+                graph.add_edge(id, tgt, ());
+            }
+            frontier.extend(reachable.into_iter().filter(|id| !visited.contains(id)));
         }
     }
-    deps.graph
+    graph
 }
 
 fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {

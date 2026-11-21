@@ -7,7 +7,10 @@ use crate::{
     ids::{IndexMap, IndexVec},
 };
 
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
 
 pub struct Transform;
 impl TransformPass for Transform {
@@ -73,10 +76,10 @@ impl TransformPass for Transform {
         }
 
         // Update trait refs.
-        let _ = ctx.translated.drive_mut(&mut UpdateTraitRefs {
+        ctx.par_drive_mut(&PerThread::new_with(|| UpdateTraitRefs {
             trait_item_clause_ids: &trait_item_clause_ids,
             memo: Default::default(),
-        });
+        }));
     }
 }
 

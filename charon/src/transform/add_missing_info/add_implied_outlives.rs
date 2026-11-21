@@ -1,6 +1,7 @@
 //! Make explicit the outlives predicates implied by the well-formedness of a type.
 use derive_generic_visitor::*;
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::mem;
 
 use crate::ast::*;
@@ -388,49 +389,74 @@ impl TransformPass for Transform {
         // the implementation much easier than having to deal with all ADTs.
         ClosureOutlivesComputer::new(type_decls, trait_decls).compute_all();
 
-        for fun_decl in &mut ctx.translated.fun_decls {
-            let mut visitor =
-                OutlivesGatherer::new(&mut fun_decl.generics, type_decls, trait_decls);
-            visitor.visit(&mut fun_decl.signature);
-            // The impl header contributes to the implied bounds even if its types are
-            // not mentioned in the signature.
-            match &mut fun_decl.src {
-                FunSource::InherentImpl { self_ty } => {
-                    visitor.visit(self_ty);
+        // The items only read the type and trait declarations, whose relevant parts (the outlives
+        // predicates of types and associated types) don't change from now on, so we can process
+        // them in parallel.
+        let type_decls = &ctx.translated.type_decls;
+        let trait_decls = &ctx.translated.trait_decls;
+        ctx.translated
+            .fun_decls
+            .iter_mut()
+            .collect_vec()
+            .into_par_iter()
+            .for_each(|fun_decl| {
+                let mut visitor =
+                    OutlivesGatherer::new(&mut fun_decl.generics, type_decls, trait_decls);
+                visitor.visit(&mut fun_decl.signature);
+                // The impl header contributes to the implied bounds even if its types are
+                // not mentioned in the signature.
+                match &mut fun_decl.src {
+                    FunSource::InherentImpl { self_ty } => {
+                        visitor.visit(self_ty);
+                    }
+                    FunSource::TraitImpl { trait_ref, .. } => {
+                        visitor.visit(trait_ref);
+                    }
+                    _ => {}
                 }
-                FunSource::TraitImpl { trait_ref, .. } => {
-                    visitor.visit(trait_ref);
+                visitor.finish();
+
+                // Also add implied bounds to the inner binders inside bodies. Implied bounds
+                // involving only body or signature lifetimes must not be kept; they must be checked
+                // by borrow-checking.
+                OutlivesGatherer {
+                    discard_outermost: true,
+                    ..OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
                 }
-                _ => {}
-            }
-            visitor.finish();
+                .visit(&mut fun_decl.body);
+            });
 
-            // Also add implied bounds to the inner binders inside bodies. Implied bounds involving
-            // only body or signature lifetimes must not be kept; they must be checked by
-            // borrow-checking.
-            OutlivesGatherer {
-                discard_outermost: true,
-                ..OutlivesGatherer::new(&mut GenericParams::default(), type_decls, trait_decls)
-            }
-            .visit(&mut fun_decl.body);
-        }
+        ctx.translated
+            .trait_impls
+            .iter_mut()
+            .collect_vec()
+            .into_par_iter()
+            .for_each(|timpl| {
+                let mut visitor =
+                    OutlivesGatherer::new(&mut timpl.generics, type_decls, trait_decls);
+                visitor.visit(&mut timpl.impl_trait);
+                visitor.finish();
+            });
 
-        for timpl in &mut ctx.translated.trait_impls {
-            let mut visitor = OutlivesGatherer::new(&mut timpl.generics, type_decls, trait_decls);
-            visitor.visit(&mut timpl.impl_trait);
-            visitor.finish();
-        }
-
-        for trait_id in trait_decls.iter_indices().collect_vec() {
-            // Keep the associated type declarations available while visiting method signatures.
-            let mut methods = mem::take(&mut trait_decls[trait_id].methods);
-            for method in &mut methods {
+        // Keep the associated type declarations available while visiting method signatures.
+        let mut methods: Vec<(TraitDeclId, IndexMap<_, _>)> = ctx
+            .translated
+            .trait_decls
+            .iter_mut()
+            .map(|decl| (decl.def_id, mem::take(&mut decl.methods)))
+            .collect();
+        let trait_decls = &ctx.translated.trait_decls;
+        methods
+            .par_iter_mut()
+            .flat_map_iter(|(_, methods)| methods.iter_mut())
+            .for_each(|method| {
                 let mut visitor =
                     OutlivesGatherer::new(&mut method.params, type_decls, trait_decls);
                 visitor.visit(&mut method.skip_binder.signature);
                 visitor.finish();
-            }
-            trait_decls[trait_id].methods = methods;
+            });
+        for (trait_id, methods) in methods {
+            ctx.translated.trait_decls[trait_id].methods = methods;
         }
     }
 }

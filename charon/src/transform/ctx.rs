@@ -116,9 +116,15 @@ pub(crate) struct PerThread<T>(Box<[Mutex<T>]>);
 
 impl<T: Default> PerThread<T> {
     pub(crate) fn new() -> Self {
+        Self::new_with(Default::default)
+    }
+}
+
+impl<T> PerThread<T> {
+    pub(crate) fn new_with(f: impl Fn() -> T) -> Self {
         Self(
             (0..rayon::current_num_threads())
-                .map(|_| Default::default())
+                .map(|_| Mutex::new(f()))
                 .collect(),
         )
     }
@@ -624,6 +630,35 @@ impl TransformCtx {
             }
         }
         results
+    }
+
+    /// Same as `self.translated.drive_mut(visitor)`, except that the items are visited in
+    /// parallel, each with the visitor of the thread it runs on. Only for visitors whose effect on
+    /// a value doesn't depend on what they visited before.
+    pub(crate) fn par_drive_mut<V: VisitAstMut + Send>(&mut self, visitors: &PerThread<V>) {
+        let krate = &mut self.translated;
+        let items = (
+            mem::take(&mut krate.type_decls),
+            mem::take(&mut krate.fun_decls),
+            mem::take(&mut krate.global_decls),
+            mem::take(&mut krate.trait_decls),
+            mem::take(&mut krate.trait_impls),
+        );
+        let _ = krate.drive_mut(&mut *visitors.get());
+        (
+            krate.type_decls,
+            krate.fun_decls,
+            krate.global_decls,
+            krate.trait_decls,
+            krate.trait_impls,
+        ) = items;
+        krate
+            .all_items_mut()
+            .collect_vec()
+            .into_par_iter()
+            .for_each(|mut item| {
+                let _ = item.drive_mut(&mut *visitors.get());
+            });
     }
 
     /// Mutably iterate over the type declarations.

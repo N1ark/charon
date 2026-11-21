@@ -3,12 +3,16 @@
 use derive_generic_visitor::*;
 use petgraph::visit::Walker;
 use petgraph::{graphmap::DiGraphMap, visit::Dfs};
+use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::ast::*;
 use crate::ids::IndexVec;
 
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum ClauseNode {
@@ -21,7 +25,8 @@ enum ClauseNode {
 
 #[derive(Visitor)]
 struct BuildGraphVisitor<'a> {
-    graph: &'a mut DiGraphMap<ClauseNode, (), rustc_hash::FxBuildHasher>,
+    /// The edges of the dependency graph found in the current item.
+    edges: &'a mut Vec<(ClauseNode, ClauseNode)>,
     translated: &'a TranslatedCrate,
     /// The item we're visiting.
     current_item: ItemId,
@@ -57,7 +62,7 @@ impl VisitorWithItemRef for BuildGraphVisitor<'_> {
             let clause = ClauseNode::Clause(item_id, clause_id);
             if !is_translated {
                 // Missing items conservatively use all their clauses.
-                self.graph.add_edge(ClauseNode::Root, clause, ());
+                self.edges.push((ClauseNode::Root, clause));
             }
             self.current_context = clause;
             self.visit(trait_ref)?;
@@ -104,11 +109,10 @@ impl VisitAst for BuildGraphVisitor<'_> {
         if let TraitRefKind::Clause(var, _) = x
             && let Some(clause_id) = var.bound_at_depth(self.binder_depth)
         {
-            self.graph.add_edge(
+            self.edges.push((
                 self.current_context,
                 ClauseNode::Clause(self.current_item, clause_id),
-                (),
-            );
+            ));
         }
     }
 }
@@ -196,12 +200,17 @@ impl TransformPass for Transform {
     }
 
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        // Build a dependency graph between all item clauses of the crate.
-        let graph: DiGraphMap<ClauseNode, (), rustc_hash::FxBuildHasher> = {
-            let mut graph = DiGraphMap::new();
-            for item in ctx.translated.all_items() {
+        // Build a dependency graph between all item clauses of the crate. We gather the edges of
+        // each item in parallel.
+        let item_edges: Vec<Vec<(ClauseNode, ClauseNode)>> = ctx
+            .translated
+            .all_items()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|item| {
                 let item_id = item.id();
                 let is_opaque_fn = item.as_fun().is_some_and(|decl| !decl.body.has_contents());
+                let mut edges = Vec::new();
 
                 for clause in &item.generic_params().trait_clauses {
                     // For opaque bodies, we must assume they may be using any clause in scope.
@@ -211,25 +220,27 @@ impl TransformPass for Transform {
                                 && clause.origin == PredicateOrigin::TraitSelf));
                     if !may_remove_clause {
                         let clause_id = clause.clause_id;
-                        graph.add_edge(
-                            ClauseNode::Root,
-                            ClauseNode::Clause(item_id, clause_id),
-                            (),
-                        );
+                        edges.push((ClauseNode::Root, ClauseNode::Clause(item_id, clause_id)));
                     }
                 }
 
                 let mut visitor = BuildGraphVisitor {
-                    graph: &mut graph,
+                    edges: &mut edges,
                     translated: &ctx.translated,
                     current_item: item_id,
                     binder_depth: DeBruijnId::ZERO,
                     current_context: ClauseNode::Root,
                 };
                 item.drive(&mut visitor);
-            }
-            graph
-        };
+                edges.sort_unstable();
+                edges.dedup();
+                edges
+            })
+            .collect();
+        let mut graph: DiGraphMap<ClauseNode, (), rustc_hash::FxBuildHasher> = DiGraphMap::new();
+        for (src, tgt) in item_edges.into_iter().flatten() {
+            graph.add_edge(src, tgt, ());
+        }
 
         // Remove the unused clauses and collect a global remapping of clause ids.
         let remaps: HashMap<ItemId, IndexVec<TraitClauseId, Option<TraitClauseId>>> = {
@@ -267,17 +278,21 @@ impl TransformPass for Transform {
         };
 
         // Adjust references to clauses.
-        let mut memo = HashConsMemo::default();
+        let memos = PerThread::<HashConsMemo<(ItemId, DeBruijnId)>>::new();
         let remaps_bloom = remaps.keys().map(|&id| ItemBloom::of(id)).collect();
-        for mut item in ctx.translated.all_items_mut() {
-            let item_id = item.as_ref().id();
-            item.drive_mut(&mut RemoveClausesVisitor {
-                remaps_bloom,
-                remaps: &remaps,
-                current_item: item_id,
-                binder_depth: DeBruijnId::ZERO,
-                memo: &mut memo,
+        ctx.translated
+            .all_items_mut()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .for_each(|mut item| {
+                let item_id = item.as_ref().id();
+                item.drive_mut(&mut RemoveClausesVisitor {
+                    remaps_bloom,
+                    remaps: &remaps,
+                    current_item: item_id,
+                    binder_depth: DeBruijnId::ZERO,
+                    memo: &mut memos.get(),
+                });
             });
-        }
     }
 }

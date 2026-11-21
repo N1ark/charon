@@ -4,18 +4,21 @@ use rustc_hash::FxHashSet as HashSet;
 
 use crate::{ast::*, name_matcher::NamePattern};
 
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
 
 #[derive(Visitor)]
-struct RemoveLastParamVisitor {
-    types: HashSet<TypeDeclId>,
+struct RemoveLastParamVisitor<'a> {
+    types: &'a HashSet<TypeDeclId>,
     /// The bloom filter of `types`, to skip values that can't mention them.
     types_bloom: ItemBloom,
     memo: HashConsMemo<()>,
 }
 
 // The rewrite only depends on `types`, so it can be reused for every occurrence of a value.
-impl VisitorWithMemo for RemoveLastParamVisitor {
+impl VisitorWithMemo for RemoveLastParamVisitor<'_> {
     type MemoContext = ();
     fn memo(&mut self) -> &mut HashConsMemo<()> {
         &mut self.memo
@@ -25,7 +28,7 @@ impl VisitorWithMemo for RemoveLastParamVisitor {
     }
 }
 
-impl VisitAstMut for RemoveLastParamVisitor {
+impl VisitAstMut for RemoveLastParamVisitor<'_> {
     fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
         &mut self,
         x: &mut HashConsed<WithCachedTypeInfo<T>>,
@@ -98,10 +101,11 @@ impl TransformPass for Transform {
             }
         }
 
-        let _ = ctx.translated.drive_mut(&mut RemoveLastParamVisitor {
-            types_bloom: types.iter().map(|&id| ItemBloom::of(id)).collect(),
-            types,
+        let types_bloom = types.iter().map(|&id| ItemBloom::of(id)).collect();
+        ctx.par_drive_mut(&PerThread::new_with(|| RemoveLastParamVisitor {
+            types_bloom,
+            types: &types,
             memo: Default::default(),
-        });
+        }));
     }
 }
