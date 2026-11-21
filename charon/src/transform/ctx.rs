@@ -485,6 +485,8 @@ impl TransformCtx {
             .translated
             .fun_decls
             .iter_mut()
+            .collect_vec()
+            .into_par_iter()
             .map(|decl| {
                 let body = mem::replace(&mut decl.body, Body::Opaque);
                 let mut copy = decl.clone();
@@ -508,13 +510,19 @@ impl TransformCtx {
             },
             |ctx, decl| f(ctx, decl),
         );
-        for (mut decl, outcome) in decls.into_iter().zip(outcomes) {
+        for (decl, outcome) in decls.iter_mut().zip(outcomes) {
             decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
-            self.add_promoted_globals(temp_ids, decl.def_id, &mut decl, outcome.new_globals);
+            self.add_promoted_globals(temp_ids, decl.def_id, decl, outcome.new_globals);
             decl.item_meta.has_errors |= outcome.has_errors;
-            let id = decl.def_id;
-            self.translated.fun_decls[id] = decl;
         }
+        // Put the transformed declarations back, dropping the copies in parallel.
+        self.translated
+            .fun_decls
+            .iter_mut()
+            .collect_vec()
+            .into_par_iter()
+            .zip(decls)
+            .for_each(|(slot, decl)| *slot = decl);
     }
 
     /// Run `f` on each item in parallel, with shared access to the whole crate, and return its
