@@ -1138,6 +1138,17 @@ struct Caches {
     /// Identifies the states of `type_replacements` we've been in, as the state below and the
     /// id of the pushed replacements; `0` is the item level. Two equal ids are two equal states.
     binder_states: HashMap<(u32, u32), u32>,
+    /// `update_generics`, keyed by the address of the modifications, the arguments, the `Self`
+    /// trait ref and the binder state.
+    updated_generics: HashMap<
+        (
+            usize,
+            HashConsed<WithCachedTypeInfo<GenericArgs>>,
+            Option<TraitRef>,
+            u32,
+        ),
+        HashConsed<WithCachedTypeInfo<GenericArgs>>,
+    >,
 }
 
 impl Caches {
@@ -1448,6 +1459,37 @@ impl UpdateItemBody<'_> {
         if modifications.required_extra_params().next().is_none() {
             return;
         }
+        // The new arguments only depend on these, except for error messages. Items with the same
+        // generics often update the same references, e.g. to their parent's clauses.
+        let key = (
+            std::ptr::from_ref(*modifications).addr(),
+            args.0,
+            self_path.clone(),
+            self.binder_state,
+        );
+        if let Some(new_args) = self.caches.borrow().updated_generics.get(&key) {
+            args.0 = *new_args;
+            return;
+        }
+        let reported_error_before = self.reported_error.replace(false);
+        self.update_generics_uncached(args, target, self_path, modifications);
+        if !self.reported_error.get() {
+            self.caches
+                .borrow_mut()
+                .updated_generics
+                .insert(key, args.0);
+        }
+        self.reported_error
+            .set(self.reported_error.get() || reported_error_before);
+    }
+
+    fn update_generics_uncached(
+        &mut self,
+        args: &mut BoxedArgs,
+        target: GenericsSource,
+        self_path: Option<TraitRef>,
+        modifications: &ItemModifications,
+    ) {
         // The erased trait ref of the last clause we looked at; consecutive paths often start
         // from the same clause.
         let mut last_clause: Option<(TraitClauseId, TraitRef)> = None;
@@ -2004,6 +2046,7 @@ impl TransformPass for Transform {
                     caches.item_replacements = Some(type_replacements.clone());
                     caches.set_ids.clear();
                     caches.binder_states.clear();
+                    caches.updated_generics.clear();
                     **state_memo = Default::default();
                 }
             }
