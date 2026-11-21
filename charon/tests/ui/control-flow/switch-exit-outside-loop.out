@@ -1,0 +1,459 @@
+# Final LLBC before serialization:
+
+// Full name: test_crate::scan
+pub fn scan(p: u32, f: fn(u32) -> bool) -> u32
+{
+    let mut _0: u32; // return
+    let mut p: u32; // arg #1
+    let f: fn(u32) -> bool; // arg #2
+    let current_block: u32; // local
+        where current_block :< u32;
+    let mut _4: bool; // anonymous local
+    let mut _5: fn(u32) -> bool; // anonymous local
+    let mut _6: bool; // anonymous local
+    let mut _7: u32; // anonymous local
+    let mut _8: bool; // anonymous local
+    let mut _9: fn(u32) -> bool; // anonymous local
+    let mut _10: bool; // anonymous local
+    let mut _11: fn(u32) -> bool; // anonymous local
+    let mut _12: u32; // anonymous local
+    let mut _13: u32; // anonymous local
+    let mut _14: bool; // anonymous local
+    let mut _15: fn(u32) -> bool; // anonymous local
+    let mut _16: bool; // anonymous local
+    let mut _17: fn(u32) -> bool; // anonymous local
+    let mut _18: u32; // anonymous local
+    let mut _19: u32; // anonymous local
+    let mut _20: bool; // anonymous local
+    let mut _21: fn(u32) -> bool; // anonymous local
+    let mut _22: bool; // anonymous local
+    let mut _23: fn(u32) -> bool; // anonymous local
+    let mut _24: u32; // anonymous local
+    let mut _25: u32; // anonymous local
+    let mut _26: bool; // anonymous local
+    let mut _27: fn(u32) -> bool; // anonymous local
+    let mut _28: bool; // anonymous local
+    let mut _29: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_12)
+    storage_live(_13)
+    storage_live(_18)
+    storage_live(_19)
+    storage_live(_24)
+    storage_live(_25)
+    storage_live(current_block)
+    loop {
+        storage_live(_4)
+        storage_live(_5)
+        _5 = copy f
+        _4 = (move _5)(const 0u32)
+        ↳⚡ goto cleanup0
+        if move _4 {
+            storage_dead(_5)
+            current_block = const 1u32
+            break 0
+        } else {
+        }
+        storage_dead(_5)
+        storage_live(_6)
+        storage_live(_7)
+        _7 = copy p
+        _6 = move _7 == const 0u32
+        if move _6 {
+            storage_dead(_7)
+            current_block = const 1u32
+        } else {
+            storage_dead(_7)
+            storage_live(_8)
+            storage_live(_9)
+            _9 = copy f
+            _8 = (move _9)(const 1u32)
+            ↳⚡ goto cleanup0
+            if move _8 {
+                storage_dead(_9)
+                storage_live(_10)
+                storage_live(_11)
+                _11 = copy f
+                _10 = (move _11)(const 11u32)
+                ↳⚡ goto cleanup0
+                if move _10 {
+                    storage_dead(_11)
+                    current_block = const 1u32
+                    storage_dead(_10)
+                    storage_dead(_8)
+                } else {
+                    storage_dead(_11)
+                    storage_dead(_10)
+                    _12 = copy p panic.+ const 1u32
+                    p = move _12
+                    storage_dead(_8)
+                    storage_live(_14)
+                    storage_live(_15)
+                    _15 = copy f
+                    _14 = (move _15)(const 2u32)
+                    ↳⚡ goto cleanup0
+                    if move _14 {
+                        storage_dead(_15)
+                        storage_live(_16)
+                        storage_live(_17)
+                        _17 = copy f
+                        _16 = (move _17)(const 12u32)
+                        ↳⚡ goto cleanup0
+                        if move _16 {
+                            storage_dead(_17)
+                            current_block = const 1u32
+                            storage_dead(_16)
+                            storage_dead(_14)
+                        } else {
+                            storage_dead(_17)
+                            storage_dead(_16)
+                            _18 = copy p panic.+ const 1u32
+                            p = move _18
+                            storage_dead(_14)
+                            storage_live(_20)
+                            storage_live(_21)
+                            _21 = copy f
+                            _20 = (move _21)(const 3u32)
+                            ↳⚡ goto cleanup0
+                            if move _20 {
+                                storage_dead(_21)
+                                storage_live(_22)
+                                storage_live(_23)
+                                _23 = copy f
+                                _22 = (move _23)(const 13u32)
+                                ↳⚡ goto cleanup0
+                                if move _22 {
+                                    storage_dead(_23)
+                                    current_block = const 1u32
+                                    storage_dead(_22)
+                                    storage_dead(_20)
+                                } else {
+                                    storage_dead(_23)
+                                    storage_dead(_22)
+                                    _24 = copy p panic.+ const 1u32
+                                    p = move _24
+                                    storage_dead(_20)
+                                    storage_live(_26)
+                                    storage_live(_27)
+                                    _27 = copy f
+                                    _26 = (move _27)(const 4u32)
+                                    ↳⚡ goto cleanup0
+                                    if move _26 {
+                                        storage_dead(_27)
+                                        current_block = const 2u32
+                                        storage_dead(_26)
+                                    } else {
+                                        storage_dead(_27)
+                                        storage_dead(_26)
+                                        storage_dead(_6)
+                                        storage_dead(_4)
+                                        continue 0
+                                    }
+                                }
+                            } else {
+                                storage_dead(_21)
+                                _25 = copy p panic.+ const 2u32
+                                p = move _25
+                                storage_dead(_20)
+                                storage_live(_26)
+                                storage_live(_27)
+                                _27 = copy f
+                                _26 = (move _27)(const 4u32)
+                                ↳⚡ goto cleanup0
+                                if move _26 {
+                                    storage_dead(_27)
+                                    current_block = const 2u32
+                                    storage_dead(_26)
+                                } else {
+                                    storage_dead(_27)
+                                    storage_dead(_26)
+                                    storage_dead(_6)
+                                    storage_dead(_4)
+                                    continue 0
+                                }
+                            }
+                        }
+                    } else {
+                        storage_dead(_15)
+                        _19 = copy p panic.+ const 2u32
+                        p = move _19
+                        storage_dead(_14)
+                        storage_live(_20)
+                        storage_live(_21)
+                        _21 = copy f
+                        _20 = (move _21)(const 3u32)
+                        ↳⚡ goto cleanup0
+                        if move _20 {
+                            storage_dead(_21)
+                            storage_live(_22)
+                            storage_live(_23)
+                            _23 = copy f
+                            _22 = (move _23)(const 13u32)
+                            ↳⚡ goto cleanup0
+                            if move _22 {
+                                storage_dead(_23)
+                                current_block = const 1u32
+                                storage_dead(_22)
+                                storage_dead(_20)
+                            } else {
+                                storage_dead(_23)
+                                storage_dead(_22)
+                                _24 = copy p panic.+ const 1u32
+                                p = move _24
+                                storage_dead(_20)
+                                storage_live(_26)
+                                storage_live(_27)
+                                _27 = copy f
+                                _26 = (move _27)(const 4u32)
+                                ↳⚡ goto cleanup0
+                                if move _26 {
+                                    storage_dead(_27)
+                                    current_block = const 2u32
+                                    storage_dead(_26)
+                                } else {
+                                    storage_dead(_27)
+                                    storage_dead(_26)
+                                    storage_dead(_6)
+                                    storage_dead(_4)
+                                    continue 0
+                                }
+                            }
+                        } else {
+                            storage_dead(_21)
+                            _25 = copy p panic.+ const 2u32
+                            p = move _25
+                            storage_dead(_20)
+                            storage_live(_26)
+                            storage_live(_27)
+                            _27 = copy f
+                            _26 = (move _27)(const 4u32)
+                            ↳⚡ goto cleanup0
+                            if move _26 {
+                                storage_dead(_27)
+                                current_block = const 2u32
+                                storage_dead(_26)
+                            } else {
+                                storage_dead(_27)
+                                storage_dead(_26)
+                                storage_dead(_6)
+                                storage_dead(_4)
+                                continue 0
+                            }
+                        }
+                    }
+                }
+            } else {
+                storage_dead(_9)
+                _13 = copy p panic.+ const 2u32
+                p = move _13
+                storage_dead(_8)
+                storage_live(_14)
+                storage_live(_15)
+                _15 = copy f
+                _14 = (move _15)(const 2u32)
+                ↳⚡ goto cleanup0
+                if move _14 {
+                    storage_dead(_15)
+                    storage_live(_16)
+                    storage_live(_17)
+                    _17 = copy f
+                    _16 = (move _17)(const 12u32)
+                    ↳⚡ goto cleanup0
+                    if move _16 {
+                        storage_dead(_17)
+                        current_block = const 1u32
+                        storage_dead(_16)
+                        storage_dead(_14)
+                    } else {
+                        storage_dead(_17)
+                        storage_dead(_16)
+                        _18 = copy p panic.+ const 1u32
+                        p = move _18
+                        storage_dead(_14)
+                        storage_live(_20)
+                        storage_live(_21)
+                        _21 = copy f
+                        _20 = (move _21)(const 3u32)
+                        ↳⚡ goto cleanup0
+                        if move _20 {
+                            storage_dead(_21)
+                            storage_live(_22)
+                            storage_live(_23)
+                            _23 = copy f
+                            _22 = (move _23)(const 13u32)
+                            ↳⚡ goto cleanup0
+                            if move _22 {
+                                storage_dead(_23)
+                                current_block = const 1u32
+                                storage_dead(_22)
+                                storage_dead(_20)
+                            } else {
+                                storage_dead(_23)
+                                storage_dead(_22)
+                                _24 = copy p panic.+ const 1u32
+                                p = move _24
+                                storage_dead(_20)
+                                storage_live(_26)
+                                storage_live(_27)
+                                _27 = copy f
+                                _26 = (move _27)(const 4u32)
+                                ↳⚡ goto cleanup0
+                                if move _26 {
+                                    storage_dead(_27)
+                                    current_block = const 2u32
+                                    storage_dead(_26)
+                                } else {
+                                    storage_dead(_27)
+                                    storage_dead(_26)
+                                    storage_dead(_6)
+                                    storage_dead(_4)
+                                    continue 0
+                                }
+                            }
+                        } else {
+                            storage_dead(_21)
+                            _25 = copy p panic.+ const 2u32
+                            p = move _25
+                            storage_dead(_20)
+                            storage_live(_26)
+                            storage_live(_27)
+                            _27 = copy f
+                            _26 = (move _27)(const 4u32)
+                            ↳⚡ goto cleanup0
+                            if move _26 {
+                                storage_dead(_27)
+                                current_block = const 2u32
+                                storage_dead(_26)
+                            } else {
+                                storage_dead(_27)
+                                storage_dead(_26)
+                                storage_dead(_6)
+                                storage_dead(_4)
+                                continue 0
+                            }
+                        }
+                    }
+                } else {
+                    storage_dead(_15)
+                    _19 = copy p panic.+ const 2u32
+                    p = move _19
+                    storage_dead(_14)
+                    storage_live(_20)
+                    storage_live(_21)
+                    _21 = copy f
+                    _20 = (move _21)(const 3u32)
+                    ↳⚡ goto cleanup0
+                    if move _20 {
+                        storage_dead(_21)
+                        storage_live(_22)
+                        storage_live(_23)
+                        _23 = copy f
+                        _22 = (move _23)(const 13u32)
+                        ↳⚡ goto cleanup0
+                        if move _22 {
+                            storage_dead(_23)
+                            current_block = const 1u32
+                            storage_dead(_22)
+                            storage_dead(_20)
+                        } else {
+                            storage_dead(_23)
+                            storage_dead(_22)
+                            _24 = copy p panic.+ const 1u32
+                            p = move _24
+                            storage_dead(_20)
+                            storage_live(_26)
+                            storage_live(_27)
+                            _27 = copy f
+                            _26 = (move _27)(const 4u32)
+                            ↳⚡ goto cleanup0
+                            if move _26 {
+                                storage_dead(_27)
+                                current_block = const 2u32
+                                storage_dead(_26)
+                            } else {
+                                storage_dead(_27)
+                                storage_dead(_26)
+                                storage_dead(_6)
+                                storage_dead(_4)
+                                continue 0
+                            }
+                        }
+                    } else {
+                        storage_dead(_21)
+                        _25 = copy p panic.+ const 2u32
+                        p = move _25
+                        storage_dead(_20)
+                        storage_live(_26)
+                        storage_live(_27)
+                        _27 = copy f
+                        _26 = (move _27)(const 4u32)
+                        ↳⚡ goto cleanup0
+                        if move _26 {
+                            storage_dead(_27)
+                            current_block = const 2u32
+                            storage_dead(_26)
+                        } else {
+                            storage_dead(_27)
+                            storage_dead(_26)
+                            storage_dead(_6)
+                            storage_dead(_4)
+                            continue 0
+                        }
+                    }
+                }
+            }
+        }
+        storage_dead(_6)
+        break 0
+    }
+    storage_dead(_4)
+    storage_live(_28)
+    storage_live(_29)
+    _29 = copy current_block
+    _28 = move _29 != const 1u32
+    if move _28 {
+    } else {
+        storage_dead(_29)
+        storage_dead(_28)
+        _0 = const 0u32
+        storage_dead(current_block)
+        storage_dead(_25)
+        storage_dead(_24)
+        storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(f)
+        storage_dead(p)
+        return
+    }
+    storage_dead(_29)
+    _0 = copy p
+    storage_dead(_28)
+    storage_dead(current_block)
+    storage_dead(_25)
+    storage_dead(_24)
+    storage_dead(_19)
+    storage_dead(_18)
+    storage_dead(_13)
+    storage_dead(_12)
+    storage_dead(f)
+    storage_dead(p)
+    return
+
+    cleanup0: {
+        storage_dead(_25)
+        storage_dead(_24)
+        storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(f)
+        storage_dead(p)
+        unwind_continue
+    }
+}
+
+
+
