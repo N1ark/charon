@@ -110,6 +110,26 @@ struct ParItemOutcome {
     first_fresh_ids: Option<FreshIds>,
 }
 
+/// One value per thread of rayon's pool, e.g. a cache used while transforming items in parallel.
+/// Use it from rayon's threads, or when no parallel loop is running.
+pub(crate) struct PerThread<T>(Box<[Mutex<T>]>);
+
+impl<T: Default> PerThread<T> {
+    pub(crate) fn new() -> Self {
+        Self(
+            (0..rayon::current_num_threads())
+                .map(|_| Default::default())
+                .collect(),
+        )
+    }
+    pub(crate) fn get(&self) -> MutexGuard<'_, T> {
+        let i = rayon::current_thread_index().unwrap_or(0);
+        // A panic while transforming an item is caught and reported for that item; it mustn't
+        // break the next items. Values like caches stay valid if their user panics.
+        self.0[i].lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
 thread_local! {
     /// The effects of the item currently being transformed on this thread, if we're inside a
     /// parallel loop.
@@ -495,6 +515,35 @@ impl TransformCtx {
             let id = decl.def_id;
             self.translated.fun_decls[id] = decl;
         }
+    }
+
+    /// Run `f` on each item in parallel, with shared access to the whole crate, and return its
+    /// results in item order. Errors are reported as with `for_each_item_mut`.
+    pub(crate) fn par_for_each_item<R: Send>(
+        &mut self,
+        f: impl Fn(&Self, ItemRef<'_>) -> R + Sync,
+    ) -> Vec<(ItemId, Option<R>)> {
+        let mut results: Vec<(ItemId, Option<R>)> = self
+            .translated
+            .all_ids()
+            .filter(|id| self.translated.get_item(*id).is_some())
+            .map(|id| (id, None))
+            .collect();
+        let outcomes = self.par_with_def_ids(
+            &mut results,
+            |(id, _)| {
+                let meta = self.translated.get_item(*id).unwrap().item_meta();
+                (*id, meta.is_local, meta.span)
+            },
+            |ctx, (id, result)| *result = Some(f(ctx, ctx.translated.get_item(*id).unwrap())),
+        );
+        for ((id, _), outcome) in results.iter().zip(outcomes) {
+            assert!(outcome.new_globals.is_empty() && outcome.first_fresh_ids.is_none());
+            if let Some(mut item) = self.translated.get_item_mut(*id) {
+                item.item_meta().has_errors |= outcome.has_errors;
+            }
+        }
+        results
     }
 
     /// Mutably iterate over the type declarations.

@@ -15,7 +15,10 @@ use crate::{
     transform::utils::GenericsSource,
 };
 
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
 
 unsafe impl IndexType for RegionId {
     fn new(x: usize) -> Self {
@@ -32,6 +35,9 @@ unsafe impl IndexType for RegionId {
 #[derive(Visitor)]
 struct TypeCheckVisitor<'a> {
     ctx: &'a TransformCtx,
+    /// The item being checked. We don't look at it through `ctx`: an item isn't checked against
+    /// itself.
+    item_id: ItemId,
     phase: Check,
     /// Tracks an enclosing span for error reporting.
     span: Span,
@@ -134,7 +140,20 @@ impl<'a> Env<'a> {
     }
 }
 
-impl TypeCheckVisitor<'_> {
+impl<'a> TypeCheckVisitor<'a> {
+    fn get_item(&self, id: ItemId) -> Option<ItemRef<'a>> {
+        if id == self.item_id {
+            return None;
+        }
+        self.ctx.translated.get_item(id)
+    }
+    fn trait_decl(&self, id: TraitDeclId) -> Option<&'a TraitDecl> {
+        self.get_item(id.into())?.as_trait_decl().copied()
+    }
+    fn trait_impl(&self, id: TraitImplId) -> Option<&'a TraitImpl> {
+        self.get_item(id.into())?.as_trait_impl().copied()
+    }
+
     fn error(&self, message: impl Display) {
         if let Some(failed) = &self.dry_run {
             failed.set(true);
@@ -432,7 +451,7 @@ impl TypeCheckVisitor<'_> {
                 Self::apply_poly_predicate(clause.trait_.clone(), args)?
             }
             TraitRefKind::ParentClause(parent, clause_id, args)
-                if let Some(tdecl) = self.ctx.translated.trait_decls.get(parent.trait_id())
+                if let Some(tdecl) = self.trait_decl(parent.trait_id())
                     && let Some(clause) = tdecl.implied_clauses.get(*clause_id) =>
             {
                 let parent_args = &parent.trait_decl_ref.generics;
@@ -462,7 +481,7 @@ impl TypeCheckVisitor<'_> {
                 generics,
                 clause_id,
                 clause_args,
-            } if let Some(tdecl) = self.ctx.translated.trait_decls.get(trait_ref.trait_id())
+            } if let Some(tdecl) = self.trait_decl(trait_ref.trait_id())
                 && let Some(assoc_ty) = tdecl.types.get(*type_id) =>
             {
                 if !generics.matches(&assoc_ty.params) {
@@ -486,7 +505,7 @@ impl TypeCheckVisitor<'_> {
                 Self::apply_poly_predicate(pred, clause_args)?
             }
             TraitRefKind::TraitImpl(trait_impl_ref)
-                if let Some(timpl) = self.ctx.translated.trait_impls.get(trait_impl_ref.id) =>
+                if let Some(timpl) = self.trait_impl(trait_impl_ref.id) =>
             {
                 let impl_args = &trait_impl_ref.generics;
                 let substituted = || {
@@ -830,7 +849,7 @@ impl TypeCheckVisitor<'_> {
 
     fn assert_matches_item(&mut self, id: impl Into<ItemId>, args: &GenericArgs) {
         let id = id.into();
-        let Some(item) = self.ctx.translated.get_item(id) else {
+        let Some(item) = self.get_item(id) else {
             return;
         };
         let params = item.generic_params();
@@ -845,7 +864,7 @@ impl TypeCheckVisitor<'_> {
     ) {
         let trait_id = trait_ref.trait_decl_ref.id;
         let target = &GenericsSource::Method(trait_id, method_id);
-        let Some(trait_decl) = self.ctx.translated.trait_decls.get(trait_id) else {
+        let Some(trait_decl) = self.trait_decl(trait_id) else {
             return;
         };
         let Some(bound_fn) = trait_decl.methods.get(method_id) else {
@@ -863,7 +882,7 @@ impl TypeCheckVisitor<'_> {
     ) {
         let trait_id = trait_ref.trait_id();
         let target = &GenericsSource::TraitType(trait_id, type_id);
-        let Some(trait_decl) = self.ctx.translated.trait_decls.get(trait_id) else {
+        let Some(trait_decl) = self.trait_decl(trait_id) else {
             return;
         };
         let Some(bound_ty) = trait_decl.types.get(type_id) else {
@@ -1001,10 +1020,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
             },
             TraitRefKind::ParentClause(parent, clause_id, args) => {
                 if let Some(clause) = self
-                    .ctx
-                    .translated
-                    .trait_decls
-                    .get(parent.trait_id())
+                    .trait_decl(parent.trait_id())
                     .and_then(|decl| decl.implied_clauses.get(*clause_id))
                     && args.regions.len() != clause.trait_.regions.len()
                 {
@@ -1024,10 +1040,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
             } => {
                 self.assert_matches_trait_type(trait_ref, *type_id, generics);
                 if let Some(clause) = self
-                    .ctx
-                    .translated
-                    .trait_decls
-                    .get(trait_ref.trait_id())
+                    .trait_decl(trait_ref.trait_id())
                     .and_then(|decl| decl.types.get(*type_id))
                     .and_then(|assoc_ty| assoc_ty.skip_binder.implied_clauses.get(*clause_id))
                     && clause_args.regions.len() != clause.trait_.regions.len()
@@ -1046,7 +1059,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
             } => {
                 let trait_id = x.trait_decl_ref.id;
                 let target = GenericsSource::item(trait_id);
-                let Some(tdecl) = self.ctx.translated.trait_decls.get(trait_id) else {
+                let Some(tdecl) = self.trait_decl(trait_id) else {
                     return;
                 };
                 if tdecl.item_meta.lang_item.as_ref().is_some_and(|item| {
@@ -1127,7 +1140,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
         self.assert_matches_item(x.id, &x.generics);
     }
     fn enter_trait_impl(&mut self, timpl: &TraitImpl) {
-        let Some(tdecl) = self.ctx.translated.trait_decls.get(timpl.impl_trait.id) else {
+        let Some(tdecl) = self.trait_decl(timpl.impl_trait.id) else {
             return;
         };
 
@@ -1229,16 +1242,19 @@ impl TransformPass for Check {
         !options.no_typecheck
     }
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        let mut substitution_cache = HashMap::default();
-        ctx.for_each_item_mut(|ctx, item| {
-            if item.as_ref().item_meta().has_errors {
-                return;
+        // Whether a substitution succeeds doesn't depend on the item being checked, so each thread
+        // can keep its own cache.
+        let substitution_caches = PerThread::<HashMap<(SubstitutedValue, [usize; 4]), bool>>::new();
+        // Check the items in parallel, then apply the lifetime unifications we computed.
+        let unifications = ctx.par_for_each_item(|ctx, item| {
+            if item.item_meta().has_errors {
+                return None;
             }
             // Accept type errors within copies of default methods. See docs for
             // `accept_type_errors` for why.
             let accept_type_errors = matches!(
-                &item,
-                ItemRefMut::Fun(FunDecl {
+                item,
+                ItemRef::Fun(FunDecl {
                     src: FunSource::TraitImpl {
                         reuses_default: true,
                         ..
@@ -1246,7 +1262,7 @@ impl TransformPass for Check {
                     ..
                 })
             );
-            let body_lt_unifier = if let ItemRefMut::Fun(fun_decl) = &item
+            let body_lt_unifier = if let ItemRef::Fun(fun_decl) = item
                 && let Body::Unstructured(GExprBody {
                     bound_body_regions, ..
                 })
@@ -1260,6 +1276,7 @@ impl TransformPass for Check {
             };
             let mut visitor = TypeCheckVisitor {
                 ctx,
+                item_id: item.id(),
                 phase: *self,
                 span: Span::dummy(),
                 binder_stack: BindingStack::empty(),
@@ -1269,7 +1286,7 @@ impl TransformPass for Check {
                 pending_unifications: None,
                 needs_substitution: false,
                 dry_run: None,
-                substitution_cache: &mut substitution_cache,
+                substitution_cache: &mut substitution_caches.get(),
                 accept_type_errors,
                 binder_ctx: vec![0],
                 empty_binder_ctx: HashMap::default(),
@@ -1278,33 +1295,38 @@ impl TransformPass for Check {
                 error_count: Cell::new(0),
             };
             // Typecheck the item, and accumulate needed lifetime unifications.
-            let _ = item.as_ref().drive(&mut visitor);
-            // Apply the lifetime unifications we computed, if any.
-            if visitor.did_unify_lifetimes
-                && let ItemRefMut::Fun(fun_decl) = item
-            {
-                #[derive(Visitor)]
-                struct UnifyBodyRegions(UnionFind<RegionId>);
-                impl VisitAstMut for UnifyBodyRegions {
-                    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
-                        &mut self,
-                        value: &mut HashConsed<WithCachedTypeInfo<T>>,
-                    ) -> ControlFlow<Self::Break> {
-                        // Avoid cloning and re-interning values without body regions.
-                        if !value.type_info().has_erased_or_body_regions() {
-                            return Continue(());
-                        }
-                        self.visit_inner(value)
-                    }
-                    fn enter_region(&mut self, r: &mut Region) {
-                        if let Region::Body(body_id) = r {
-                            *body_id = self.0.find_mut(*body_id);
-                        }
-                    }
-                }
-                let unifier = visitor.body_lt_unifier.take().unwrap();
-                let _ = UnifyBodyRegions(unifier).visit(&mut fun_decl.body);
+            let _ = item.drive(&mut visitor);
+            if visitor.did_unify_lifetimes {
+                visitor.body_lt_unifier
+            } else {
+                None
             }
         });
+        #[derive(Visitor)]
+        struct UnifyBodyRegions(UnionFind<RegionId>);
+        impl VisitAstMut for UnifyBodyRegions {
+            fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+                &mut self,
+                value: &mut HashConsed<WithCachedTypeInfo<T>>,
+            ) -> ControlFlow<Self::Break> {
+                // Avoid cloning and re-interning values without body regions.
+                if !value.type_info().has_erased_or_body_regions() {
+                    return Continue(());
+                }
+                self.visit_inner(value)
+            }
+            fn enter_region(&mut self, r: &mut Region) {
+                if let Region::Body(body_id) = r {
+                    *body_id = self.0.find_mut(*body_id);
+                }
+            }
+        }
+        for (id, unifier) in unifications {
+            if let Some(Some(unifier)) = unifier
+                && let ItemId::Fun(id) = id
+            {
+                let _ = UnifyBodyRegions(unifier).visit(&mut ctx.translated.fun_decls[id].body);
+            }
+        }
     }
 }
