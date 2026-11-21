@@ -136,6 +136,7 @@ pub(crate) fn generate(
         "charon_lib::ids::index_vec::IndexVec",
         "charon_lib::ids::index_map::IndexMap",
         "InternalBitFlags",
+        "charon_lib::ast::type_level::type_info::ItemBloom",
         "charon_lib::ast::type_level::type_info::TypeFlags",
         "charon_lib::ast::type_level::type_info::TypeInfo",
         "charon_lib::ast::type_level::type_info::WithCachedTypeInfo",
@@ -166,6 +167,7 @@ pub(crate) fn generate(
         all_types.remove(&ctx.id_from_name("charon_lib::ids::index_map::IndexMap"));
         // Hide these from OCaml.
         all_types.remove(&ctx.id_from_name("InternalBitFlags"));
+        all_types.remove(&ctx.id_from_name("charon_lib::ast::type_level::type_info::ItemBloom"));
         all_types.remove(&ctx.id_from_name("charon_lib::ast::type_level::type_info::TypeFlags"));
         all_types.remove(&ctx.id_from_name("charon_lib::ast::type_level::type_info::TypeInfo"));
         all_types.remove(

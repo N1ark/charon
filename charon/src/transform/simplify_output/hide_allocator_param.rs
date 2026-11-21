@@ -1,3 +1,4 @@
+use derive_generic_visitor::*;
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -8,6 +9,8 @@ use crate::transform::{TransformCtx, ctx::TransformPass};
 #[derive(Visitor)]
 struct RemoveLastParamVisitor {
     types: HashSet<TypeDeclId>,
+    /// The bloom filter of `types`, to skip values that can't mention them.
+    types_bloom: ItemBloom,
     memo: HashConsMemo<()>,
 }
 
@@ -27,6 +30,9 @@ impl VisitAstMut for RemoveLastParamVisitor {
         &mut self,
         x: &mut HashConsed<WithCachedTypeInfo<T>>,
     ) -> ControlFlow<Self::Break> {
+        if !x.type_info().items.intersects(self.types_bloom) {
+            return Continue(());
+        }
         self.visit_memoized(x)
     }
 
@@ -93,6 +99,7 @@ impl TransformPass for Transform {
         }
 
         let _ = ctx.translated.drive_mut(&mut RemoveLastParamVisitor {
+            types_bloom: types.iter().map(|&id| ItemBloom::of(id)).collect(),
             types,
             memo: Default::default(),
         });

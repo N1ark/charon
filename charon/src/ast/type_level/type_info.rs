@@ -19,11 +19,54 @@ bitflags::bitflags! {
     }
 }
 
+/// A small bloom filter over the items mentioned by a value: if `bloom.intersects(other)` is
+/// false, then the value mentions none of the items in `other`. Passes that only rewrite
+/// references to a few items can use this to skip values without visiting them.
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ItemBloom(ItemBloomBits);
+/// Up to 32 bits fit in the padding of `TypeInfo`, so this doesn't make it bigger.
+type ItemBloomBits = u32;
+
+impl ItemBloom {
+    pub fn of(id: impl Into<ItemId>) -> Self {
+        let (kind, index) = match id.into() {
+            ItemId::Type(id) => (0, id.index()),
+            ItemId::TraitDecl(id) => (1, id.index()),
+            ItemId::TraitImpl(id) => (2, id.index()),
+            ItemId::Fun(id) => (3, id.index()),
+            ItemId::Global(id) => (4, id.index()),
+        };
+        // Fibonacci hashing: take the top bits of a multiplicative hash.
+        let hash = ((index as u64) << 3 | kind).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        Self(1 << (hash >> (64 - ItemBloomBits::BITS.trailing_zeros())))
+    }
+    pub fn insert(&mut self, other: Self) {
+        self.0 |= other.0;
+    }
+    pub fn intersects(self, other: Self) -> bool {
+        self.0 & other.0 != 0
+    }
+    pub fn is_full(self) -> bool {
+        self.0 == ItemBloomBits::MAX
+    }
+}
+
+impl FromIterator<ItemBloom> for ItemBloom {
+    fn from_iter<I: IntoIterator<Item = ItemBloom>>(iter: I) -> Self {
+        let mut bloom = Self::default();
+        for x in iter {
+            bloom.insert(x);
+        }
+        bloom
+    }
+}
+
 /// Various bits of information about the contents of a type-level value.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeInfo {
     pub max_de_bruijn_id: Option<DeBruijnId>,
     pub flags: TypeFlags,
+    pub items: ItemBloom,
 }
 
 impl TypeInfo {
@@ -51,8 +94,10 @@ impl TypeInfo {
                 let TypeInfo {
                     max_de_bruijn_id,
                     flags,
+                    items,
                 } = value.type_info();
                 self.info.flags |= flags;
+                self.info.items.insert(items);
                 if let Some(id) = max_de_bruijn_id {
                     self.visit_de_bruijn_id(&id);
                 }
@@ -69,6 +114,22 @@ impl TypeInfo {
                     );
                 }
                 Continue(())
+            }
+
+            fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
+                self.info.items.insert(ItemBloom::of(*id));
+            }
+            fn enter_trait_decl_id(&mut self, id: &TraitDeclId) {
+                self.info.items.insert(ItemBloom::of(*id));
+            }
+            fn enter_trait_impl_id(&mut self, id: &TraitImplId) {
+                self.info.items.insert(ItemBloom::of(*id));
+            }
+            fn enter_fun_decl_id(&mut self, id: &FunDeclId) {
+                self.info.items.insert(ItemBloom::of(*id));
+            }
+            fn enter_global_decl_id(&mut self, id: &GlobalDeclId) {
+                self.info.items.insert(ItemBloom::of(*id));
             }
 
             fn enter_de_bruijn_var<T: AstVisitable + Idx>(&mut self, var: &DeBruijnVar<T>) {
