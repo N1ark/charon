@@ -400,15 +400,16 @@ mod trait_ref_path {
 use type_constraint_set::*;
 mod type_constraint_set {
     use rustc_hash::FxHashMap as HashMap;
+    use std::sync::Arc;
 
     use super::trait_ref_path::*;
     use crate::{ast::*, ids::IndexVec};
 
-    /// A set of local `TraitTypeConstraint`s, represented as a trie.
+    /// A set of local `TraitTypeConstraint`s, represented as a trie. Cheap to clone.
     #[derive(Default, Clone, PartialEq, Eq)]
     pub struct TypeConstraintSet {
-        /// For each base clause, a sub-trie of type constraints.
-        clauses: HashMap<BaseClause, TypeConstraintSetInner>,
+        /// For each base clause, a sub-trie of type constraints. `None` if empty.
+        clauses: Option<Arc<HashMap<BaseClause, TypeConstraintSetInner>>>,
     }
 
     /// A set of `TraitTypeConstraint`s that apply to a trait.
@@ -428,16 +429,20 @@ mod type_constraint_set {
         fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
             use std::hash::BuildHasher;
             // The order of the clauses in the map doesn't matter.
-            let hashes = self.clauses.iter().fold(0u64, |acc, entry| {
-                acc.wrapping_add(rustc_hash::FxBuildHasher.hash_one(entry))
-            });
+            let hashes = self
+                .clauses
+                .iter()
+                .flat_map(|c| c.iter())
+                .fold(0u64, |acc, entry| {
+                    acc.wrapping_add(rustc_hash::FxBuildHasher.hash_one(entry))
+                });
             state.write_u64(hashes);
         }
     }
 
     impl TypeConstraintSet {
         pub fn is_empty(&self) -> bool {
-            self.clauses.is_empty()
+            self.clauses.is_none()
         }
 
         pub fn from_constraints(
@@ -457,7 +462,8 @@ mod type_constraint_set {
             cid: Option<TraitTypeConstraintId>,
             ty: Ty,
         ) {
-            let mut trie = self.clauses.entry(path.tref.base).or_default();
+            let clauses = Arc::make_mut(self.clauses.get_or_insert_default());
+            let mut trie = clauses.entry(path.tref.base).or_default();
             for id in &path.tref.parent_path {
                 trie = trie
                     .parent_clauses
@@ -512,7 +518,7 @@ mod type_constraint_set {
                 // the item.
                 assert!(var.bound_at_depth(DeBruijnId::zero()).is_some());
             }
-            let mut trie = self.clauses.get(&base)?;
+            let mut trie = self.clauses.as_ref()?.get(&base)?;
             for id in parent_path {
                 trie = trie.parent_clauses.get(*id)?;
             }
@@ -521,7 +527,7 @@ mod type_constraint_set {
 
         pub fn iter(&self) -> impl Iterator<Item = (AssocTypePath, Ty)> {
             let mut vec = vec![];
-            for (base, inner) in &self.clauses {
+            for (base, inner) in self.clauses.iter().flat_map(|c| c.iter()) {
                 let base_path = TraitRefPath {
                     base: *base,
                     parent_path: Default::default(),
@@ -599,7 +605,7 @@ mod type_constraint_set {
     impl std::fmt::Debug for TypeConstraintSet {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_str("{ ")?;
-            for (base, inner) in self.clauses.iter() {
+            for (base, inner) in self.clauses.iter().flat_map(|c| c.iter()) {
                 inner.debug_fmt(f, *base, &[])?;
             }
             f.write_str("}")?;
@@ -1131,6 +1137,9 @@ struct Caches {
     path_names: HashMap<AssocTypePath, Ustr>,
     /// The types of the type variables at binder level zero, by variable id.
     type_vars: Vec<Ty>,
+    /// The address of the modifications and the number of type parameters of the last item that
+    /// computed its replacements, the parameters it added and its replacements.
+    last_replacements: Option<((usize, usize), Vec<TypeParam>, TypeConstraintSet)>,
     /// The item-level replacements of the items that the ids below are for.
     item_replacements: Option<TypeConstraintSet>,
     /// Identifies the replacement sets we pushed by their contents; `0` is the empty set.
@@ -2004,18 +2013,29 @@ impl TransformPass for Transform {
             let type_replacements = type_replacements.unwrap_or_else(|| {
                 let caches = caches.get();
                 let mut caches = caches.borrow_mut();
-                item.generic_params()
-                    .types
+                let types = &mut item.generic_params().types;
+                // Consecutive items often have the same modifications and parameters (e.g. a
+                // method and its closures), hence the same new parameters and replacements.
+                let key = (std::ptr::from_ref(*modifications).addr(), types.len());
+                if let Some((last_key, new_params, replacements)) = &caches.last_replacements
+                    && *last_key == key
+                {
+                    types.raw.extend_from_slice(new_params);
+                    return replacements.clone();
+                }
+                let first_new_param = types.len();
+                types
                     .raw
                     .reserve_exact(modifications.required_extra_paths.len());
-                modifications.compute_replacements(|path| {
+                let replacements = modifications.compute_replacements(|path| {
                     let name = caches.path_name(path, &ctx.translated);
-                    let var_id = item
-                        .generic_params()
-                        .types
-                        .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
+                    let var_id =
+                        types.push_with(|id| TypeParam::new(id, name, Variance::Invariant));
                     caches.type_var(var_id)
-                })
+                });
+                let new_params = types.raw[first_new_param..].to_vec();
+                caches.last_replacements = Some((key, new_params, replacements.clone()));
+                replacements
             });
 
             // Remove used constraints.
