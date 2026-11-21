@@ -191,11 +191,18 @@ pub trait UllbcPass: Sync {
         }
     }
 
-    /// Transform an item. This forwards to `transform_function` by default.
+    /// Transform an item. This forwards to `transform_function` by default. A pass that overrides
+    /// this to transform other items than functions must say so with
+    /// `transforms_non_function_items`.
     fn transform_item(&self, ctx: &TransformCtx, item: ItemRefMut<'_>) {
         if let ItemRefMut::Fun(decl) = item {
             self.transform_function(ctx, decl);
         }
+    }
+
+    /// Whether `transform_item` transforms other items than functions.
+    fn transforms_non_function_items(&self) -> bool {
+        false
     }
 
     /// Some passes carry function bodies, which must also be transformed. This is called before
@@ -234,6 +241,22 @@ pub trait LlbcPass: Sync {
             self.transform_body(ctx, body)
         }
     }
+
+    /// The name of the pass, used for debug logging. The default implementation uses the type
+    /// name.
+    fn name(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
+}
+
+/// A pass that modifies each function declaration on its own, whichever kind of body it has.
+pub trait FunDeclPass: Sync {
+    /// Whether the pass should run.
+    fn should_run(&self, _options: &TranslateOptions) -> bool {
+        true
+    }
+
+    fn transform_function(&self, options: &TranslateOptions, decl: &mut FunDecl);
 
     /// The name of the pass, used for debug logging. The default implementation uses the type
     /// name.
@@ -467,42 +490,12 @@ impl TransformCtx {
         });
     }
 
-    /// Mutably iterate over the bodies in parallel. Each body is moved out of the crate while
-    /// the bodies are being transformed, hence all the bodies look `Opaque` to `f`.
-    pub(crate) fn par_for_each_body(&mut self, f: impl Fn(&Self, &mut Body) + Sync) {
-        let mut bodies: Vec<(FunDeclId, bool, Span, Body)> = self
-            .translated
-            .fun_decls
-            .iter_mut()
-            .filter(|decl| decl.body.has_contents())
-            .map(|decl| {
-                let body = mem::replace(&mut decl.body, Body::Opaque);
-                (
-                    decl.def_id,
-                    decl.item_meta.is_local,
-                    decl.item_meta.span,
-                    body,
-                )
-            })
-            .collect();
-        let temp_ids = self.translated.global_decls.slot_count();
-        let outcomes = self.par_with_def_ids(
-            &mut bodies,
-            |(id, is_local, span, _)| ((*id).into(), *is_local, *span),
-            |ctx, (_, _, _, body)| f(ctx, body),
-        );
-        for ((id, _, _, mut body), outcome) in bodies.into_iter().zip(outcomes) {
-            body.globalize_fresh_ids(outcome.first_fresh_ids);
-            self.add_promoted_globals(temp_ids, id, &mut body, outcome.new_globals);
-            let decl = &mut self.translated.fun_decls[id];
-            decl.body = body;
-            decl.item_meta.has_errors |= outcome.has_errors;
-        }
-    }
-
     /// Mutably iterate over the function declarations in parallel, without access to the rest of
     /// the crate.
-    pub(crate) fn par_for_each_fun_decl_mut(&mut self, f: impl Fn(&mut FunDecl) + Sync) {
+    pub(crate) fn par_for_each_fun_decl_mut(
+        &mut self,
+        f: impl Fn(&TranslateOptions, &mut FunDecl) + Sync,
+    ) {
         let mut fun_decls = mem::take(&mut self.translated.fun_decls);
         let mut decls: Vec<&mut FunDecl> = fun_decls.iter_mut().collect();
         let outcomes = self.par_with_def_ids(
@@ -514,7 +507,7 @@ impl TransformCtx {
                     decl.item_meta.span,
                 )
             },
-            |_, decl| f(decl),
+            |ctx, decl| f(&ctx.options, decl),
         );
         for (decl, outcome) in decls.into_iter().zip(outcomes) {
             decl.body.globalize_fresh_ids(outcome.first_fresh_ids);

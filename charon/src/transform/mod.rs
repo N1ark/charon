@@ -79,9 +79,10 @@ pub mod control_flow {
 }
 
 pub use ctx::TransformCtx;
-use ctx::{LlbcPass, TransformPass, UllbcPass};
+use ctx::{FunDeclPass, LlbcPass, TransformPass, UllbcPass};
 
 use crate::ast::ItemRefMut;
+use itertools::Itertools;
 use crate::formatter::IntoFormatter;
 use crate::options::CliOpts;
 use crate::pretty::FmtWithCtx;
@@ -268,8 +269,6 @@ pub fn run_transformation_passes(options: &CliOpts, ctx: &mut TransformCtx) {
     }
     // Cleanup passes useful for both llbc and ullbc.
     ctx.run_passes([
-        // Body passes may introduce fresh locals; make their storage markers explicit.
-        mixed_body(&finish_translation::insert_storage_statements::Transform),
         // Normalize trait refs.
         global(&normalize::normalize_trait_refs::Transform),
         // Change trait associated types to be type parameters instead. See the module for details.
@@ -280,13 +279,17 @@ pub fn run_transformation_passes(options: &CliOpts, ctx: &mut TransformCtx) {
         global(&simplify_output::remove_unused_clauses::Transform),
         // `--remove-adt-clauses`: Remove all trait clauses from type declarations.
         global(&simplify_output::remove_adt_clauses::Transform),
-        // Remove the locals which are never used.
-        mixed_body(&simplify_output::remove_unused_locals::Transform),
-        // Remove the useless `StatementKind::Nop`s.
-        mixed_body(&simplify_output::remove_nops::Transform),
-        // Take all the comments found in the original body and assign them to statements. This must be
-        // last after all the statement-affecting passes to avoid losing comments.
-        mixed_body(&add_missing_info::recover_body_comments::Transform),
+        Pass::FusedFunDecl(Box::new([
+            // Body passes may introduce fresh locals; make their storage markers explicit.
+            CowBox::Borrowed(&finish_translation::insert_storage_statements::Transform),
+            // Remove the locals which are never used.
+            CowBox::Borrowed(&simplify_output::remove_unused_locals::Transform),
+            // Remove the useless `StatementKind::Nop`s.
+            CowBox::Borrowed(&simplify_output::remove_nops::Transform),
+            // Take all the comments found in the original body and assign them to statements. This
+            // must be last after all the statement-affecting passes to avoid losing comments.
+            CowBox::Borrowed(&add_missing_info::recover_body_comments::Transform),
+        ])),
         // Hide the `A` type parameter on standard library containers (`Box`, `Vec`, etc).
         global(&simplify_output::hide_allocator_param::Transform),
         // Partially monomorphize items so that no item is ever instanciated with a mutable reference
@@ -341,6 +344,7 @@ pub enum Pass {
     NonBody(CowBox<dyn TransformPass>),
     FusedUnstructuredBody(Box<[CowBox<dyn UllbcPass>]>),
     FusedStructuredBody(Box<[CowBox<dyn LlbcPass>]>),
+    FusedFunDecl(Box<[CowBox<dyn FunDeclPass>]>),
 }
 
 impl TransformCtx {
@@ -364,30 +368,58 @@ impl TransformCtx {
                         pass.apply_preceding_passes(self, first_passes);
                     }
                 }
-                let run = |ctx: &TransformCtx, mut item: ItemRefMut<'_>| {
-                    for pass in passes.iter() {
-                        if pass.should_run(&ctx.options) {
-                            trace!("# Starting pass {}", pass.name());
-                            let _guard = crate::timing::scope_lazy("transform", || {
-                                short_pass_name(pass.name())
-                            });
-                            pass.transform_item(ctx, item.reborrow());
-                        }
+                let active = passes
+                    .iter()
+                    .filter(|pass| pass.should_run(&self.options))
+                    .collect_vec();
+                let run = |passes: &[&CowBox<dyn UllbcPass>],
+                           ctx: &TransformCtx,
+                           mut item: ItemRefMut<'_>| {
+                    for pass in passes {
+                        trace!("# Starting pass {}", pass.name());
+                        let _guard = crate::timing::scope_lazy("transform", || {
+                            short_pass_name(pass.name())
+                        });
+                        pass.transform_item(ctx, item.reborrow());
                     }
                 };
                 // Functions come last; the other items are few and may depend on each other's
                 // transformation so we keep them sequential.
-                self.for_each_item_mut(|ctx, item| {
-                    if !matches!(item, ItemRefMut::Fun(_)) {
-                        run(ctx, item)
-                    }
-                });
-                self.par_for_each_fun_decl(|ctx, decl| run(ctx, ItemRefMut::Fun(decl)));
+                let non_fun_passes = active
+                    .iter()
+                    .copied()
+                    .filter(|pass| pass.transforms_non_function_items())
+                    .collect_vec();
+                if !non_fun_passes.is_empty() {
+                    self.for_each_item_mut_where(
+                        |id| !id.is_fun(),
+                        |ctx, item| run(&non_fun_passes, ctx, item),
+                    );
+                }
+                self.par_for_each_fun_decl(|ctx, decl| run(&active, ctx, ItemRefMut::Fun(decl)));
                 for pass in passes.iter() {
                     if pass.should_run(&self.options) {
                         pass.finalize(self);
                     }
                 }
+            }
+            Pass::FusedFunDecl(passes) => {
+                let passes = passes
+                    .iter()
+                    .filter(|pass| pass.should_run(&self.options))
+                    .collect_vec();
+                if passes.is_empty() {
+                    return;
+                }
+                self.par_for_each_fun_decl_mut(|options, decl| {
+                    for pass in &passes {
+                        trace!("# Starting pass {}", pass.name());
+                        let _guard = crate::timing::scope_lazy("transform", || {
+                            short_pass_name(pass.name())
+                        });
+                        pass.transform_function(options, decl);
+                    }
+                });
             }
             Pass::FusedStructuredBody(passes) => {
                 self.par_for_each_fun_decl(|ctx, decl| {

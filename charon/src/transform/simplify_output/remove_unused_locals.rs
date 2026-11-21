@@ -9,7 +9,8 @@ use std::ops::ControlFlow::Continue;
 use crate::ast::*;
 use crate::ids::IndexVec;
 use crate::transform::TransformCtx;
-use crate::transform::ctx::{TransformPass, UllbcPass};
+use crate::options::TranslateOptions;
+use crate::transform::ctx::{FunDeclPass, UllbcPass};
 
 #[derive(Visitor)]
 struct LocalsUsageVisitor {
@@ -118,12 +119,12 @@ impl UllbcPass for Transform {
         remove_unused_locals(body)
     }
 }
-impl TransformPass for Transform {
-    fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        ctx.par_for_each_fun_decl_mut(|fun| match &mut fun.body {
+impl FunDeclPass for Transform {
+    fn transform_function(&self, _options: &TranslateOptions, fun: &mut FunDecl) {
+        match &mut fun.body {
             Body::Unstructured(body) => remove_unused_locals(body),
             Body::Structured(body) => remove_unused_locals(body),
             _ => {}
-        });
+        }
     }
 }

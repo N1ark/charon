@@ -9,7 +9,8 @@ use derive_generic_visitor::Visitor;
 use crate::ast::*;
 use crate::ids::IndexVec;
 use crate::transform::TransformCtx;
-use crate::transform::ctx::{TransformPass, UllbcPass};
+use crate::options::TranslateOptions;
+use crate::transform::ctx::{FunDeclPass, UllbcPass};
 use crate::ullbc_ast::{BlockId, TerminatorKind};
 
 #[derive(Visitor)]
@@ -195,9 +196,8 @@ impl UllbcPass for Transform {
     }
 }
 
-impl TransformPass for Transform {
-    fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        let deallocate_all_locals = ctx.options.deallocate_all_locals;
-        ctx.par_for_each_fun_decl_mut(|fun| self.transform_function(fun, deallocate_all_locals));
+impl FunDeclPass for Transform {
+    fn transform_function(&self, options: &TranslateOptions, fun: &mut FunDecl) {
+        self.transform_function(fun, options.deallocate_all_locals)
     }
 }
