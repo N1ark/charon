@@ -305,6 +305,22 @@ pub fn solve_copy<'tcx, S: UnderOwnerState<'tcx>>(
     (!proof.kind.is_error()).then_some(proof)
 }
 
+/// Whether `ty` implements the given single-parameter trait in the current context, ignoring
+/// regions. This is much cheaper than using [`solve_trait`], as no proof is built.
+pub fn implements_trait<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    ty: ty::Ty<'tcx>,
+    trait_id: RDefId,
+) -> bool {
+    use rustc_trait_selection::infer::TyCtxtInferExt;
+    let tcx = s.base().tcx;
+    let ty = erase_free_regions(tcx, ty);
+    let (infcx, param_env) = tcx.infer_ctxt().build_with_typing_env(s.typing_env());
+    rustc_trait_selection::traits::type_known_to_meet_bound_modulo_regions(
+        &infcx, param_env, ty, trait_id,
+    )
+}
+
 /// Solve the `T: Destruct` predicate.
 pub fn solve_destruct<'tcx, S: UnderOwnerState<'tcx>>(s: &S, ty: ty::Ty<'tcx>) -> TraitProof<'tcx> {
     let tcx = s.base().tcx;
