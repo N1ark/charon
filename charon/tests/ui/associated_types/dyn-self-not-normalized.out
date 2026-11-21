@@ -1,0 +1,278 @@
+# Final LLBC before serialization:
+
+opaque type core::future::future::Future::{vtable}<Ty0>
+
+// Full name: core::task::wake::Context
+#[lang_item(Context)]
+pub opaque type Context<mut 'a>
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::task::poll::Poll
+#[lang_item(Poll)]
+pub enum Poll<T>
+where
+    TraitClause0: (T: Sized),
+{
+  Ready { _0: T },
+  Pending,
+}
+
+// Full name: core::pin::Pin
+#[fundamental]
+#[lang_item(Pin)]
+pub opaque type Pin<Ptr>
+where
+    TraitClause0: (Ptr: Sized),
+
+// Full name: core::future::future::Future
+#[lang_item(Future)]
+pub trait Future<Self, Self_Output>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self_Output: Sized)
+    fn poll<'_0_1, '_1_1, '_2_1, Outlives0: (Self: '_0_1), Outlives1: ('_2_1: '_1_1)>;
+    vtable: core::future::future::Future::{vtable}<Self_Output>
+}
+
+// Full name: core::ops::deref::Deref
+#[lang_item(Deref)]
+#[diagnostic_item("Deref")]
+pub trait Deref<Self, Self_Target>
+{
+    proof ImpliedClause0: (Self_Target: MetaSized)
+    fn deref<'_0_1, Outlives0: (Self: '_0_1), Outlives1: (Self_Target: '_0_1)>;
+    vtable: core::ops::deref::Deref::{vtable}<Self_Target>
+}
+
+// Full name: core::ops::deref::DerefMut
+#[lang_item(DerefMut)]
+pub trait DerefMut<Self, Self_Clause0_Target>
+{
+    proof ImpliedClause0: (Self: Deref<Self_Clause0_Target>)
+    fn deref_mut<'_0_1, Outlives0: (Self: '_0_1), Outlives1: (Self_Clause0_Target: '_0_1)>;
+    vtable: core::ops::deref::DerefMut::{vtable}<Self_Clause0_Target>
+}
+
+// Full name: core::future::future::{impl Future<Clause2_Output> for Pin<P>[TraitClause0]}::poll
+pub fn poll<'_0, '_1, '_2, P, Clause1_Clause0_Target, Clause2_Output>(_1: Pin<&'_0 mut Pin<P>[TraitClause0]>[{built_in impl Sized for &'_0 mut Pin<P>[TraitClause0]}], _2: &'_1 mut Context<'_2>) -> Poll<Clause2_Output>[TraitClause2::ImpliedClause1]
+where
+    TraitClause0: (P: Sized),
+    TraitClause1: (P: DerefMut<Clause1_Clause0_Target>),
+    TraitClause2: (Clause1_Clause0_Target: Future<Clause2_Output>),
+    Outlives0: (P: '_0),
+    Outlives1: ('_2: '_1),
+= <opaque>
+
+// Full name: core::future::future::{impl Future<Clause2_Output> for Pin<P>[TraitClause0]}
+impl<P, Clause1_Clause0_Target, Clause2_Output> "impl_Future_for_Pin" Future<Clause2_Output> for Pin<P>[TraitClause0]
+where
+    TraitClause0: (P: Sized),
+    TraitClause1: (P: DerefMut<Clause1_Clause0_Target>),
+    TraitClause2: (Clause1_Clause0_Target: Future<Clause2_Output>),
+{
+    proof ImpliedClause0: (Pin<P>[TraitClause0]: MetaSized) = {built_in impl MetaSized for Pin<P>[TraitClause0]}
+    proof ImpliedClause1: (Clause2_Output: Sized) = TraitClause2::ImpliedClause1
+    fn poll<'_0_1, '_1_1, '_2_1> = poll<'_0_1, '_1_1, '_2_1, P, Clause1_Clause0_Target, Clause2_Output>[TraitClause0, TraitClause1, TraitClause2]
+    vtable: lazy
+}
+
+// Full name: core::marker::Send
+#[diagnostic_item("Send")]
+pub unsafe trait Send<Self>
+
+struct () {}
+
+// Full name: core::marker::Destruct
+#[lang_item(Destruct)]
+pub trait Destruct<Self>
+{
+    fn drop_glue<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::panicking::panic_in_cleanup
+#[lang_item(PanicInCleanup)]
+fn panic_in_cleanup() -> !
+= <opaque>
+
+// Full name: core::pin::Pin::{impl Destruct for Pin<Ptr>[TraitClause0]}::drop_glue
+unsafe fn drop_glue<'_0, Ptr>(_1: &'_0 mut Pin<Ptr>[TraitClause0])
+where
+    TraitClause0: (Ptr: Sized),
+    Outlives0: (Ptr: '_0),
+= <opaque>
+
+// Full name: alloc::alloc::Global
+#[lang_item(GlobalAlloc)]
+pub struct Global {}
+
+// Full name: alloc::boxed::Box
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box<T>
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (type_error("removed allocator parameter"): Sized),
+
+// Full name: alloc::boxed::{Box<T>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}::pin
+pub fn pin<T>(_1: T) -> Pin<Box<T>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<T>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}]
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+// Full name: alloc::boxed::{impl Deref<T> for Box<T>[TraitClause0, TraitClause1]}::deref
+pub fn deref<'_0, T, A>(_1: &'_0 Box<T>[TraitClause0, TraitClause1]) -> &'_0 T
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (A: Sized),
+    Outlives0: (T: '_0),
+    Outlives1: (A: '_0),
+= <opaque>
+
+// Full name: alloc::boxed::{impl Deref<T> for Box<T>[TraitClause0, TraitClause1]}
+impl<T, A> "impl_Deref_for_Box" Deref<T> for Box<T>[TraitClause0, TraitClause1]
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (A: Sized),
+{
+    proof ImpliedClause0: (T: MetaSized) = TraitClause0
+    fn deref<'_0_1> = deref<'_0_1, T, A>[TraitClause0, TraitClause1]
+    vtable: lazy
+}
+
+// Full name: alloc::boxed::{impl DerefMut<T> for Box<T>[TraitClause0, TraitClause1]}::deref_mut
+pub fn deref_mut<'_0, T, A>(_1: &'_0 mut Box<T>[TraitClause0, TraitClause1]) -> &'_0 mut T
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (A: Sized),
+    Outlives0: (T: '_0),
+    Outlives1: (A: '_0),
+= <opaque>
+
+// Full name: alloc::boxed::{impl DerefMut<T> for Box<T>[TraitClause0, TraitClause1]}
+impl<T, A> "impl_DerefMut_for_Box" DerefMut<T> for Box<T>[TraitClause0, TraitClause1]
+where
+    TraitClause0: (T: MetaSized),
+    TraitClause1: (A: Sized),
+{
+    proof ImpliedClause0: (Box<T>[TraitClause0, TraitClause1]: Deref<T>) = impl_Deref_for_Box<T, A>[TraitClause0, TraitClause1]
+    fn deref_mut<'_0_1> = deref_mut<'_0_1, T, A>[TraitClause0, TraitClause1]
+    vtable: lazy
+}
+
+// Full name: test_crate::assert_future
+pub fn assert_future<T, F>(future: F) -> F
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (F: Sized),
+    TraitClause2: (F: Future<T>),
+{
+    let mut _0: F; // return
+    let future: F; // arg #1
+
+    storage_live(_0)
+    _0 = move future
+    conditional_drop[{built_in impl Destruct for F}::drop_glue<'0>] future
+    ↳⚡ storage_dead(future)
+        unwind_continue
+    storage_dead(future)
+    return
+}
+
+// Full name: test_crate::FutureExt
+pub trait FutureExt<Self, Self_Clause1_Output>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Future<Self_Clause1_Output>)
+    fn boxed<'a, TraitClause0_1: (Self: Sized), TraitClause1_1: (Self: Send), Outlives0: (Self: 'a)> = boxed<'a, Self, Self_Clause1_Output>[Self, TraitClause0_1, TraitClause1_1]
+    vtable: test_crate::FutureExt::{vtable}<Self_Clause1_Output>
+}
+
+// Full name: test_crate::FutureExt::boxed
+pub fn boxed<'a, Self, Clause0_Clause1_Output>(self: Self) -> Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + 'a)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + 'a)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + 'a)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + 'a)}, {built_in impl Sized for Global}]}]
+where
+    TraitClause0: (Self: FutureExt<Clause0_Clause1_Output>),
+    TraitClause1: (Self: Sized),
+    TraitClause2: (Self: Send),
+    Outlives0: (Self: 'a),
+{
+    let mut _0: Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '20)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '22)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '29)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '31)}, {built_in impl Sized for Global}]}]; // return
+    let self: Self; // arg #1
+    let mut _2: Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '32)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '34)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '41)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '43)}, {built_in impl Sized for Global}]}]; // anonymous local
+    let mut _3: Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '44)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '46)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '53)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '55)}, {built_in impl Sized for Global}]}]; // anonymous local
+    let mut _4: Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '56)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '58)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '65)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '67)}, {built_in impl Sized for Global}]}]; // anonymous local
+    let mut _5: Pin<Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}]; // anonymous local
+    let mut _6: Self; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    storage_live(_4)
+    storage_live(_5)
+    storage_live(_6)
+    _6 = move self
+    _5 = pin<Self>[TraitClause1](move _6)
+    ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'68>] _6
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(self)
+        unwind_continue
+    _4 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '69)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '71)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '78)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '80)}, {built_in impl Sized for Global}]}], &vtable_of(TraitClause0::ImpliedClause1)>(move _5)
+    conditional_drop[drop_glue<'81, Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}]] _5
+    ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'83>] _6
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(self)
+        unwind_continue
+    storage_dead(_6)
+    storage_dead(_5)
+    _3 = assert_future<Clause0_Clause1_Output, Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]}]>[TraitClause0::ImpliedClause1::ImpliedClause1, {built_in impl Sized for Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]}]}, impl_Future_for_Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '0)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '2)}, {built_in impl Sized for Global}], (dyn Future<Clause0_Clause1_Output> + Send + '12), Clause0_Clause1_Output>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '9)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '11)}, {built_in impl Sized for Global}]}, impl_DerefMut_for_Box<(dyn Future<Clause0_Clause1_Output> + Send + '12), Global>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '14)}, {built_in impl Sized for Global}], Future<(dyn Future<Clause0_Clause1_Output> + Send + '18), Clause0_Clause1_Output>]](move _4)
+    ↳⚡ conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(self)
+        unwind_continue
+    _2 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '109)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '111)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '118)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '120)}, {built_in impl Sized for Global}]}],  at []>(move _3)
+    conditional_drop[drop_glue<'145, Box<(dyn Future<Clause0_Clause1_Output> + Send + '121)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '123)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '121)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '123)}, {built_in impl Sized for Global}]}]] _3
+    ↳⚡ conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(self)
+        unwind_continue
+    storage_dead(_4)
+    storage_dead(_3)
+    _0 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '146)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '148)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '155)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '157)}, {built_in impl Sized for Global}]}],  at []>(move _2)
+    conditional_drop[drop_glue<'182, Box<(dyn Future<Clause0_Clause1_Output> + Send + '158)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '160)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '158)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '160)}, {built_in impl Sized for Global}]}]] _2
+    ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(self)
+        unwind_continue
+    storage_dead(_2)
+    conditional_drop[{built_in impl Destruct for Self}::drop_glue<'183>] self
+    ↳⚡ storage_dead(self)
+        unwind_continue
+    storage_dead(self)
+    return
+}
+
+
+
