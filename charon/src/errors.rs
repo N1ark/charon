@@ -8,6 +8,7 @@ use petgraph::algo::dijkstra::dijkstra;
 use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::cmp::{Ord, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::io::Write;
@@ -90,7 +91,13 @@ impl Error {
             '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}' => true,
             _ => false,
         };
-        if self.msg.contains(needs_normalizing) {
+        // The characters to normalize are ASCII or start with byte 0xE2 in UTF-8: we only look for
+        // them if one of these bytes is there.
+        let may_need_normalizing = self
+            .msg
+            .bytes()
+            .any(|b| (b < 0x20 && b != b'\n') || b == 0x7f || b == 0xe2);
+        if may_need_normalizing && self.msg.contains(needs_normalizing) {
             return self.render_with_title(krate, level, &self.msg);
         }
         let rendered = self.render_with_title(krate, level, "\u{E000}\n\u{E001}");
@@ -132,8 +139,10 @@ impl Error {
         if let Some(file) = krate.files.get(span.file_id) {
             origin = format!("{}", file.name);
             if let Some(source) = &file.contents {
-                let (source, line_start, range) =
-                    covering_lines(source, span.to_byte_range(source));
+                let (source, line_start, range) = with_line_starts(source, |line_starts| {
+                    let range = byte_range(span, source, line_starts);
+                    covering_lines(source, line_starts, range)
+                });
                 let snippet = Snippet::source(source)
                     .line_start(line_start)
                     .path(&origin)
@@ -155,32 +164,69 @@ impl Error {
 
 /// The lines of `source` that `range` touches, the number of the first one, and `range` relative to
 /// them. The renderer takes time linear in the source it is given, so we only give it these lines.
-fn covering_lines(source: &str, range: Range<usize>) -> (&str, usize, Range<usize>) {
+/// `line_starts` are the offsets at which the lines of `source` start.
+fn covering_lines<'s>(
+    source: &'s str,
+    line_starts: &[usize],
+    range: Range<usize>,
+) -> (&'s str, usize, Range<usize>) {
     if range.start > range.end || range.end > source.len() {
         return (source, 1, range);
     }
-    let bytes = source.as_bytes();
-    let line_start_before = |pos: usize| {
-        bytes[..pos]
-            .iter()
-            .rposition(|&b| b == b'\n')
-            .map_or(0, |i| i + 1)
-    };
-    let mut lo = line_start_before(range.start);
+    // The index of the line that contains `pos`.
+    let line_of = |pos: usize| line_starts.partition_point(|&start| start <= pos) - 1;
+    let mut first_line = line_of(range.start);
     // The renderer counts lines in the text before the end of the range: keep that text non-empty.
-    if range.end == lo && lo > 0 {
-        lo = line_start_before(lo - 1);
+    if range.end == line_starts[first_line] && first_line > 0 {
+        first_line -= 1;
     }
-    let hi = bytes[range.end..]
-        .iter()
-        .position(|&b| b == b'\n')
-        .map_or(source.len(), |i| range.end + i + 1);
-    let line_start = 1 + bytes[..lo].iter().filter(|&&b| b == b'\n').count();
+    let lo = line_starts[first_line];
+    let hi = line_starts
+        .get(line_of(range.end) + 1)
+        .copied()
+        .unwrap_or(source.len());
     (
         &source[lo..hi],
-        line_start,
+        first_line + 1,
         range.start - lo..range.end - lo,
     )
+}
+
+/// Call `f` with the offsets at which the lines of `source` start. Computing them takes time
+/// linear in the size of the source, so each thread keeps those of the last source it was asked
+/// about: diagnostics come in runs from the same file.
+fn with_line_starts<R>(source: &str, f: impl FnOnce(&[usize]) -> R) -> R {
+    thread_local! {
+        static LAST: RefCell<(String, Vec<usize>)> = const { RefCell::new((String::new(), Vec::new())) };
+    }
+    LAST.with_borrow_mut(|(last_source, line_starts)| {
+        if line_starts.is_empty() || last_source != source {
+            *line_starts = std::iter::once(0)
+                .chain(
+                    source
+                        .bytes()
+                        .enumerate()
+                        .filter(|&(_, b)| b == b'\n')
+                        .map(|(i, _)| i + 1),
+                )
+                .collect();
+            source.clone_into(last_source);
+        }
+        f(line_starts)
+    })
+}
+
+/// The byte range of `span` in `source`, whose lines start at `line_starts`; like
+/// `SpanData::to_byte_range`.
+fn byte_range(span: SpanData, source: &str, line_starts: &[usize]) -> Range<usize> {
+    let to_byte = |loc: Loc| {
+        let line_start = match loc.line as usize {
+            0 => source.len(),
+            line => line_starts.get(line - 1).copied().unwrap_or(source.len()),
+        };
+        line_start + loc.col as usize
+    };
+    to_byte(span.beg)..to_byte(span.end)
 }
 
 /// What stderr does with styling (colors etc).
@@ -503,7 +549,7 @@ impl ErrorCtx {
 
     /// What identifies a diagnostic: we display each one once.
     pub(crate) fn display_key(span: Span, msg: &str, level: &Level) -> u64 {
-        let mut hasher = std::hash::DefaultHasher::new();
+        let mut hasher = rustc_hash::FxHasher::default();
         (span, msg, format!("{level:?}")).hash(&mut hasher);
         hasher.finish()
     }
