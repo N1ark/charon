@@ -2,7 +2,9 @@ use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::*;
 use crate::hax;
 use charon_lib::{ast::*, ids::IndexVec};
+use rustc_hash::FxHashSet as HashSet;
 use rustc_middle::ty::TypeVisitableExt;
+use std::rc::Rc;
 
 impl<'tcx> TranslateCtx<'tcx> {
     pub fn recognize_builtin_impl(
@@ -121,10 +123,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         bound_trait_ref: &hax::Binder<hax::TraitRef<'tcx>>,
     ) -> Result<PolyTraitDeclRef, Error> {
         // If nothing is bound, translating in the current binder gives the same result and reuses
-        // its caches. Hitting these caches can change the numbering of body regions, so we only do
-        // this if they are erased.
+        // its caches.
         if bound_trait_ref.bound_vars.is_empty()
-            && self.options.erase_body_lifetimes
             && !bound_trait_ref
                 .value
                 .rustc_args(self.hax_state())
@@ -273,37 +273,100 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         trait_proof: &hax::TraitProof<'tcx>,
     ) -> Result<PolyTraitRef, Error> {
         // The translation only depends on the proof and the binder stack, except for the errors it
-        // reports and the fresh body regions it allocates. We cache translations that report no
-        // errors and, inside bodies, that allocate no fresh regions.
+        // reports, so we cache translations that report no errors. Inside bodies, we translate
+        // with a separate freshener and give fresh regions to the ones that appear in the result
+        // afterwards; that way we don't allocate regions we don't use, and the regions we
+        // allocate don't depend on what the caches contain.
         let key = (
             trait_proof.clone(),
             self.error_on_trait_proof_error,
             self.lifetime_freshener.is_some(),
         );
-        if let Some(tref) = self.innermost_binder().trait_proof_trans_cache.get(&key) {
-            return Ok(tref.clone());
-        }
-        let error_count = self.t_ctx.errors.borrow().error_count;
-        // Inside bodies, we give fresh regions to the ones that appear in the result afterwards.
-        // That way we don't allocate regions we don't use, and the regions we allocate don't
-        // depend on what the caches contain.
-        let (tref, local_regions) = self.with_local_body_regions(|this| {
-            let tref = this.translate_trait_proof_uncached(span, trait_proof);
-            (
-                tref,
-                this.lifetime_freshener.as_ref().map(|v| v.slot_count()),
-            )
-        });
-        let mut tref = tref?;
-        self.import_body_regions(&mut tref);
-        if self.t_ctx.errors.borrow().error_count == error_count
-            && local_regions.is_none_or(|n| n == 0)
+        let mut tref = if let Some((tref, mentioned_items)) =
+            self.innermost_binder().trait_proof_trans_cache.get(&key)
         {
-            self.innermost_binder_mut()
-                .trait_proof_trans_cache
-                .insert(key, tref.clone());
-        }
+            let tref = tref.clone();
+            // Record the uses of other items that translating the proof would have recorded.
+            if !mentioned_items.is_empty() {
+                let mentioned_items = mentioned_items.clone();
+                let dep_src = self.make_dep_source(span);
+                let mut errors = self.t_ctx.errors.borrow_mut();
+                for &(id, is_local) in mentioned_items.iter() {
+                    errors.register_dep_source(&dep_src, id, is_local);
+                }
+            }
+            tref
+        } else {
+            let error_count = self.t_ctx.errors.borrow().error_count;
+            let tref = self.with_local_body_regions(|this| {
+                this.translate_trait_proof_uncached(span, trait_proof)
+            })?;
+            if self.t_ctx.errors.borrow().error_count == error_count {
+                // Inside the bodies of local items, we record where items are used, for error
+                // reports. We keep the items this translation mentions to record them on reuse.
+                let mentioned_items =
+                    if self.item_src.def_id().is_local() && self.lifetime_freshener.is_some() {
+                        self.mentioned_items(&tref)
+                    } else {
+                        Rc::default()
+                    };
+                self.innermost_binder_mut()
+                    .trait_proof_trans_cache
+                    .insert(key, (tref.clone(), mentioned_items));
+            }
+            tref
+        };
+        self.import_body_regions(&mut tref);
         Ok(tref)
+    }
+
+    /// The items mentioned in `x`, and whether they're local.
+    fn mentioned_items(&self, x: &impl AstVisitable) -> Rc<[(ItemId, bool)]> {
+        #[derive(Visitor)]
+        struct MentionedItems {
+            seen: HashSet<usize>,
+            items: Vec<ItemId>,
+        }
+        impl VisitAst for MentionedItems {
+            fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+                &mut self,
+                value: &HashConsed<WithCachedTypeInfo<T>>,
+            ) -> ControlFlow<Self::Break> {
+                if self.seen.insert(std::ptr::from_ref(value.inner()).addr()) {
+                    self.visit_inner(value)
+                } else {
+                    ControlFlow::Continue(())
+                }
+            }
+            fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
+                self.items.push((*id).into());
+            }
+            fn enter_global_decl_id(&mut self, id: &GlobalDeclId) {
+                self.items.push((*id).into());
+            }
+            fn enter_trait_decl_id(&mut self, id: &TraitDeclId) {
+                self.items.push((*id).into());
+            }
+            fn enter_trait_impl_id(&mut self, id: &TraitImplId) {
+                self.items.push((*id).into());
+            }
+            fn enter_fun_decl_id(&mut self, id: &FunDeclId) {
+                self.items.push((*id).into());
+            }
+        }
+        let mut visitor = MentionedItems {
+            seen: HashSet::default(),
+            items: vec![],
+        };
+        let _ = visitor.visit(x);
+        visitor
+            .items
+            .into_iter()
+            .filter_map(|id| {
+                let src = self.t_ctx.reverse_id_map.get(&id)?;
+                Some((id, src.def_id().is_local()))
+            })
+            .collect()
     }
 
     fn translate_trait_proof_uncached(

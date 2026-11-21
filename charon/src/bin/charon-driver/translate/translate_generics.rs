@@ -69,8 +69,10 @@ pub(crate) struct BindingLevel<'tcx> {
     pub type_trans_cache: HashMap<hax::Ty<'tcx>, Ty>,
     /// Cache the translation of trait proofs, like `type_trans_cache`. The key also records the
     /// context that influences the translation: `error_on_trait_proof_error` and whether we're
-    /// allocating fresh body regions.
-    pub trait_proof_trans_cache: HashMap<(hax::TraitProof<'tcx>, bool, bool), PolyTraitRef>,
+    /// allocating fresh body regions. Inside the bodies of local items, we also keep the items
+    /// the translation mentions, to record their uses when reusing it.
+    pub trait_proof_trans_cache:
+        HashMap<(hax::TraitProof<'tcx>, bool, bool), (PolyTraitRef, std::rc::Rc<[(ItemId, bool)]>)>,
 }
 
 /// Small helper: we ignore some region names (when they are equal to "'_")
