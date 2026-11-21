@@ -19,8 +19,12 @@ impl Transform {
             .find(|(_, decl)| decl.item_meta.name == panic_name)
             .map(|(id, _)| id);
 
-        let repeated_globals =
-            super::anon_const_to_call::globals_in_constant_repeats(&ctx.translated);
+        // Only needed to inline anon consts.
+        let repeated_globals = if ctx.options.inline_anon_consts {
+            super::anon_const_to_call::globals_in_constant_repeats(&ctx.translated)
+        } else {
+            Default::default()
+        };
 
         // Collect and remove the functions that we want to inline.
         let to_inline = ctx

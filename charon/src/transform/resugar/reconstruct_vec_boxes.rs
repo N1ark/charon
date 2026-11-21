@@ -259,6 +259,13 @@ fn is_new_uninit_call(ctx: &TransformCtx, call: &Call) -> bool {
 
 impl Transform {
     pub fn new(ctx: &mut TransformCtx) -> CowBox<dyn UllbcPass> {
+        // Looking for the functions is costly; skip it when the pass won't run anyway.
+        if !ctx.options.treat_box_as_builtin || ctx.options.monomorphize_with_hax {
+            return CowBox::Owned(Box::new(Transform {
+                box_new: None,
+                box_write: None,
+            }));
+        }
         let box_new = ctx
             .translated
             .fun_decls
