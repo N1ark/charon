@@ -179,12 +179,12 @@ pub struct TranslateCtx<'tcx> {
     pub extra_early_regions_cache: HashMap<(hax::ItemRef<'tcx>, bool), Vec<Region>>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
-    /// What translating each item did, if we translate items out of order.
-    pub(crate) log: Option<Box<super::translate_log::TranslationLog<'tcx>>>,
+    /// The views of allocations each item looked up, see `settle_translation_order`.
+    pub(crate) view_lookups: Vec<(ItemId, Vec<rustc_const_uneval::ViewLookup<'tcx>>)>,
+    /// The impls whose vtable we translated, to refer to it once the impls are all translated.
+    pub(crate) translated_vtables: Vec<(TraitImplId, GlobalDeclRef)>,
     /// The state shared with the other workers, if we translate in parallel.
     pub(crate) par: Option<std::sync::Arc<super::translate_par::ParShared<'tcx>>>,
-    /// The index of this context among the workers; `0` for the main context.
-    pub(crate) worker_index: usize,
     /// The items this worker translated that aren't in `translated`, see `store_item`.
     pub(crate) par_items: super::translate_par::ParItems,
 }

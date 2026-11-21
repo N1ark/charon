@@ -3,12 +3,10 @@
 //! Worker jobs on rustc's thread pool pop items from a shared worklist and translate them, each
 //! with its own `TranslateCtx`. The workers share the state that identifies items (ids, names),
 //! the caches of computations that don't depend on the item (names, context-free types), and the
-//! state of method usage. Since ids are assigned in whatever order the workers encounter items, we
-//! log what each translation does (see `translate_log`), merge the workers' results into the main
-//! context once the worklist is empty, and renumber everything as the sequential translation does.
+//! state of method usage. Once the worklist is empty, we merge the workers' results into the main
+//! context; ids are in whatever order the workers encountered items (see `translate_order`).
 use super::translate_crate::*;
 use super::translate_ctx::*;
-use super::translate_log::{MemoRef, TranslationLog};
 use crate::driver::{BodyRequest, BodyRequests};
 use crate::hax;
 use crate::hax::state::ShardedMap;
@@ -26,7 +24,7 @@ use std::sync::{Arc, Mutex};
 
 /// A context-free type: its translation, the items it mentions and whether these are local, and
 /// what translating it did.
-pub(crate) type MonoType = (Ty, Vec<(ItemId, bool)>, Option<MemoRef>);
+pub(crate) type MonoType = (Ty, Vec<(ItemId, bool)>);
 
 /// The state shared by the workers.
 pub(crate) struct ParShared<'tcx> {
@@ -48,13 +46,11 @@ pub(crate) struct ParShared<'tcx> {
     pub(crate) impls: Lock<IndexMap<TraitImplId, TraitImpl>>,
     pub(crate) files: Lock<Files>,
     /// See `TranslateCtx::cached_names`.
-    pub(crate) cached_names: ShardedMap<RustcItem<'tcx>, (Name, Option<MemoRef>)>,
+    pub(crate) cached_names: ShardedMap<RustcItem<'tcx>, Name>,
     /// See `TranslateCtx::mono_type_cache`.
     pub(crate) mono_types: ShardedMap<hax::Ty<'tcx>, MonoType>,
     /// The translation contexts not in use by a job.
     ctxs: Mutex<Vec<AssertSend<Box<TranslateCtx<'tcx>>>>>,
-    /// The number of contexts we created, which is also the index of the next one.
-    ctx_count: AtomicUsize,
     max_jobs: usize,
     jobs: AtomicUsize,
 }
@@ -147,9 +143,15 @@ pub(crate) fn without_translation_jobs<R>(f: impl FnOnce() -> R) -> R {
 }
 
 /// Whether we can translate in parallel with these options.
-pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>) -> bool {
+pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>, cli_options: &CliOpts) -> bool {
     use charon_lib::name_matcher::PatElem;
     rustc_data_structures::sync::is_dyn_thread_safe()
+        // The errors of the MiniRust backend depend on the order of the items.
+        && !cli_options.run_with_minirust
+        && !matches!(
+            cli_options.format,
+            Some(charon_lib::options::SerializationFormatArg::MiniRust)
+        )
         && ctx.cache.is_none()
         && ctx.errors.borrow().continue_on_failure()
         && !ctx.options.collect_instantiated_layouts
@@ -160,7 +162,7 @@ pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>) -> bool {
 }
 
 impl<'tcx> TranslateCtx<'tcx> {
-    /// Translate the items in the worklist in parallel with `threads` workers, then renumber.
+    /// Translate the items in the worklist in parallel with `threads` workers.
     pub(crate) fn translate_in_parallel(&mut self, cli_options: &CliOpts, threads: usize) {
         let shared = Arc::new(ParShared {
             env: WorkerEnv {
@@ -185,7 +187,6 @@ impl<'tcx> TranslateCtx<'tcx> {
             cached_names: Default::default(),
             mono_types: Default::default(),
             ctxs: Default::default(),
-            ctx_count: AtomicUsize::new(1),
             max_jobs: threads,
             jobs: Default::default(),
         });
@@ -265,19 +266,16 @@ impl<'tcx> TranslateCtx<'tcx> {
             file_to_id: std::mem::take(&mut self.file_to_id),
             files: std::mem::take(&mut krate.files),
         };
-        use super::translate_cache::MemoKey;
         for (item, name) in std::mem::take(&mut self.cached_names) {
-            let memo = self.log_memo_ref(&MemoKey::Name(item.clone()));
-            shared.cached_names.insert(item, (name, memo));
+            shared.cached_names.insert(item, name);
         }
-        for (ty, (tr_ty, deps)) in std::mem::take(&mut self.mono_type_cache) {
-            let memo = self.log_memo_ref(&MemoKey::Ty(ty.clone()));
-            shared.mono_types.insert(ty, (tr_ty, deps, memo));
+        for (ty, mono_type) in std::mem::take(&mut self.mono_type_cache) {
+            shared.mono_types.insert(ty, mono_type);
         }
     }
 
     /// Put the results of the workers and the shared state back into this context.
-    fn merge_workers(&mut self, shared: ParShared<'tcx>, mut workers: Vec<TranslateCtx<'tcx>>) {
+    fn merge_workers(&mut self, shared: ParShared<'tcx>, workers: Vec<TranslateCtx<'tcx>>) {
         let ParShared {
             ids,
             reverse_ids,
@@ -314,12 +312,15 @@ impl<'tcx> TranslateCtx<'tcx> {
         extend(&mut krate.trait_decls, counts[3]);
         extend(&mut krate.trait_impls, counts[4]);
 
-        // Merge the workers' items and logs, in the order of their index.
-        workers.sort_by_key(|ctx| ctx.worker_index);
+        // Merge the workers' items and what they recorded.
         let main_items = std::mem::take(&mut self.par_items);
         self.merge_par_items(main_items);
-        let main_log = self.log.as_mut().unwrap();
-        let mut logs = vec![std::mem::take(&mut **main_log)];
+        let recording = self.errors.get_mut().recording.as_ref().unwrap();
+        let mut worker_errors: HashSet<ItemId> = recording
+            .errors
+            .iter()
+            .filter_map(|error| error.def_id)
+            .collect();
         for mut worker in workers {
             // An item may have been translated by several workers, which got the same result.
             fn merge_items<I: charon_lib::ids::Idx, T>(
@@ -343,7 +344,17 @@ impl<'tcx> TranslateCtx<'tcx> {
             for (parent, child, _) in worker.containment_graph.all_edges() {
                 self.containment_graph.add_edge(parent, child, ());
             }
-            logs.push(*worker.log.take().unwrap());
+            self.view_lookups.append(&mut worker.view_lookups);
+            self.translated_vtables
+                .append(&mut worker.translated_vtables);
+            let recorded = worker.errors.get_mut().recording.take().unwrap();
+            worker_errors.extend(recorded.errors.iter().filter_map(|error| error.def_id));
+            let errors = self.errors.get_mut();
+            errors.error_count += recorded.count;
+            let recording = errors.recording.as_mut().unwrap();
+            recording.errors.extend(recorded.errors);
+            recording.dep_edges.extend(recorded.dep_edges);
+            recording.count += recorded.count;
             // Give the memory of this worker back before merging the next one.
             drop(worker);
             purge_freed_memory();
@@ -356,13 +367,18 @@ impl<'tcx> TranslateCtx<'tcx> {
         let krate = &mut self.translated;
         krate.item_names.reserve(names.len());
         krate.item_names.extend(names.into_entries());
-        // The memoized computations of this context may have raised errors formatted without all
-        // the names, we don't want to reuse them.
+        // The workers didn't know all the names when formatting their errors: we translate the
+        // items that raised them again. The memoized computations of this context may have raised
+        // such errors too, we don't reuse them.
         self.cached_item_metas.clear();
-        let mut log = TranslationLog::merge(logs);
-        // The workers didn't know all the names when formatting their errors.
-        log.mark_worker_errors();
-        self.log = Some(Box::new(log));
+        for id in worker_errors {
+            self.translate_again(id);
+        }
+        while let Some(src) = self.items_to_translate.pop_front() {
+            if self.processed.insert(src.clone()) {
+                self.translate_item(&src);
+            }
+        }
     }
 
     fn merge_par_items(&mut self, items: ParItems) {
@@ -390,12 +406,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             &env.cli_options,
             env.body_requests.clone(),
         );
-        let index = shared.ctx_count.fetch_add(1, Ordering::Relaxed);
         ctx.par = Some(shared.clone());
-        ctx.worker_index = index;
         ctx.register_target_info();
-        ctx.start_translation_log();
-        ctx.log_finish_start();
+        ctx.start_recording();
         Box::new(ctx)
     }
 }

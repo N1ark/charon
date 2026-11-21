@@ -114,6 +114,10 @@ pub fn run(args: UiTestArgs) -> Result<ExitStatus> {
     // Run Charon.
     let mut cmd = Command::new(std::env::current_exe()?);
     cmd.arg("rustc");
+    // The outputs show some ids, which depend on the order of translation.
+    if std::env::var_os("CHARON_TRANSLATE_THREADS").is_none() {
+        cmd.env("CHARON_TRANSLATE_THREADS", "1");
+    }
 
     // Charon args.
     let run_with_minirust = matches!(magic_comments.output, OutputKind::RunWithMiniRust);

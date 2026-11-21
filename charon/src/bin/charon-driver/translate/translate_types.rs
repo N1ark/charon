@@ -151,13 +151,11 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     /// regions), in which case the return type is different.
     #[tracing::instrument(skip(self, span))]
     pub(crate) fn translate_ty(&mut self, span: Span, hax_ty: &hax::Ty<'tcx>) -> Result<Ty, Error> {
-        // A memoized computation must translate the type again to log what that does.
-        let mut ty = if !self.t_ctx.log_recording_memo()
-            && let Some(ty) = self
-                .innermost_binder()
-                .type_trans_cache
-                .get(hax_ty)
-                .cloned()
+        let mut ty = if let Some(ty) = self
+            .innermost_binder()
+            .type_trans_cache
+            .get(hax_ty)
+            .cloned()
         {
             self.t_ctx.cache_reuse_binder_ty(hax_ty);
             ty
@@ -200,15 +198,13 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             && is_context_free(hax_ty);
         if shared
             && let Some(par) = self.t_ctx.par.clone()
-            && let Some((ty, deps, memo)) = par.mono_types.get(hax_ty)
+            && let Some((ty, deps)) = par.mono_types.get(hax_ty)
         {
             let dep_src = self.make_dep_source(span);
             let mut errors = self.t_ctx.errors.borrow_mut();
             for (id, is_local) in deps {
                 errors.register_dep_source(&dep_src, id, is_local);
             }
-            drop(errors);
-            self.t_ctx.log_replay_memo_ref(memo);
             return ty;
         }
         if shared && let Some((ty, deps)) = self.t_ctx.mono_type_cache.get(hax_ty) {
@@ -231,13 +227,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             .translate_ty_inner(span, hax_ty)
             .unwrap_or_else(|e| TyKind::Error(e.msg).into_ty());
         if shared {
-            let memo = if self.t_ctx.par.is_some() {
-                self.t_ctx.log_finish_shared_memo(true)
-            } else {
-                self.t_ctx
-                    .cache_finish_memo(|| super::translate_cache::MemoKey::Ty(hax_ty.clone()));
-                None
-            };
+            self.t_ctx
+                .cache_finish_memo(|| super::translate_cache::MemoKey::Ty(hax_ty.clone()));
             let mut has_errors = false;
             ty.dyn_visit(|k: &TyKind| has_errors |= k.is_error());
             ty.dyn_visit(|k: &TraitRefKind| has_errors |= matches!(k, TraitRefKind::Unknown(_)));
@@ -255,9 +246,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 ty.dyn_visit(|&id: &FunDeclId| push(id.into()));
                 // The regions are already erased, as there is no freshener.
                 match &self.t_ctx.par {
-                    Some(par) => par
-                        .mono_types
-                        .insert(hax_ty.clone(), (ty.clone(), deps, memo)),
+                    Some(par) => par.mono_types.insert(hax_ty.clone(), (ty.clone(), deps)),
                     None => {
                         self.t_ctx
                             .mono_type_cache

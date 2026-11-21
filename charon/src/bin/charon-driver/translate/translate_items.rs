@@ -39,28 +39,29 @@ impl<'tcx> TranslateCtx<'tcx> {
             return;
         }
         self.cache_start_recording();
-        self.log_start_item(trans_id);
-        self.with_def_id(def_id, &trans_id, |mut ctx| {
-            let span = ctx.def_span(def_id);
-            // Catch cycles
-            let res = {
-                // Stopgap measure because there are still many panics in charon and hax.
-                let mut ctx = std::panic::AssertUnwindSafe(&mut ctx);
-                std::panic::catch_unwind(move || ctx.translate_item_aux(item_src, trans_id))
-            };
-            match res {
-                Ok(Ok(())) => return,
-                // Translation error
-                Ok(Err(_)) => {
-                    register_error!(ctx, span, "Item `{def_id:?}` caused errors; ignoring.")
-                }
-                // Panic
-                Err(_) => register_error!(
-                    ctx,
-                    span,
-                    "Thread panicked when extracting item `{def_id:?}`."
-                ),
-            };
+        self.record_views_of(trans_id, |this| {
+            this.with_def_id(def_id, &trans_id, |mut ctx| {
+                let span = ctx.def_span(def_id);
+                // Catch cycles
+                let res = {
+                    // Stopgap measure because there are still many panics in charon and hax.
+                    let mut ctx = std::panic::AssertUnwindSafe(&mut ctx);
+                    std::panic::catch_unwind(move || ctx.translate_item_aux(item_src, trans_id))
+                };
+                match res {
+                    Ok(Ok(())) => return,
+                    // Translation error
+                    Ok(Err(_)) => {
+                        register_error!(ctx, span, "Item `{def_id:?}` caused errors; ignoring.")
+                    }
+                    // Panic
+                    Err(_) => register_error!(
+                        ctx,
+                        span,
+                        "Thread panicked when extracting item `{def_id:?}`."
+                    ),
+                };
+            })
         });
         if let Some(trans_id) = trans_id.as_item()
             && self.errors.borrow().item_has_errors(trans_id)
@@ -75,7 +76,6 @@ impl<'tcx> TranslateCtx<'tcx> {
                 par.set_has_errors(trans_id);
             }
         }
-        self.log_finish_item();
         self.cache_finish_recording(trans_id);
         // We must be careful not to early-return from this function to not unbalance the stack.
         self.translate_stack.pop();
@@ -99,7 +99,6 @@ impl<'tcx> TranslateCtx<'tcx> {
                     if let Some(par) = &self.par {
                         par.names.insert(trans_id, name.clone());
                     }
-                    self.log_named(trans_id);
                 }
                 name
             }
@@ -289,7 +288,6 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn get_or_translate(&mut self, id: ItemId) -> Result<ItemRef<'_>, Error> {
         // A replay of the translation in progress must translate this item too.
         self.cache_record_use(id);
-        self.log_use(id);
         self.cache_decode_now(id);
         // We have to call `get_item` a few times because we're running into the classic `Polonius`
         // problem case.
@@ -336,7 +334,6 @@ impl<'tcx> TranslateCtx<'tcx> {
         fun_id: FunDeclId,
     ) {
         self.cache_taint("method impl");
-        self.log_method_impl(trait_id, method_id, fun_id);
         let par = self.par.clone();
         let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
         let method_status = match &mut shared_methods {
@@ -360,7 +357,6 @@ impl<'tcx> TranslateCtx<'tcx> {
         self.cache_record_effect(|| {
             super::translate_cache::Effect::MarkMethodUsed(trait_id, method_id)
         });
-        self.log_mark_method_used(trait_id, method_id);
         let par = self.par.clone();
         let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
         let method_status = match &mut shared_methods {

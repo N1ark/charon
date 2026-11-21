@@ -746,7 +746,6 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 self.t_ctx.cache_record_effect(|| {
                     super::translate_cache::Effect::ImplVTable(impl_id, vtable.clone())
                 });
-                self.t_ctx.log_impl_vtable(impl_id, &vtable);
             }
             _ => self.t_ctx.cache_taint("vtable of another impl"),
         }
@@ -852,11 +851,13 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             self.t_ctx.cache_record_effect(|| {
                 super::translate_cache::Effect::FillLazyVTable(impl_id, vtable_ref.clone())
             });
-            self.t_ctx.log_fill_lazy_vtable(impl_id, &vtable_ref);
             if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
                 && timpl.vtable.is_lazy()
             {
                 timpl.vtable = VTableDecl::VTable(vtable_ref);
+            } else {
+                // We may translate the impl later, or another worker may.
+                self.t_ctx.translated_vtables.push((impl_id, vtable_ref));
             }
         }
 

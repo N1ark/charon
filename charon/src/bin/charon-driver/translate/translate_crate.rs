@@ -614,25 +614,15 @@ impl<'tcx> TranslateCtx<'tcx> {
                 // lookups need them.
                 if new {
                     is_new = true;
-                    self.log_start_naming(trans_id);
-                    let name = self.translate_name(src);
-                    let named = name.is_ok();
-                    if let Ok(name) = name {
+                    if let Ok(name) = self.translate_name(src) {
                         self.translated.item_names.insert(trans_id, name.clone());
                         par.names.insert(trans_id, name);
                     }
-                    self.log_finish_naming(named);
                 } else if let Some(name) = par.names.get(&trans_id) {
                     self.translated.item_names.insert(trans_id, name);
-                } else {
-                    // Another worker is computing the name, or failed to. Its log records what
-                    // computing the name does.
-                    self.log_start_discarded();
-                    let name = self.translate_name(src);
-                    self.log_finish_discarded();
-                    if let Ok(name) = name {
-                        self.translated.item_names.insert(trans_id, name);
-                    }
+                } else if let Ok(name) = self.translate_name(src) {
+                    // Another worker is computing the name, or failed to.
+                    self.translated.item_names.insert(trans_id, name);
                 }
                 trans_id
             }
@@ -650,19 +640,14 @@ impl<'tcx> TranslateCtx<'tcx> {
                 self.reverse_id_map.insert(trans_id, src.clone());
                 // Store the name early so the name matcher can identify paths.
                 self.cache_start_recording();
-                self.log_start_naming(trans_id);
-                let name = self.translate_name(src);
-                let named = name.is_ok();
-                if let Ok(name) = name {
+                if let Ok(name) = self.translate_name(src) {
                     self.translated.item_names.insert(trans_id, name);
                 }
-                self.log_finish_naming(named);
                 self.cache_finish_naming(trans_id);
                 trans_id
             }
         };
         self.cache_record_registration(item_id, src, is_new, false);
-        self.log_registration(item_id);
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, item_id, src.def_id().is_local());
@@ -718,8 +703,6 @@ impl<'tcx> TranslateCtx<'tcx> {
         item_src: TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
         let (id, is_new) = self.register(dep_src, &item_src);
-        // Out of order, this may be the enqueuing that comes first.
-        self.log_enqueue(id);
         if let Some(item_id) = id.as_item() {
             self.cache_record_registration(item_id, &item_src, false, true);
             // Each source is translated at most once, so enqueuing it again would do nothing.
@@ -1537,9 +1520,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
             extra_early_regions_cache: Default::default(),
             intrinsic_def_ids: Default::default(),
-            log: None,
+            view_lookups: Default::default(),
+            translated_vtables: Default::default(),
             par: None,
-            worker_index: 0,
             par_items: Default::default(),
         }
     }
@@ -1598,7 +1581,7 @@ pub fn translate<'tcx>(
         body_requests,
     );
     // Debugging aid: translate items in another order (last in first out, or pseudo-random if
-    // given a seed), then renumber as the sequential order.
+    // given a seed).
     let scramble_seed = std::env::var("CHARON_SCRAMBLE_ORDER").ok();
     let mut rng: u64 = scramble_seed
         .as_deref()
@@ -1613,10 +1596,8 @@ pub fn translate<'tcx>(
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or_else(rustc_thread_pool::current_num_threads);
-    let parallel = threads > 1 && super::translate_par::can_translate_in_parallel(&ctx);
-    if scramble || parallel {
-        ctx.start_translation_log();
-    }
+    let parallel =
+        threads > 1 && super::translate_par::can_translate_in_parallel(&ctx, cli_options);
     ctx.register_target_info();
     ctx.reserve_unit_decl();
     ctx.register_builtin_functions()?;
@@ -1746,12 +1727,6 @@ pub fn translate<'tcx>(
 
     if ctx.errors.borrow().has_errors() {
         // Don't continue translating if there were errors while parsing options.
-        if ctx.is_logging() {
-            // Report them.
-            ctx.log_finish_start();
-            ctx.replay_sequential_order();
-            ctx.renumber_as_sequential();
-        }
         return Err(Error::dummy());
     }
 
@@ -1769,7 +1744,9 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
-    ctx.log_finish_start();
+    if ctx.cache.is_none() && ctx.errors.borrow().continue_on_failure() {
+        ctx.start_recording();
+    }
     if parallel {
         charon_lib::timing::time("translate-parallel", || {
             ctx.translate_in_parallel(cli_options, threads)
@@ -1812,17 +1789,11 @@ pub fn translate<'tcx>(
         }
     }
 
-    if ctx.is_logging() {
-        charon_lib::timing::time("translate-replay", || ctx.replay_sequential_order());
-    }
+    charon_lib::timing::time("translate-settle", || ctx.settle_translation_order());
     // Remove methods not marked as "used". They are never called and we made sure not to translate
     // them. This removes them from the traits and impls.
     ctx.remove_unused_methods();
     ctx.compute_started_from();
-    if ctx.is_logging() {
-        charon_lib::timing::time("translate-renumber", || ctx.renumber_as_sequential());
-        super::translate_par::purge_freed_memory();
-    }
     ctx.cache_store_names();
     if let Some(cache) = &mut ctx.cache {
         cache.finish(&ctx.translated.files);

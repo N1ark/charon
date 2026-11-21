@@ -116,6 +116,19 @@ impl<'tcx> AllocTypes<'tcx> {
             .unwrap_or_default()
     }
 
+    /// Put back lookups taken with `take_lookups`, as if this thread recorded them now.
+    pub fn put_back_lookups(&self, lookups: Vec<ViewLookup<'tcx>>) {
+        if lookups.is_empty() {
+            return;
+        }
+        let mut data = self.0.lock();
+        let recorded = data.lookups.as_mut().unwrap();
+        recorded
+            .entry(std::thread::current().id())
+            .or_default()
+            .extend(lookups);
+    }
+
     /// Set the view of this allocation, even if it had one.
     pub fn force_view(&self, alloc_id: interpret::AllocId, view: AllocView<'tcx>) {
         self.0.lock().views.insert(alloc_id, view);

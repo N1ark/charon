@@ -10,11 +10,11 @@ error: Unexpected error: could not find the trait clause variable Required(test_
 29 |         foo() + <Env as Unix>::name()
    |                 ^^^^^^^^^^^^^^^^^^^^^
 
-error: Unexpected error: could not find the trait clause variable Required(test_crate::closure_user, 0)
-  --> tests/ui/trivial-bounds-items.rs:45:24
+error: Unexpected error: could not find the trait clause variable TraitSelf
+  --> tests/ui/trivial-bounds-items.rs:37:17
    |
-45 |     let f = || foo() + <Env as Unix>::name();
-   |                        ^^^^^^^^^^^^^^^^^^^^^
+37 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
 
 error: Unexpected error: could not find the type variable Self
   --> tests/ui/trivial-bounds-items.rs:37:17
@@ -22,10 +22,10 @@ error: Unexpected error: could not find the type variable Self
 37 |         foo() + <Env as Unix>::name()
    |                 ^^^^^^^^^^^^^^^^^^^^^
 
-error: Unexpected error: could not find the trait clause variable TraitSelf
-  --> tests/ui/trivial-bounds-items.rs:37:17
+error: Unexpected error: could not find the trait clause variable Required(test_crate::closure_user, 0)
+  --> tests/ui/trivial-bounds-items.rs:45:24
    |
-37 |         foo() + <Env as Unix>::name()
-   |                 ^^^^^^^^^^^^^^^^^^^^^
+45 |     let f = || foo() + <Env as Unix>::name();
+   |                        ^^^^^^^^^^^^^^^^^^^^^
 
 ERROR Charon failed to translate this code (9 errors)

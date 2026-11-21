@@ -288,11 +288,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         if let Some(parent_span) = parent_span {
             let data = self.translate_span_data(source_info.span);
             let parent_span = self.translate_span_data(parent_span);
-            let span = Span::new(parent_span, Some(data));
-            if self.is_logging() {
-                self.log_span(span);
-            }
-            span
+            Span::new(parent_span, Some(data))
         } else {
             self.translate_span(&source_info.span)
         }
@@ -318,9 +314,6 @@ impl<'tcx> TranslateCtx<'tcx> {
             self.recent_spans[slot] = Some((*span, translated));
             translated
         };
-        if self.is_logging() {
-            self.log_span(translated);
-        }
         translated
     }
 
@@ -525,15 +518,12 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// `[Ident("test"), Ident("bla"), Ident("Foo"), Impl(impl<T> Ty<T>, Disambiguator(1)), Ident("bar")]`
     fn name_for_item(&mut self, item: &RustcItem<'tcx>) -> Result<Name, Error> {
         if let Some(par) = self.par.clone() {
-            if let Some((name, memo)) = par.cached_names.get(item) {
-                self.log_replay_memo_ref(memo);
+            if let Some(name) = par.cached_names.get(item) {
                 return Ok(name);
             }
-            self.cache_start_memo();
             let name = self.name_for_item_uncached(item);
-            let memo = self.log_finish_shared_memo(name.is_ok());
             if let Ok(name) = &name {
-                par.cached_names.insert(item.clone(), (name.clone(), memo));
+                par.cached_names.insert(item.clone(), name.clone());
             }
             return name;
         }
