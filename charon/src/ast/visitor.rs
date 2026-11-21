@@ -1332,6 +1332,26 @@ impl<C: Hash + Eq + Mappable> Mapper for MemoMapper<C> {
     type Value<T: Mappable> = rustc_hash::FxHashMap<(HashConsed<T>, Option<C>), HashConsed<T>>;
 }
 
+impl<C: Hash + Eq + Mappable> HashConsMemo<C> {
+    /// The recorded rewrite of `x` in `context`, if any.
+    pub fn get<T: HashConsable>(
+        &mut self,
+        x: &HashConsed<T>,
+        context: Option<C>,
+    ) -> Option<HashConsed<T>> {
+        self.map.get::<T>()?.get(&(x.clone(), context)).cloned()
+    }
+    /// Record that `x` is rewritten to `new` in `context`.
+    pub fn insert<T: HashConsable>(
+        &mut self,
+        x: HashConsed<T>,
+        context: Option<C>,
+        new: HashConsed<T>,
+    ) {
+        self.map.or_default::<T>().insert((x, context), new);
+    }
+}
+
 impl<C> Default for HashConsMemo<C> {
     fn default() -> Self {
         Self {

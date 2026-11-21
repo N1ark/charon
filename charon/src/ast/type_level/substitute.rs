@@ -28,6 +28,11 @@ pub trait VarsVisitor {
         None
     }
     fn visit_metadata_value(&mut self, _value: &MetadataValue) {}
+    /// A memo of the rewrites of hash-consed values, keyed by binder depth. Only valid if the
+    /// rewrite of a value only depends on the value and on the binder depth.
+    fn memo(&mut self) -> Option<&mut HashConsMemo<DeBruijnId>> {
+        None
+    }
 }
 
 /// A replacement for a clause variable, expressed as seen from the outside of the value being
@@ -56,6 +61,10 @@ pub(crate) struct SubstVisitor<'a> {
     /// Whether to substitute explicit variables only (types, regions, const generics).
     explicits_only: bool,
     had_error: bool,
+    /// Values are often shared (e.g. in deep trait proofs): substitute each once. We only start
+    /// memoizing on big values, as it costs more than it saves on small ones.
+    memo: Option<Box<HashConsMemo<DeBruijnId>>>,
+    visited: u32,
 }
 impl<'a> SubstVisitor<'a> {
     pub(crate) fn new(
@@ -68,6 +77,8 @@ impl<'a> SubstVisitor<'a> {
             self_ref,
             explicits_only,
             had_error: false,
+            memo: None,
+            visited: 0,
         }
     }
 
@@ -147,6 +158,15 @@ impl VarsVisitor for SubstVisitor<'_> {
     fn visit_metadata_value(&mut self, _value: &MetadataValue) {
         self.had_error = true;
     }
+    fn memo(&mut self) -> Option<&mut HashConsMemo<DeBruijnId>> {
+        const MEMO_THRESHOLD: u32 = 16;
+        if self.visited < MEMO_THRESHOLD {
+            self.visited += 1;
+            None
+        } else {
+            Some(self.memo.get_or_insert_default())
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -192,7 +212,22 @@ pub trait TyVisitable: Sized + AstVisitable {
                             | TypeFlags::USES_SIZE_METADATA,
                     )
                 {
-                    self.visit_inner(value)
+                    let depth = self.depth;
+                    if let Some(memo) = self.v.memo() {
+                        if let Some(new) = memo.get(value, Some(depth)) {
+                            *value = new;
+                            return Continue(());
+                        }
+                        let old = value.clone();
+                        self.visit_inner(value)?;
+                        self.v
+                            .memo()
+                            .expect("memoization doesn't stop once started")
+                            .insert(old, Some(depth), value.clone());
+                        Continue(())
+                    } else {
+                        self.visit_inner(value)
+                    }
                 } else {
                     Continue(())
                 }
