@@ -33,6 +33,8 @@ struct MagicComments {
     default_options: bool,
     /// A list of paths to files that must be compiled as dependencies for this test.
     auxiliary_crates: Vec<PathBuf>,
+    /// The order in which to translate items, see `CHARON_SCRAMBLE_ORDER`.
+    scramble_order: Option<String>,
 }
 
 static HELP_STRING: &str = unindent!(
@@ -53,6 +55,8 @@ static HELP_STRING: &str = unindent!(
          differs between debug and release mode.
     - `//@ no-default-options`: don't set default options like --hide-allocator
     - `//@ aux-crate=<file path>`: compile this file as a crate dependency.
+    - `//@ scramble-order=<seed>`: translate items in a pseudo-random order instead of the order
+         we find them in (or last in first out if `<seed>` isn't a number).
 
     A test can be run several times with different options using revisions:
     - `//@ revisions=<rev1>,<rev2>,...`: declare the revisions; each is a separate test, with
@@ -117,6 +121,9 @@ pub fn run(args: UiTestArgs) -> Result<ExitStatus> {
     // The outputs show some ids, which depend on the order of translation.
     if std::env::var_os("CHARON_TRANSLATE_THREADS").is_none() {
         cmd.env("CHARON_TRANSLATE_THREADS", "1");
+    }
+    if let Some(seed) = &magic_comments.scramble_order {
+        cmd.env("CHARON_SCRAMBLE_ORDER", seed);
     }
 
     // Charon args.
@@ -209,6 +216,7 @@ fn parse_magic_comments(input_path: &Path, revision: Option<&str>) -> Result<Mag
         rustc_opts: Vec::new(),
         default_options: true,
         auxiliary_crates: Vec::new(),
+        scramble_order: None,
     };
     let mut revisions: Option<Vec<&str>> = None;
     let contents = fs::read_to_string(input_path)?;
@@ -264,6 +272,8 @@ fn parse_magic_comments(input_path: &Path, revision: Option<&str>) -> Result<Mag
             comments
                 .rustc_opts
                 .extend(rustc_opts.split_whitespace().map(str::to_owned));
+        } else if let Some(seed) = line.strip_prefix("scramble-order=") {
+            comments.scramble_order = Some(seed.to_owned());
         } else if let Some(crate_path) = line.strip_prefix("aux-crate=") {
             let crate_path: PathBuf = crate_path.into();
             let parent = input_path
