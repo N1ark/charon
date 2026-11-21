@@ -1,5 +1,5 @@
-use crate::ast::*;
 use crate::ast::bodies::insert_statements;
+use crate::ast::*;
 use crate::errors::{ErrorCtx, Level};
 use crate::formatter::{FmtCtx, IntoFormatter};
 use crate::llbc_ast;

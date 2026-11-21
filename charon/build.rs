@@ -32,5 +32,8 @@ fn main() {
 
     // `charon-driver` is built for the same target and links the toolchain's `librustc_driver`, so
     // this is also the host target of the rustc we run.
-    println!("cargo::rustc-env=CHARON_HOST_TARGET={}", env::var("TARGET").unwrap());
+    println!(
+        "cargo::rustc-env=CHARON_HOST_TARGET={}",
+        env::var("TARGET").unwrap()
+    );
 }

@@ -198,9 +198,10 @@ impl TypeInfo {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE)
                     }
                     TraitRefKind::SelfId => self.info.flags.insert(TypeFlags::MENTIONS_SELF_CLAUSE),
-                    TraitRefKind::Unknown(_) => {
-                        self.info.flags.insert(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF)
-                    }
+                    TraitRefKind::Unknown(_) => self
+                        .info
+                        .flags
+                        .insert(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF),
                     TraitRefKind::TraitImpl(..)
                     | TraitRefKind::Clause(..)
                     | TraitRefKind::BuiltinOrAuto { .. }

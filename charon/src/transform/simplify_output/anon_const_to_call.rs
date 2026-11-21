@@ -31,7 +31,9 @@ pub(super) fn globals_in_constant_repeats(krate: &TranslatedCrate) -> HashSet<Gl
             }
         }
     }
-    RepeatedGlobals(HashSet::new()).visit_by_val_infallible(krate).0
+    RepeatedGlobals(HashSet::new())
+        .visit_by_val_infallible(krate)
+        .0
 }
 
 impl Transform {

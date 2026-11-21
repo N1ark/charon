@@ -8,8 +8,8 @@ use serde_state::{DeserializeState, SerializeState};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thin_vec::ThinVec;
 
-use crate::ast::*;
 use crate::ast::bodies::insert_statements;
+use crate::ast::*;
 
 // Globally-unique identifier for each statement.
 generate_index_type!(StatementId);

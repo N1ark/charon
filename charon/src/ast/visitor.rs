@@ -1363,7 +1363,12 @@ pub trait VisitorWithMemo: VisitAstMut {
             }
         };
         let key = (x.clone(), context);
-        if let Some(new) = self.memo().map.or_default::<WithCachedTypeInfo<T>>().get(&key) {
+        if let Some(new) = self
+            .memo()
+            .map
+            .or_default::<WithCachedTypeInfo<T>>()
+            .get(&key)
+        {
             *x = new.clone();
             return Continue(());
         }
