@@ -135,6 +135,8 @@ pub struct TranslateCtx<'tcx> {
     pub body_requests: Arc<BodyRequests<'tcx>>,
     /// The bodies we asked rustc to prepare for the items in `items_to_translate`.
     pub requested_bodies: HashMap<TransItemSource<'tcx>, BodyRequest<'tcx>>,
+    /// The items `register_and_enqueue` has added to `items_to_translate`.
+    pub enqueued: ItemIdSet,
     /// The declaration we've already processed (successfully or not).
     pub processed: HashSet<TransItemSource<'tcx>>,
     /// While translating, record which item is "contained" by another, in the sense that
@@ -177,6 +179,33 @@ pub struct TranslateCtx<'tcx> {
     pub extra_early_regions_cache: HashMap<(hax::ItemRef<'tcx>, bool), Vec<Region>>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
+}
+
+/// A set of item ids. Item ids are small indices, so we store the set densely.
+#[derive(Default)]
+pub struct ItemIdSet {
+    types: Vec<bool>,
+    trait_decls: Vec<bool>,
+    trait_impls: Vec<bool>,
+    funs: Vec<bool>,
+    globals: Vec<bool>,
+}
+
+impl ItemIdSet {
+    /// Returns whether the id wasn't in the set.
+    pub fn insert(&mut self, id: ItemId) -> bool {
+        let (members, index) = match id {
+            ItemId::Type(id) => (&mut self.types, id.index()),
+            ItemId::TraitDecl(id) => (&mut self.trait_decls, id.index()),
+            ItemId::TraitImpl(id) => (&mut self.trait_impls, id.index()),
+            ItemId::Fun(id) => (&mut self.funs, id.index()),
+            ItemId::Global(id) => (&mut self.globals, id.index()),
+        };
+        if members.len() <= index {
+            members.resize(index + 1, false);
+        }
+        !std::mem::replace(&mut members[index], true)
+    }
 }
 
 /// The number of entries of `TranslateCtx::recent_spans`.

@@ -2117,15 +2117,17 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                 // We also get the inverse: `#[unsafe(force_target_feature)]` functions have a safe signature, but calling
                 // them is unsafe if the caller does not enable the feature.
                 let attrs = tcx.codegen_fn_attrs(*def_id);
-                let caller = self.item_src.def_id().as_real_or_promoted();
-                let caller_features = caller
-                    .map(|caller| tcx.typeck_root_def_id(caller))
-                    .filter(|caller| tcx.def_kind(*caller).has_codegen_attrs())
-                    .map_or(&[][..], |caller| {
-                        &tcx.codegen_fn_attrs(caller).target_features[..]
-                    });
-                let has_feature =
-                    tcx.is_target_feature_call_safe(&attrs.target_features, caller_features);
+                // A callee without target features needs none from the caller.
+                let has_feature = attrs.target_features.is_empty() || {
+                    let caller = self.item_src.def_id().as_real_or_promoted();
+                    let caller_features = caller
+                        .map(|caller| tcx.typeck_root_def_id(caller))
+                        .filter(|caller| tcx.def_kind(*caller).has_codegen_attrs())
+                        .map_or(&[][..], |caller| {
+                            &tcx.codegen_fn_attrs(caller).target_features[..]
+                        });
+                    tcx.is_target_feature_call_safe(&attrs.target_features, caller_features)
+                };
                 if sig_is_unsafe && attrs.safe_target_features && has_feature {
                     break 'safety_fndef CallSafety::Safe;
                 } else if !has_feature {

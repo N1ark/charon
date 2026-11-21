@@ -216,7 +216,11 @@ impl PathElems {
     }
 
     pub fn push(&mut self, elem: PathElem) {
-        self.with_mut(|elems| elems.push(elem))
+        // Build the new list at its final size directly: this is hot when naming items.
+        let mut elems = Vec::with_capacity(self.len() + 1);
+        elems.extend_from_slice(self);
+        elems.push(elem);
+        *self = PathElems::new(elems);
     }
 
     pub fn pop(&mut self) -> Option<PathElem> {

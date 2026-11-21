@@ -645,6 +645,10 @@ impl<'tcx> TranslateCtx<'tcx> {
         let (id, is_new) = self.register(dep_src, &item_src);
         if let Some(item_id) = id.as_item() {
             self.cache_record_registration(item_id, &item_src, false, true);
+            // Each source is translated at most once, so enqueuing it again would do nothing.
+            if !self.enqueued.insert(item_id) {
+                return id;
+            }
         }
         if is_new {
             self.request_body(&item_src);
@@ -1412,6 +1416,7 @@ pub fn translate<'tcx>(
         items_to_translate: Default::default(),
         body_requests,
         requested_bodies: Default::default(),
+        enqueued: Default::default(),
         processed: Default::default(),
         containment_graph: Default::default(),
         translate_stack: Default::default(),
