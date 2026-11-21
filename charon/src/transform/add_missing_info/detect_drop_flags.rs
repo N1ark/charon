@@ -458,7 +458,7 @@ impl UllbcPass for Transform {
             .collect();
         CheckFlagCorrectness::filter_invalid_flags(body, &mut flag_candidates);
         for (flag, place) in flag_candidates {
-            body.locals.locals[flag].drop_flag_for = Some(place.clone());
+            body.locals.locals[flag].drop_flag_for = Some(Box::new(place.clone()));
         }
     }
 }

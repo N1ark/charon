@@ -3,10 +3,10 @@
 //! See the [Rust Reference](https://doc.rust-lang.org/reference/inline-assembly.html) for the
 //! meaning of operands and options.
 use crate::ast::*;
+use crate::utils::ustr::Ustr;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
-use ustr::Ustr;
 
 generate_index_type!(AsmOperandId, "AsmOperand");
 

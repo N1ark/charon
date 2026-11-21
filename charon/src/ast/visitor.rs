@@ -74,6 +74,7 @@ use derive_generic_visitor::*;
         ReprOptions,
         RuntimeChecks,
         String,
+        thin_vec::ThinVec<String>,
         UnwindTerminateReason,
         Variance,
         WithRetag,
@@ -89,7 +90,7 @@ use derive_generic_visitor::*;
         u8,
         ullbc_ast::UnwindKind,
         usize,
-        ustr::Ustr,
+        crate::utils::ustr::Ustr,
     ),
     // Types that are completely skipped, even by `ZipAst`.
     skip(
@@ -442,6 +443,7 @@ impl<K: BodyVisitable + Hash + Eq, T: BodyVisitable + MergeValue> BodyVisitable
         ScalarTy,
         Span,
         String,
+        thin_vec::ThinVec<String>,
         TraitRef,
         Ty,
         TypeDeclId,

@@ -27,7 +27,7 @@ impl Generator<'_> {
             "use derive_generic_visitor::{{Drive, DriveMut, DriveTwo}};"
         )?;
         writeln!(f, "use serde::{{Deserialize, Serialize}};")?;
-        writeln!(f, "use ustr::Ustr;")?;
+        writeln!(f, "use crate::utils::ustr::Ustr;")?;
         writeln!(f)?;
         writeln!(f, "#[derive(Debug, Copy, Clone, PartialEq, Eq)]")?;
         writeln!(f, "pub struct FromRustcError;")?;

@@ -57,8 +57,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             hax::ConstantByte::Uninit => Byte::Uninit,
             hax::ConstantByte::Value(v) => Byte::Value(*v),
             hax::ConstantByte::Provenance(prov, offset, i) => Byte::Provenance(
-                self.translate_provenance(span, prov)?,
-                IntegerValue::mk_usize(*offset as u128),
+                Box::new(self.translate_provenance(span, prov)?),
+                Box::new(IntegerValue::mk_usize(*offset as u128)),
                 *i,
             ),
         })
@@ -310,11 +310,12 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 ConstantExprKind::TypeId(self.translate_ty(span, ty)?)
             }
             hax::ConstantExprKind::Memory(bytes) => {
-                let bytes: Vec<Byte> = bytes
-                    .iter()
-                    .map(|b| self.translate_constant_byte(span, b))
-                    .try_collect()?;
-                ConstantExprKind::RawMemory(bytes)
+                // `try_collect` would over-allocate because it doesn't know the exact length.
+                let mut translated = Vec::with_capacity(bytes.len());
+                for b in bytes {
+                    translated.push(self.translate_constant_byte(span, b)?);
+                }
+                ConstantExprKind::RawMemory(translated)
             }
             hax::ConstantExprKind::Todo(msg) => {
                 register_error!(self, span, "Unsupported constant: {:?}", msg);

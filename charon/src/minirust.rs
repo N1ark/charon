@@ -1087,7 +1087,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
         Ok(match abi {
             Abi::Rust => mini::CallingConvention::Rust,
             Abi::C => mini::CallingConvention::C,
-            Abi::Other(name) if name == "rust-call" => mini::CallingConvention::Rust,
+            Abi::Other(name) if name.as_str() == "rust-call" => mini::CallingConvention::Rust,
             Abi::Other(name) => {
                 raise!(
                     span,
@@ -1149,18 +1149,20 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
             match byte {
                 Byte::Uninit => bytes.push(None),
                 Byte::Value(value) => bytes.push(Some(*value)),
-                // MiniRust doesn't have TypeId provenance so we lower it to a hash of the type.
-                Byte::Provenance(GlobalProvenance::TypeId(ty), ptr_offset, i) => {
-                    let val = self.type_id_val(span, ty, ptr_offset.to_bits() as u64)?;
-                    let val_bytes = if T::ENDIANNESS == mini::LittleEndian {
-                        val.to_le_bytes()
-                    } else {
-                        val.to_be_bytes()
-                    };
-                    bytes.push(Some(val_bytes[*i as usize]));
-                }
                 Byte::Provenance(provenance, ptr_offset, pointer_byte) => {
-                    let name = match provenance {
+                    let name = match &**provenance {
+                        // MiniRust doesn't have TypeId provenance so we lower it to a hash of the
+                        // type.
+                        GlobalProvenance::TypeId(ty) => {
+                            let val = self.type_id_val(span, ty, ptr_offset.to_bits() as u64)?;
+                            let val_bytes = if T::ENDIANNESS == mini::LittleEndian {
+                                val.to_le_bytes()
+                            } else {
+                                val.to_be_bytes()
+                            };
+                            bytes.push(Some(val_bytes[*pointer_byte as usize]));
+                            continue;
+                        }
                         GlobalProvenance::Global(gref)
                             if self
                                 .krate
@@ -1174,7 +1176,6 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                         GlobalProvenance::Function(..) => {
                             raise!(span, "MiniRust globals cannot contain function pointers")
                         }
-                        GlobalProvenance::TypeId(_) => unreachable!(),
                     };
                     // FIXME(minirust): MiniRust does not seem to support pointer fragments
                     if *pointer_byte == 0 {

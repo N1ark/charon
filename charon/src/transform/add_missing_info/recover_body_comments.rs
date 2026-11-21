@@ -8,14 +8,14 @@ use crate::transform::ctx::TransformPass;
 
 trait IsStatement {
     fn get_span(&self) -> Span;
-    fn get_comments_before(&mut self) -> &mut Vec<String>;
+    fn get_comments_before(&mut self) -> &mut thin_vec::ThinVec<String>;
 }
 
 impl IsStatement for llbc_ast::Statement {
     fn get_span(&self) -> Span {
         self.span
     }
-    fn get_comments_before(&mut self) -> &mut Vec<String> {
+    fn get_comments_before(&mut self) -> &mut thin_vec::ThinVec<String> {
         &mut self.comments_before
     }
 }
@@ -23,7 +23,7 @@ impl IsStatement for ullbc_ast::Statement {
     fn get_span(&self) -> Span {
         self.span
     }
-    fn get_comments_before(&mut self) -> &mut Vec<String> {
+    fn get_comments_before(&mut self) -> &mut thin_vec::ThinVec<String> {
         &mut self.comments_before
     }
 }
@@ -31,7 +31,7 @@ impl IsStatement for ullbc_ast::Terminator {
     fn get_span(&self) -> Span {
         self.span
     }
-    fn get_comments_before(&mut self) -> &mut Vec<String> {
+    fn get_comments_before(&mut self) -> &mut thin_vec::ThinVec<String> {
         &mut self.comments_before
     }
 }
