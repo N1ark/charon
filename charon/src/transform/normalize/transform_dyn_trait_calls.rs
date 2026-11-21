@@ -147,7 +147,8 @@ fn transform_dyn_trait_call(
     if let TyKind::DynTrait(..) = dyn_trait_place.ty().kind()
         && let PlaceKind::Local(local) = dyn_trait_place.kind
         && let Some(last) = ctx.statements.last()
-        && let StatementKind::Assign(dest, Rvalue::Use(src, _)) = &last.kind
+        && let StatementKind::Assign(dest, rvalue) = &last.kind
+        && let Rvalue::Use(src, _) = &**rvalue
         && let Operand::Copy(place, _) | Operand::Read(place) | Operand::Move(place) = src
         && dest.local_id() == Some(local)
     {

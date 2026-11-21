@@ -356,16 +356,15 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                         if body.locals.is_return_or_arg(*local) => {}
 
                     // These casts are intrinsics for MiniRust.
-                    ullbc_ast::StatementKind::Assign(
-                        destination,
-                        Rvalue::UnaryOp(
+                    ullbc_ast::StatementKind::Assign(destination, rvalue)
+                        if let Rvalue::UnaryOp(
                             UnOp::Cast(
                                 cast @ (CastKind::PtrExposeProvenance(..)
                                 | CastKind::PtrWithExposedProvenance(..)),
                             ),
                             operand,
-                        ),
-                    ) => {
+                        ) = &**rvalue =>
+                    {
                         let intrinsic = match cast {
                             CastKind::PtrExposeProvenance(..) => {
                                 mini::IntrinsicOp::PointerExposeProvenance
@@ -435,7 +434,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                     destination,
                     source,
                 });
-                if let Rvalue::Use(_, WithRetag::Yes) = value {
+                if let Rvalue::Use(_, WithRetag::Yes) = &**value {
                     statements.push(mini::Statement::Validate {
                         place: destination,
                         fn_entry: false,

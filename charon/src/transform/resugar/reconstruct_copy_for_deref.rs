@@ -69,7 +69,7 @@ impl VisitBody for UseCollector<'_> {
             } else if let Rvalue::Use(
                 Operand::Copy(source, _) | Operand::Read(source),
                 WithRetag::No,
-            ) = rvalue
+            ) = &**rvalue
                 && (matches!(source.ty().kind(), TyKind::Ref(..)) || source.ty().is_box())
                 && !info.invalid
             {

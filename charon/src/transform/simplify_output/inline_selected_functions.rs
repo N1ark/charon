@@ -167,7 +167,10 @@ impl UllbcPass for Transform {
                         let arg_place = outer_body.locals.place_for_var(arg_local);
                         [
                             StatementKind::StorageLive(arg_local),
-                            StatementKind::Assign(arg_place, Rvalue::Use(arg, WithRetag::Yes)),
+                            StatementKind::Assign(
+                                arg_place,
+                                Box::new(Rvalue::Use(arg, WithRetag::Yes)),
+                            ),
                         ]
                     })
                     .map(|kind| Statement::new(span, kind)),
@@ -182,7 +185,7 @@ impl UllbcPass for Transform {
                 span,
                 StatementKind::Assign(
                     dest_place,
-                    Rvalue::Use(Operand::Move(return_place), WithRetag::Yes),
+                    Box::new(Rvalue::Use(Operand::Move(return_place), WithRetag::Yes)),
                 ),
             ));
             let final_block = outer_body.body.push(final_block);

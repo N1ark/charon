@@ -53,7 +53,10 @@ impl UllbcPass for Transform {
                 .unwrap_or((AbortKind::Panic, None));
 
             block.statements.push(Statement {
-                kind: StatementKind::Assert { assert, on_failure },
+                kind: StatementKind::Assert {
+                    assert: Box::new(assert),
+                    on_failure,
+                },
                 span: block.terminator.span,
                 comments_before: block.terminator.comments_before.clone(),
             });

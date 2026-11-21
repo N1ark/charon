@@ -70,12 +70,12 @@ impl UllbcPass for Transform {
                 block.statements.push(Statement::new(
                     block.terminator.span,
                     StatementKind::Assert {
-                        assert: Assert {
+                        assert: Box::new(Assert {
                             cond: discr,
                             expected,
                             check_kind: None,
                             call: Box::new(call),
-                        },
+                        }),
                         on_failure: abort.clone(),
                     },
                 ));

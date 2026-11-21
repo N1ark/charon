@@ -38,14 +38,12 @@ impl UllbcPass for Transform {
                     .is_some_and(|(tref, _)| trait_ref_is_box_drop(krate, tref))
                 && let [Operand::Move(argument)] = call.args.as_slice()
                 && let Some(statement) = block.statements.last()
-                && let StatementKind::Assign(
-                    temporary,
-                    Rvalue::Ref {
-                        place,
-                        kind: BorrowKind::Mut,
-                        ..
-                    },
-                ) = &statement.kind
+                && let StatementKind::Assign(temporary, rvalue) = &statement.kind
+                && let Rvalue::Ref {
+                    place,
+                    kind: BorrowKind::Mut,
+                    ..
+                } = &**rvalue
                 && temporary.is_local()
                 && temporary == argument
                 && place.ty().is_box()

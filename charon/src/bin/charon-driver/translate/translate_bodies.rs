@@ -293,7 +293,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let ret = bb.new_var(None, c.ty().clone());
             bb.push_statement(StatementKind::Assign(
                 ret,
-                Rvalue::Use(Operand::Const(c), WithRetag::No),
+                Box::new(Rvalue::Use(Operand::Const(c), WithRetag::No)),
             ));
             Ok(Body::Unstructured(bb.build()))
         } else {
@@ -428,7 +428,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         };
         builder.push_statement(StatementKind::Assign(
             return_place,
-            Rvalue::Aggregate(AggregateKind::Adt(tref, variant, None), args),
+            Box::new(Rvalue::Aggregate(
+                AggregateKind::Adt(tref, variant, None),
+                args,
+            )),
         ));
         Ok(Body::Unstructured(builder.build()))
     }
@@ -557,10 +560,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 let path = self.translate_metadata_path(&path);
                 StatementKind::Assign(
                     box_slice.clone(),
-                    Rvalue::UnaryOp(
+                    Box::new(Rvalue::UnaryOp(
                         UnOp::Cast(CastKind::Unsize(box_slice_ty, meta, path)),
                         Operand::Move(initialized_box),
-                    ),
+                    )),
                 )
             });
 
@@ -606,7 +609,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         );
         builder.push_statement(StatementKind::Assign(
             return_place,
-            Rvalue::Use(Operand::Const(type_id), WithRetag::No),
+            Box::new(Rvalue::Use(Operand::Const(type_id), WithRetag::No)),
         ));
         Ok(Body::Unstructured(builder.build()))
     }
@@ -754,7 +757,7 @@ impl<'tcx> BodyTransCtx<'tcx, '_, '_> {
 
         // Record the outlives that need to hold throughout the body.
         let outlives = self.user_type_annotations.outlives.drain(..).map(|pred| {
-            let kind = StatementKind::Borrowck(BorrowckStatement::SetOutlives(pred));
+            let kind = StatementKind::Borrowck(Box::new(BorrowckStatement::SetOutlives(pred)));
             Statement::new(span, kind)
         });
         self.blocks[START_BLOCK_ID]
@@ -808,7 +811,7 @@ impl BodyTransformCtx for BlockTransCtx<'_, '_, '_, '_> {
     fn insert_assn_stmt(&mut self, place: Place, rvalue: Rvalue) {
         self.statements.push(Statement::new(
             self.span,
-            StatementKind::Assign(place, rvalue),
+            StatementKind::Assign(place, Box::new(rvalue)),
         ));
     }
 }
@@ -1100,13 +1103,13 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                         self.insert_assn_stmt(place.clone(), Rvalue::Use(operand, WithRetag::No));
                         self.statements.push(Statement::new(
                             span,
-                            StatementKind::Borrowck(BorrowckStatement::SetType(
+                            StatementKind::Borrowck(Box::new(BorrowckStatement::SetType(
                                 PlaceTypeConstraint {
                                     place: place.clone(),
                                     ty: annotated_ty,
                                     variance: Variance::Invariant,
                                 },
-                            )),
+                            ))),
                         ));
                         Operand::Move(place)
                     }
@@ -1561,7 +1564,7 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
             mir::StatementKind::Assign((place, rvalue)) => {
                 let t_place = self.translate_place(span, place)?;
                 let t_rvalue = self.translate_mir_rvalue(span, rvalue, t_place.ty())?;
-                Some(StatementKind::Assign(t_place, t_rvalue))
+                Some(StatementKind::Assign(t_place, Box::new(t_rvalue)))
             }
             mir::StatementKind::SetDiscriminant {
                 place,
@@ -1624,7 +1627,9 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
             }
             mir::StatementKind::FakeRead((_, place)) => {
                 let place = self.translate_place(span, place)?;
-                Some(StatementKind::Borrowck(BorrowckStatement::FakeRead(place)))
+                Some(StatementKind::Borrowck(Box::new(
+                    BorrowckStatement::FakeRead(place),
+                )))
             }
             mir::StatementKind::AscribeUserType((place, user_ty), variance) => {
                 let variance = match variance {

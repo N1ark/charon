@@ -178,33 +178,27 @@ fn remove_dynamic_checks(
         //   assert(move b == true)
         [
             Statement {
-                kind: StatementKind::Assign(len, Rvalue::Use(Operand::Copy(len_op, _), _)),
+                kind: StatementKind::Assign(len, len_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        is_in_bounds,
-                        Rvalue::BinaryOp(BinOp::Lt, _, Operand::Copy(lt_op2, _)),
-                    ),
+                kind: StatementKind::Assign(is_in_bounds, lt_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: true,
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if lt_op2 == len
-            && cond == is_in_bounds
+        ] if let Rvalue::Use(Operand::Copy(len_op, _), _) = &**len_rvalue
+            && let Rvalue::BinaryOp(BinOp::Lt, _, Operand::Copy(lt_op2, _)) = &**lt_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: true,
+                ..
+            } = &**assert
+            && *lt_op2 == *len
+            && *cond == *is_in_bounds
             && let Some((_, ProjectionElem::PtrMetadata)) = len_op.as_projection() =>
         {
             rest
@@ -216,47 +210,38 @@ fn remove_dynamic_checks(
         //   assert(move b == true)
         [
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        reborrow,
-                        Rvalue::RawPtr {
-                            kind: RefKind::Shared,
-                            ..
-                        },
-                    ),
+                kind: StatementKind::Assign(reborrow, reborrow_rvalue),
                 ..
             },
             Statement {
-                kind: StatementKind::Assign(len, Rvalue::Use(Operand::Copy(len_op, _), _)),
+                kind: StatementKind::Assign(len, len_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        is_in_bounds,
-                        Rvalue::BinaryOp(BinOp::Lt, _, Operand::Copy(lt_op2, _)),
-                    ),
+                kind: StatementKind::Assign(is_in_bounds, lt_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: true,
-                                check_kind: Some(BuiltinAssertKind::BoundsCheck { .. }),
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if lt_op2 == len
-            && cond == is_in_bounds
+        ] if let Rvalue::RawPtr {
+            kind: RefKind::Shared,
+            ..
+        } = &**reborrow_rvalue
+            && let Rvalue::Use(Operand::Copy(len_op, _), _) = &**len_rvalue
+            && let Rvalue::BinaryOp(BinOp::Lt, _, Operand::Copy(lt_op2, _)) = &**lt_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: true,
+                check_kind: Some(BuiltinAssertKind::BoundsCheck { .. }),
+                ..
+            } = &**assert
+            && *lt_op2 == *len
+            && *cond == *is_in_bounds
             && let Some((slice_place, ProjectionElem::PtrMetadata)) = len_op.as_projection()
-            && reborrow == slice_place =>
+            && *reborrow == *slice_place =>
         {
             rest
         }
@@ -279,34 +264,28 @@ fn remove_dynamic_checks(
         //   res := -x;
         [
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        is_zero,
-                        Rvalue::BinaryOp(BinOp::Eq, y_op, Operand::Const(_zero)),
-                    ),
+                kind: StatementKind::Assign(is_zero, eq_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: false,
-                                check_kind:
-                                    Some(
-                                        BuiltinAssertKind::DivisionByZero(_)
-                                        | BuiltinAssertKind::RemainderByZero(_)
-                                        | BuiltinAssertKind::OverflowNeg(_),
-                                    ),
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if cond == is_zero => {
+        ] if let Rvalue::BinaryOp(BinOp::Eq, y_op, Operand::Const(_zero)) = &**eq_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: false,
+                check_kind:
+                    Some(
+                        BuiltinAssertKind::DivisionByZero(_)
+                        | BuiltinAssertKind::RemainderByZero(_)
+                        | BuiltinAssertKind::OverflowNeg(_),
+                    ),
+                ..
+            } = &**assert
+            && *cond == *is_zero =>
+        {
             let found = make_binop_overflow_panic(rest, |bop, _, r| {
                 matches!(bop, BinOp::Div(_) | BinOp::Rem(_)) && equiv_op(r, y_op)
             }) || make_unop_overflow_panic(rest, |unop, o| {
@@ -328,41 +307,41 @@ fn remove_dynamic_checks(
         // by the previous pass for division by zero.
         [
             Statement {
-                kind: StatementKind::Assign(is_neg_1, Rvalue::BinaryOp(BinOp::Eq, _y_op, _minus_1)),
+                kind: StatementKind::Assign(is_neg_1, is_neg_1_rvalue),
                 ..
             },
             Statement {
-                kind: StatementKind::Assign(is_min, Rvalue::BinaryOp(BinOp::Eq, _x_op, _int_min)),
+                kind: StatementKind::Assign(is_min, is_min_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        has_overflow,
-                        Rvalue::BinaryOp(
-                            BinOp::BitAnd,
-                            Operand::Move(and_op1),
-                            Operand::Move(and_op2),
-                        ),
-                    ),
+                kind: StatementKind::Assign(has_overflow, and_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: false,
-                                check_kind: Some(BuiltinAssertKind::Overflow(..)),
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if and_op1 == is_neg_1 && and_op2 == is_min && cond == has_overflow => rest,
+        ] if matches!(**is_neg_1_rvalue, Rvalue::BinaryOp(BinOp::Eq, ..))
+            && matches!(**is_min_rvalue, Rvalue::BinaryOp(BinOp::Eq, ..))
+            && let Rvalue::BinaryOp(
+                BinOp::BitAnd,
+                Operand::Move(and_op1),
+                Operand::Move(and_op2),
+            ) = &**and_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: false,
+                check_kind: Some(BuiltinAssertKind::Overflow(..)),
+                ..
+            } = &**assert
+            && *and_op1 == *is_neg_1
+            && *and_op2 == *is_min
+            && *cond == *has_overflow =>
+        {
+            rest
+        }
 
         // Overflow checks for right/left shift. They can look like:
         //   a := y as u32; // or another type
@@ -372,34 +351,29 @@ fn remove_dynamic_checks(
         //   res := x {<<,>>} y;
         [
             Statement {
-                kind: StatementKind::Assign(cast, Rvalue::UnaryOp(UnOp::Cast(_), y_op)),
+                kind: StatementKind::Assign(cast, cast_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        has_overflow,
-                        Rvalue::BinaryOp(BinOp::Lt, Operand::Move(lhs), Operand::Const(..)),
-                    ),
+                kind: StatementKind::Assign(has_overflow, lt_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: true,
-                                check_kind: Some(BuiltinAssertKind::Overflow(..)),
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if cond == has_overflow
-            && lhs == cast
+        ] if let Rvalue::UnaryOp(UnOp::Cast(_), y_op) = &**cast_rvalue
+            && let Rvalue::BinaryOp(BinOp::Lt, Operand::Move(lhs), Operand::Const(..)) =
+                &**lt_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: true,
+                check_kind: Some(BuiltinAssertKind::Overflow(..)),
+                ..
+            } = &**assert
+            && *cond == *has_overflow
+            && *lhs == *cast
             && let Some(cast_local) = cast.as_local()
             && !rest.iter().any(|st| uses_local(st, cast_local)) =>
         {
@@ -436,33 +410,26 @@ fn remove_dynamic_checks(
         //   res := a[y];
         [
             Statement {
-                kind:
-                    StatementKind::Assign(
-                        has_overflow,
-                        Rvalue::BinaryOp(BinOp::Lt, y_op, Operand::Const(..)),
-                    ),
+                kind: StatementKind::Assign(has_overflow, lt_rvalue),
                 ..
             },
             Statement {
-                kind:
-                    StatementKind::Assert {
-                        assert:
-                            Assert {
-                                cond: Operand::Move(cond),
-                                expected: true,
-                                check_kind:
-                                    check_kind @ Some(
-                                        BuiltinAssertKind::Overflow(..)
-                                        | BuiltinAssertKind::BoundsCheck { .. },
-                                    ),
-                                ..
-                            },
-                        ..
-                    },
+                kind: StatementKind::Assert { assert, .. },
                 ..
             },
             rest @ ..,
-        ] if cond == has_overflow => {
+        ] if let Rvalue::BinaryOp(BinOp::Lt, y_op, Operand::Const(..)) = &**lt_rvalue
+            && let Assert {
+                cond: Operand::Move(cond),
+                expected: true,
+                check_kind:
+                    check_kind @ Some(
+                        BuiltinAssertKind::Overflow(..) | BuiltinAssertKind::BoundsCheck { .. },
+                    ),
+                ..
+            } = &**assert
+            && *cond == *has_overflow =>
+        {
             // look for a shift operation
             let mut found = make_binop_overflow_panic(rest, |bop, _, r| {
                 matches!(bop, BinOp::Shl(_) | BinOp::Shr(_)) && equiv_op(r, y_op)
@@ -542,13 +509,8 @@ fn resolve_pending_shift_check(body: &mut ExprBody, check: PendingShiftCheck) {
     let assert_pos = body.body[block].statements.iter().position(|stmt| {
         matches!(
             &stmt.kind,
-            StatementKind::Assert {
-                assert: Assert {
-                    cond: Operand::Move(cond),
-                    ..
-                },
-                ..
-            } if cond.as_local() == Some(cond_local)
+            StatementKind::Assert { assert, .. }
+                if matches!(&assert.cond, Operand::Move(cond) if cond.as_local() == Some(cond_local))
         )
     });
 
@@ -563,8 +525,8 @@ fn resolve_pending_shift_check(body: &mut ExprBody, check: PendingShiftCheck) {
                 .iter()
                 .enumerate()
                 .find_map(|(i, stmt)| {
-                    if let StatementKind::Assign(dest, Rvalue::BinaryOp(binop, lhs, rhs)) =
-                        &stmt.kind
+                    if let StatementKind::Assign(dest, rvalue) = &stmt.kind
+                        && let Rvalue::BinaryOp(binop, lhs, rhs) = &**rvalue
                         && matches!(
                             binop,
                             BinOp::Shl(OverflowMode::Wrap) | BinOp::Shr(OverflowMode::Wrap)
@@ -606,12 +568,16 @@ fn resolve_pending_shift_check(body: &mut ExprBody, check: PendingShiftCheck) {
     });
 
     // Compute the shift early, promoted to panic-on-overflow, where the check used to be.
-    body[StmtLoc::new(block, assert_pos)].kind =
-        StatementKind::Assign(fresh.clone(), Rvalue::BinaryOp(panic_binop, lhs, rhs));
+    body[StmtLoc::new(block, assert_pos)].kind = StatementKind::Assign(
+        fresh.clone(),
+        Box::new(Rvalue::BinaryOp(panic_binop, lhs, rhs)),
+    );
 
     // Forward the result at the original shift site.
-    body[shift_loc].kind =
-        StatementKind::Assign(dest, Rvalue::Use(Operand::Move(fresh), WithRetag::No));
+    body[shift_loc].kind = StatementKind::Assign(
+        dest,
+        Box::new(Rvalue::Use(Operand::Move(fresh), WithRetag::No)),
+    );
 }
 
 /// Overflow checks for addition/subtraction/multiplication. They look like:
@@ -699,18 +665,18 @@ fn reconstruct_overflow_calls(ctx: &TransformCtx, body: &mut ExprBody) {
             && matches!(
                 continuation.statements.first(),
                 Some(Statement {
-                    kind: StatementKind::Assert {
-                        assert: Assert {
-                            cond: Operand::Move(cond),
-                            expected: false,
-                            check_kind: Some(BuiltinAssertKind::Overflow(..)),
-                            ..
-                        },
-                        ..
-                    },
+                    kind: StatementKind::Assert { assert, .. },
                     ..
-                }) if matches!(cond.as_projection(), Some((base, ProjectionElem::Field(None, field)))
-                    if base == dest && field.index() == 1)
+                }) if matches!(
+                    &**assert,
+                    Assert {
+                        cond: Operand::Move(cond),
+                        expected: false,
+                        check_kind: Some(BuiltinAssertKind::Overflow(..)),
+                        ..
+                    } if matches!(cond.as_projection(), Some((base, ProjectionElem::Field(None, field)))
+                        if base == dest && field.index() == 1)
+                )
             );
         // Every use of the integer field also counts as a mention of the tuple local. The other
         // mentions allowed are: its assignment, and the assert. If these are the only uses, we can
@@ -734,7 +700,7 @@ fn reconstruct_overflow_calls(ctx: &TransformCtx, body: &mut ExprBody) {
         let span = block.terminator.span;
         block.statements.push(Statement {
             span,
-            kind: StatementKind::Assign(scalar, rvalue),
+            kind: StatementKind::Assign(scalar, Box::new(rvalue)),
             comments_before: std::mem::take(&mut block.terminator.comments_before),
         });
         block.terminator.kind = TerminatorKind::Goto { target };

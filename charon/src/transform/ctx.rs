@@ -1019,7 +1019,7 @@ impl BodyTransformCtx for UllbcStatementTransformCtx<'_> {
     fn insert_assn_stmt(&mut self, place: Place, rvalue: Rvalue) {
         self.statements.push(ullbc_ast::Statement::new(
             self.span,
-            ullbc_ast::StatementKind::Assign(place, rvalue),
+            ullbc_ast::StatementKind::Assign(place, Box::new(rvalue)),
         ));
     }
 

@@ -1628,7 +1628,7 @@ module Ullbc = struct
        match __tag with
        | 0 ->
            let* _0 = place_of_postcard ctx st in
-           let* _1 = rvalue_of_postcard ctx st in
+           let* _1 = box_of_postcard rvalue_of_postcard ctx st in
            Ok (Assign (_0, _1))
        | 1 ->
            let* _0 = place_of_postcard ctx st in
@@ -1644,10 +1644,10 @@ module Ullbc = struct
            let* _0 = place_of_postcard ctx st in
            Ok (PlaceMention _0)
        | 5 ->
-           let* _0 = borrowck_statement_of_postcard ctx st in
+           let* _0 = box_of_postcard borrowck_statement_of_postcard ctx st in
            Ok (Borrowck _0)
        | 6 ->
-           let* assert_ = assertion_of_postcard ctx st in
+           let* assert_ = box_of_postcard assertion_of_postcard ctx st in
            let* on_failure = abort_kind_of_postcard ctx st in
            Ok (Assert (assert_, on_failure))
        | 7 -> Ok Nop

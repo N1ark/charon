@@ -1140,25 +1140,21 @@ impl<'a> ReconstructCtx<'a> {
     fn translate_statement(&self, st: &src::Statement) -> tgt::Statement {
         let span = st.span;
         let kind = match st.kind.clone() {
-            src::StatementKind::Assign(place, rvalue) => {
-                tgt::StatementKind::Assign(place, Box::new(rvalue))
-            }
+            src::StatementKind::Assign(place, rvalue) => tgt::StatementKind::Assign(place, rvalue),
             src::StatementKind::SetDiscriminant(place, variant_id) => {
                 tgt::StatementKind::SetDiscriminant(place, variant_id)
             }
             src::StatementKind::StorageLive(var_id) => tgt::StatementKind::StorageLive(var_id),
             src::StatementKind::StorageDead(var_id) => tgt::StatementKind::StorageDead(var_id),
             src::StatementKind::Assert { assert, on_failure } => tgt::StatementKind::Assert {
-                assert: Box::new(assert),
+                assert,
                 on_failure: on_failure.clone(),
                 on_unwind: Box::new(
                     tgt::Statement::new(span, tgt::StatementKind::UnwindResume).into_block(),
                 ),
             },
             src::StatementKind::PlaceMention(place) => tgt::StatementKind::PlaceMention(place),
-            src::StatementKind::Borrowck(statement) => {
-                tgt::StatementKind::Borrowck(Box::new(statement))
-            }
+            src::StatementKind::Borrowck(statement) => tgt::StatementKind::Borrowck(statement),
             src::StatementKind::Nop => tgt::StatementKind::Nop,
         };
         let mut translated = tgt::Statement::new(span, kind);

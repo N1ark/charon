@@ -62,7 +62,7 @@ pub struct Statement {
 #[derive(EnumAsInner)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub enum StatementKind {
-    Assign(Place, Rvalue),
+    Assign(Place, Box<Rvalue>),
     /// A call. For now, we don't support dynamic calls (i.e. to a function pointer in memory).
     SetDiscriminant(Place, VariantId),
     /// Indicates that this local should be allocated; if it is already allocated, this frees
@@ -80,7 +80,7 @@ pub enum StatementKind {
     /// (e.g. because they go out of bounds).
     PlaceMention(Place),
     /// Statements that only affect borrow-checking.
-    Borrowck(BorrowckStatement),
+    Borrowck(Box<BorrowckStatement>),
     /// A non-diverging runtime check for a condition. This can be either:
     /// - Emitted for inlined "assumes" (which cause UB on failure)
     /// - Reconstructed from `if b { panic() }` if `--reconstruct-asserts` is set.
@@ -88,7 +88,7 @@ pub enum StatementKind {
     /// This statement comes with the effect that happens when the check fails
     /// (rather than representing it as an unwinding edge).
     Assert {
-        assert: Assert,
+        assert: Box<Assert>,
         on_failure: AbortKind,
     },
     /// Does nothing. Useful for passes.

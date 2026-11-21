@@ -1208,7 +1208,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             )),
             Operand::Move(shim_self.clone()),
         );
-        builder.push_statement(StatementKind::Assign(target_self.clone(), rval));
+        builder.push_statement(StatementKind::Assign(target_self.clone(), Box::new(rval)));
 
         builder.call(
             ret_place,
@@ -1254,7 +1254,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             )),
             Operand::Move(dyn_self.clone()),
         );
-        builder.push_statement(StatementKind::Assign(target_self.clone(), rval));
+        builder.push_statement(StatementKind::Assign(target_self.clone(), Box::new(rval)));
 
         let rustc_trait_args = trait_pred.trait_ref.rustc_args(self.hax_state_with_id());
         let rustc_self_ty = rustc_trait_args[0].as_type().unwrap();

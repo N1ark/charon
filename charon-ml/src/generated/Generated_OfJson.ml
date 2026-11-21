@@ -1996,7 +1996,7 @@ module Ullbc = struct
       (match js with
       | `Assoc [ ("Assign", `List [ _0; _1 ]) ] ->
           let* _0 = place_of_json ctx _0 in
-          let* _1 = rvalue_of_json ctx _1 in
+          let* _1 = box_of_json rvalue_of_json ctx _1 in
           Ok (Assign (_0, _1))
       | `Assoc [ ("SetDiscriminant", `List [ _0; _1 ]) ] ->
           let* _0 = place_of_json ctx _0 in
@@ -2012,7 +2012,7 @@ module Ullbc = struct
           let* _0 = place_of_json ctx _0 in
           Ok (PlaceMention _0)
       | `Assoc [ ("Borrowck", _0) ] ->
-          let* _0 = borrowck_statement_of_json ctx _0 in
+          let* _0 = box_of_json borrowck_statement_of_json ctx _0 in
           Ok (Borrowck _0)
       | `Assoc
           [
@@ -2020,7 +2020,7 @@ module Ullbc = struct
               ( `Assoc [ ("assert", assert_); ("on_failure", on_failure) ]
               | `List [ assert_; on_failure ] ) );
           ] ->
-          let* assert_ = assertion_of_json ctx assert_ in
+          let* assert_ = box_of_json assertion_of_json ctx assert_ in
           let* on_failure = abort_kind_of_json ctx on_failure in
           Ok (Assert (assert_, on_failure))
       | `String "Nop" -> Ok Nop

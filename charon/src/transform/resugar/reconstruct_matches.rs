@@ -32,7 +32,7 @@ impl Transform {
             let target = *target;
             let mut statement = Statement::new(
                 block.terminator.span,
-                StatementKind::Assign(dest, Rvalue::Discriminant(p)),
+                StatementKind::Assign(dest, Box::new(Rvalue::Discriminant(p))),
             );
             statement.comments_before = mem::take(&mut block.terminator.comments_before);
             block.statements.push(statement);
@@ -52,7 +52,10 @@ impl Transform {
         let Some(last_st) = block.statements.last_mut() else {
             return;
         };
-        let StatementKind::Assign(dest, Rvalue::Discriminant(p)) = &last_st.kind else {
+        let StatementKind::Assign(dest, rvalue) = &last_st.kind else {
+            return;
+        };
+        let Rvalue::Discriminant(p) = &**rvalue else {
             return;
         };
         assert!(dest.is_local()); // The destination should be a variable.
