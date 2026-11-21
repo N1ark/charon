@@ -155,9 +155,11 @@ pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>, cli_options: &Cl
         && ctx.cache.is_none()
         && ctx.errors.borrow().continue_on_failure()
         && !ctx.options.collect_instantiated_layouts
-        // Matching an impl pattern needs the impl, which may be in another worker's crate.
+        // Matching an impl pattern needs the impl, which may be in another worker's crate (except
+        // for those of `hide_traits`, see `opacity_for_name`).
         && !ctx.options.item_opacities.iter().any(|(pat, _)| {
-            pat.elems.iter().any(|elem| matches!(elem, PatElem::Impl(_)))
+            !ctx.options.hides_trait_impls(pat)
+                && pat.elems.iter().any(|elem| matches!(elem, PatElem::Impl(_)))
         })
 }
 
