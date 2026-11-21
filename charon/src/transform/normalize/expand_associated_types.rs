@@ -96,6 +96,7 @@ mod trait_ref_path {
     use std::fmt::Display;
 
     use enum_as_inner::EnumAsInner;
+    use smallvec::{SmallVec, smallvec};
 
     use crate::ast::*;
 
@@ -128,7 +129,7 @@ mod trait_ref_path {
         ///     type BazTy: Bar<FooTy = bool>;
         /// }
         /// ```
-        pub parent_path: Vec<TraitClauseId>,
+        pub parent_path: SmallVec<[TraitClauseId; 4]>,
         /// The id of the trait at the end of this path. This is the trait that the final clause
         /// implements.
         pub trait_decl_id: TraitDeclId,
@@ -139,7 +140,7 @@ mod trait_ref_path {
         pub fn self_ref(trait_decl_id: TraitDeclId) -> Self {
             Self {
                 base: BaseClause::SelfClause,
-                parent_path: vec![],
+                parent_path: smallvec![],
                 trait_decl_id,
             }
         }
@@ -147,7 +148,7 @@ mod trait_ref_path {
         pub fn local_clause(clause_id: TraitClauseId, trait_decl_id: TraitDeclId) -> Self {
             Self {
                 base: BaseClause::Local(DeBruijnVar::new_at_zero(clause_id)),
-                parent_path: vec![],
+                parent_path: smallvec![],
                 trait_decl_id,
             }
         }
@@ -158,7 +159,7 @@ mod trait_ref_path {
         pub fn parent_clause(id: TraitClauseId, trait_decl_id: TraitDeclId) -> Self {
             Self {
                 base: BaseClause::SelfClause,
-                parent_path: vec![id],
+                parent_path: smallvec![id],
                 trait_decl_id,
             }
         }
@@ -250,12 +251,12 @@ mod trait_ref_path {
             match &self.kind {
                 TraitRefKind::SelfId => Some(TraitRefPath {
                     base: BaseClause::SelfClause,
-                    parent_path: vec![],
+                    parent_path: smallvec![],
                     trait_decl_id,
                 }),
                 TraitRefKind::Clause(id, _) => Some(TraitRefPath {
                     base: BaseClause::Local(*id),
-                    parent_path: vec![],
+                    parent_path: smallvec![],
                     trait_decl_id,
                 }),
                 TraitRefKind::ParentClause(tref, id, _) => {
@@ -480,20 +481,29 @@ mod type_constraint_set {
             &self,
             path: &AssocTypePath,
         ) -> Option<(Option<TraitTypeConstraintId>, &Ty)> {
-            if let BaseClause::Local(var) = path.tref.base {
-                // Only lookup at level zero because replacements are always at level zero relative to
-                // the item.
-                assert!(var.bound_at_depth(DeBruijnId::zero()).is_some());
-            }
-            let mut trie = self.clauses.get(&path.tref.base)?;
-            for id in &path.tref.parent_path {
-                trie = trie.parent_clauses.get(*id)?;
-            }
-            trie.assoc_tys.get(path.type_id).map(|(id, ty)| (*id, ty))
+            self.find_at(path.tref.base, &path.tref.parent_path, path.type_id)
         }
         /// Find the entry at that path from the trie, if it exists.
         pub fn find(&self, path: &AssocTypePath) -> Option<&Ty> {
             Some(self.find_ty_and_used_constraint(path)?.1)
+        }
+        /// Find the entry at the path made of these components.
+        pub fn find_at(
+            &self,
+            base: BaseClause,
+            parent_path: &[TraitClauseId],
+            type_id: AssocTypeId,
+        ) -> Option<(Option<TraitTypeConstraintId>, &Ty)> {
+            if let BaseClause::Local(var) = base {
+                // Only lookup at level zero because replacements are always at level zero relative to
+                // the item.
+                assert!(var.bound_at_depth(DeBruijnId::zero()).is_some());
+            }
+            let mut trie = self.clauses.get(&base)?;
+            for id in parent_path {
+                trie = trie.parent_clauses.get(*id)?;
+            }
+            trie.assoc_tys.get(type_id).map(|(id, ty)| (*id, ty))
         }
 
         pub fn iter(&self) -> impl Iterator<Item = (AssocTypePath, Ty)> {
@@ -501,7 +511,7 @@ mod type_constraint_set {
             for (base, inner) in &self.clauses {
                 let base_path = TraitRefPath {
                     base: *base,
-                    parent_path: vec![],
+                    parent_path: Default::default(),
                     // If the trait id is not set it will not be observed, so we put a dummy value.
                     trait_decl_id: inner.trait_decl_id.unwrap_or(TraitDeclId::MAX),
                 };
@@ -1036,9 +1046,19 @@ struct Caches {
     escaping_levels: HashMap<usize, u64>,
     /// `AssocTypePath::to_name`.
     path_names: HashMap<AssocTypePath, String>,
+    /// The types of the type variables at binder level zero, by variable id.
+    type_vars: Vec<Ty>,
 }
 
 impl Caches {
+    fn type_var(&mut self, id: TypeVarId) -> Ty {
+        for i in self.type_vars.len()..=id.index() {
+            let ty = TyKind::TypeVar(DeBruijnVar::new_at_zero(TypeVarId::new(i))).into_ty();
+            self.type_vars.push(ty);
+        }
+        self.type_vars[id.index()].clone()
+    }
+
     fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> String {
         if let Some(name) = self.path_names.get(path) {
             return name.clone();
@@ -1179,23 +1199,32 @@ impl UpdateItemBody<'_> {
     }
 
     fn lookup_type_replacement(&self, path: &AssocTypePath) -> Option<Ty> {
-        let mut path = path.clone();
-        let dbid = match &mut path.tref.base {
-            BaseClause::Local(DeBruijnVar::Bound(dbid, _)) => {
+        self.lookup_type_replacement_on(path.tref.base, path)
+    }
+
+    /// Look up `path` with its base replaced by `base`.
+    fn lookup_type_replacement_on(&self, base: BaseClause, path: &AssocTypePath) -> Option<Ty> {
+        let (dbid, base) = match base {
+            BaseClause::Local(DeBruijnVar::Bound(dbid, id)) => {
                 // Make the variable relative to the target item. Where clauses are always at
                 // binder level zero.
-                std::mem::replace(dbid, DeBruijnId::zero())
+                let base = BaseClause::Local(DeBruijnVar::Bound(DeBruijnId::zero(), id));
+                (dbid, base)
             }
-            _ => self.type_replacements.depth(),
+            _ => (self.type_replacements.depth(), base),
         };
-        let ty = self.type_replacements[dbid].find(&path)?;
-        let mut ty = self
-            .caches
-            .borrow_mut()
-            .moved
-            .entry((ty.clone(), dbid))
-            .or_insert_with(|| ty.clone().move_under_binders(dbid))
-            .clone();
+        let (_, ty) =
+            self.type_replacements[dbid].find_at(base, &path.tref.parent_path, path.type_id)?;
+        let mut ty = if dbid.is_zero() {
+            ty.clone()
+        } else {
+            self.caches
+                .borrow_mut()
+                .moved
+                .entry((ty.clone(), dbid))
+                .or_insert_with(|| ty.clone().move_under_binders(dbid))
+                .clone()
+        };
         if let TyKind::TraitType(tref, type_id, _args) = ty.kind() {
             let path = TraitRefPath::self_ref(tref.trait_id()).with_assoc_type(*type_id);
             // Unnormalizable types may very well show up, e.g. when trait loopiness forces us to
@@ -1250,12 +1279,15 @@ impl UpdateItemBody<'_> {
                     .insert(key, ty.clone());
                 Some(ty)
             }
-            TraitRefKind::Clause(..) | TraitRefKind::SelfId => {
-                let path = path.on_tref(&tref.to_path().unwrap());
-                self.lookup_type_replacement(&path)
+            // This is `path.on_tref(&tref.to_path())`.
+            TraitRefKind::Clause(var, _) => {
+                self.lookup_type_replacement_on(BaseClause::Local(*var), path)
             }
+            TraitRefKind::SelfId => self.lookup_type_replacement(path),
             TraitRefKind::ParentClause(parent, clause_id, _) => {
-                let path = path.on_tref(&TraitRefPath::parent_clause(*clause_id, tref.trait_id()));
+                // This is `path.on_tref(&TraitRefPath::parent_clause(clause_id, _))`.
+                let mut path = path.clone();
+                path.tref.parent_path.insert(0, *clause_id);
                 self.lookup_path_on_trait_ref(&path, parent)
             }
             TraitRefKind::ItemClause { .. } => None,
@@ -1313,82 +1345,97 @@ impl UpdateItemBody<'_> {
         if modifications.required_extra_params().next().is_none() {
             return;
         }
-        args.with_mut(|args| for path in modifications.required_extra_params() {
-            let mut path = path.clone();
-            let base_tref = match path.tref.base {
-                BaseClause::SelfClause => self_path.as_ref().unwrap().clone(),
-                BaseClause::Local(var) => {
-                    let clause_id = var
-                        .bound_at_depth(DeBruijnId::zero())
-                        .expect("found replacement not at binder level 0?");
-                    path = path.pop_base();
-                    let tref = &args.trait_refs[clause_id].0;
-                    self.caches
-                        .borrow_mut()
-                        .erased
-                        .entry((tref.skip_binder.clone(), tref.regions.len()))
-                        .or_insert_with(|| tref.clone().erase())
-                        .clone()
-                }
-            };
-            let ty = if let Some(ty) = self.lookup_path_on_trait_ref(&path, &base_tref) {
-                ty.clone()
-            } else {
-                let fmt_ctx = &self.ctx.into_fmt();
-                let path_fmt = path.fmt_with_krate(&self.ctx.translated);
-                if self.is_type_alias {
-                    register_error!(
-                        self.ctx,
-                        self.span,
-                        "Could not compute the value of {path_fmt}: type aliases are allowed to \
-                        make use of unproved trait facts. To fix this, add the necessary \
-                        trait bound to the type alias, ignoring the `type_alias_bounds` warning."
-                    );
-                } else if self_path
-                    .as_ref()
-                    .is_some_and(|tref| tref.kind.is_item_clause())
-                {
-                    register_error!(
-                        self.ctx,
-                        self.span,
-                        "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
-                        Either stop using this option or `--exclude` this trait."
-                    );
+        // The erased trait ref of the last clause we looked at; consecutive paths often start
+        // from the same clause.
+        let mut last_clause: Option<(TraitClauseId, TraitRef)> = None;
+        args.with_mut(|args| {
+            args.types.reserve(modifications.required_extra_params().count());
+            for path in modifications.required_extra_params() {
+                let mut path = path.clone();
+                let base_tref = match path.tref.base {
+                    BaseClause::SelfClause => self_path.as_ref().unwrap().clone(),
+                    BaseClause::Local(var) => {
+                        let clause_id = var
+                            .bound_at_depth(DeBruijnId::zero())
+                            .expect("found replacement not at binder level 0?");
+                        // This is `path.pop_base()`.
+                        path.tref.base = BaseClause::SelfClause;
+                        match &last_clause {
+                            Some((id, tref)) if *id == clause_id => tref.clone(),
+                            _ => {
+                                let tref = &args.trait_refs[clause_id].0;
+                                let tref = self
+                                    .caches
+                                    .borrow_mut()
+                                    .erased
+                                    .entry((tref.skip_binder.clone(), tref.regions.len()))
+                                    .or_insert_with(|| tref.clone().erase())
+                                    .clone();
+                                last_clause = Some((clause_id, tref.clone()));
+                                tref
+                            }
+                        }
+                    }
+                };
+                let ty = if let Some(ty) = self.lookup_path_on_trait_ref(&path, &base_tref) {
+                    ty.clone()
                 } else {
-                    let key = (
-                        path.clone(),
-                        base_tref.clone(),
-                        target.clone(),
-                        args.clone(),
-                        self.binder_state,
-                        self_path.clone(),
-                    );
-                    let mut error_msgs = self.error_msgs.borrow_mut();
-                    let msg = error_msgs.entry(key).or_insert_with(|| {
-                        let path_fmt = path
-                            .on_real_tref(&self.ctx.translated, base_tref.clone())
-                            .map(|ty| ty.to_string_with_ctx(fmt_ctx))
-                            .unwrap_or_else(|| path_fmt.to_string());
-                        let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
-                        let base_tref = base_tref.with_ctx(fmt_ctx);
-                        let args = args.with_ctx(fmt_ctx);
-                        format!(
-                            "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
-                        item reference {item_name}{args}.\
-                        \nConstraints in scope:\n{}",
-                            self.type_replacements
-                                .iter()
-                                .flat_map(|x| x.iter())
-                                .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
-                                .join("\n"),
-                        )
-                    });
-                    self.ctx.span_err(self.span, msg, Level::WARNING);
-                }
-                self.reported_error.set(true);
-                TyKind::Error(format!("Can't compute {path}")).into_ty()
-            };
-            args.types.push(ty);
+                    let fmt_ctx = &self.ctx.into_fmt();
+                    let path_fmt = path.fmt_with_krate(&self.ctx.translated);
+                    if self.is_type_alias {
+                        register_error!(
+                            self.ctx,
+                            self.span,
+                            "Could not compute the value of {path_fmt}: type aliases are allowed to \
+                            make use of unproved trait facts. To fix this, add the necessary \
+                            trait bound to the type alias, ignoring the `type_alias_bounds` warning."
+                        );
+                    } else if self_path
+                        .as_ref()
+                        .is_some_and(|tref| tref.kind.is_item_clause())
+                    {
+                        register_error!(
+                            self.ctx,
+                            self.span,
+                            "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
+                            Either stop using this option or `--exclude` this trait."
+                        );
+                    } else {
+                        let key = (
+                            path.clone(),
+                            base_tref.clone(),
+                            target.clone(),
+                            args.clone(),
+                            self.binder_state,
+                            self_path.clone(),
+                        );
+                        let mut error_msgs = self.error_msgs.borrow_mut();
+                        let msg = error_msgs.entry(key).or_insert_with(|| {
+                            let path_fmt = path
+                                .on_real_tref(&self.ctx.translated, base_tref.clone())
+                                .map(|ty| ty.to_string_with_ctx(fmt_ctx))
+                                .unwrap_or_else(|| path_fmt.to_string());
+                            let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
+                            let base_tref = base_tref.with_ctx(fmt_ctx);
+                            let args = args.with_ctx(fmt_ctx);
+                            format!(
+                                "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
+                            item reference {item_name}{args}.\
+                            \nConstraints in scope:\n{}",
+                                self.type_replacements
+                                    .iter()
+                                    .flat_map(|x| x.iter())
+                                    .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
+                                    .join("\n"),
+                            )
+                        });
+                        self.ctx.span_err(self.span, msg, Level::WARNING);
+                    }
+                    self.reported_error.set(true);
+                    TyKind::Error(format!("Can't compute {path}")).into_ty()
+                };
+                args.types.push(ty);
+            }
         })
     }
     fn update_item_generics(&mut self, id: impl Into<ItemId>, args: &mut BoxedArgs) {
@@ -1467,11 +1514,12 @@ impl VisitAstMut for UpdateItemBody<'_> {
         }
         let krate = &self.ctx.translated;
         let replacements = modifications.compute_replacements(|path| {
-            let name = self.caches.borrow_mut().path_name(path, krate);
+            let mut caches = self.caches.borrow_mut();
+            let name = caches.path_name(path, krate);
             let var_id = generics
                 .types
                 .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
-            TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
+            caches.type_var(var_id)
         });
         self.under_binder(replacements, |this| this.visit_inner(binder))
     }
@@ -1760,13 +1808,15 @@ impl TransformPass for Transform {
             // Add new parameters in order to have types to fill in all the replaced paths. We then
             // collect the replaced paths and their associated value.
             let type_replacements = type_replacements.unwrap_or_else(|| {
+                let caches = caches.get();
+                let mut caches = caches.borrow_mut();
                 modifications.compute_replacements(|path| {
-                    let name = caches.get().borrow_mut().path_name(path, &ctx.translated);
+                    let name = caches.path_name(path, &ctx.translated);
                     let var_id = item
                         .generic_params()
                         .types
                         .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
-                    TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
+                    caches.type_var(var_id)
                 })
             });
 
