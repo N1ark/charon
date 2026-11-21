@@ -286,7 +286,7 @@ mod serialize {
         where
             S: serde::Serializer,
         {
-            serialize_dedup(self, self.inner(), state, serializer)
+            serialize_dedup(self, || self.inner(), state, serializer)
         }
     }
 

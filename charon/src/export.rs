@@ -10,7 +10,7 @@ use crate::transform::TransformCtx;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 /// The data of a generic crate. We serialize this to pass it to `charon-ml`, so this must be as
@@ -41,6 +41,65 @@ impl<'de> Deserialize<'de> for CrateData {
 
 #[derive(Serialize)]
 pub struct CharonVersion(pub String);
+
+/// A postcard flavor that buffers the output before handing it to a writer. `postcard::to_io`
+/// instead hands each byte or varint to the writer separately, which is slow.
+struct PostcardWriter<W> {
+    buf: Vec<u8>,
+    writer: W,
+}
+
+impl<W: Write> PostcardWriter<W> {
+    const FLUSH_THRESHOLD: usize = 1 << 16;
+
+    fn new(writer: W) -> Self {
+        PostcardWriter {
+            buf: Vec::with_capacity(2 * Self::FLUSH_THRESHOLD),
+            writer,
+        }
+    }
+
+    fn flush(&mut self) -> postcard::Result<()> {
+        self.writer
+            .write_all(&self.buf)
+            .map_err(|_| postcard::Error::SerializeBufferFull)?;
+        self.buf.clear();
+        Ok(())
+    }
+}
+
+impl<W: Write> postcard::ser_flavors::Flavor for PostcardWriter<W> {
+    type Output = ();
+    #[inline]
+    fn try_push(&mut self, byte: u8) -> postcard::Result<()> {
+        self.buf.push(byte);
+        if self.buf.len() >= Self::FLUSH_THRESHOLD {
+            self.flush()?;
+        }
+        Ok(())
+    }
+    #[inline]
+    fn try_extend(&mut self, data: &[u8]) -> postcard::Result<()> {
+        // Most calls write a short varint: copying it with a known length avoids a `memcpy` call.
+        match *data {
+            [a] => self.buf.push(a),
+            [a, b] => self.buf.extend_from_slice(&[a, b]),
+            [a, b, c] => self.buf.extend_from_slice(&[a, b, c]),
+            [a, b, c, d] => self.buf.extend_from_slice(&[a, b, c, d]),
+            _ => self.buf.extend_from_slice(data),
+        }
+        if self.buf.len() >= Self::FLUSH_THRESHOLD {
+            self.flush()?;
+        }
+        Ok(())
+    }
+    fn finalize(mut self) -> postcard::Result<()> {
+        self.flush()?;
+        self.writer
+            .flush()
+            .map_err(|_| postcard::Error::SerializeBufferFull)
+    }
+}
 
 impl<'de> Deserialize<'de> for CharonVersion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -114,23 +173,25 @@ impl CrateData {
             return Err(());
         };
         // Write to the file.
-        let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
         let with_state = serde_state::WithState::new(self, state);
         match format {
             SerializationFormat::Json => {
+                let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
                 if let Err(err) = serde_json::to_writer(&mut writer, &with_state) {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
                 }
             }
             SerializationFormat::Postcard => {
-                if let Err(err) = postcard::to_io(&with_state, &mut writer) {
+                let flavor = PostcardWriter::new(outfile);
+                if let Err(err) = postcard::serialize_with_flavor(&with_state, flavor) {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
                 }
             }
             #[cfg(feature = "minirust")]
             SerializationFormat::MiniRust => {
+                let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
                 if let Err(err) = crate::minirust::serialize(&self.translated, &mut writer) {
                     anstream::eprintln!("{}\n", err.render(&self.translated, Level::ERROR));
                     return Err(());
