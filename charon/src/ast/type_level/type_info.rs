@@ -69,7 +69,9 @@ impl FromIterator<ItemBloom> for ItemBloom {
 /// Various bits of information about the contents of a type-level value.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeInfo {
-    pub max_de_bruijn_id: Option<DeBruijnId>,
+    /// One more than the largest `DeBruijnId` mentioned, or 0 if none. This is small so that the
+    /// whole `TypeInfo` takes 8 bytes in each hash-consed value.
+    max_de_bruijn_id_plus_one: u16,
     pub flags: TypeFlags,
     pub items: ItemBloom,
 }
@@ -96,14 +98,10 @@ impl TypeInfo {
                 &mut self,
                 value: &HashConsed<WithCachedTypeInfo<T>>,
             ) -> ControlFlow<Self::Break> {
-                let TypeInfo {
-                    max_de_bruijn_id,
-                    flags,
-                    items,
-                } = value.type_info();
-                self.info.flags |= flags;
-                self.info.items.insert(items);
-                if let Some(id) = max_de_bruijn_id {
+                let info = value.type_info();
+                self.info.flags |= info.flags;
+                self.info.items.insert(info.items);
+                if let Some(id) = info.max_de_bruijn_id() {
                     self.visit_de_bruijn_id(&id);
                 }
                 Continue(())
@@ -111,12 +109,9 @@ impl TypeInfo {
 
             fn visit_de_bruijn_id(&mut self, &id: &DeBruijnId) -> ControlFlow<Self::Break> {
                 if let Some(id) = id.sub(self.binder_depth) {
-                    self.info.max_de_bruijn_id = Some(
-                        self.info
-                            .max_de_bruijn_id
-                            .unwrap_or(DeBruijnId::ZERO)
-                            .max(id),
-                    );
+                    let plus_one = u16::try_from(id.index + 1).expect("too many nested binders");
+                    let max = &mut self.info.max_de_bruijn_id_plus_one;
+                    *max = (*max).max(plus_one);
                 }
                 Continue(())
             }
@@ -328,12 +323,15 @@ impl TypeInfo {
 
     /// The largest `DeBruijnId` mentioned by this item, if any.
     pub fn max_de_bruijn_id(&self) -> Option<DeBruijnId> {
-        self.max_de_bruijn_id
+        let index = self.max_de_bruijn_id_plus_one.checked_sub(1)?;
+        Some(DeBruijnId {
+            index: index.into(),
+        })
     }
 
     /// Whether this value mentions a type-level variable (region, type, constant, trait).
     pub fn mentions_var(&self) -> bool {
-        self.max_de_bruijn_id.is_some() || self.flags.contains(TypeFlags::MENTIONS_FREE_VAR)
+        self.max_de_bruijn_id_plus_one != 0 || self.flags.contains(TypeFlags::MENTIONS_FREE_VAR)
     }
 
     /// Whether this value mentions `TraitRef::SelfClause`.
