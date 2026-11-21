@@ -1,5 +1,5 @@
 //! Interned strings.
-use rustc_hash::FxHashSet;
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -7,27 +7,31 @@ use std::ops::Deref;
 use std::sync::{LazyLock, Mutex};
 
 /// An interned string: cheap to copy, compare and hash. Interned strings are never freed.
+///
+/// This points to the interned `&str` so that it's only one pointer wide.
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "charon_on_charon", charon::opaque)]
-pub struct Ustr(&'static str);
+pub struct Ustr(&'static &'static str);
 
-static INTERNED: LazyLock<Mutex<FxHashSet<&'static str>>> = LazyLock::new(Default::default);
+static INTERNED: LazyLock<Mutex<FxHashMap<&'static str, &'static &'static str>>> =
+    LazyLock::new(Default::default);
 
 impl Ustr {
     pub fn as_str(&self) -> &'static str {
-        self.0
+        *self.0
     }
 }
 
 impl From<&str> for Ustr {
     fn from(s: &str) -> Self {
         let mut interned = INTERNED.lock().unwrap();
-        if let Some(s) = interned.get(s) {
+        if let Some(&s) = interned.get(s) {
             return Ustr(s);
         }
         let s: &'static str = Box::leak(s.into());
-        interned.insert(s);
-        Ustr(s)
+        let interned_s = Box::leak(Box::new(s));
+        interned.insert(s, interned_s);
+        Ustr(interned_s)
     }
 }
 
@@ -53,7 +57,7 @@ impl Eq for Ustr {}
 
 impl Hash for Ustr {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.as_ptr().hash(state)
+        std::ptr::hash(self.0, state)
     }
 }
 
