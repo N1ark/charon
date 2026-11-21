@@ -19,6 +19,8 @@
 //!
 //! Entries live in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else the
 //! translation depends on: the charon binary, the options and the upstream crates.
+use std::borrow::Cow;
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -603,24 +605,26 @@ pub(crate) enum Effect {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-struct CachedRef {
+struct CachedRef<'a> {
     old_id: ItemId,
     enqueue: bool,
     hash: u128,
-    encoded: Vec<u8>,
+    #[serde(borrow)]
+    encoded: Cow<'a, [u8]>,
 }
 
 /// An entry is: this head, the length of the serialized name and the name if `name_refs` is
 /// `Some`, and if `has_body`, the references of the item (`Vec<CachedRef>`) and its
 /// `CachedBody`.
 #[derive(Serialize, Deserialize)]
-struct EntryHead {
+struct EntryHead<'a> {
     /// The id of the item itself in the session that stored it.
     self_id: ItemId,
     has_body: bool,
     files: Vec<File>,
     /// The registrations made to compute the name of the item, if we stored its name.
-    name_refs: Option<Vec<CachedRef>>,
+    #[serde(borrow)]
+    name_refs: Option<Vec<CachedRef<'a>>>,
 }
 
 #[derive(SerializeState, DeserializeState)]
@@ -648,6 +652,19 @@ pub(crate) struct CacheStats {
     tainted: HashMap<&'static str, usize>,
 }
 
+/// The bytes of an entry, in the pack that holds them.
+struct EntryBytes {
+    pack: Rc<Mmap>,
+    range: std::ops::Range<usize>,
+}
+
+impl std::ops::Deref for EntryBytes {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        &self.pack[self.range.clone()]
+    }
+}
+
 /// Where an entry lives: pack index, offset and length.
 type EntryLoc = (usize, usize, usize);
 
@@ -660,7 +677,7 @@ const PACK_MAGIC: &[u8; 8] = b"CHRNPAK1";
 pub(crate) struct TranslationCache<'tcx> {
     dir: PathBuf,
     /// The pack files of the cache, and the entries they contain.
-    packs: Vec<Mmap>,
+    packs: Vec<Rc<Mmap>>,
     index: HashMap<u128, EntryLoc>,
     /// The entries stored by this session, written to a new pack at the end.
     new_pack: Vec<u8>,
@@ -762,7 +779,7 @@ impl<'tcx> TranslationCache<'tcx> {
                         index.insert(hash, loc);
                     }
                 }
-                packs.push(pack);
+                packs.push(Rc::new(pack));
             }
         }
         Some(Self {
@@ -807,9 +824,12 @@ impl<'tcx> TranslationCache<'tcx> {
         self.stats.stored += 1;
     }
 
-    fn entry(&self, hash: u128) -> Option<&[u8]> {
+    fn entry(&self, hash: u128) -> Option<EntryBytes> {
         let &(pack, offset, len) = self.index.get(&hash)?;
-        Some(&self.packs[pack][offset..offset + len])
+        Some(EntryBytes {
+            pack: self.packs[pack].clone(),
+            range: offset..offset + len,
+        })
     }
 
     pub(crate) fn pop_unbound(&mut self) -> Option<ItemId> {
@@ -968,7 +988,11 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     /// Register a reference of a cached item. Returns `None` if that failed.
-    fn cache_register_ref(&mut self, dep_src: &Option<DepSource>, r: &CachedRef) -> Option<ItemId> {
+    fn cache_register_ref(
+        &mut self,
+        dep_src: &Option<DepSource>,
+        r: &CachedRef<'_>,
+    ) -> Option<ItemId> {
         let cache = self.cache.as_mut().unwrap();
         let id = match cache.by_hash.get(&r.hash) {
             Some(&id) => {
@@ -995,7 +1019,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                     .ok()?;
                     let key = Rc::new(ItemKey {
                         hash: r.hash,
-                        encoded: r.encoded.clone(),
+                        encoded: r.encoded.to_vec(),
                     });
                     self.cache.as_mut().unwrap().known_key = Some((src.clone(), key));
                     let id = if r.enqueue {
@@ -1014,14 +1038,14 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     /// Register an item without decoding its source, using the name stored in its entry.
-    fn cache_register_unbound(&mut self, r: &CachedRef) -> Option<ItemId> {
+    fn cache_register_unbound(&mut self, r: &CachedRef<'_>) -> Option<ItemId> {
         let cache = self.cache.as_ref().unwrap();
         // Stored placeholder spans refer to the local crate root as `FileId::ZERO`.
         if !cache.local_files.contains(&FileId::ZERO) {
             return None;
         }
         let bytes = cache.entry(r.hash)?;
-        let (head, rest) = postcard::take_from_bytes::<EntryHead>(bytes).ok()?;
+        let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
         let name_refs = head.name_refs?;
         let name_len = u32::from_le_bytes(rest.get(..4)?.try_into().ok()?) as usize;
         let state = DedupSerializer::default();
@@ -1037,7 +1061,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         cache.by_hash.insert(r.hash, id);
         let key = Rc::new(ItemKey {
             hash: r.hash,
-            encoded: r.encoded.clone(),
+            encoded: r.encoded.to_vec(),
         });
         cache.keys.insert(id, key);
 
@@ -1056,10 +1080,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             id_map.insert(name_ref.old_id, new_id);
         }
         let file_map = self.cache_register_files(head.files);
-        let _ = name.drive_mut(&mut RemapIds {
-            id_map: &id_map,
-            file_map: &file_map,
-        });
+        let _ = name.drive_mut(&mut RemapIds::new(&id_map, &file_map));
         self.translated.item_names.insert(id, name);
         Some(id)
     }
@@ -1101,7 +1122,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         };
         let _guard = charon_lib::timing::scope("cache-load");
         let parsed = std::panic::catch_unwind(|| {
-            let (head, rest) = postcard::take_from_bytes::<EntryHead>(bytes).ok()?;
+            let (head, rest) = postcard::take_from_bytes::<EntryHead>(&bytes).ok()?;
             if !head.has_body {
                 return Some((head, None));
             }
@@ -1138,10 +1159,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let file_map = self.cache_register_files(head.files);
 
         // Rename the ids.
-        let mut remap = RemapIds {
-            id_map: &id_map,
-            file_map: &file_map,
-        };
+        let mut remap = RemapIds::new(&id_map, &file_map);
         macro_rules! finish {
             ($decl:expr, $slots:ident) => {{
                 let mut decl = $decl;
@@ -1295,7 +1313,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         &self,
         id: ItemId,
         files: &mut indexmap::IndexSet<FileId>,
-    ) -> Option<(Vec<CachedRef>, Vec<u8>)> {
+    ) -> Option<(Vec<CachedRef<'static>>, Vec<u8>)> {
         let cache = self.cache.as_ref().unwrap();
         // The names of allocations depend on the order we encounter them in.
         if matches!(self.reverse_id_map[&id].def_id().base, DefIdBase::Alloc(_)) {
@@ -1309,7 +1327,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                 old_id: ref_id,
                 enqueue,
                 hash: ref_key.hash,
-                encoded: ref_key.encoded.clone(),
+                encoded: Cow::Owned(ref_key.encoded.clone()),
             });
         }
         let mut name = self.translated.item_names.get(&id)?.clone();
@@ -1376,7 +1394,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                 old_id: ref_id,
                 enqueue,
                 hash: ref_key.hash,
-                encoded: ref_key.encoded.clone(),
+                encoded: Cow::Owned(ref_key.encoded.clone()),
             });
         }
         let Some(mut item) = self.translated.get_item_mut(id) else {
@@ -1526,6 +1544,28 @@ const STORED_FILE_IDS_START: usize = 0xC000;
 struct RemapIds<'a> {
     id_map: &'a HashMap<ItemId, ItemId>,
     file_map: &'a [FileId],
+    /// The renaming doesn't depend on where values occur.
+    memo: HashConsMemo<()>,
+}
+
+impl<'a> RemapIds<'a> {
+    fn new(id_map: &'a HashMap<ItemId, ItemId>, file_map: &'a [FileId]) -> Self {
+        Self {
+            id_map,
+            file_map,
+            memo: Default::default(),
+        }
+    }
+}
+
+impl VisitorWithMemo for RemapIds<'_> {
+    type MemoContext = ();
+    fn memo(&mut self) -> &mut HashConsMemo<()> {
+        &mut self.memo
+    }
+    fn memo_context(&self) -> Option<()> {
+        Some(())
+    }
 }
 
 /// Renumber the files of an item to be stored.
@@ -1572,6 +1612,12 @@ impl RemapIds<'_> {
 }
 
 impl VisitAstMut for RemapIds<'_> {
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(value)
+    }
     fn enter_file_id(&mut self, id: &mut FileId) {
         // Other ids come from values of the session that are equal to the ones we loaded: these
         // spans don't matter.
