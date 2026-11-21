@@ -193,8 +193,10 @@ pub struct BodyRequests<'tcx> {
     /// The thread that runs the translation.
     translation_thread: thread::ThreadId,
     requests: IntoDynSyncSend<Mutex<Requests<'tcx>>>,
-    /// Notified when `requests` changes.
-    requests_changed: IntoDynSyncSend<Condvar>,
+    /// Wakes up the threads that wait for bodies to prepare.
+    work_available: IntoDynSyncSend<Condvar>,
+    /// Wakes up the translation when the body it waits for is ready.
+    body_ready: IntoDynSyncSend<Condvar>,
 }
 
 /// A body the translation is going to read.
@@ -225,7 +227,19 @@ struct Requests<'tcx> {
     /// The number of `Ready` bodies the translation hasn't read yet, which we bound so as to only
     /// work a little ahead of it (that's both memory and work taken from rustc's checks).
     ready: usize,
+    /// The number of threads waiting on `work_available`.
+    workers_waiting: usize,
+    /// Whether the translation waits on `body_ready`.
+    translation_waiting: bool,
     translation_done: bool,
+}
+
+impl Requests<'_> {
+    /// Whether a waiting worker should start preparing bodies again. Once started, it goes on up
+    /// to `MAX_READY_BODIES`.
+    fn worker_should_wake(&self) -> bool {
+        self.workers_waiting != 0 && self.ready <= MAX_READY_BODIES / 2 && !self.queue.is_empty()
+    }
 }
 
 /// How many bodies we prepare ahead of the translation.
@@ -241,7 +255,8 @@ impl<'tcx> BodyRequests<'tcx> {
             owners: IntoDynSyncSend(owners),
             translation_thread: thread::current().id(),
             requests: IntoDynSyncSend(Default::default()),
-            requests_changed: IntoDynSyncSend(Condvar::new()),
+            work_available: IntoDynSyncSend(Condvar::new()),
+            body_ready: IntoDynSyncSend(Condvar::new()),
         }
     }
 
@@ -261,7 +276,9 @@ impl<'tcx> BodyRequests<'tcx> {
         if !requests.prepared.contains_key(&request) {
             requests.prepared.insert(request, Prepared::Queued);
             requests.queue.push_back(request);
-            self.requests_changed.notify_all();
+            if requests.worker_should_wake() {
+                self.work_available.notify_all();
+            }
         }
     }
 
@@ -271,7 +288,9 @@ impl<'tcx> BodyRequests<'tcx> {
         loop {
             match requests.prepared.get(&request)? {
                 Prepared::InProgress => {
-                    requests = self.requests_changed.wait(requests).unwrap();
+                    requests.translation_waiting = true;
+                    requests = self.body_ready.wait(requests).unwrap();
+                    requests.translation_waiting = false;
                     continue;
                 }
                 Prepared::Queued => {}
@@ -280,7 +299,9 @@ impl<'tcx> BodyRequests<'tcx> {
             let Prepared::Ready(body) = requests.prepared.remove(&request).unwrap() else {
                 return None;
             };
-            self.requests_changed.notify_all();
+            if requests.worker_should_wake() {
+                self.work_available.notify_all();
+            }
             return body;
         }
     }
@@ -290,13 +311,15 @@ impl<'tcx> BodyRequests<'tcx> {
         let requests = &mut *self.requests.lock().unwrap();
         if let Some(Prepared::Ready(_)) = requests.prepared.remove(&request) {
             requests.ready -= 1;
-            self.requests_changed.notify_all();
+            if requests.worker_should_wake() {
+                self.work_available.notify_all();
+            }
         }
     }
 
     fn translation_done(&self) {
         self.requests.lock().unwrap().translation_done = true;
-        self.requests_changed.notify_all();
+        self.work_available.notify_all();
     }
 
     /// Prepare the requested bodies until the translation is done.
@@ -334,7 +357,9 @@ impl<'tcx> BodyRequests<'tcx> {
                 if !wait {
                     return false;
                 }
-                requests = self.requests_changed.wait(requests).unwrap();
+                requests.workers_waiting += 1;
+                requests = self.work_available.wait(requests).unwrap();
+                requests.workers_waiting -= 1;
             }
         };
         let body = match request {
@@ -359,7 +384,9 @@ impl<'tcx> BodyRequests<'tcx> {
             *prepared = Prepared::Ready(body);
             requests.ready += 1;
         }
-        self.requests_changed.notify_all();
+        if requests.translation_waiting {
+            self.body_ready.notify_all();
+        }
         true
     }
 }
