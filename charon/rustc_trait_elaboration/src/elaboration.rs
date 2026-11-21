@@ -102,6 +102,14 @@ pub struct PredicateSearcher<'tcx, Id: ItemId = DefId> {
     pub(crate) has_no_concrete_clauses: bool,
 }
 
+/// Whether the environment has where-clauses that apply to parameter-free types.
+/// The solver prioritises these, so trait proofs then depend on the owner.
+pub fn has_concrete_clauses(param_env: ParamEnv<'_>) -> bool {
+    param_env
+        .caller_bounds()
+        .any(|clause| !clause.has_non_region_param())
+}
+
 /// What the predicate searcher of an item depends on: its environment, the implicit `Self: Trait`
 /// clause of trait items, and its trait clauses with their ids. Items with the same key, e.g. the
 /// methods of an impl that don't add where-clauses, share a searcher.
@@ -175,13 +183,10 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         }
     }
 
-    /// Whether the environment has where-clauses that apply to parameter-free types.
-    /// The solver prioritises these, so trait proofs then depend on the owner.
+    /// Whether the environment has where-clauses that apply to parameter-free types, see
+    /// [`has_concrete_clauses`].
     pub fn has_concrete_clauses(&self) -> bool {
-        self.typing_env
-            .param_env
-            .caller_bounds()
-            .any(|clause| !clause.has_non_region_param())
+        has_concrete_clauses(self.typing_env.param_env)
     }
 
     /// Whether rustc's selection would prove this normalized and erased trait ref with a

@@ -262,9 +262,9 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     /// The owner only influences the translation through the clauses in scope (for trait
     /// resolution and normalization). These can't apply to a value without (non-lifetime)
     /// parameters, unless they are themselves parameter-free (see
-    /// `PredicateSearcher::has_concrete_clauses`). Hence parameter-free values translate the same
-    /// in all the owners without such clauses, and we share a cache for them. This is the same
-    /// reasoning as for the concrete caches of `rustc_trait_elaboration`.
+    /// `rustc_trait_elaboration::has_concrete_clauses`). Hence parameter-free values translate the
+    /// same in all the owners without such clauses, and we share a cache for them. This is the
+    /// same reasoning as for the concrete caches of `rustc_trait_elaboration`.
     ///
     /// You must not call `sinto` within this function as this will likely result in `BorrowMut`
     /// panics.
@@ -276,8 +276,7 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
         let uses_shared_cache = match self.with_cache(|cache| cache.uses_shared_cache) {
             Some(b) => b,
             None => {
-                let b =
-                    self.with_predicate_searcher(|searcher, _| !searcher.has_concrete_clauses());
+                let b = !rustc_trait_elaboration::has_concrete_clauses(self.param_env());
                 self.with_cache(|cache| cache.uses_shared_cache = Some(b));
                 b
             }
