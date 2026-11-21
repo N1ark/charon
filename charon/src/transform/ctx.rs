@@ -11,7 +11,7 @@ use crate::transform::CowBox;
 use crate::ullbc_ast;
 use itertools::Itertools;
 use rayon::prelude::*;
-use rustc_hash::FxHashSet as HashSet;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -461,34 +461,42 @@ impl TransformCtx {
 
     /// Add the globals created while transforming function `fun_id` in a parallel loop to the
     /// crate, and update their ids in `decl`. `temp_ids` is the first temporary id, i.e. the
-    /// number of global slots during the loop.
+    /// number of global slots during the loop. `promoted_counts` maps names to the number of
+    /// promoted constants named after them; it is computed on first use.
     fn add_promoted_globals(
         &mut self,
         temp_ids: usize,
         fun_id: FunDeclId,
         decl: &mut impl AstVisitable,
         globals: Vec<GlobalDecl>,
+        promoted_counts: &mut Option<HashMap<PathElems, usize>>,
     ) {
         if globals.is_empty() {
             return;
         }
         let fun_name = self.translated.item_name(fun_id).clone();
-        let promoted_count = self
-            .translated
-            .item_names
-            .values()
-            .filter_map(|n| n.name.split_last())
-            .filter(|(last, prefix)| {
-                matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
-                    && *prefix == fun_name.name.as_slice()
-            })
-            .count();
+        let promoted_counts = promoted_counts.get_or_insert_with(|| {
+            let mut counts: HashMap<PathElems, usize> = HashMap::default();
+            for (last, prefix) in self
+                .translated
+                .item_names
+                .values()
+                .filter_map(|n| n.name.split_last())
+            {
+                if matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _)) {
+                    *counts.entry(PathElems::new(prefix.to_vec())).or_default() += 1;
+                }
+            }
+            counts
+        });
+        let promoted_count = promoted_counts.entry(fun_name.name.clone()).or_default();
+        let first_promoted = mem::replace(promoted_count, *promoted_count + globals.len());
         let mut new_ids = Vec::with_capacity(globals.len());
         for (i, mut global) in globals.into_iter().enumerate() {
             let mut name = fun_name.clone();
             name.name.push(PathElem::Builtin(
                 BuiltinPathElem::PromotedConst,
-                Disambiguator::new(promoted_count + i),
+                Disambiguator::new(first_promoted + i),
             ));
             global.item_meta.name = name.clone();
             let id = self.translated.global_decls.push_with(|id| {
@@ -498,11 +506,39 @@ impl TransformCtx {
             self.translated.item_names.insert(id.into(), name);
             new_ids.push(id);
         }
-        decl.dyn_visit_mut(|id: &mut GlobalDeclId| {
-            if let Some(idx) = id.index().checked_sub(temp_ids) {
-                *id = new_ids[idx];
+        #[derive(Visitor)]
+        struct RenameTempIds<'a> {
+            temp_ids: usize,
+            new_ids: &'a [GlobalDeclId],
+            /// The bloom filter of the temporary ids.
+            temp_bloom: ItemBloom,
+        }
+        impl VisitAstMut for RenameTempIds<'_> {
+            fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+                &mut self,
+                x: &mut HashConsed<WithCachedTypeInfo<T>>,
+            ) -> ControlFlow<Self::Break> {
+                // Avoid cloning and re-interning the values that can't mention a temporary id.
+                if !x.type_info().items.intersects(self.temp_bloom) {
+                    return ControlFlow::Continue(());
+                }
+                self.visit_inner(x)
             }
-        });
+            fn enter_global_decl_id(&mut self, id: &mut GlobalDeclId) {
+                if let Some(idx) = id.index().checked_sub(self.temp_ids) {
+                    *id = self.new_ids[idx];
+                }
+            }
+        }
+        let temp_bloom = (temp_ids..temp_ids + new_ids.len())
+            .map(|i| ItemBloom::of(GlobalDeclId::from_usize(i)))
+            .collect();
+        let _ = RenameTempIds {
+            temp_ids,
+            new_ids: &new_ids,
+            temp_bloom,
+        }
+        .visit(decl);
     }
 
     /// Mutably iterate over the function declarations in parallel, without access to the rest of
@@ -524,8 +560,11 @@ impl TransformCtx {
             },
             |ctx, decl| f(&ctx.options, decl),
         );
+        decls
+            .par_iter_mut()
+            .zip(&outcomes)
+            .for_each(|(decl, outcome)| decl.body.globalize_fresh_ids(outcome.first_fresh_ids));
         for (decl, outcome) in decls.into_iter().zip(outcomes) {
-            decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
             decl.item_meta.has_errors |= outcome.has_errors;
             assert!(outcome.new_globals.is_empty());
         }
@@ -537,6 +576,7 @@ impl TransformCtx {
     /// through the declarations in chunks of `PAR_CHUNK`.
     pub(crate) fn par_for_each_fun_decl(&mut self, f: impl Fn(&Self, &mut FunDecl) + Sync) {
         let count = self.translated.fun_decls.iter().count();
+        let mut promoted_counts = None;
         for start in (0..count).step_by(PAR_CHUNK) {
             let mut decls: Vec<FunDecl> = self
                 .translated
@@ -569,9 +609,18 @@ impl TransformCtx {
                 },
                 |ctx, decl| f(ctx, decl),
             );
+            decls
+                .par_iter_mut()
+                .zip(&outcomes)
+                .for_each(|(decl, outcome)| decl.body.globalize_fresh_ids(outcome.first_fresh_ids));
             for (decl, outcome) in decls.iter_mut().zip(outcomes) {
-                decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
-                self.add_promoted_globals(temp_ids, decl.def_id, decl, outcome.new_globals);
+                self.add_promoted_globals(
+                    temp_ids,
+                    decl.def_id,
+                    decl,
+                    outcome.new_globals,
+                    &mut promoted_counts,
+                );
                 decl.item_meta.has_errors |= outcome.has_errors;
             }
             // Put the transformed declarations back, dropping the copies in parallel.
