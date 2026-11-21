@@ -247,112 +247,7 @@ where
             Option::Some => {
             },
             _ => {
-                storage_dead(_6)
-                storage_live(_27)
-                _27 = copy has_any_digit
-                if move _27 {
-                } else {
-                    storage_live(_28)
-                    _28 = copy setter
-                    if move _28 {
-                        storage_live(_29)
-                        storage_live(_30)
-                        _30 = &(*input) with_metadata(read input.metadata)
-                        _29 = is_empty<'86, u8>[{built_in impl Sized for u8}](move _30)
-                        ↳⚡ goto cleanup0
-                        if move _29 {
-                        } else {
-                            storage_dead(_30)
-                            storage_live(_31)
-                            _31 = ()
-                            _0 = Result::Err { _0: move _31 }
-                            storage_dead(_31)
-                            storage_dead(_29)
-                            storage_dead(_28)
-                            storage_dead(_27)
-                            break 0
-                        }
-                        storage_dead(_30)
-                    } else {
-                    }
-                }
-                storage_dead(_29)
-                storage_dead(_28)
-                storage_dead(_27)
-                storage_live(opt_port)
-                storage_live(_33)
-                storage_live(_34)
-                _34 = copy port
-                _33 = cast<u16>(move _34)
-                storage_dead(_34)
-                opt_port = Option::Some { _0: move _33 }
-                storage_dead(_33)
-                fake_read(opt_port)
-                storage_live(_35)
-                _35 = copy has_any_digit
-                if move _35 {
-                    storage_live(_36)
-                    storage_live(_37)
-                    _37 = &opt_port
-                    storage_live(_38)
-                    storage_live(_39)
-                    storage_live(_40)
-                    _40 = &default_port
-                    storage_live(_41)
-                    _41 = ()
-                    _39 = TraitClause1::call<'85>(move _40, move _41)
-                    ↳⚡ goto cleanup0
-                    _38 = &_39
-                    storage_dead(_41)
-                    storage_dead(_40)
-                    _36 = impl_PartialEq_Option_for_Option::eq<'87, '88, u16>[{built_in impl Sized for u16}, impl_PartialEq_u16_for_u16](move _37, move _38)
-                    ↳⚡ goto cleanup0
-                    if move _36 {
-                        storage_dead(_39)
-                        storage_dead(_38)
-                        storage_dead(_37)
-                        storage_live(_42)
-                        _42 = Option::None {  }
-                        opt_port = move _42
-                        storage_dead(_42)
-                    } else {
-                        storage_dead(_39)
-                        storage_dead(_38)
-                        storage_dead(_37)
-                    }
-                } else {
-                    storage_live(_42)
-                    _42 = Option::None {  }
-                    opt_port = move _42
-                    storage_dead(_42)
-                }
-                storage_dead(_36)
-                storage_dead(_35)
-                storage_live(_43)
-                storage_live(_44)
-                _44 = copy opt_port
-                storage_live(_45)
-                storage_live(_46)
-                _46 = &(*input) with_metadata(read input.metadata)
-                _45 = len<'89, u8>[{built_in impl Sized for u8}](move _46)
-                ↳⚡ goto cleanup0
-                storage_dead(_46)
-                _43 = (move _44, move _45)
-                storage_dead(_45)
-                storage_dead(_44)
-                _0 = Result::Ok { _0: move _43 }
-                storage_dead(_43)
-                storage_dead(opt_port)
-                storage_dead(has_any_digit)
-                storage_dead(port)
-                conditional_drop[{built_in impl Destruct for P}::drop_glue<'90>] default_port
-                ↳⚡ goto cleanup1
-                storage_dead(_18)
-                storage_dead(_16)
-                storage_dead(default_port)
-                storage_dead(setter)
-                storage_dead(input)
-                return
+                break 0
             },
         }
         storage_live(c)
@@ -397,7 +292,16 @@ where
                         storage_dead(remaining)
                         storage_dead(c)
                         storage_dead(_6)
-                        break 0
+                        storage_dead(has_any_digit)
+                        storage_dead(port)
+                        conditional_drop[{built_in impl Destruct for P}::drop_glue<'91>] default_port
+                        ↳⚡ goto cleanup1
+                        storage_dead(_18)
+                        storage_dead(_16)
+                        storage_dead(default_port)
+                        storage_dead(setter)
+                        storage_dead(input)
+                        return
                     }
                 }
                 storage_dead(_24)
@@ -405,112 +309,7 @@ where
                 storage_dead(_10)
                 storage_dead(remaining)
                 storage_dead(c)
-                storage_dead(_6)
-                storage_live(_27)
-                _27 = copy has_any_digit
-                if move _27 {
-                } else {
-                    storage_live(_28)
-                    _28 = copy setter
-                    if move _28 {
-                        storage_live(_29)
-                        storage_live(_30)
-                        _30 = &(*input) with_metadata(read input.metadata)
-                        _29 = is_empty<'86, u8>[{built_in impl Sized for u8}](move _30)
-                        ↳⚡ goto cleanup0
-                        if move _29 {
-                        } else {
-                            storage_dead(_30)
-                            storage_live(_31)
-                            _31 = ()
-                            _0 = Result::Err { _0: move _31 }
-                            storage_dead(_31)
-                            storage_dead(_29)
-                            storage_dead(_28)
-                            storage_dead(_27)
-                            break 0
-                        }
-                        storage_dead(_30)
-                    } else {
-                    }
-                }
-                storage_dead(_29)
-                storage_dead(_28)
-                storage_dead(_27)
-                storage_live(opt_port)
-                storage_live(_33)
-                storage_live(_34)
-                _34 = copy port
-                _33 = cast<u16>(move _34)
-                storage_dead(_34)
-                opt_port = Option::Some { _0: move _33 }
-                storage_dead(_33)
-                fake_read(opt_port)
-                storage_live(_35)
-                _35 = copy has_any_digit
-                if move _35 {
-                    storage_live(_36)
-                    storage_live(_37)
-                    _37 = &opt_port
-                    storage_live(_38)
-                    storage_live(_39)
-                    storage_live(_40)
-                    _40 = &default_port
-                    storage_live(_41)
-                    _41 = ()
-                    _39 = TraitClause1::call<'85>(move _40, move _41)
-                    ↳⚡ goto cleanup0
-                    _38 = &_39
-                    storage_dead(_41)
-                    storage_dead(_40)
-                    _36 = impl_PartialEq_Option_for_Option::eq<'87, '88, u16>[{built_in impl Sized for u16}, impl_PartialEq_u16_for_u16](move _37, move _38)
-                    ↳⚡ goto cleanup0
-                    if move _36 {
-                        storage_dead(_39)
-                        storage_dead(_38)
-                        storage_dead(_37)
-                        storage_live(_42)
-                        _42 = Option::None {  }
-                        opt_port = move _42
-                        storage_dead(_42)
-                    } else {
-                        storage_dead(_39)
-                        storage_dead(_38)
-                        storage_dead(_37)
-                    }
-                } else {
-                    storage_live(_42)
-                    _42 = Option::None {  }
-                    opt_port = move _42
-                    storage_dead(_42)
-                }
-                storage_dead(_36)
-                storage_dead(_35)
-                storage_live(_43)
-                storage_live(_44)
-                _44 = copy opt_port
-                storage_live(_45)
-                storage_live(_46)
-                _46 = &(*input) with_metadata(read input.metadata)
-                _45 = len<'89, u8>[{built_in impl Sized for u8}](move _46)
-                ↳⚡ goto cleanup0
-                storage_dead(_46)
-                _43 = (move _44, move _45)
-                storage_dead(_45)
-                storage_dead(_44)
-                _0 = Result::Ok { _0: move _43 }
-                storage_dead(_43)
-                storage_dead(opt_port)
-                storage_dead(has_any_digit)
-                storage_dead(port)
-                conditional_drop[{built_in impl Destruct for P}::drop_glue<'90>] default_port
-                ↳⚡ goto cleanup1
-                storage_dead(_18)
-                storage_dead(_16)
-                storage_dead(default_port)
-                storage_dead(setter)
-                storage_dead(input)
-                return
+                break 0
             },
         }
         storage_live(digit)
@@ -546,7 +345,16 @@ where
             storage_dead(remaining)
             storage_dead(c)
             storage_dead(_6)
-            break 0
+            storage_dead(has_any_digit)
+            storage_dead(port)
+            conditional_drop[{built_in impl Destruct for P}::drop_glue<'91>] default_port
+            ↳⚡ goto cleanup1
+            storage_dead(_18)
+            storage_dead(_16)
+            storage_dead(default_port)
+            storage_dead(setter)
+            storage_dead(input)
+            return
         } else {
             storage_dead(_21)
             storage_dead(_20)
@@ -564,9 +372,114 @@ where
             continue 0
         }
     }
+    storage_dead(_6)
+    storage_live(_27)
+    _27 = copy has_any_digit
+    if move _27 {
+    } else {
+        storage_live(_28)
+        _28 = copy setter
+        if move _28 {
+            storage_live(_29)
+            storage_live(_30)
+            _30 = &(*input) with_metadata(read input.metadata)
+            _29 = is_empty<'86, u8>[{built_in impl Sized for u8}](move _30)
+            ↳⚡ goto cleanup0
+            if move _29 {
+            } else {
+                storage_dead(_30)
+                storage_live(_31)
+                _31 = ()
+                _0 = Result::Err { _0: move _31 }
+                storage_dead(_31)
+                storage_dead(_29)
+                storage_dead(_28)
+                storage_dead(_27)
+                storage_dead(has_any_digit)
+                storage_dead(port)
+                conditional_drop[{built_in impl Destruct for P}::drop_glue<'91>] default_port
+                ↳⚡ goto cleanup1
+                storage_dead(_18)
+                storage_dead(_16)
+                storage_dead(default_port)
+                storage_dead(setter)
+                storage_dead(input)
+                return
+            }
+            storage_dead(_30)
+        } else {
+        }
+    }
+    storage_dead(_29)
+    storage_dead(_28)
+    storage_dead(_27)
+    storage_live(opt_port)
+    storage_live(_33)
+    storage_live(_34)
+    _34 = copy port
+    _33 = cast<u16>(move _34)
+    storage_dead(_34)
+    opt_port = Option::Some { _0: move _33 }
+    storage_dead(_33)
+    fake_read(opt_port)
+    storage_live(_35)
+    _35 = copy has_any_digit
+    if move _35 {
+        storage_live(_36)
+        storage_live(_37)
+        _37 = &opt_port
+        storage_live(_38)
+        storage_live(_39)
+        storage_live(_40)
+        _40 = &default_port
+        storage_live(_41)
+        _41 = ()
+        _39 = TraitClause1::call<'85>(move _40, move _41)
+        ↳⚡ goto cleanup0
+        _38 = &_39
+        storage_dead(_41)
+        storage_dead(_40)
+        _36 = impl_PartialEq_Option_for_Option::eq<'87, '88, u16>[{built_in impl Sized for u16}, impl_PartialEq_u16_for_u16](move _37, move _38)
+        ↳⚡ goto cleanup0
+        if move _36 {
+            storage_dead(_39)
+            storage_dead(_38)
+            storage_dead(_37)
+            storage_live(_42)
+            _42 = Option::None {  }
+            opt_port = move _42
+            storage_dead(_42)
+        } else {
+            storage_dead(_39)
+            storage_dead(_38)
+            storage_dead(_37)
+        }
+    } else {
+        storage_live(_42)
+        _42 = Option::None {  }
+        opt_port = move _42
+        storage_dead(_42)
+    }
+    storage_dead(_36)
+    storage_dead(_35)
+    storage_live(_43)
+    storage_live(_44)
+    _44 = copy opt_port
+    storage_live(_45)
+    storage_live(_46)
+    _46 = &(*input) with_metadata(read input.metadata)
+    _45 = len<'89, u8>[{built_in impl Sized for u8}](move _46)
+    ↳⚡ goto cleanup0
+    storage_dead(_46)
+    _43 = (move _44, move _45)
+    storage_dead(_45)
+    storage_dead(_44)
+    _0 = Result::Ok { _0: move _43 }
+    storage_dead(_43)
+    storage_dead(opt_port)
     storage_dead(has_any_digit)
     storage_dead(port)
-    conditional_drop[{built_in impl Destruct for P}::drop_glue<'91>] default_port
+    conditional_drop[{built_in impl Destruct for P}::drop_glue<'90>] default_port
     ↳⚡ goto cleanup1
     storage_dead(_18)
     storage_dead(_16)

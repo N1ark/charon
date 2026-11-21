@@ -399,6 +399,8 @@ impl BlockData {
 /// See [`ExitInfo::compute_loop_exit_ranks`].
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct LoopExitRank {
+    /// Whether this exit can reach a switch.
+    continues: bool,
     /// Number of paths we found going to this exit.
     path_count: usize,
     /// Distance from the loop header.
@@ -433,9 +435,10 @@ impl ExitInfo {
     /// sure to catch that case, and when that's not possible we want to still find a node through
     /// which a lot of exit paths go.
     ///
-    /// To do that, we first count for each exit node how many exit paths go through it, and pick
-    /// the node with most occurrences. If there are many such nodes, we pick the one with shortest
-    /// distance from the loop header. Finally if there are still many such nodes, we keep the
+    /// To do that, we first count for each exit node how many exit paths go through it. We pick a
+    /// node that can reach a switch over exit code (straight-line code to a return), then the node
+    /// with most occurrences. If there are many such nodes, we pick the one with shortest distance
+    /// from the loop header. Finally if there are still many such nodes, we keep the
     /// first node found (the order in which we explore the graph is deterministic, and we use an
     /// insertion-order hash map).
     ///
@@ -489,6 +492,7 @@ impl ExitInfo {
                 loop_exits
                     .entry(bid)
                     .or_insert_with(|| LoopExitRank {
+                        continues: block_data.reaches_switch,
                         path_count: 0,
                         distance_from_header: Reverse(distance_from_header[bid]),
                     })
@@ -596,8 +600,9 @@ impl ExitInfo {
             // Compute the candidates.
             let loop_exits: SeqHashMap<BlockId, LoopExitRank> =
                 Self::compute_loop_exit_ranks(cfg, loop_id);
-            // We choose the exit with:
-            // - the most occurrences
+            // We choose the exit that:
+            // - can reach a switch
+            // - has the most occurrences
             // - the least total distance (if there are several possibilities)
             // - doesn't necessarily lead to an error (panic, unreachable)
             let best_exits: Vec<(BlockId, LoopExitRank)> =
