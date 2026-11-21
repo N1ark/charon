@@ -389,9 +389,16 @@ impl<'tcx> TranslateCtx<'tcx> {
                             &TransItemSourceKind::InherentImpl,
                         )?;
                         let ty = bt_ctx.translate_ty(span, i.ty())?;
+                        let mut params = bt_ctx.into_generics();
+                        // Names are hash-consed and the equality of clauses ignores their spans:
+                        // impl blocks with the same generics and type would get the spans of the
+                        // first one we name.
+                        for clause in params.trait_clauses.iter_mut() {
+                            clause.span = None;
+                        }
                         ImplElem::Ty(Box::new(Binder {
                             kind: BinderKind::InherentImplBlock,
-                            params: bt_ctx.into_generics(),
+                            params,
                             skip_binder: ty,
                         }))
                     }
