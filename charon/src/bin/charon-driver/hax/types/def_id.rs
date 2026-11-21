@@ -390,8 +390,13 @@ impl DefId {
 
     /// The global standing for an anonymous allocation.
     pub fn make_anon_alloc<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
-        let tcx = s.base().tcx;
         s.with_global_cache(|cache| cache.anon_allocs.insert(alloc_id));
+        Self::make_anon_alloc_unnumbered(s, alloc_id)
+    }
+
+    /// Like `make_anon_alloc`, without numbering the allocation. Its name can't be computed.
+    pub fn make_anon_alloc_unnumbered<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
+        let tcx = s.base().tcx;
         let mutability = GlobalRef::Alloc(alloc_id).mutability(tcx);
         let contents = DefIdContents {
             base: DefIdBase::Alloc(alloc_id),

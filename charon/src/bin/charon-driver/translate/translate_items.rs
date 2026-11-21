@@ -31,6 +31,14 @@ impl<'tcx> TranslateCtx<'tcx> {
             return;
         }
         self.translate_stack.push(trans_id);
+        if let Some(id) = trans_id.as_item()
+            && self.cache.is_some()
+            && (self.translated.get_item(id).is_some() || self.cache_load(id))
+        {
+            self.translate_stack.pop();
+            return;
+        }
+        self.cache_start_recording();
         self.with_def_id(def_id, &trans_id, |mut ctx| {
             let span = ctx.def_span(def_id);
             // Catch cycles
@@ -59,6 +67,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         {
             item.item_meta().has_errors = true;
         }
+        self.cache_finish_recording(trans_id);
         // We must be careful not to early-return from this function to not unbalance the stack.
         self.translate_stack.pop();
     }
@@ -225,10 +234,12 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// While translating an item you may need the contents of another. Use this to retreive the
     /// translated version of this item. Use with care as this could create cycles.
     pub(crate) fn get_or_translate(&mut self, id: ItemId) -> Result<ItemRef<'_>, Error> {
+        // A replay of the translation in progress must translate this item too.
+        self.cache_record_use(id);
         // We have to call `get_item` a few times because we're running into the classic `Polonius`
         // problem case.
         if self.translated.get_item(id).is_none() {
-            let item_source = self.reverse_id_map.get(&id).unwrap().clone();
+            let item_source = self.source_of(id);
             self.translate_item(&item_source);
             if self.translated.get_item(id).is_none() {
                 let span = self.def_span(item_source.def_id());
@@ -256,6 +267,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         method_id: TraitMethodId,
         fun_id: FunDeclId,
     ) {
+        self.cache_taint("method impl");
         match &mut self.method_status[trait_id][method_id] {
             MethodStatus::Unused { implementors } => {
                 implementors.insert(fun_id);
@@ -269,6 +281,9 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Mark the method as "used", which will enqueue for translation all the implementations of
     /// that method.
     pub fn mark_method_as_used(&mut self, trait_id: TraitDeclId, method_id: TraitMethodId) {
+        self.cache_record_effect(|| {
+            super::translate_cache::Effect::MarkMethodUsed(trait_id, method_id)
+        });
         let old_status = mem::replace(
             &mut self.method_status[trait_id][method_id],
             MethodStatus::Used,

@@ -133,6 +133,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             .get(hax_ty)
             .cloned()
         {
+            self.t_ctx.cache_reuse_binder_ty(hax_ty);
             ty
         } else {
             let ty = self.translate_ty_uncached(span, hax_ty);
@@ -172,12 +173,21 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             for &(id, is_local) in deps {
                 errors.register_dep_source(&dep_src, id, is_local);
             }
-            return ty.clone();
+            drop(errors);
+            let ty = ty.clone();
+            self.t_ctx
+                .cache_replay_memo(|| super::translate_cache::MemoKey::Ty(hax_ty.clone()));
+            return ty;
+        }
+        if shared {
+            self.t_ctx.cache_start_memo();
         }
         let ty = self
             .translate_ty_inner(span, hax_ty)
             .unwrap_or_else(|e| TyKind::Error(e.msg).into_ty());
         if shared {
+            self.t_ctx
+                .cache_finish_memo(|| super::translate_cache::MemoKey::Ty(hax_ty.clone()));
             let mut has_errors = false;
             ty.dyn_visit(|k: &TyKind| has_errors |= k.is_error());
             ty.dyn_visit(|k: &TraitRefKind| has_errors |= matches!(k, TraitRefKind::Unknown(_)));
@@ -420,6 +430,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             && !self.monomorphic_layouts.contains_key(&tref)
             && let Some(layout) = self.translate_layout(span, item, None)
         {
+            self.t_ctx.cache_taint("mono layouts");
             self.monomorphic_layouts.insert(tref, layout);
         }
     }

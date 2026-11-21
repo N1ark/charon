@@ -9,6 +9,7 @@ use std::{
 };
 
 use super::translate_crate::{RustcItem, VirtualImplKind};
+use super::translate_cache::MemoKey;
 use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{BaseState, DefPathItem, SInto};
@@ -32,6 +33,11 @@ impl<'tcx> TranslateCtx<'tcx> {
                     contents: source_file.src.as_deref().cloned(),
                 });
                 self.file_to_id.insert(filename, id);
+                if source_file.cnum == rustc_span::def_id::LOCAL_CRATE
+                    && let Some(cache) = &mut self.cache
+                {
+                    cache.local_files.insert(id);
+                }
                 id
             }
         }
@@ -408,8 +414,17 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// `[Ident("test"), Ident("bla"), Ident("Foo"), Impl(impl<T> Ty<T>, Disambiguator(1)), Ident("bar")]`
     fn name_for_item(&mut self, item: &RustcItem<'tcx>) -> Result<Name, Error> {
         if let Some(name) = self.cached_names.get(item) {
-            return Ok(name.clone());
+            let name = name.clone();
+            self.cache_replay_memo(|| MemoKey::Name(item.clone()));
+            return Ok(name);
         }
+        self.cache_start_memo();
+        let name = self.name_for_item_uncached(item);
+        self.cache_finish_memo(|| MemoKey::Name(item.clone()));
+        name
+    }
+
+    fn name_for_item_uncached(&mut self, item: &RustcItem<'tcx>) -> Result<Name, Error> {
         let def_id = item.def_id();
         trace!("Computing name for `{def_id:?}`");
 
@@ -987,9 +1002,30 @@ impl<'tcx> TranslateCtx<'tcx> {
         name_opacity: ItemOpacity,
     ) -> ItemMeta {
         if let Some(item_meta) = self.cached_item_metas.get(item_src) {
-            return item_meta.clone();
+            let item_meta = item_meta.clone();
+            self.cache_replay_memo(|| MemoKey::ItemMeta(item_src.clone()));
+            return item_meta;
         }
+        self.cache_start_memo();
         let error_count = self.errors.borrow().error_count;
+        let item_meta = self.translate_item_meta_uncached(def, item_src, name, name_opacity);
+        // Recomputing an `ItemMeta` gives the same result: we only cache it to report errors once.
+        let cached = self.errors.borrow().error_count != error_count;
+        self.cache_finish_memo_if(cached, || MemoKey::ItemMeta(item_src.clone()));
+        if cached {
+            self.cached_item_metas
+                .insert(item_src.clone(), item_meta.clone());
+        }
+        item_meta
+    }
+
+    fn translate_item_meta_uncached(
+        &mut self,
+        def: &hax::FullDef<'tcx>,
+        item_src: &TransItemSource<'tcx>,
+        name: Name,
+        name_opacity: ItemOpacity,
+    ) -> ItemMeta {
         let span = def.source_span.as_ref().unwrap_or(&def.span);
         let span = self.translate_span(span);
         let is_local = def.def_id().is_local();
@@ -1037,7 +1073,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             name_opacity
         };
 
-        let item_meta = ItemMeta {
+        ItemMeta {
             name,
             span,
             source_text: def.source_text(self.tcx),
@@ -1050,12 +1086,6 @@ impl<'tcx> TranslateCtx<'tcx> {
             lang_item,
             diagnostic_item,
             has_errors: false,
-        };
-        // Recomputing an `ItemMeta` gives the same result: we only cache it to report errors once.
-        if self.errors.borrow().error_count != error_count {
-            self.cached_item_metas
-                .insert(item_src.clone(), item_meta.clone());
         }
-        item_meta
     }
 }

@@ -459,6 +459,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     index: param.index,
                     name: param.name,
                 };
+                self.t_ctx.cache_taint("lifetime mutability");
                 let mutability = self
                     .t_ctx
                     .lt_mutability_computer

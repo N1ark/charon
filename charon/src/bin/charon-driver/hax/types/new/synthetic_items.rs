@@ -479,12 +479,12 @@ impl<'tcx> ItemRef<'tcx> {
 pub struct FnPtrShape(ty::PolyFnSig<'static>);
 
 impl FnPtrShape {
-    fn erase<'tcx>(sig: ty::PolyFnSig<'tcx>) -> Self {
+    pub(crate) fn erase<'tcx>(sig: ty::PolyFnSig<'tcx>) -> Self {
         // SAFETY: the extended lifetime never escapes the compiler session.
         Self(unsafe { std::mem::transmute::<ty::PolyFnSig<'tcx>, ty::PolyFnSig<'static>>(sig) })
     }
 
-    fn sig<'tcx>(self, _s: &impl BaseState<'tcx>) -> ty::PolyFnSig<'tcx> {
+    pub(crate) fn sig<'tcx>(self, _s: &impl BaseState<'tcx>) -> ty::PolyFnSig<'tcx> {
         // SAFETY: we only use a single compiler session, so this is the same `'tcx`.
         unsafe { std::mem::transmute::<ty::PolyFnSig<'static>, ty::PolyFnSig<'tcx>>(self.0) }
     }

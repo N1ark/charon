@@ -160,6 +160,8 @@ pub struct TranslateCtx<'tcx> {
     /// Translations of the types that translate the same in every monomorphic item, with the items
     /// they mention and whether these are local.
     pub mono_type_cache: HashMap<hax::Ty<'tcx>, (Ty, Vec<(ItemId, bool)>)>,
+    /// The persistent cache of translated items, if enabled.
+    pub(crate) cache: Option<super::translate_cache::TranslationCache<'tcx>>,
 }
 
 /// The functions exported under a given symbol.

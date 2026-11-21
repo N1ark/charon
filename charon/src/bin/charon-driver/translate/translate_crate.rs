@@ -427,6 +427,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         use rustc_middle::middle::exported_symbols::ExportedSymbol;
         use rustc_symbol_mangling::mangle_internal_symbol;
         let tcx = self.tcx;
+        // Linking depends on the whole program.
+        self.cache_taint("exported fns");
         let exported_fns = self.exported_fns.get_or_insert_with(|| {
             let local = tcx
                 .hir_crate_items(())
@@ -537,6 +539,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         parent: impl Into<ContainmentNode>,
         child: impl Into<ContainmentNode>,
     ) {
+        self.cache_taint("containment");
         self.containment_graph
             .add_edge(parent.into(), child.into(), ());
     }
@@ -574,39 +577,48 @@ impl<'tcx> TranslateCtx<'tcx> {
         dep_src: &Option<DepSource>,
         src: &TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
-        let item_id = match self.id_map.get(src) {
-            Some(tid) => *tid,
+        let mut is_new = false;
+        let item_id = match self.id_map.get(src).copied() {
+            Some(tid) => tid,
+            None if let Some(id) = self.cache_find_unbound(src) => id,
             None => {
-                use TransItemSourceKind::*;
-                let trans_id = match src.kind {
-                    Type | VTable => ItemId::Type(self.translated.type_decls.reserve_slot()),
-                    TraitDecl => ItemId::TraitDecl(self.translated.trait_decls.reserve_slot()),
-                    TraitImpl(..) => ItemId::TraitImpl(self.translated.trait_impls.reserve_slot()),
-                    Global | VTableInstance(..) => {
-                        ItemId::Global(self.translated.global_decls.reserve_slot())
-                    }
-                    Fun | ClosureAsFnCast | VirtualMethod(..) | VTableMethod(..)
-                    | VTableDropShim(..) | IntrinsicFallback => {
-                        ItemId::Fun(self.translated.fun_decls.reserve_slot())
-                    }
-                    InherentImpl | Module => {
-                        return ItemOrModuleId::Module(src.def_id().real_rust_def_id());
-                    }
+                is_new = true;
+                let Some(trans_id) = self.reserve_item_id(src.kind) else {
+                    return ItemOrModuleId::Module(src.def_id().real_rust_def_id());
                 };
                 // Add the id to the queue of declarations to translate
                 self.id_map.insert(src.clone(), trans_id);
                 self.reverse_id_map.insert(trans_id, src.clone());
                 // Store the name early so the name matcher can identify paths.
+                self.cache_start_recording();
                 if let Ok(name) = self.translate_name(src) {
                     self.translated.item_names.insert(trans_id, name);
                 }
+                self.cache_finish_naming(trans_id);
                 trans_id
             }
         };
+        self.cache_record_registration(item_id, src, is_new, false);
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, item_id, src.def_id().is_local());
         ItemOrModuleId::Item(item_id)
+    }
+
+    /// Reserve an id for an item of this kind. Returns `None` for kinds we don't translate as items.
+    pub(crate) fn reserve_item_id(&mut self, kind: TransItemSourceKind) -> Option<ItemId> {
+        use TransItemSourceKind::*;
+        Some(match kind {
+            Type | VTable => ItemId::Type(self.translated.type_decls.reserve_slot()),
+            TraitDecl => ItemId::TraitDecl(self.translated.trait_decls.reserve_slot()),
+            TraitImpl(..) => ItemId::TraitImpl(self.translated.trait_impls.reserve_slot()),
+            Global | VTableInstance(..) => {
+                ItemId::Global(self.translated.global_decls.reserve_slot())
+            }
+            Fun | ClosureAsFnCast | VirtualMethod(..) | VTableMethod(..) | VTableDropShim(..)
+            | IntrinsicFallback => ItemId::Fun(self.translated.fun_decls.reserve_slot()),
+            InherentImpl | Module => return None,
+        })
     }
 
     /// Register this item source and enqueue it for translation.
@@ -616,6 +628,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         item_src: TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
         let id = self.register_no_enqueue(dep_src, &item_src);
+        if let Some(item_id) = id.as_item() {
+            self.cache_record_registration(item_id, &item_src, false, true);
+        }
         self.items_to_translate.push_back(item_src);
         id
     }
@@ -623,9 +638,12 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// Enqueue an item from its id.
     pub(crate) fn enqueue_id(&mut self, id: impl Into<ItemId>) {
         let id = id.into();
+        self.cache_taint("enqueue by id");
         if self.translated.get_item(id).is_none() {
-            let item_src = self.reverse_id_map[&id].clone();
-            self.items_to_translate.push_back(item_src);
+            match self.reverse_id_map.get(&id) {
+                Some(item_src) => self.items_to_translate.push_back(item_src.clone()),
+                None => self.cache_enqueue_unbound(id),
+            }
         }
     }
 
@@ -635,6 +653,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         trait_def_id: &hax::DefId,
         trait_id: TraitDeclId,
     ) -> Result<(), Error> {
+        // Record it even if it's already done: replaying the translation in progress must do it.
+        self.cache_record_effect(|| super::translate_cache::Effect::RegisterAssocItems(trait_id));
         if self.method_status.get(trait_id).is_some() {
             return Ok(());
         }
@@ -684,6 +704,10 @@ impl<'tcx> TranslateCtx<'tcx> {
         if let Some(&item_id) = self.assoc_item_id_map.get(item_def_id)
             && self.method_status.get(trait_id).is_some()
         {
+            // The id is only valid once the trait's items are registered.
+            self.cache_record_effect(|| {
+                super::translate_cache::Effect::RegisterAssocItems(trait_id)
+            });
             return Ok(item_id);
         }
 
@@ -701,6 +725,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             && let Some(&item_id) = self.assoc_item_id_map.get(decl_def_id)
             && self.method_status.get(trait_id).is_some()
         {
+            self.cache_record_effect(|| {
+                super::translate_cache::Effect::RegisterAssocItems(trait_id)
+            });
             self.assoc_item_id_map.insert(item_def_id.clone(), item_id);
             return Ok(item_id);
         }
@@ -1345,6 +1372,7 @@ pub fn translate<'tcx>(
         lt_mutability_computer: Default::default(),
         monomorphic_layouts: Default::default(),
         mono_type_cache: Default::default(),
+        cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
     };
     ctx.register_target_info();
     ctx.reserve_unit_decl();
@@ -1492,9 +1520,15 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
-    while let Some(item_src) = ctx.items_to_translate.pop_front() {
-        if ctx.processed.insert(item_src.clone()) {
-            ctx.translate_item(&item_src);
+    loop {
+        if let Some(item_src) = ctx.items_to_translate.pop_front() {
+            if ctx.processed.insert(item_src.clone()) {
+                ctx.translate_item(&item_src);
+            }
+        } else if let Some(id) = ctx.cache.as_mut().and_then(|c| c.pop_unbound()) {
+            ctx.cache_translate_unbound(id);
+        } else {
+            break;
         }
     }
 
@@ -1513,6 +1547,10 @@ pub fn translate<'tcx>(
     // them. This removes them from the traits and impls.
     ctx.remove_unused_methods();
     ctx.compute_started_from();
+    ctx.cache_store_names();
+    if let Some(cache) = &mut ctx.cache {
+        cache.finish();
+    }
 
     // Return the context, dropping the hax state and rustc `tcx`.
     Ok(TransformCtx {

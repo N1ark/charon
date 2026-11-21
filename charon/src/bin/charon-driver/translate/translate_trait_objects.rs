@@ -739,6 +739,13 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             )?
             .unwrap();
 
+        // This depends on the order of translation.
+        match self.item_id.as_item() {
+            Some(ItemId::TraitImpl(impl_id)) => self.t_ctx.cache_record_effect(|| {
+                super::translate_cache::Effect::ImplVTable(impl_id, vtable.clone())
+            }),
+            _ => self.t_ctx.cache_taint("vtable of another impl"),
+        }
         if self.translated.global_decls.get(vtable.id).is_none() {
             Ok(VTableDecl::Lazy)
         } else {
@@ -838,6 +845,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 id: global_id,
                 generics: BoxedArgs::new(self.outermost_generics().identity_args()),
             };
+            self.t_ctx.cache_record_effect(|| {
+                super::translate_cache::Effect::FillLazyVTable(impl_id, vtable_ref.clone())
+            });
             if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
                 && timpl.vtable.is_lazy()
             {

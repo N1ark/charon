@@ -201,7 +201,7 @@ impl Span {
         Some(Span(bits))
     }
 
-    fn unpack(self) -> SerializedSpan {
+    pub fn unpack(self) -> SerializedSpan {
         use pack::*;
         if self.0 & WIDE_FLAG != 0 {
             return WIDE_SPANS.lock().unwrap().spans[(self.0 ^ WIDE_FLAG) as usize];

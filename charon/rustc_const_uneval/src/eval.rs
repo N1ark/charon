@@ -47,6 +47,22 @@ impl<'tcx> AllocTypes<'tcx> {
         *self.0.borrow_mut().entry(alloc_id).or_default()
     }
 
+    /// The view decided for this allocation, if any: `Some(None)` if it is viewed untyped.
+    pub fn decided_view(&self, alloc_id: interpret::AllocId) -> Option<Option<Ty<'tcx>>> {
+        self.0.borrow().get(&alloc_id).map(|view| match view {
+            AllocView::Untyped => None,
+            AllocView::Typed(ty) => Some(*ty),
+        })
+    }
+
+    /// Decide the view of this allocation, unless it is already decided.
+    pub fn decide_view(&self, alloc_id: interpret::AllocId, ty: Option<Ty<'tcx>>) {
+        self.update_if_unset(alloc_id, || match ty {
+            None => AllocView::Untyped,
+            Some(ty) => AllocView::Typed(ty),
+        })
+    }
+
     pub(crate) fn update_if_unset(
         &self,
         alloc_id: interpret::AllocId,
