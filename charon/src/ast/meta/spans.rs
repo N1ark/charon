@@ -1,5 +1,5 @@
 use crate::utils::dedup::*;
-use derive_generic_visitor::{ControlFlow, Drive, DriveMut, DriveTwo, Visit, VisitMut, VisitTwo};
+use derive_generic_visitor::{ControlFlow, Drive, DriveMut, DriveTwo, VisitTwo, Visitor};
 use rustc_hash::FxHashMap as HashMap;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
@@ -299,26 +299,41 @@ impl std::fmt::Debug for Span {
     }
 }
 
-impl<'s, V> Drive<'s, V> for Span
-where
-    V: for<'a> Visit<'a, SerializedSpan> + for<'a> Visit<'a, Option<SerializedSpan>>,
-{
-    fn drive_inner(&'s self, v: &mut V) -> ControlFlow<V::Break> {
-        v.visit(&self.unpack())
+/// Visitors don't explore the contents of spans: spans are everywhere, and unpacking them is not
+/// free. A visitor that needs their contents (e.g. their `FileId`s) must handle them in
+/// `visit_span`/`enter_span`, e.g. using [`Span::map_file_ids`].
+impl<'s, V: Visitor> Drive<'s, V> for Span {
+    fn drive_inner(&'s self, _v: &mut V) -> ControlFlow<V::Break> {
+        ControlFlow::Continue(())
     }
 }
-impl<'s, V> DriveMut<'s, V> for Span
-where
-    V: for<'a> VisitMut<'a, SerializedSpan> + for<'a> VisitMut<'a, Option<SerializedSpan>>,
-{
-    fn drive_inner_mut(&'s mut self, v: &mut V) -> ControlFlow<V::Break> {
+impl<'s, V: Visitor> DriveMut<'s, V> for Span {
+    fn drive_inner_mut(&'s mut self, _v: &mut V) -> ControlFlow<V::Break> {
+        ControlFlow::Continue(())
+    }
+}
+
+impl Span {
+    /// Apply `f` to the ids of the files this span mentions.
+    pub fn map_file_ids(&mut self, mut f: impl FnMut(FileId) -> FileId) {
         let old_span = self.unpack();
         let mut span = old_span;
-        let res = v.visit(&mut span);
+        span.data.file_id = f(span.data.file_id);
+        if let Some(data) = &mut span.generated_from_span {
+            data.file_id = f(data.file_id);
+        }
         if span != old_span {
             *self = Span::from_unpacked(span);
         }
-        res
+    }
+
+    /// The ids of the files this span mentions.
+    pub fn file_ids(self) -> impl Iterator<Item = FileId> {
+        let span = self.unpack();
+        [Some(span.data), span.generated_from_span]
+            .into_iter()
+            .flatten()
+            .map(|data| data.file_id)
     }
 }
 impl<'s, V> DriveTwo<'s, V> for Span
@@ -441,12 +456,31 @@ pub fn combine_span(m0: &Span, m1: &Span) -> Span {
 /// Combine all the span information in a slice.
 pub fn combine_span_iter<'a, T: Iterator<Item = &'a Span>>(mut ms: T) -> Span {
     // The iterator should have a next element
-    let mut mc: Span = ms.next().copied().unwrap_or_default();
+    let Some(&first) = ms.next() else {
+        return Span::default();
+    };
+    // Same as folding with `combine_span`, but without packing the intermediate spans.
+    let mut combined = first.unpack();
+    let mut changed = false;
     for m in ms {
-        mc = combine_span(&mc, m);
+        let d1 = m.data();
+        if combined.data.file_id == d1.file_id {
+            combined = SerializedSpan {
+                data: SpanData {
+                    file_id: d1.file_id,
+                    beg: Loc::min(&combined.data.beg, &d1.beg),
+                    end: Loc::max(&combined.data.end, &d1.end),
+                },
+                generated_from_span: None,
+            };
+            changed = true;
+        }
     }
-
-    mc
+    if changed {
+        Span::from_unpacked(combined)
+    } else {
+        first
+    }
 }
 
 impl FileName {

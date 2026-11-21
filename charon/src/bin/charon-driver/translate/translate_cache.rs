@@ -1613,11 +1613,22 @@ struct StoreFileIds<'a> {
     files: &'a indexmap::IndexSet<FileId>,
 }
 
+impl StoreFileIds<'_> {
+    fn store(&self, id: FileId) -> FileId {
+        match self.files.get_index_of(&id) {
+            Some(index) => FileId::from(STORED_FILE_IDS_START + index),
+            None => id,
+        }
+    }
+}
+
 impl VisitAstMut for StoreFileIds<'_> {
     fn enter_file_id(&mut self, id: &mut FileId) {
-        if let Some(index) = self.files.get_index_of(id) {
-            *id = FileId::from(STORED_FILE_IDS_START + index);
-        }
+        *id = self.store(*id);
+    }
+    // Visitors don't explore spans.
+    fn enter_span(&mut self, span: &mut charon_lib::ast::Span) {
+        span.map_file_ids(|id| self.store(id));
     }
 }
 
@@ -1656,6 +1667,10 @@ struct CollectIds {
 impl VisitAst for CollectIds {
     fn enter_file_id(&mut self, id: &FileId) {
         self.files.insert(*id);
+    }
+    // Visitors don't explore spans.
+    fn enter_span(&mut self, span: &charon_lib::ast::Span) {
+        self.files.extend(span.file_ids());
     }
     fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
         self.items.insert((*id).into());

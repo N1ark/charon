@@ -192,6 +192,10 @@ impl CrateMerger {
                 fn enter_file_id(&mut self, id: &mut FileId) {
                     *id = self.file_id_map[*id];
                 }
+                // Visitors don't explore spans.
+                fn enter_span(&mut self, span: &mut Span) {
+                    span.map_file_ids(|id| self.file_id_map[id]);
+                }
                 fn enter_type_decl_id(&mut self, id: &mut TypeDeclId) {
                     *id += self.type_offset;
                 }

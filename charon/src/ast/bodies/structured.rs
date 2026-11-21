@@ -183,11 +183,7 @@ impl Block {
         if seq.is_empty() {
             None
         } else {
-            let span = seq
-                .iter()
-                .map(|st| st.span)
-                .reduce(|a, b| meta::combine_span(&a, &b))
-                .unwrap();
+            let span = meta::combine_span_iter(seq.iter().map(|st| &st.span));
             Some(Block::new(span, seq))
         }
     }
