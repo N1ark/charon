@@ -327,6 +327,13 @@ impl StructuredBody {
         std::iter::once(&mut self.block).chain(self.cleanups.iter_mut())
     }
 
+    /// The number of statements, including the nested ones.
+    pub fn statement_count(&mut self) -> usize {
+        let mut count = 0;
+        self.visit_statements(|_| count += 1);
+        count
+    }
+
     /// Apply a function to all the statements, in a top-down manner. See [`Block::visit_statements`].
     pub fn visit_statements<F: FnMut(&mut Statement)>(&mut self, mut f: F) {
         for block in self.blocks_mut() {
