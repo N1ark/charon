@@ -117,10 +117,16 @@ pub fn wait_for_rustc_checks(tcx: TyCtxt<'_>, def_id: DefId) {
         _ => true,
     };
     if def_id.is_local() && may_be_const_evaluated {
+        use rustc_thread_pool::tlv::TLV;
         while RUSTC_CHECKS_DONE.get().is_none() {
             // Rather than blocking, help with pending work (which may be the checks themselves):
-            // the other threads may not get to run, e.g. for lack of jobserver tokens.
-            if rustc_thread_pool::yield_now() != Some(rustc_thread_pool::Yield::Executed) {
+            // the other threads may not get to run, e.g. for lack of jobserver tokens. Running a
+            // job sets this thread's rustc context (`tls`) to the job's, which may live on another
+            // thread's stack; like `join` and `scope`, we restore ours afterwards.
+            let context = TLV.with(|tlv| tlv.get());
+            let yielded = rustc_thread_pool::yield_now();
+            TLV.with(|tlv| tlv.set(context));
+            if yielded != Some(rustc_thread_pool::Yield::Executed) {
                 std::thread::sleep(std::time::Duration::from_micros(100));
             }
         }
