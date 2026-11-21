@@ -86,7 +86,7 @@ mod base {
     /// Global caches
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
-        pub per_item: ShardedMap<DefId, Arc<Lock<ItemCache<'tcx>>>>,
+        pub per_item: ShardedMap<DefId, &'tcx Lock<ItemCache<'tcx>>>,
         /// The translated definitions, optionally instantiated with generic arguments.
         pub full_defs: ShardedMap<(DefId, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Cache of parameter-free values, shared by the owners that translate these the same way.
@@ -217,8 +217,8 @@ mod base {
         pub ty_interner: &'tcx Interner<'tcx, TyKind<'tcx>>,
         pub trait_proof_interner: &'tcx Interner<'tcx, TraitProofContents<'tcx>>,
         pub item_ref_interner: &'tcx Interner<'tcx, ItemRefContents<'tcx>>,
-        pub options: Arc<crate::hax::options::Options>,
-        pub cache: Arc<GlobalCache<'tcx>>,
+        pub options: &'tcx crate::hax::options::Options,
+        pub cache: &'tcx GlobalCache<'tcx>,
         pub elab_ctx: crate::hax::traits::ElaborationCtx<'tcx, DefId>,
         pub tcx: ty::TyCtxt<'tcx>,
     }
@@ -234,13 +234,13 @@ mod base {
                 ty_interner: Box::leak(Box::default()),
                 trait_proof_interner: Box::leak(Box::default()),
                 item_ref_interner: Box::leak(Box::default()),
-                cache: Default::default(),
-                options: Arc::new(options),
+                cache: Box::leak(Box::default()),
+                options: Box::leak(Box::new(options)),
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
 
-        /// Free the interners and the elaboration context, which are otherwise leaked.
+        /// Free the caches, the interners and the elaboration context, which are otherwise leaked.
         ///
         /// # Safety
         /// No clone of this `Base`, nor anything it produced (types, item refs, trait proofs...),
@@ -250,8 +250,15 @@ mod base {
                 drop(unsafe { Box::from_raw(value as *const T as *mut T) })
             }
             // The caches point into the interners: drop them first.
-            drop(self.cache);
+            let mut cache =
+                *unsafe { Box::from_raw(self.cache as *const _ as *mut GlobalCache<'tcx>) };
+            let per_item = std::mem::take(&mut cache.per_item);
+            drop(cache);
+            for (_, item_cache) in per_item.into_entries() {
+                unsafe { free_leaked(item_cache) };
+            }
             unsafe {
+                free_leaked(self.options);
                 free_leaked(self.ty_interner);
                 free_leaked(self.trait_proof_interner);
                 free_leaked(self.item_ref_interner);
@@ -311,14 +318,15 @@ pub trait BaseState<'tcx>: Sized {
         &self.base().cache
     }
     /// The cache for a given item.
-    fn item_cache(&self, def_id: &DefId) -> Arc<Lock<ItemCache<'tcx>>> {
-        self.global_cache()
+    fn item_cache(&self, def_id: &DefId) -> &'tcx Lock<ItemCache<'tcx>> {
+        // Leaked so that states don't share a reference count, see `Base::free`.
+        *self
+            .global_cache()
             .per_item
             .shard(def_id)
             .lock()
             .entry(def_id.clone())
-            .or_default()
-            .clone()
+            .or_insert_with(|| Box::leak(Box::default()))
     }
     /// Access the cache for a given item. You must not call `sinto` within this function as this
     /// will likely result in `BorrowMut` panics.
@@ -330,7 +338,7 @@ pub trait BaseState<'tcx>: Sized {
 pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner(&self) -> DefId;
     /// The cache of the current owner.
-    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>>;
+    fn owner_cache(&self) -> &'tcx Lock<ItemCache<'tcx>>;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
         if let Some(param_env) = self.owner_cache().lock().param_env {
@@ -349,7 +357,7 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
             base: self.base().clone(),
             owner: Owner {
                 def_id: self.owner(),
-                cache: self.owner_cache().clone(),
+                cache: self.owner_cache(),
             },
         }
     }
@@ -412,7 +420,7 @@ pub struct State<'tcx, Owner> {
 #[derive(Clone)]
 pub struct Owner<'tcx> {
     def_id: DefId,
-    cache: Arc<Lock<ItemCache<'tcx>>>,
+    cache: &'tcx Lock<ItemCache<'tcx>>,
 }
 
 pub type StateWithBase<'tcx> = State<'tcx, ()>;
@@ -439,8 +447,8 @@ impl<'tcx> UnderOwnerState<'tcx> for StateWithOwner<'tcx> {
     fn owner(&self) -> DefId {
         self.owner.def_id.clone()
     }
-    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
-        &self.owner.cache
+    fn owner_cache(&self) -> &'tcx Lock<ItemCache<'tcx>> {
+        self.owner.cache
     }
 }
 
@@ -453,7 +461,7 @@ impl<'tcx, A: UnderOwnerState<'tcx>, B> UnderOwnerState<'tcx> for (A, B) {
     fn owner(&self) -> DefId {
         self.0.owner()
     }
-    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
+    fn owner_cache(&self) -> &'tcx Lock<ItemCache<'tcx>> {
         self.0.owner_cache()
     }
 }
