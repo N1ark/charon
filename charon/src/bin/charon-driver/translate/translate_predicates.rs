@@ -2,6 +2,7 @@ use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::*;
 use crate::hax;
 use charon_lib::{ast::*, ids::IndexVec};
+use rustc_middle::ty::TypeVisitableExt;
 
 impl<'tcx> TranslateCtx<'tcx> {
     pub fn recognize_builtin_impl(
@@ -119,6 +120,19 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         span: Span,
         bound_trait_ref: &hax::Binder<hax::TraitRef<'tcx>>,
     ) -> Result<PolyTraitDeclRef, Error> {
+        // If nothing is bound, translating in the current binder gives the same result and reuses
+        // its caches. Hitting these caches can change the numbering of body regions, so we only do
+        // this if they are erased.
+        if bound_trait_ref.bound_vars.is_empty()
+            && self.options.erase_body_lifetimes
+            && !bound_trait_ref
+                .value
+                .rustc_args(self.hax_state())
+                .has_escaping_bound_vars()
+        {
+            let trait_ref = self.translate_trait_ref(span, &bound_trait_ref.value)?;
+            return Ok(RegionBinder::empty(trait_ref));
+        }
         self.translate_region_binder(span, bound_trait_ref, move |ctx, trait_ref| {
             ctx.translate_trait_ref(span, trait_ref)
         })
@@ -254,6 +268,35 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
 
     #[tracing::instrument(skip(self, span, trait_proof))]
     pub(crate) fn translate_trait_proof(
+        &mut self,
+        span: Span,
+        trait_proof: &hax::TraitProof<'tcx>,
+    ) -> Result<PolyTraitRef, Error> {
+        // The translation only depends on the proof and the binder stack, except for the errors it
+        // reports and the fresh body regions it allocates. We cache translations that report no
+        // errors and, inside bodies, that allocate no fresh regions.
+        let key = (
+            trait_proof.clone(),
+            self.error_on_trait_proof_error,
+            self.lifetime_freshener.is_some(),
+        );
+        if let Some(tref) = self.innermost_binder().trait_proof_trans_cache.get(&key) {
+            return Ok(tref.clone());
+        }
+        let error_count = self.t_ctx.errors.borrow().error_count;
+        let fresh_regions = self.lifetime_freshener.as_ref().map(|v| v.slot_count());
+        let tref = self.translate_trait_proof_uncached(span, trait_proof)?;
+        if self.t_ctx.errors.borrow().error_count == error_count
+            && self.lifetime_freshener.as_ref().map(|v| v.slot_count()) == fresh_regions
+        {
+            self.innermost_binder_mut()
+                .trait_proof_trans_cache
+                .insert(key, tref.clone());
+        }
+        Ok(tref)
+    }
+
+    fn translate_trait_proof_uncached(
         &mut self,
         span: Span,
         trait_proof: &hax::TraitProof<'tcx>,
