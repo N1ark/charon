@@ -153,6 +153,9 @@ pub struct TranslateCtx<'tcx> {
     pub lt_mutability_computer: LifetimeMutabilityComputer,
     /// The layouts of the monomorphic instances of the type declarations, for `--collect-instantiated-layouts`.
     pub monomorphic_layouts: SeqHashMap<TypeDeclRef, Layout>,
+    /// Translations of the types that translate the same in every monomorphic item, with the items
+    /// they mention and whether these are local.
+    pub mono_type_cache: HashMap<hax::Ty<'tcx>, (Ty, Vec<(ItemId, bool)>)>,
 }
 
 /// The functions exported under a given symbol.
