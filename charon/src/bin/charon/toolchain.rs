@@ -1,6 +1,12 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::{env, ffi::OsStr, path::PathBuf, process::Command, sync::Mutex};
+use std::{
+    env,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+    process::Command,
+    sync::Mutex,
+};
 
 // Store the toolchain details directly in the binary.
 static PINNED_TOOLCHAIN: &str = include_str!("../../../rust-toolchain");
@@ -63,6 +69,33 @@ impl Toolchain {
     }
 
     fn run(&self, program: impl AsRef<OsStr>) -> Command {
+        // On Linux, all `rustup run` does is set up the toolchain's environment: we do it ourselves
+        // when the toolchain is installed, which saves running rustup.
+        if cfg!(target_os = "linux")
+            && let Some(dir) = self.rustup_dir()
+        {
+            let prepend = |var: &str, path: PathBuf| {
+                let old = env::var_os(var);
+                env::join_paths(std::iter::once(path).chain(old.iter().flat_map(env::split_paths)))
+                    .unwrap()
+            };
+            let bin = dir.join("bin");
+            let program = Path::new(program.as_ref());
+            let mut cmd = if program.components().count() == 1 && bin.join(program).is_file() {
+                Command::new(bin.join(program))
+            } else {
+                Command::new(program)
+            };
+            cmd.env("PATH", prepend("PATH", bin));
+            cmd.env(
+                "LD_LIBRARY_PATH",
+                prepend("LD_LIBRARY_PATH", dir.join("lib")),
+            );
+            cmd.env("RUSTUP_TOOLCHAIN", dir.file_name().unwrap());
+            cmd.env("RUSTUP_HOME", dir.parent().unwrap().parent().unwrap());
+            return cmd;
+        }
+
         let mut cmd = Command::new("rustup");
         cmd.arg("run");
         cmd.arg(&self.channel);
@@ -131,27 +164,8 @@ pub fn in_toolchain(program: impl AsRef<OsStr>) -> Result<Command> {
 }
 
 pub fn driver_cmd() -> Result<Command> {
-    // On Linux, the toolchain's libraries are all the driver needs from `rustup run`: setting their
-    // path ourselves saves running rustup.
-    let toolchain = get_pinned_toolchain();
-    let mut cmd = if cfg!(target_os = "linux")
-        && env::var_os("CHARON_TOOLCHAIN_IS_IN_PATH").is_none()
-        && let Some(dir) = toolchain.rustup_dir()
-    {
-        let mut lib_path = vec![dir.join("lib")];
-        lib_path.extend(
-            env::var_os("LD_LIBRARY_PATH")
-                .iter()
-                .flat_map(env::split_paths),
-        );
-        let mut cmd = Command::new(driver_path());
-        cmd.env("LD_LIBRARY_PATH", env::join_paths(lib_path)?);
-        cmd.env("RUSTUP_TOOLCHAIN", dir.file_name().unwrap());
-        cmd
-    } else {
-        // We need `in_toolchain` to get the right library paths.
-        in_toolchain(driver_path())?
-    };
+    // We need `in_toolchain` to get the right library paths.
+    let mut cmd = in_toolchain(driver_path())?;
     // The driver expects the first arg to be "rustc" because that's how cargo calls it.
     cmd.arg("rustc");
     Ok(cmd)
