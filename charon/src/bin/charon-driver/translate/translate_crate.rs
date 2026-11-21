@@ -1350,7 +1350,7 @@ pub fn translate<'tcx>(
     mut error_ctx: ErrorCtx,
     sysroot: PathBuf,
     body_requests: Arc<BodyRequests<'tcx>>,
-) -> Result<TransformCtx, Error> {
+) -> Result<(TransformCtx, HaxLeftovers<'tcx>), Error> {
     let translate_options = TranslateOptions::new(&mut error_ctx, cli_options);
 
     let traits_to_remove: HashSet<rustc_hir::def_id::DefId> = {
@@ -1617,8 +1617,7 @@ pub fn translate<'tcx>(
         cache.finish(&ctx.translated.files);
     }
 
-    // Drop the translation state, including the hax state and caches. The translated crate doesn't
-    // refer to hax data, so we can then free the hax interners.
+    // Drop the translation state, except for the hax state.
     let hax_base = ctx.hax_state.base.clone();
     let transform_ctx = {
         let ctx = ctx;
@@ -1628,8 +1627,20 @@ pub fn translate<'tcx>(
             errors: std::sync::Mutex::new(ctx.errors.into_inner()),
         }
     };
-    // Safety: the translation state, which held the other clones of `hax_base` and everything they
-    // produced, is gone.
-    unsafe { hax_base.free() };
-    Ok(transform_ctx)
+    Ok((transform_ctx, HaxLeftovers(Some(hax_base))))
+}
+
+/// The hax state that remains once translation is done. Dropping it frees it.
+pub struct HaxLeftovers<'tcx>(Option<hax::state::Base<'tcx>>);
+
+// Safety: this holds the only remaining references to the hax state (its `Rc`s and interners), so
+// nothing else can access it concurrently.
+unsafe impl Send for HaxLeftovers<'_> {}
+
+impl Drop for HaxLeftovers<'_> {
+    fn drop(&mut self) {
+        // Safety: the translation state, which held the other clones of this `Base` and everything
+        // they produced, is gone.
+        unsafe { self.0.take().unwrap().free() }
+    }
 }

@@ -729,7 +729,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         } else {
             return Compilation::Continue;
         };
-        let Ok(mut ctx) = translated else {
+        let Ok((mut ctx, hax_leftovers)) = translated else {
             return Compilation::Continue;
         };
 
@@ -779,6 +779,12 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
             output,
             files,
         });
+        // Freeing the hax state takes a while, so we only do it once the passes are running. The
+        // peak memory usage happens while they run alongside the end of rustc's compilation, so we
+        // also give the memory we freed back to the system.
+        drop(hax_leftovers);
+        #[cfg(all(feature = "jemalloc", not(windows)))]
+        purge_freed_memory();
 
         Compilation::Continue
     }
@@ -787,6 +793,23 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
             charon_lib::timing::time("rustc-late-checks", || check_late_rustc_errors(tcx));
         }
         Compilation::Continue
+    }
+}
+
+/// Return the memory that jemalloc keeps around after it is freed to the system.
+#[cfg(all(feature = "jemalloc", not(windows)))]
+fn purge_freed_memory() {
+    // 4096 is `MALLCTL_ARENAS_ALL`.
+    let name = c"arena.4096.purge";
+    // Safety: this control takes no argument and returns nothing.
+    unsafe {
+        tikv_jemalloc_sys::mallctl(
+            name.as_ptr(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            0,
+        );
     }
 }
 
