@@ -33,23 +33,6 @@ pub fn f(x: u32) -> u32
                 if move _5 {
                     storage_dead(_6)
                     _4 = const 0i32
-                    storage_dead(_5)
-                    switch copy _4 {
-                        0i32 => {
-                        },
-                        1i32 => {
-                            storage_dead(_4)
-                            continue 1
-                        },
-                        _ => {
-                            _0 = const 2u32
-                            storage_dead(_4)
-                            storage_dead(x)
-                            return
-                        },
-                    }
-                    storage_dead(_4)
-                    continue 0
                 } else {
                     storage_dead(_6)
                     storage_live(_7)
@@ -64,24 +47,24 @@ pub fn f(x: u32) -> u32
                         _4 = const 2i32
                     }
                     storage_dead(_7)
-                    storage_dead(_5)
-                    switch copy _4 {
-                        0i32 => {
-                        },
-                        1i32 => {
-                            storage_dead(_4)
-                            continue 1
-                        },
-                        _ => {
-                            _0 = const 2u32
-                            storage_dead(_4)
-                            storage_dead(x)
-                            return
-                        },
-                    }
-                    storage_dead(_4)
-                    continue 0
                 }
+                storage_dead(_5)
+                switch copy _4 {
+                    0i32 => {
+                    },
+                    1i32 => {
+                        storage_dead(_4)
+                        continue 1
+                    },
+                    _ => {
+                        _0 = const 2u32
+                        storage_dead(_4)
+                        storage_dead(x)
+                        return
+                    },
+                }
+                storage_dead(_4)
+                continue 0
             }
         }
     }

@@ -133,238 +133,6 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
         storage_live(_10)
         _10 = copy done_a
         if move _10 {
-            storage_dead(_10)
-            storage_live(_19)
-            _19 = copy done_b
-            if move _19 {
-            } else {
-                storage_live(_20)
-                storage_live(_21)
-                _21 = copy parse
-                storage_live(_22)
-                _22 = copy input
-                _20 = (move _21)(const 1u32, move _22)
-                ↳⚡ storage_dead(input)
-                    storage_dead(parse)
-                    unwind_continue
-                storage_dead(_22)
-                storage_dead(_21)
-                match _20 {
-                    Result::Ok => {
-                        storage_live(i_23)
-                        i_23 = copy (_20 as variant Result::Ok)._0
-                        storage_live(_24)
-                        _24 = copy i_23
-                        input = move _24
-                        storage_dead(_24)
-                        done_b = const true
-                        storage_dead(i_23)
-                        storage_dead(_20)
-                        storage_dead(_19)
-                        storage_dead(err)
-                        continue 0
-                    },
-                    Result::Err => {
-                        storage_live(e_25)
-                        e_25 = copy (_20 as variant Result::Err)._0
-                        storage_live(_26)
-                        storage_live(_27)
-                        _27 = copy e_25
-                        _26 = Option::Some { _0: move _27 }
-                        storage_dead(_27)
-                        err = move _26
-                        storage_dead(_26)
-                        storage_dead(e_25)
-                        storage_dead(_20)
-                    },
-                }
-            }
-            storage_dead(_19)
-            storage_live(_28)
-            _28 = copy done_c
-            if move _28 {
-            } else {
-                storage_live(_29)
-                storage_live(_30)
-                _30 = copy parse
-                storage_live(_31)
-                _31 = copy input
-                _29 = (move _30)(const 2u32, move _31)
-                ↳⚡ storage_dead(input)
-                    storage_dead(parse)
-                    unwind_continue
-                storage_dead(_31)
-                storage_dead(_30)
-                match _29 {
-                    Result::Ok => {
-                        storage_live(i_32)
-                        i_32 = copy (_29 as variant Result::Ok)._0
-                        storage_live(_33)
-                        _33 = copy i_32
-                        input = move _33
-                        storage_dead(_33)
-                        done_c = const true
-                        storage_dead(i_32)
-                        storage_dead(_29)
-                        storage_dead(_28)
-                        storage_dead(err)
-                        continue 0
-                    },
-                    Result::Err => {
-                        storage_live(e_34)
-                        e_34 = copy (_29 as variant Result::Err)._0
-                        storage_live(_35)
-                        storage_live(_36)
-                        _36 = copy e_34
-                        _35 = Option::Some { _0: move _36 }
-                        storage_dead(_36)
-                        err = move _35
-                        storage_dead(_35)
-                        storage_dead(e_34)
-                        storage_dead(_29)
-                    },
-                }
-            }
-            storage_dead(_28)
-            storage_live(_37)
-            _37 = copy done_d
-            if move _37 {
-            } else {
-                storage_live(_38)
-                storage_live(_39)
-                _39 = copy parse
-                storage_live(_40)
-                _40 = copy input
-                _38 = (move _39)(const 3u32, move _40)
-                ↳⚡ storage_dead(input)
-                    storage_dead(parse)
-                    unwind_continue
-                storage_dead(_40)
-                storage_dead(_39)
-                match _38 {
-                    Result::Ok => {
-                        storage_live(i_41)
-                        i_41 = copy (_38 as variant Result::Ok)._0
-                        storage_live(_42)
-                        _42 = copy i_41
-                        input = move _42
-                        storage_dead(_42)
-                        done_d = const true
-                        storage_dead(i_41)
-                        storage_dead(_38)
-                        storage_dead(_37)
-                        storage_dead(err)
-                        continue 0
-                    },
-                    Result::Err => {
-                        storage_live(e_43)
-                        e_43 = copy (_38 as variant Result::Err)._0
-                        storage_live(_44)
-                        storage_live(_45)
-                        _45 = copy e_43
-                        _44 = Option::Some { _0: move _45 }
-                        storage_dead(_45)
-                        err = move _44
-                        storage_dead(_44)
-                        storage_dead(e_43)
-                        storage_dead(_38)
-                    },
-                }
-            }
-            storage_dead(_37)
-            storage_live(_46)
-            _46 = copy done_e
-            if move _46 {
-            } else {
-                storage_live(_47)
-                storage_live(_48)
-                _48 = copy parse
-                storage_live(_49)
-                _49 = copy input
-                _47 = (move _48)(const 4u32, move _49)
-                ↳⚡ storage_dead(input)
-                    storage_dead(parse)
-                    unwind_continue
-                storage_dead(_49)
-                storage_dead(_48)
-                match _47 {
-                    Result::Ok => {
-                        storage_live(i_50)
-                        i_50 = copy (_47 as variant Result::Ok)._0
-                        storage_live(_51)
-                        _51 = copy i_50
-                        input = move _51
-                        storage_dead(_51)
-                        done_e = const true
-                        storage_dead(i_50)
-                        storage_dead(_47)
-                        storage_dead(_46)
-                        storage_dead(err)
-                        continue 0
-                    },
-                    Result::Err => {
-                        storage_live(e_52)
-                        e_52 = copy (_47 as variant Result::Err)._0
-                        storage_live(_53)
-                        storage_live(_54)
-                        _54 = copy e_52
-                        _53 = Option::Some { _0: move _54 }
-                        storage_dead(_54)
-                        err = move _53
-                        storage_dead(_53)
-                        storage_dead(e_52)
-                        storage_dead(_47)
-                    },
-                }
-            }
-            storage_dead(_46)
-            storage_live(_55)
-            _55 = copy done_f
-            if move _55 {
-                break 0
-            } else {
-            }
-            storage_live(_56)
-            storage_live(_57)
-            _57 = copy parse
-            storage_live(_58)
-            _58 = copy input
-            _56 = (move _57)(const 5u32, move _58)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
-            storage_dead(_58)
-            storage_dead(_57)
-            match _56 {
-                Result::Ok => {
-                },
-                Result::Err => {
-                    storage_live(e_61)
-                    e_61 = copy (_56 as variant Result::Err)._0
-                    storage_live(_62)
-                    storage_live(_63)
-                    _63 = copy e_61
-                    _62 = Option::Some { _0: move _63 }
-                    storage_dead(_63)
-                    err = move _62
-                    storage_dead(_62)
-                    storage_dead(e_61)
-                    storage_dead(_56)
-                    break 0
-                },
-            }
-            storage_live(i_59)
-            i_59 = copy (_56 as variant Result::Ok)._0
-            storage_live(_60)
-            _60 = copy i_59
-            input = move _60
-            storage_dead(_60)
-            done_f = const true
-            storage_dead(i_59)
-            storage_dead(_56)
-            storage_dead(_55)
-            storage_dead(err)
-            continue 0
         } else {
             storage_live(_11)
             storage_live(_12)
@@ -404,241 +172,241 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
                     storage_dead(_17)
                     storage_dead(e_16)
                     storage_dead(_11)
-                    storage_dead(_10)
-                    storage_live(_19)
-                    _19 = copy done_b
-                    if move _19 {
-                    } else {
-                        storage_live(_20)
-                        storage_live(_21)
-                        _21 = copy parse
-                        storage_live(_22)
-                        _22 = copy input
-                        _20 = (move _21)(const 1u32, move _22)
-                        ↳⚡ storage_dead(input)
-                            storage_dead(parse)
-                            unwind_continue
-                        storage_dead(_22)
-                        storage_dead(_21)
-                        match _20 {
-                            Result::Ok => {
-                                storage_live(i_23)
-                                i_23 = copy (_20 as variant Result::Ok)._0
-                                storage_live(_24)
-                                _24 = copy i_23
-                                input = move _24
-                                storage_dead(_24)
-                                done_b = const true
-                                storage_dead(i_23)
-                                storage_dead(_20)
-                                storage_dead(_19)
-                                storage_dead(err)
-                                continue 0
-                            },
-                            Result::Err => {
-                                storage_live(e_25)
-                                e_25 = copy (_20 as variant Result::Err)._0
-                                storage_live(_26)
-                                storage_live(_27)
-                                _27 = copy e_25
-                                _26 = Option::Some { _0: move _27 }
-                                storage_dead(_27)
-                                err = move _26
-                                storage_dead(_26)
-                                storage_dead(e_25)
-                                storage_dead(_20)
-                            },
-                        }
-                    }
-                    storage_dead(_19)
-                    storage_live(_28)
-                    _28 = copy done_c
-                    if move _28 {
-                    } else {
-                        storage_live(_29)
-                        storage_live(_30)
-                        _30 = copy parse
-                        storage_live(_31)
-                        _31 = copy input
-                        _29 = (move _30)(const 2u32, move _31)
-                        ↳⚡ storage_dead(input)
-                            storage_dead(parse)
-                            unwind_continue
-                        storage_dead(_31)
-                        storage_dead(_30)
-                        match _29 {
-                            Result::Ok => {
-                                storage_live(i_32)
-                                i_32 = copy (_29 as variant Result::Ok)._0
-                                storage_live(_33)
-                                _33 = copy i_32
-                                input = move _33
-                                storage_dead(_33)
-                                done_c = const true
-                                storage_dead(i_32)
-                                storage_dead(_29)
-                                storage_dead(_28)
-                                storage_dead(err)
-                                continue 0
-                            },
-                            Result::Err => {
-                                storage_live(e_34)
-                                e_34 = copy (_29 as variant Result::Err)._0
-                                storage_live(_35)
-                                storage_live(_36)
-                                _36 = copy e_34
-                                _35 = Option::Some { _0: move _36 }
-                                storage_dead(_36)
-                                err = move _35
-                                storage_dead(_35)
-                                storage_dead(e_34)
-                                storage_dead(_29)
-                            },
-                        }
-                    }
-                    storage_dead(_28)
-                    storage_live(_37)
-                    _37 = copy done_d
-                    if move _37 {
-                    } else {
-                        storage_live(_38)
-                        storage_live(_39)
-                        _39 = copy parse
-                        storage_live(_40)
-                        _40 = copy input
-                        _38 = (move _39)(const 3u32, move _40)
-                        ↳⚡ storage_dead(input)
-                            storage_dead(parse)
-                            unwind_continue
-                        storage_dead(_40)
-                        storage_dead(_39)
-                        match _38 {
-                            Result::Ok => {
-                                storage_live(i_41)
-                                i_41 = copy (_38 as variant Result::Ok)._0
-                                storage_live(_42)
-                                _42 = copy i_41
-                                input = move _42
-                                storage_dead(_42)
-                                done_d = const true
-                                storage_dead(i_41)
-                                storage_dead(_38)
-                                storage_dead(_37)
-                                storage_dead(err)
-                                continue 0
-                            },
-                            Result::Err => {
-                                storage_live(e_43)
-                                e_43 = copy (_38 as variant Result::Err)._0
-                                storage_live(_44)
-                                storage_live(_45)
-                                _45 = copy e_43
-                                _44 = Option::Some { _0: move _45 }
-                                storage_dead(_45)
-                                err = move _44
-                                storage_dead(_44)
-                                storage_dead(e_43)
-                                storage_dead(_38)
-                            },
-                        }
-                    }
-                    storage_dead(_37)
-                    storage_live(_46)
-                    _46 = copy done_e
-                    if move _46 {
-                    } else {
-                        storage_live(_47)
-                        storage_live(_48)
-                        _48 = copy parse
-                        storage_live(_49)
-                        _49 = copy input
-                        _47 = (move _48)(const 4u32, move _49)
-                        ↳⚡ storage_dead(input)
-                            storage_dead(parse)
-                            unwind_continue
-                        storage_dead(_49)
-                        storage_dead(_48)
-                        match _47 {
-                            Result::Ok => {
-                                storage_live(i_50)
-                                i_50 = copy (_47 as variant Result::Ok)._0
-                                storage_live(_51)
-                                _51 = copy i_50
-                                input = move _51
-                                storage_dead(_51)
-                                done_e = const true
-                                storage_dead(i_50)
-                                storage_dead(_47)
-                                storage_dead(_46)
-                                storage_dead(err)
-                                continue 0
-                            },
-                            Result::Err => {
-                                storage_live(e_52)
-                                e_52 = copy (_47 as variant Result::Err)._0
-                                storage_live(_53)
-                                storage_live(_54)
-                                _54 = copy e_52
-                                _53 = Option::Some { _0: move _54 }
-                                storage_dead(_54)
-                                err = move _53
-                                storage_dead(_53)
-                                storage_dead(e_52)
-                                storage_dead(_47)
-                            },
-                        }
-                    }
-                    storage_dead(_46)
-                    storage_live(_55)
-                    _55 = copy done_f
-                    if move _55 {
-                        break 0
-                    } else {
-                    }
-                    storage_live(_56)
-                    storage_live(_57)
-                    _57 = copy parse
-                    storage_live(_58)
-                    _58 = copy input
-                    _56 = (move _57)(const 5u32, move _58)
-                    ↳⚡ storage_dead(input)
-                        storage_dead(parse)
-                        unwind_continue
-                    storage_dead(_58)
-                    storage_dead(_57)
-                    match _56 {
-                        Result::Ok => {
-                        },
-                        Result::Err => {
-                            storage_live(e_61)
-                            e_61 = copy (_56 as variant Result::Err)._0
-                            storage_live(_62)
-                            storage_live(_63)
-                            _63 = copy e_61
-                            _62 = Option::Some { _0: move _63 }
-                            storage_dead(_63)
-                            err = move _62
-                            storage_dead(_62)
-                            storage_dead(e_61)
-                            storage_dead(_56)
-                            break 0
-                        },
-                    }
-                    storage_live(i_59)
-                    i_59 = copy (_56 as variant Result::Ok)._0
-                    storage_live(_60)
-                    _60 = copy i_59
-                    input = move _60
-                    storage_dead(_60)
-                    done_f = const true
-                    storage_dead(i_59)
-                    storage_dead(_56)
-                    storage_dead(_55)
-                    storage_dead(err)
-                    continue 0
                 },
             }
         }
+        storage_dead(_10)
+        storage_live(_19)
+        _19 = copy done_b
+        if move _19 {
+        } else {
+            storage_live(_20)
+            storage_live(_21)
+            _21 = copy parse
+            storage_live(_22)
+            _22 = copy input
+            _20 = (move _21)(const 1u32, move _22)
+            ↳⚡ storage_dead(input)
+                storage_dead(parse)
+                unwind_continue
+            storage_dead(_22)
+            storage_dead(_21)
+            match _20 {
+                Result::Ok => {
+                    storage_live(i_23)
+                    i_23 = copy (_20 as variant Result::Ok)._0
+                    storage_live(_24)
+                    _24 = copy i_23
+                    input = move _24
+                    storage_dead(_24)
+                    done_b = const true
+                    storage_dead(i_23)
+                    storage_dead(_20)
+                    storage_dead(_19)
+                    storage_dead(err)
+                    continue 0
+                },
+                Result::Err => {
+                    storage_live(e_25)
+                    e_25 = copy (_20 as variant Result::Err)._0
+                    storage_live(_26)
+                    storage_live(_27)
+                    _27 = copy e_25
+                    _26 = Option::Some { _0: move _27 }
+                    storage_dead(_27)
+                    err = move _26
+                    storage_dead(_26)
+                    storage_dead(e_25)
+                    storage_dead(_20)
+                },
+            }
+        }
+        storage_dead(_19)
+        storage_live(_28)
+        _28 = copy done_c
+        if move _28 {
+        } else {
+            storage_live(_29)
+            storage_live(_30)
+            _30 = copy parse
+            storage_live(_31)
+            _31 = copy input
+            _29 = (move _30)(const 2u32, move _31)
+            ↳⚡ storage_dead(input)
+                storage_dead(parse)
+                unwind_continue
+            storage_dead(_31)
+            storage_dead(_30)
+            match _29 {
+                Result::Ok => {
+                    storage_live(i_32)
+                    i_32 = copy (_29 as variant Result::Ok)._0
+                    storage_live(_33)
+                    _33 = copy i_32
+                    input = move _33
+                    storage_dead(_33)
+                    done_c = const true
+                    storage_dead(i_32)
+                    storage_dead(_29)
+                    storage_dead(_28)
+                    storage_dead(err)
+                    continue 0
+                },
+                Result::Err => {
+                    storage_live(e_34)
+                    e_34 = copy (_29 as variant Result::Err)._0
+                    storage_live(_35)
+                    storage_live(_36)
+                    _36 = copy e_34
+                    _35 = Option::Some { _0: move _36 }
+                    storage_dead(_36)
+                    err = move _35
+                    storage_dead(_35)
+                    storage_dead(e_34)
+                    storage_dead(_29)
+                },
+            }
+        }
+        storage_dead(_28)
+        storage_live(_37)
+        _37 = copy done_d
+        if move _37 {
+        } else {
+            storage_live(_38)
+            storage_live(_39)
+            _39 = copy parse
+            storage_live(_40)
+            _40 = copy input
+            _38 = (move _39)(const 3u32, move _40)
+            ↳⚡ storage_dead(input)
+                storage_dead(parse)
+                unwind_continue
+            storage_dead(_40)
+            storage_dead(_39)
+            match _38 {
+                Result::Ok => {
+                    storage_live(i_41)
+                    i_41 = copy (_38 as variant Result::Ok)._0
+                    storage_live(_42)
+                    _42 = copy i_41
+                    input = move _42
+                    storage_dead(_42)
+                    done_d = const true
+                    storage_dead(i_41)
+                    storage_dead(_38)
+                    storage_dead(_37)
+                    storage_dead(err)
+                    continue 0
+                },
+                Result::Err => {
+                    storage_live(e_43)
+                    e_43 = copy (_38 as variant Result::Err)._0
+                    storage_live(_44)
+                    storage_live(_45)
+                    _45 = copy e_43
+                    _44 = Option::Some { _0: move _45 }
+                    storage_dead(_45)
+                    err = move _44
+                    storage_dead(_44)
+                    storage_dead(e_43)
+                    storage_dead(_38)
+                },
+            }
+        }
+        storage_dead(_37)
+        storage_live(_46)
+        _46 = copy done_e
+        if move _46 {
+        } else {
+            storage_live(_47)
+            storage_live(_48)
+            _48 = copy parse
+            storage_live(_49)
+            _49 = copy input
+            _47 = (move _48)(const 4u32, move _49)
+            ↳⚡ storage_dead(input)
+                storage_dead(parse)
+                unwind_continue
+            storage_dead(_49)
+            storage_dead(_48)
+            match _47 {
+                Result::Ok => {
+                    storage_live(i_50)
+                    i_50 = copy (_47 as variant Result::Ok)._0
+                    storage_live(_51)
+                    _51 = copy i_50
+                    input = move _51
+                    storage_dead(_51)
+                    done_e = const true
+                    storage_dead(i_50)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(err)
+                    continue 0
+                },
+                Result::Err => {
+                    storage_live(e_52)
+                    e_52 = copy (_47 as variant Result::Err)._0
+                    storage_live(_53)
+                    storage_live(_54)
+                    _54 = copy e_52
+                    _53 = Option::Some { _0: move _54 }
+                    storage_dead(_54)
+                    err = move _53
+                    storage_dead(_53)
+                    storage_dead(e_52)
+                    storage_dead(_47)
+                },
+            }
+        }
+        storage_dead(_46)
+        storage_live(_55)
+        _55 = copy done_f
+        if move _55 {
+            break 0
+        } else {
+        }
+        storage_live(_56)
+        storage_live(_57)
+        _57 = copy parse
+        storage_live(_58)
+        _58 = copy input
+        _56 = (move _57)(const 5u32, move _58)
+        ↳⚡ storage_dead(input)
+            storage_dead(parse)
+            unwind_continue
+        storage_dead(_58)
+        storage_dead(_57)
+        match _56 {
+            Result::Ok => {
+            },
+            Result::Err => {
+                storage_live(e_61)
+                e_61 = copy (_56 as variant Result::Err)._0
+                storage_live(_62)
+                storage_live(_63)
+                _63 = copy e_61
+                _62 = Option::Some { _0: move _63 }
+                storage_dead(_63)
+                err = move _62
+                storage_dead(_62)
+                storage_dead(e_61)
+                storage_dead(_56)
+                break 0
+            },
+        }
+        storage_live(i_59)
+        i_59 = copy (_56 as variant Result::Ok)._0
+        storage_live(_60)
+        _60 = copy i_59
+        input = move _60
+        storage_dead(_60)
+        done_f = const true
+        storage_dead(i_59)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(err)
+        continue 0
     }
     storage_dead(_55)
     match err {

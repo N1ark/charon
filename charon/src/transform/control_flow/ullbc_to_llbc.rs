@@ -799,15 +799,17 @@ impl ExitInfo {
                 .into_iter()
                 .filter(|&tgt| cfg.fwd_cfg.contains_edge(bid, tgt))
                 .collect_vec();
-            // Whether the block is reachable from several branches and leads to more branching.
-            let is_branching_merge = |id: BlockId| {
-                cfg.block_data[id].reaches_switch
-                    && branches
-                        .iter()
-                        .filter(|&&branch| cfg.block_data[branch].shortest_paths.contains_key(&id))
-                        .count()
-                        >= 2
+            // Whether the block is reachable from several branches.
+            let is_merge = |id: BlockId| {
+                branches
+                    .iter()
+                    .filter(|&&branch| cfg.block_data[branch].shortest_paths.contains_key(&id))
+                    .count()
+                    >= 2
             };
+            // Whether the block is reachable from several branches and leads to more branching.
+            let is_branching_merge =
+                |id: BlockId| cfg.block_data[id].reaches_switch && is_merge(id);
             // The best exit may be a block from which the control-flow only goes straight to a
             // `continue` or `return` (e.g. the block that all the `continue`s of a loop go to). It
             // can get more flow than the block where the branches of the switch actually merge,
@@ -875,7 +877,11 @@ impl ExitInfo {
                 if cfg.block_data[exit_id].reaches_switch {
                     branching_exits.insert(exit_id);
                 }
-                cfg.block_data[bid].exit_info.switch_exit = Some(exit_id);
+                // The switch of a loop header only uses its exit if its branches merge there, so
+                // that e.g. the body of a `while` loop stays inside the `if`.
+                if !block_data.is_loop_header || is_merge(exit_id) {
+                    cfg.block_data[bid].exit_info.switch_exit = Some(exit_id);
+                }
             }
         }
     }
@@ -1246,7 +1252,6 @@ impl<'a> ReconstructCtx<'a> {
         }
 
         if let Some(bid) = block_data.exit_info.switch_exit
-            && !block_data.is_loop_header
             && !(matches!(self.mode, ReconstructMode::ForwardBreak)
                 && merge_children.contains(&bid))
         {
