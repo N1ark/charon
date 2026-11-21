@@ -1903,13 +1903,16 @@ impl TransformPass for Transform {
             }
         };
 
-        // We transform the type declarations and trait declarations one by one, in the same order
-        // as `for_each_item_mut`: trait declarations get new associated types, and these items are
-        // looked at when formatting error messages. The other items don't affect each other, so we
-        // transform them in parallel. Error messages display trait impls, so we transform copies of
-        // them.
+        // We transform the trait declarations one by one, in the same order as `for_each_item_mut`:
+        // they get new associated types, which error messages may display. The other items don't
+        // affect each other, so we transform them in parallel. Error messages display type
+        // declarations and trait impls, so we transform copies of them.
+        ctx.par_for_each_item_copy_where(
+            |id| id.is_type(),
+            |ctx, item| update_item(ctx, item, None),
+        );
         ctx.for_each_item_mut_where(
-            |id| id.is_type() || id.is_trait_decl(),
+            |id| id.is_trait_decl(),
             |ctx, mut item| {
                 let id = item.as_ref().id();
                 let modifications = item_modifications.get(&GenericsSource::Item(id)).unwrap();
