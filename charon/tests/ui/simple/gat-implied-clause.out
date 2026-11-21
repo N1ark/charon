@@ -76,27 +76,23 @@ where
     storage_live(_3)
     _3 = &x
     _2 = TraitClause1::LifetimeGat<'4>::ImpliedClause1::clone<'6>(move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::LifetimeGat<'7>}::drop_glue<'8>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for TraitClause1::LifetimeGat<'9>}::drop_glue<'10>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::LifetimeGat<'7>}::drop_glue<'8>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     _0 = ()
     conditional_drop[{built_in impl Destruct for TraitClause1::LifetimeGat<'11>}::drop_glue<'12>] x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
-
-    cleanup0: {
-        conditional_drop[{built_in impl Destruct for TraitClause1::LifetimeGat<'7>}::drop_glue<'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::non_lifetime_gat_bound
@@ -116,27 +112,23 @@ where
     storage_live(_3)
     _3 = &x
     _2 = TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]::ImpliedClause1::clone<'1>(move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]}::drop_glue<'3>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     _0 = ()
     conditional_drop[{built_in impl Destruct for TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]}::drop_glue<'4>] x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
-
-    cleanup0: {
-        conditional_drop[{built_in impl Destruct for TraitClause1::NonLifetimeGat<u8>[{built_in impl Sized for u8}]}::drop_glue<'2>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::const_gat_bound
@@ -156,27 +148,23 @@ where
     storage_live(_3)
     _3 = &x
     _2 = TraitClause1::ConstGat<4usize>::ImpliedClause1::clone<'1>(move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::ConstGat<4usize>}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for TraitClause1::ConstGat<4usize>}::drop_glue<'3>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::ConstGat<4usize>}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     _0 = ()
     conditional_drop[{built_in impl Destruct for TraitClause1::ConstGat<4usize>}::drop_glue<'4>] x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
-
-    cleanup0: {
-        conditional_drop[{built_in impl Destruct for TraitClause1::ConstGat<4usize>}::drop_glue<'2>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 

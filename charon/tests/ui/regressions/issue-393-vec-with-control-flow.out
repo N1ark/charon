@@ -118,7 +118,9 @@ pub fn next(b: bool) -> Option<Vec<u8>[{built_in impl Sized for u8}, {built_in i
     storage_live(_3)
     storage_live(_4)
     _4 = new_uninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}]()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(b)
+        storage_dead(ret)
+        unwind_continue
     storage_live(_5)
     storage_live(_6)
     _6 = copy b
@@ -128,7 +130,9 @@ pub fn next(b: bool) -> Option<Vec<u8>[{built_in impl Sized for u8}, {built_in i
         storage_dead(_6)
         storage_dead(_5)
         conditional_drop[impl_Destruct_for_Box::drop_glue<'1, MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}]}, {built_in impl Sized for Global}]] _4
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(b)
+            storage_dead(ret)
+            unwind_continue
         storage_dead(_4)
         storage_dead(_3)
         storage_dead(vec)
@@ -143,7 +147,11 @@ pub fn next(b: bool) -> Option<Vec<u8>[{built_in impl Sized for u8}, {built_in i
     storage_dead(_5)
     storage_live(_12)
     _12 = write<[u8; 1usize], Global>[{built_in impl Sized for [u8; 1usize]}, {built_in impl Sized for Global}](move _4, move _11)
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'2, MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}]}, {built_in impl Sized for Global}]] _3
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(b)
+        storage_dead(ret)
+        unwind_continue
     storage_dead(_4)
     storage_live(ret)
     storage_live(x)
@@ -155,7 +163,11 @@ pub fn next(b: bool) -> Option<Vec<u8>[{built_in impl Sized for u8}, {built_in i
     ret = into_vec<u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}](move y)
     ↳⚡ storage_dead(y)
         storage_dead(x)
-        goto cleanup1
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'2, MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}]}, {built_in impl Sized for Global}]] _3
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(b)
+        storage_dead(ret)
+        unwind_continue
     storage_dead(y)
     storage_dead(x)
     vec = move ret
@@ -167,26 +179,18 @@ pub fn next(b: bool) -> Option<Vec<u8>[{built_in impl Sized for u8}, {built_in i
     conditional_drop[impl_Destruct_for_Vec::drop_glue<'3, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] _7
     ↳⚡ conditional_drop[impl_Destruct_for_Vec::drop_glue<'5, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] vec
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
+        storage_dead(b)
+        storage_dead(ret)
+        unwind_continue
     storage_dead(_7)
     conditional_drop[impl_Destruct_for_Vec::drop_glue<'4, u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}]] vec
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(b)
+        storage_dead(ret)
+        unwind_continue
     storage_dead(vec)
     storage_dead(b)
     storage_dead(ret)
     return
-
-    cleanup0: {
-        storage_dead(b)
-        storage_dead(ret)
-        unwind_continue
-    }
-
-    cleanup1: {
-        conditional_drop[impl_Destruct_for_Box::drop_glue<'2, MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[u8; 1usize]>[{built_in impl Sized for [u8; 1usize]}]}, {built_in impl Sized for Global}]] _3
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    }
 }
 
 

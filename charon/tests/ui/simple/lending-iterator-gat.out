@@ -252,14 +252,24 @@ where
             ↳⚡ unwind_terminate(in_cleanup)
             conditional_drop[{built_in impl Destruct for TraitClause2::Item<'33>}::drop_glue<'34>] _9
             ↳⚡ unwind_terminate(in_cleanup)
-            goto cleanup1
+            conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
+            ↳⚡ unwind_terminate(in_cleanup)
+            conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
+            ↳⚡ unwind_terminate(in_cleanup)
+            goto cleanup0
         conditional_drop[{built_in impl Destruct for TraitClause2::Item<'30>}::drop_glue<'31>] _9
-        ↳⚡ goto cleanup1
+        ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
+            ↳⚡ unwind_terminate(in_cleanup)
+            conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
+            ↳⚡ unwind_terminate(in_cleanup)
+            goto cleanup0
         storage_dead(_9)
         storage_dead(_8)
         storage_dead(_7)
         conditional_drop[{built_in impl Destruct for TraitClause2::Item<'35>}::drop_glue<'36>] item
-        ↳⚡ goto cleanup2
+        ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
+            ↳⚡ unwind_terminate(in_cleanup)
+            goto cleanup0
         storage_dead(item)
         conditional_drop[impl_Destruct_for_Option::drop_glue<'45, TraitClause2::Item<'39>>[TraitClause2::Item<'40>::ImpliedClause0]] _4
         ↳⚡ goto cleanup0
@@ -271,9 +281,12 @@ where
     ↳⚡ goto cleanup0
     storage_dead(_4)
     conditional_drop[{built_in impl Destruct for T1}::drop_glue<'26>] f
-    ↳⚡ goto cleanup3
+    ↳⚡ goto cleanup1
     conditional_drop[{built_in impl Destruct for I}::drop_glue<'32>] iter
-    ↳⚡ goto cleanup4
+    ↳⚡ storage_dead(_3)
+        storage_dead(f)
+        storage_dead(iter)
+        unwind_continue
     storage_dead(_3)
     storage_dead(f)
     storage_dead(iter)
@@ -282,28 +295,12 @@ where
     cleanup0: {
         conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup3
+        goto cleanup1
     }
 
     cleanup1: {
-        conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup2
-    }
-
-    cleanup2: {
-        conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    }
-
-    cleanup3: {
         conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup4
-    }
-
-    cleanup4: {
         storage_dead(_3)
         storage_dead(f)
         storage_dead(iter)

@@ -149,16 +149,24 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     storage_dead(_14)
     _0 = const 7u8
     conditional_drop[drop_glue<'4>] _d
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[drop_glue<'1>] _c
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
     storage_dead(_d)
     conditional_drop[drop_glue<'5>] _c
-    ↳⚡ goto cleanup2
+    ↳⚡ goto cleanup1
     storage_dead(_c)
     conditional_drop[drop_glue<'6>] _b
-    ↳⚡ goto cleanup3
+    ↳⚡ conditional_drop[drop_glue<'3>] _a
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(tag)
+        storage_dead(fail)
+        unwind_continue
     storage_dead(_b)
     conditional_drop[drop_glue<'7>] _a
-    ↳⚡ goto cleanup4
+    ↳⚡ storage_dead(tag)
+        storage_dead(fail)
+        unwind_continue
     storage_dead(_a)
     storage_dead(tag)
     storage_dead(fail)
@@ -167,28 +175,16 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     cleanup0: {
         conditional_drop[drop_glue<'0>] _d
         ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[drop_glue<'1>] _c
+        ↳⚡ unwind_terminate(in_cleanup)
         goto cleanup1
     }
 
     cleanup1: {
-        conditional_drop[drop_glue<'1>] _c
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup2
-    }
-
-    cleanup2: {
         conditional_drop[drop_glue<'2>] _b
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup3
-    }
-
-    cleanup3: {
         conditional_drop[drop_glue<'3>] _a
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup4
-    }
-
-    cleanup4: {
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue

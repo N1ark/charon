@@ -1713,6 +1713,133 @@ fn remove_useless_jump_blocks(body: &mut tgt::ExprBody) {
     }
 }
 
+/// Copy the cleanup blocks that take less space copied at each jump to them than shared.
+fn inline_small_cleanups(body: &mut tgt::StructuredBody) {
+    use tgt::{CleanupId, StatementKind};
+    if body.cleanups.is_empty() {
+        return;
+    }
+    // The number of jumps to each cleanup block, the cleanup blocks each one jumps to (once per
+    // jump), and the number of statements of each one.
+    let mut refs = body.cleanups.map_ref(|_| 0usize);
+    let mut targets = body.cleanups.map_ref(|_| Vec::new());
+    let mut sizes = body.cleanups.map_ref(|_| 0usize);
+    body.block.visit_statements(|st| {
+        if let StatementKind::GotoCleanup(id) = st.kind {
+            refs[id] += 1;
+        }
+    });
+    for (id, block) in body.cleanups.iter_mut_enumerated() {
+        block.visit_statements(|st| {
+            if !st.kind.is_nop() {
+                sizes[id] += 1;
+            }
+            if let StatementKind::GotoCleanup(target) = st.kind {
+                refs[target] += 1;
+                targets[id].push(target);
+            }
+        });
+    }
+
+    // Copying a cleanup block makes the ones that jump to it bigger, so we decide for the
+    // cleanup blocks after the ones they jump to.
+    let mut order = Vec::with_capacity(body.cleanups.len());
+    let mut visited = body.cleanups.map_ref(|_| false);
+    for root in body.cleanups.indices() {
+        let mut stack = vec![(root, 0)];
+        while let Some((id, next_target)) = stack.pop() {
+            if next_target == 0 {
+                if visited[id] {
+                    continue;
+                }
+                visited[id] = true;
+            }
+            if let Some(&target) = targets[id].get(next_target) {
+                stack.push((id, next_target + 1));
+                stack.push((target, 0));
+            } else {
+                order.push(id);
+            }
+        }
+    }
+    let mut inline = body.cleanups.map_ref(|_| false);
+    for &id in &order {
+        sizes[id] += targets[id]
+            .iter()
+            .filter(|&&target| inline[target])
+            .map(|&target| sizes[target] - 1)
+            .sum::<usize>();
+        // Copied, the statements take `refs * size` lines of pretty-printed code. Shared, they
+        // take `refs + size + 3`: the jumps, the block, and an empty line, a header and a closing
+        // line around it.
+        inline[id] = refs[id] * sizes[id] <= refs[id] + sizes[id] + 3;
+    }
+    if !inline.iter().any(|&inline| inline) {
+        return;
+    }
+
+    // Replace the jumps to the copied blocks with fresh copies of them.
+    let replace_jumps =
+        |block: &mut tgt::Block, cleanups: &IndexVec<CleanupId, Option<tgt::Block>>| {
+            let copy = |id: CleanupId| {
+                let mut copy = cleanups[id].clone().unwrap();
+                copy.visit_blocks_bwd(|block: &mut tgt::Block| {
+                    block.id = tgt::BlockId::fresh();
+                    for st in &mut block.statements {
+                        st.id = tgt::StatementId::fresh();
+                    }
+                });
+                copy
+            };
+            block.visit_blocks_bwd(|block: &mut tgt::Block| {
+            let is_copied_jump = |st: &tgt::Statement| {
+                matches!(st.kind, StatementKind::GotoCleanup(id) if inline[id])
+            };
+            if let [st] = block.statements.as_slice()
+                && let StatementKind::GotoCleanup(id) = st.kind
+                && inline[id]
+            {
+                *block = copy(id);
+            } else if block.statements.iter().any(is_copied_jump) {
+                for st in mem::take(&mut block.statements) {
+                    if let StatementKind::GotoCleanup(id) = st.kind
+                        && inline[id]
+                    {
+                        let copy = copy(id);
+                        block.span = combine_span(&block.span, &copy.span);
+                        block.statements.extend(copy.statements);
+                    } else {
+                        block.statements.push(st);
+                    }
+                }
+            }
+        });
+        };
+    let mut cleanups: IndexVec<CleanupId, Option<tgt::Block>> = mem::take(&mut body.cleanups)
+        .into_iter()
+        .map(Some)
+        .collect();
+    for &id in &order {
+        let mut block = cleanups[id].take().unwrap();
+        replace_jumps(&mut block, &cleanups);
+        cleanups[id] = Some(block);
+    }
+    replace_jumps(&mut body.block, &cleanups);
+
+    // Renumber the shared blocks.
+    let mut new_ids = cleanups.map_ref(|_| None);
+    for (id, block) in cleanups.into_iter_enumerated() {
+        if !inline[id] {
+            new_ids[id] = Some(body.cleanups.push(block.unwrap()));
+        }
+    }
+    body.visit_statements(|st| {
+        if let StatementKind::GotoCleanup(id) = &mut st.kind {
+            *id = new_ids[*id].unwrap();
+        }
+    });
+}
+
 fn translate_body(ctx: &TransformCtx, body: &mut Body) {
     use Body::{Structured, Unstructured};
     let Unstructured(src_body) = body else {
@@ -1748,7 +1875,8 @@ fn translate_body(ctx: &TransformCtx, body: &mut Body) {
     while let Some(&block_id) = ctx.cleanups.get(cleanups.next_idx()) {
         cleanups.push(ctx.translate_block(block_id));
     }
-    let tgt_body = tgt::StructuredBody { block, cleanups };
+    let mut tgt_body = tgt::StructuredBody { block, cleanups };
+    inline_small_cleanups(&mut tgt_body);
 
     let mut tgt_body = tgt::ExprBody {
         span: src_body.span,

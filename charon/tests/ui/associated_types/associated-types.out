@@ -285,20 +285,17 @@ where
     storage_live(_4)
     _4 = copy x
     _3 = TraitClause1::use_item_provided<Clause2_Item>[TraitClause2](move _4)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     _2 = &_3
     storage_dead(_4)
     _0 = TraitClause2::ImpliedClause1::ImpliedClause1::clone<'9>(move _2)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     storage_dead(_3)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::call_fn

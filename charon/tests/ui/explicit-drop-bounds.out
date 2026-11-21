@@ -127,18 +127,16 @@ where
     drop[TraitClause4::drop_glue<'0>] _y
     ↳⚡ drop[TraitClause3::drop_glue<'2>] _x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[TraitClause3::drop_glue<'1>] _x
-    ↳⚡ goto cleanup0
-    storage_dead(_y)
-    storage_dead(_x)
-    return
-
-    cleanup0: {
         storage_dead(_y)
         storage_dead(_x)
         unwind_continue
-    }
+    drop[TraitClause3::drop_glue<'1>] _x
+    ↳⚡ storage_dead(_y)
+        storage_dead(_x)
+        unwind_continue
+    storage_dead(_y)
+    storage_dead(_x)
+    return
 }
 
 // Full name: test_crate::main

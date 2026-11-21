@@ -297,23 +297,21 @@ fn mk_ptr(x: *mut u32) -> Box<(dyn Consume + 'static)>[{built_in impl MetaSized 
     storage_live(_4)
     _4 = copy x
     _3 = new<*mut u32>[{built_in impl Sized for *mut u32}](move _4)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     _2 = unsize_cast<Box<(dyn Consume + '6)>[{built_in impl MetaSized for (dyn Consume + '8)}, {built_in impl Sized for Global}], &{impl Consume for *mut u32}::{vtable}>(move _3)
     conditional_drop[drop_glue<'9, *mut u32, Global>[{built_in impl MetaSized for *mut u32}, {built_in impl Sized for Global}]] _3
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_4)
     storage_dead(_3)
     _0 = unsize_cast<Box<(dyn Consume + '10)>[{built_in impl MetaSized for (dyn Consume + '12)}, {built_in impl Sized for Global}],  at []>(move _2)
     conditional_drop[drop_glue<'19, (dyn Consume + '13), Global>[{built_in impl MetaSized for (dyn Consume + '13)}, {built_in impl Sized for Global}]] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::main

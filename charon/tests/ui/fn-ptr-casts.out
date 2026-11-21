@@ -112,12 +112,16 @@ fn from_fn_def<'a>(x: &'a u8) -> &'a u8
     storage_live(_10)
     _10 = &(*x)
     _8 = (move _9)<'33>(move _10)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_11)
+        storage_dead(x)
+        unwind_continue
     _7 = &(*_8)
     storage_dead(_10)
     storage_dead(_9)
     _4 = (move _5)<'34>(move _6, move _7)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_11)
+        storage_dead(x)
+        unwind_continue
     _0 = &(*_4)
     storage_dead(_7)
     storage_dead(_6)
@@ -129,12 +133,6 @@ fn from_fn_def<'a>(x: &'a u8) -> &'a u8
     storage_dead(_11)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(_11)
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::from_inline_const

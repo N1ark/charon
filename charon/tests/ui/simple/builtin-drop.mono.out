@@ -153,16 +153,13 @@ unsafe fn {impl Destruct for (String, String)}::drop_glue::<String, String><'_0>
     drop[impl_Destruct_for_String::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[impl_Destruct_for_String::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[impl_Destruct_for_String::drop_glue<'2>] (*_1)._1
-    ↳⚡ goto cleanup0
-    storage_dead(_1)
-    return
-
-    cleanup0: {
         storage_dead(_1)
         unwind_continue
-    }
+    drop[impl_Destruct_for_String::drop_glue<'2>] (*_1)._1
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::drop_array

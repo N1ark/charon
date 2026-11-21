@@ -132,21 +132,18 @@ where
     storage_live(_3)
     storage_live(_1)
     _1 = foo[TraitClause0::ImpliedClause1]()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     storage_live(_2)
     _2 = TraitClause0::ImpliedClause1::name()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     _3 = copy _1 panic.+ copy _2
     _0 = move _3
     storage_dead(_2)
     storage_dead(_1)
     storage_dead(_3)
     return
-
-    cleanup0: {
-        storage_dead(_3)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::via_projection
@@ -166,21 +163,18 @@ where
     storage_live(_3)
     storage_live(_1)
     _1 = foo[TraitClause2]()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     storage_live(_2)
     _2 = TraitClause2::name()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     _3 = copy _1 panic.+ copy _2
     _0 = move _3
     storage_dead(_2)
     storage_dead(_1)
     storage_dead(_3)
     return
-
-    cleanup0: {
-        storage_dead(_3)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::user
@@ -195,21 +189,18 @@ pub fn user() -> u32
     storage_live(_3)
     storage_live(_1)
     _1 = via_supertrait[impl_Sub_for_Env]()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     storage_live(_2)
     _2 = via_projection<Empty<Env>[{built_in impl Sized for Env}]>[{built_in impl Sized for Empty<Env>[{built_in impl Sized for Env}]}, impl_Iterator_for_Empty<Env>[{built_in impl Sized for Env}], impl_Unix_for_Env]()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_3)
+        unwind_continue
     _3 = copy _1 panic.+ copy _2
     _0 = move _3
     storage_dead(_2)
     storage_dead(_1)
     storage_dead(_3)
     return
-
-    cleanup0: {
-        storage_dead(_3)
-        unwind_continue
-    }
 }
 
 

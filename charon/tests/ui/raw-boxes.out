@@ -2142,19 +2142,17 @@ where
     ↳⚡ _4 = &mut (*_1)
         _5 = drop<'5, T, A>[TraitClause0, TraitClause1, TraitClause2](move _4)
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    _2 = &mut (*_1)
-    _3 = drop<'4, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
-    ↳⚡ goto cleanup0
-    drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1)._1
-    ↳⚡ unwind_continue
-    return
-
-    cleanup0: {
         drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    }
+    _2 = &mut (*_1)
+    _3 = drop<'4, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
+    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1)._1
+    ↳⚡ unwind_continue
+    return
 }
 
 // Full name: alloc::boxed::box_new_uninit::{promoted_const}

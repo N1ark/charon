@@ -611,7 +611,10 @@ where
     storage_live(_6)
     _6 = &(*t32)
     _4 = TraitClause0::ImpliedClause1::operate_on<'7, '8>(move _5, move _6)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(t64)
+        storage_dead(t32)
+        storage_dead(self)
+        unwind_continue
     storage_dead(_6)
     storage_dead(_5)
     storage_dead(_4)
@@ -621,7 +624,10 @@ where
     storage_live(_9)
     _9 = &(*t64)
     _7 = TraitClause0::ImpliedClause2::operate_on<'9, '10>(move _8, move _9)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(t64)
+        storage_dead(t32)
+        storage_dead(self)
+        unwind_continue
     storage_dead(_9)
     storage_dead(_8)
     storage_dead(_7)
@@ -630,13 +636,6 @@ where
     storage_dead(t32)
     storage_dead(self)
     return
-
-    cleanup0: {
-        storage_dead(t64)
-        storage_dead(t32)
-        storage_dead(self)
-        unwind_continue
-    }
 }
 
 fn test_crate::Both32And64::both_operate::{vtable_method}<'_0, '_1, '_2, Self>(_1: &'_0 (dyn Both32And64), _2: &'_1 i32, _3: &'_2 i64)
@@ -866,7 +865,10 @@ fn impl_Both32And64_for_i32::both_operate<'_0, '_1, '_2>(self: &'_0 i32, t32: &'
     storage_live(_6)
     _6 = &(*t32)
     _4 = impl_BaseOn_i32_for_i32::operate_on<'7, '8>(move _5, move _6)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(t64)
+        storage_dead(t32)
+        storage_dead(self)
+        unwind_continue
     storage_dead(_6)
     storage_dead(_5)
     storage_dead(_4)
@@ -876,7 +878,10 @@ fn impl_Both32And64_for_i32::both_operate<'_0, '_1, '_2>(self: &'_0 i32, t32: &'
     storage_live(_9)
     _9 = &(*t64)
     _7 = impl_BaseOn_i64_for_i32::operate_on<'9, '10>(move _8, move _9)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(t64)
+        storage_dead(t32)
+        storage_dead(self)
+        unwind_continue
     storage_dead(_9)
     storage_dead(_8)
     storage_dead(_7)
@@ -885,13 +890,6 @@ fn impl_Both32And64_for_i32::both_operate<'_0, '_1, '_2>(self: &'_0 i32, t32: &'
     storage_dead(t32)
     storage_dead(self)
     return
-
-    cleanup0: {
-        storage_dead(t64)
-        storage_dead(t32)
-        storage_dead(self)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::{impl Both32And64 for i32}::{vtable_drop_shim}

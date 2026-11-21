@@ -663,7 +663,16 @@ where
     // let _ = Some(&mut 0u32).map(identity);
     // let _ = Some(&mut 0u32).map(mutable_identity);
     conditional_drop[{built_in impl Destruct for A}::drop_glue<'225>] x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(x)
+        storage_dead(_25)
+        storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        unwind_continue
     storage_dead(_19)
     storage_dead(_18)
     storage_dead(x)
@@ -678,10 +687,6 @@ where
     cleanup0: {
         conditional_drop[{built_in impl Destruct for A}::drop_glue<'66>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
         storage_dead(_19)
         storage_dead(_18)
         storage_dead(x)

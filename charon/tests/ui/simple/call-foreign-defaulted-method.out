@@ -102,7 +102,15 @@ fn main()
     _3 = &(*_7)
     _2 = &(*_3)
     _1 = takes_trait<'6, ()>[{built_in impl Sized for ()}, impl_Trait_for_unit](move _2)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
     storage_live(_9)
     storage_live(_12)
     storage_live(_13)
@@ -117,7 +125,15 @@ fn main()
     _6 = move _9
     _5 = &(*_6)
     _4 = impl_Trait_for_unit::defaulted<'8>(move _5)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
@@ -130,18 +146,6 @@ fn main()
     storage_dead(_9)
     storage_dead(_8)
     return
-
-    cleanup0: {
-        storage_dead(_7)
-        storage_dead(_6)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        unwind_continue
-    }
 }
 
 pub fn test_crate::foo::Trait::defaulted<'_0, Self>(self: &'_0 Self)

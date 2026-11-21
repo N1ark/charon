@@ -59,22 +59,22 @@ fn main()
     // Needed a few convolutions to make it emit a `break` instead of moving the `return`
     // inside the loop.
     _1 = foo()
-    ↳⚡ goto cleanup0
+    ↳⚡ unwind_continue
     if move _1 {
         loop {
             storage_live(_2)
             _2 = do_something()
-            ↳⚡ goto cleanup0
+            ↳⚡ unwind_continue
             storage_dead(_2)
             storage_live(_3)
             _3 = foo()
-            ↳⚡ goto cleanup0
+            ↳⚡ unwind_continue
             if move _3 {
                 break 0
             } else {
                 storage_live(_4)
                 _4 = bar()
-                ↳⚡ goto cleanup0
+                ↳⚡ unwind_continue
                 if move _4 {
                     break 0
                 } else {
@@ -90,12 +90,8 @@ fn main()
     }
     storage_dead(_1)
     _0 = do_something_at_the_end()
-    ↳⚡ goto cleanup0
+    ↳⚡ unwind_continue
     return
-
-    cleanup0: {
-        unwind_continue
-    }
 }
 
 

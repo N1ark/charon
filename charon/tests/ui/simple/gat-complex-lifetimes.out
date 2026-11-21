@@ -71,19 +71,16 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for TraitClause1::Type<'27>}::drop_glue<'28>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
+        storage_dead(x)
+        unwind_continue
     _0 = &(*_2)
     storage_dead(_3)
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for TraitClause1::Type<'24>}::drop_glue<'25>] x
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 

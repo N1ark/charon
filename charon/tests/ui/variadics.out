@@ -77,14 +77,22 @@ pub unsafe extern "C" fn sum(...) -> i32
     storage_live(_3)
     _3 = &two-phase-mut ap
     a = next_arg<'5, '6, i32>[{built_in impl Sized for i32}, impl_VaArgSafe_for_i32](move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[drop_glue<'7, '9>] ap
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(_8)
+        storage_dead(ap)
+        unwind_continue
     storage_dead(_3)
     fake_read(a)
     storage_live(b)
     storage_live(_5)
     _5 = &two-phase-mut ap
     b = next_arg<'10, '11, i32>[{built_in impl Sized for i32}, impl_VaArgSafe_for_i32](move _5)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[drop_glue<'7, '9>] ap
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(_8)
+        storage_dead(ap)
+        unwind_continue
     storage_dead(_5)
     fake_read(b)
     storage_live(_6)
@@ -98,22 +106,12 @@ pub unsafe extern "C" fn sum(...) -> i32
     storage_dead(b)
     storage_dead(a)
     conditional_drop[drop_glue<'12, '14>] ap
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(_8)
+        storage_dead(ap)
+        unwind_continue
     storage_dead(_8)
     storage_dead(ap)
     return
-
-    cleanup0: {
-        conditional_drop[drop_glue<'7, '9>] ap
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
-        storage_dead(_8)
-        storage_dead(ap)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::foo

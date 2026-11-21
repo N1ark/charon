@@ -88,9 +88,15 @@ pub fn check(n: u32) -> u32
         storage_live(_5)
         _5 = &{promoted_const} with_metadata(const 9usize)
         _4 = from_str<'0>(move _5)
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(_4)
+            storage_dead(n)
+            storage_dead(_5)
+            unwind_continue
         panic(panic_fmt<'3>(move _4))
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(_4)
+            storage_dead(n)
+            storage_dead(_5)
+            unwind_continue
     }
     storage_dead(_3)
     storage_dead(_2)
@@ -99,13 +105,6 @@ pub fn check(n: u32) -> u32
     storage_dead(n)
     storage_dead(_5)
     return
-
-    cleanup0: {
-        storage_dead(_4)
-        storage_dead(n)
-        storage_dead(_5)
-        unwind_continue
-    }
 }
 
 // Full name: crate_a::m::Alias
@@ -130,26 +129,22 @@ pub fn use_a(b: Box<u32>) -> u32
     _2 = unbox(move _3)
     ↳⚡ conditional_drop[drop_glue<'0, u32, Global>] _3
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_3)
-    _0 = check(move _2)
-    ↳⚡ goto cleanup0
-    storage_dead(_2)
-    conditional_drop[drop_glue<'2, u32, Global>] b
-    ↳⚡ goto cleanup1
-    storage_dead(b)
-    return
-
-    cleanup0: {
         conditional_drop[drop_glue<'1, u32, Global>] b
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
         storage_dead(b)
         unwind_continue
-    }
+    storage_dead(_3)
+    _0 = check(move _2)
+    ↳⚡ conditional_drop[drop_glue<'1, u32, Global>] b
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(b)
+        unwind_continue
+    storage_dead(_2)
+    conditional_drop[drop_glue<'2, u32, Global>] b
+    ↳⚡ storage_dead(b)
+        unwind_continue
+    storage_dead(b)
+    return
 }
 
 // Full name: crate_b::Shape

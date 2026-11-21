@@ -1228,7 +1228,13 @@ pub fn test_loops()
     _0 = ()
     storage_live(x_1)
     x_1 = test_loop1(const 2u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_1)
     storage_live(_2)
     storage_live(_3)
@@ -1248,7 +1254,13 @@ pub fn test_loops()
     storage_dead(_2)
     storage_live(x_4)
     x_4 = test_loop2(const 2u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_4)
     storage_live(_5)
     storage_live(_6)
@@ -1268,7 +1280,13 @@ pub fn test_loops()
     storage_dead(_5)
     storage_live(x_7)
     x_7 = test_loop3(const 2u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_7)
     storage_live(_8)
     storage_live(_9)
@@ -1288,7 +1306,13 @@ pub fn test_loops()
     storage_dead(_8)
     storage_live(x_10)
     x_10 = test_loop4(const 20u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_10)
     storage_live(_11)
     storage_live(_12)
@@ -1308,7 +1332,13 @@ pub fn test_loops()
     storage_dead(_11)
     storage_live(x_13)
     x_13 = test_loop5(const 2u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_13)
     storage_live(_14)
     storage_live(_15)
@@ -1328,7 +1358,13 @@ pub fn test_loops()
     storage_dead(_14)
     storage_live(x_16)
     x_16 = test_loop6(const 2u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        unwind_continue
     fake_read(x_16)
     storage_live(_17)
     storage_live(_18)
@@ -1360,16 +1396,6 @@ pub fn test_loops()
     storage_dead(_20)
     storage_dead(_19)
     return
-
-    cleanup0: {
-        storage_dead(_24)
-        storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(_21)
-        storage_dead(_20)
-        storage_dead(_19)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::nested_loops_enum
@@ -1573,7 +1599,10 @@ pub fn loop_inside_if(b: bool, n: u32) -> u32
     _6 = Range { start: const 0u32, end: move _7 }
     storage_dead(_7)
     _5 = into_iter<Range<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Range<u32>[{built_in impl Sized for u32}]}, impl_Iterator_for_Range<u32>[{built_in impl Sized for u32}, impl_Step_for_u32, {built_in impl Destruct for u32}]](move _6)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_14)
+        storage_dead(n)
+        storage_dead(b)
+        unwind_continue
     storage_dead(_6)
     storage_live(iter)
     iter = move _5
@@ -1584,7 +1613,10 @@ pub fn loop_inside_if(b: bool, n: u32) -> u32
         _11 = &mut iter
         _10 = &two-phase-mut (*_11)
         _9 = next<'2, u32>[{built_in impl Sized for u32}, impl_Step_for_u32, {built_in impl Destruct for u32}](move _10)
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(_14)
+            storage_dead(n)
+            storage_dead(b)
+            unwind_continue
         storage_dead(_10)
         match _9 {
             Option::None => {
@@ -1616,13 +1648,6 @@ pub fn loop_inside_if(b: bool, n: u32) -> u32
     storage_dead(n)
     storage_dead(b)
     return
-
-    cleanup0: {
-        storage_dead(_14)
-        storage_dead(n)
-        storage_dead(b)
-        unwind_continue
-    }
 }
 
 pub fn test_crate::sum(max: u32) -> u32
@@ -1783,7 +1808,9 @@ pub fn clear<'_0>(v: &'_0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in 
         storage_live(_6)
         _6 = &(*v)
         _5 = alloc::vec::{Vec<T>[TraitClause0, TraitClause1]}::len<'4, u32, Global>[{built_in impl Sized for u32}, {built_in impl Sized for Global}](move _6)
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(_10)
+            storage_dead(v)
+            unwind_continue
         storage_dead(_6)
         _3 = move _4 < move _5
         if move _3 {
@@ -1798,7 +1825,9 @@ pub fn clear<'_0>(v: &'_0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in 
         storage_live(_9)
         _9 = copy i
         _7 = impl_IndexMut_for_Vec::index_mut<'5, u32, usize, Global>[{built_in impl Sized for u32}, {built_in impl Sized for usize}, {built_in impl Sized for Global}, impl_SliceIndex_slice_for_usize<u32>[{built_in impl Sized for u32}]](move _8, move _9)
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(_10)
+            storage_dead(v)
+            unwind_continue
         storage_dead(_9)
         storage_dead(_8)
         (*_7) = const 0u32
@@ -1816,12 +1845,6 @@ pub fn clear<'_0>(v: &'_0 mut Vec<u32>[{built_in impl Sized for u32}, {built_in 
     storage_dead(_10)
     storage_dead(v)
     return
-
-    cleanup0: {
-        storage_dead(_10)
-        storage_dead(v)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::List

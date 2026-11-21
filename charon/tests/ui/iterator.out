@@ -5679,7 +5679,9 @@ fn main()
         _7 = impl_Iterator_for_IntoIter::next<'62, i32, 7usize>[{built_in impl Sized for i32}](move _8)
         ↳⚡ conditional_drop[drop_glue<'63, i32, 7usize>[{built_in impl Sized for i32}]] iter_6
             ↳⚡ unwind_terminate(in_cleanup)
-            goto cleanup1
+            conditional_drop[drop_glue<'64, i32, 7usize>[{built_in impl Sized for i32}]] _3
+            ↳⚡ unwind_terminate(in_cleanup)
+            goto cleanup0
         storage_dead(_8)
         match _7 {
             Option::None => {
@@ -5703,7 +5705,9 @@ fn main()
     storage_dead(_9)
     storage_dead(_7)
     conditional_drop[drop_glue<'65, i32, 7usize>[{built_in impl Sized for i32}]] iter_6
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[drop_glue<'64, i32, 7usize>[{built_in impl Sized for i32}]] _3
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     storage_dead(iter_6)
     conditional_drop[drop_glue<'66, i32, 7usize>[{built_in impl Sized for i32}]] _3
     ↳⚡ goto cleanup0
@@ -5922,12 +5926,6 @@ fn main()
         storage_dead(_33)
         storage_dead(_12)
         unwind_continue
-    }
-
-    cleanup1: {
-        conditional_drop[drop_glue<'64, i32, 7usize>[{built_in impl Sized for i32}]] _3
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
     }
 }
 

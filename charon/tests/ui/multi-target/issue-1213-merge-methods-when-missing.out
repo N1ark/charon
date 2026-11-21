@@ -254,10 +254,12 @@ fn f<'_0>(blocks: &'_0 mut [u8])
     storage_live(_4)
     _4 = &two-phase-mut (*blocks) with_metadata(read blocks.metadata)
     _3 = iter_mut<'13, u8>[{built_in impl Sized for u8}](move _4)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(blocks)
+        unwind_continue
     storage_dead(_4)
     _2 = into_iter<IterMut<'14, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for IterMut<'14, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_IterMut<'14, u8>[{built_in impl Sized for u8}]](move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(blocks)
+        unwind_continue
     storage_dead(_3)
     storage_live(iter)
     iter = move _2
@@ -268,7 +270,8 @@ fn f<'_0>(blocks: &'_0 mut [u8])
         _8 = &mut iter
         _7 = &two-phase-mut (*_8)
         _6 = impl_Iterator_for_IterMut::next<'21, '22, u8>[{built_in impl Sized for u8}](move _7)
-        ↳⚡ goto cleanup0
+        ↳⚡ storage_dead(blocks)
+            unwind_continue
         storage_dead(_7)
         match _6 {
             Option::None => {
@@ -288,11 +291,6 @@ fn f<'_0>(blocks: &'_0 mut [u8])
     storage_dead(_2)
     storage_dead(blocks)
     return
-
-    cleanup0: {
-        storage_dead(blocks)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::g

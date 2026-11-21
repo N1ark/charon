@@ -279,20 +279,19 @@ where
     _3 = impl_Drop_for_Vec::drop<'2, T, A>[TraitClause0, TraitClause1, {built_in impl Destruct for T}, {built_in impl Destruct for A}](move _2)
     ↳⚡ drop[impl_Destruct_for_RawVec::drop_glue<'3, T, A>[TraitClause0, TraitClause1]] (*_1).buf
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[impl_Destruct_for_RawVec::drop_glue<'4, T, A>[TraitClause0, TraitClause1]] (*_1).buf
-    ↳⚡ goto cleanup0
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-
-    cleanup0: {
         storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
         unwind_continue
-    }
+    drop[impl_Destruct_for_RawVec::drop_glue<'4, T, A>[TraitClause0, TraitClause1]] (*_1).buf
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 pub fn alloc::vec::{Vec<T>[TraitClause0, TraitClause1]}::with_capacity_in<T, A>(capacity: usize, alloc: A) -> Vec<T>[TraitClause0, TraitClause1]

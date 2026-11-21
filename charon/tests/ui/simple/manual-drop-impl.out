@@ -99,20 +99,19 @@ where
     _3 = impl_Drop_for_Foo::drop<'2, T>[TraitClause0](move _2)
     ↳⚡ drop[impl_Destruct_for_Vec::drop_glue<'3, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[impl_Destruct_for_Vec::drop_glue<'4, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
-    ↳⚡ goto cleanup0
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-
-    cleanup0: {
         storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)
         unwind_continue
-    }
+    drop[impl_Destruct_for_Vec::drop_glue<'4, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::{impl Drop for Foo<T>[TraitClause0]}

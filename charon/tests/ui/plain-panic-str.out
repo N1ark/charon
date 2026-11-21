@@ -41,15 +41,13 @@ fn main()
     storage_live(_2)
     _2 = &test_crate::main::{promoted_const} with_metadata(const 4usize)
     _1 = from_str<'0>(move _2)
-    ↳⚡ goto cleanup0
-    panic(panic_fmt<'3>(move _1))
-    ↳⚡ goto cleanup0
-
-    cleanup0: {
-        storage_dead(_1)
+    ↳⚡ storage_dead(_1)
         storage_dead(_2)
         unwind_continue
-    }
+    panic(panic_fmt<'3>(move _1))
+    ↳⚡ storage_dead(_1)
+        storage_dead(_2)
+        unwind_continue
 }
 
 

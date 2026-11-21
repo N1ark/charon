@@ -379,18 +379,16 @@ where
     drop[{built_in impl Destruct for U}::drop_glue<'0>] _2
     ↳⚡ drop[{built_in impl Destruct for T}::drop_glue<'2>] _1
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[{built_in impl Destruct for T}::drop_glue<'1>] _1
-    ↳⚡ goto cleanup0
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-
-    cleanup0: {
         storage_dead(_2)
         storage_dead(_1)
         unwind_continue
-    }
+    drop[{built_in impl Destruct for T}::drop_glue<'1>] _1
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::associated_items

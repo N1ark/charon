@@ -232,14 +232,20 @@ where
     conditional_drop[drop_glue<'81, Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}]] _5
     ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'83>] _6
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
+        conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     storage_dead(_6)
     storage_dead(_5)
     _3 = assert_future<Clause0_Clause1_Output, Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]}]>[TraitClause0::ImpliedClause1::ImpliedClause1, {built_in impl Sized for Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '19)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '19)}, {built_in impl Sized for Global}]}]}, impl_Future_for_Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '0)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '2)}, {built_in impl Sized for Global}], (dyn Future<Clause0_Clause1_Output> + Send + '12), Clause0_Clause1_Output>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '9)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '11)}, {built_in impl Sized for Global}]}, impl_DerefMut_for_Box<(dyn Future<Clause0_Clause1_Output> + Send + '12), Global>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '14)}, {built_in impl Sized for Global}], Future<(dyn Future<Clause0_Clause1_Output> + Send + '18), Clause0_Clause1_Output>]](move _4)
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     _2 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '109)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '111)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '118)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '120)}, {built_in impl Sized for Global}]}],  at []>(move _3)
     conditional_drop[drop_glue<'145, Box<(dyn Future<Clause0_Clause1_Output> + Send + '121)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '123)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '121)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '123)}, {built_in impl Sized for Global}]}]] _3
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     storage_dead(_4)
     storage_dead(_3)
     _0 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '146)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '148)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '155)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '157)}, {built_in impl Sized for Global}]}],  at []>(move _2)
@@ -247,23 +253,14 @@ where
     ↳⚡ goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for Self}::drop_glue<'183>] self
-    ↳⚡ goto cleanup2
+    ↳⚡ storage_dead(self)
+        unwind_continue
     storage_dead(self)
     return
 
     cleanup0: {
         conditional_drop[{built_in impl Destruct for Self}::drop_glue<'82>] self
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup2
-    }
-
-    cleanup1: {
-        conditional_drop[drop_glue<'108, Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '84)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '86)}, {built_in impl Sized for Global}]}]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    }
-
-    cleanup2: {
         storage_dead(self)
         unwind_continue
     }

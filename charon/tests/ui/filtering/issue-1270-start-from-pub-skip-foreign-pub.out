@@ -145,17 +145,22 @@ pub fn example(x: Result<u32, String>[{built_in impl Sized for u32}, {built_in i
                 ↳⚡ unwind_terminate(in_cleanup)
                 conditional_drop[impl_Destruct_for_Result::drop_glue<'6, !, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]] residual
                 ↳⚡ unwind_terminate(in_cleanup)
-                goto cleanup1
+                conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'8, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
+                ↳⚡ unwind_terminate(in_cleanup)
+                goto cleanup0
             storage_dead(_6)
             conditional_drop[impl_Destruct_for_Result::drop_glue<'5, !, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]] residual
-            ↳⚡ goto cleanup1
+            ↳⚡ conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'8, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
+                ↳⚡ unwind_terminate(in_cleanup)
+                goto cleanup0
             storage_dead(residual)
             storage_dead(_2)
             conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'7, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
             ↳⚡ goto cleanup0
             storage_dead(_3)
             conditional_drop[impl_Destruct_for_Result::drop_glue<'9, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x
-            ↳⚡ goto cleanup2
+            ↳⚡ storage_dead(x)
+                unwind_continue
             storage_dead(x)
             return
         },
@@ -170,23 +175,14 @@ pub fn example(x: Result<u32, String>[{built_in impl Sized for u32}, {built_in i
     ↳⚡ goto cleanup0
     storage_dead(_3)
     conditional_drop[impl_Destruct_for_Result::drop_glue<'3, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x
-    ↳⚡ goto cleanup2
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
 
     cleanup0: {
         conditional_drop[impl_Destruct_for_Result::drop_glue<'1, u32, String>[{built_in impl Sized for u32}, {built_in impl Sized for String}]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup2
-    }
-
-    cleanup1: {
-        conditional_drop[impl_Destruct_for_ControlFlow::drop_glue<'8, Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}], u32>[{built_in impl Sized for Result<!, String>[{built_in impl Sized for !}, {built_in impl Sized for String}]}, {built_in impl Sized for u32}]] _3
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    }
-
-    cleanup2: {
         storage_dead(x)
         unwind_continue
     }

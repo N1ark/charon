@@ -125,17 +125,14 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Clause1_Item}::drop_glue<'2>] t
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for Clause1_Item}::drop_glue<'1>] t
-    ↳⚡ goto cleanup0
-    storage_dead(t)
-    return
-
-    cleanup0: {
         storage_dead(t)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[{built_in impl Destruct for Clause1_Item}::drop_glue<'1>] t
+    ↳⚡ storage_dead(t)
+        unwind_continue
+    storage_dead(t)
+    return
 }
 
 // Full name: test_crate::X
@@ -179,17 +176,14 @@ where
     _0 = TraitClause1::ImpliedClause1::method<'1>(move _2)
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
-    ↳⚡ goto cleanup0
-    storage_dead(x)
-    return
-
-    cleanup0: {
         storage_dead(x)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
 }
 
 // Full name: test_crate::b
@@ -208,17 +202,14 @@ where
     _0 = TraitClause1::ImpliedClause1::method<'1>(move _2)
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
-    ↳⚡ goto cleanup0
-    storage_dead(x)
-    return
-
-    cleanup0: {
         storage_dead(x)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
 }
 
 // Full name: test_crate::x
@@ -241,34 +232,31 @@ where
     storage_live(_3)
     _3 = copy x
     _2 = a<T, Clause1_Clause1_Assoc>[TraitClause0, TraitClause1](move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     storage_live(_4)
     storage_live(_5)
     _5 = copy x
     _4 = b<T, Clause2_Clause1_Assoc>[TraitClause0, TraitClause2](move _5)
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[{built_in impl Destruct for Clause1_Clause1_Assoc}::drop_glue<'0>] _2
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_5)
     _0 = (move _2, move _4)
     conditional_drop[{built_in impl Destruct for Clause1_Clause1_Assoc}::drop_glue<'1>] _4
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[{built_in impl Destruct for Clause1_Clause1_Assoc}::drop_glue<'0>] _2
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_4)
     conditional_drop[{built_in impl Destruct for Clause1_Clause1_Assoc}::drop_glue<'2>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
-
-    cleanup1: {
-        conditional_drop[{built_in impl Destruct for Clause1_Clause1_Assoc}::drop_glue<'0>] _2
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    }
 }
 
 

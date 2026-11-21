@@ -60,10 +60,14 @@ pub fn m<'_0>(self: &'_0 S) -> u32
     storage_live(_4)
     storage_live(_2)
     _2 = foo()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
     storage_live(_3)
     _3 = name()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
     _4 = copy _2 panic.+ copy _3
     _0 = move _4
     storage_dead(_3)
@@ -71,12 +75,6 @@ pub fn m<'_0>(self: &'_0 S) -> u32
     storage_dead(_4)
     storage_dead(self)
     return
-
-    cleanup0: {
-        storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::Tr
@@ -100,10 +98,14 @@ pub fn d::<S><'_0>(self: &'_0 S) -> u32
     storage_live(_4)
     storage_live(_2)
     _2 = foo()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
     storage_live(_3)
     _3 = name()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
     _4 = copy _2 panic.+ copy _3
     _0 = move _4
     storage_dead(_3)
@@ -111,12 +113,6 @@ pub fn d::<S><'_0>(self: &'_0 S) -> u32
     storage_dead(_4)
     storage_dead(self)
     return
-
-    cleanup0: {
-        storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::{impl Tr for S}
@@ -143,10 +139,16 @@ extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u32
     storage_live(_5)
     storage_live(_3)
     _3 = foo()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_5)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
     storage_live(_4)
     _4 = name()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_5)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
     _5 = copy _3 panic.+ copy _4
     _0 = move _5
     storage_dead(_4)
@@ -155,13 +157,6 @@ extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u32
     storage_dead(tupled_args)
     storage_dead(_1)
     return
-
-    cleanup0: {
-        storage_dead(_5)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::closure_user

@@ -235,12 +235,28 @@ fn foo()
     _8 = move _9
     _2 = &(*_8)
     _1 = is_some<'7, i32>[{built_in impl Sized for i32}](move _2)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(_9)
+        unwind_continue
     storage_dead(_2)
     storage_dead(_1)
     storage_live(_3)
     _3 = into<u32, u64>[{built_in impl Sized for u32}, {built_in impl Sized for u64}, impl_From_u32_for_u64](const 42u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(_9)
+        unwind_continue
     storage_live(_10)
     storage_live(_13)
     storage_live(_14)
@@ -255,7 +271,15 @@ fn foo()
     _6 = &(*_7)
     _5 = &(*_6)
     _4 = from_ref<'9, i32>[{built_in impl Sized for i32}](move _5)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_10)
+        storage_dead(_9)
+        unwind_continue
     storage_dead(_5)
     storage_dead(_6)
     storage_dead(_4)
@@ -269,18 +293,6 @@ fn foo()
     storage_dead(_10)
     storage_dead(_9)
     return
-
-    cleanup0: {
-        storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        storage_dead(_10)
-        storage_dead(_9)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::module::dont_translate_body

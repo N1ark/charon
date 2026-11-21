@@ -175,7 +175,10 @@ where
     conditional_drop[impl_Destruct_for_Transitive::drop_glue<'1, U>[TraitClause1, TraitClause4]] _y
     ↳⚡ goto cleanup0
     conditional_drop[impl_Destruct_for_Direct::drop_glue<'3, T>[TraitClause0, TraitClause3]] _x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(_z)
+        storage_dead(_y)
+        storage_dead(_x)
+        unwind_continue
     storage_dead(_z)
     storage_dead(_y)
     storage_dead(_x)
@@ -184,10 +187,6 @@ where
     cleanup0: {
         conditional_drop[impl_Destruct_for_Direct::drop_glue<'4, T>[TraitClause0, TraitClause3]] _x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
         storage_dead(_z)
         storage_dead(_y)
         storage_dead(_x)

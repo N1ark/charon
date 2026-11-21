@@ -102,17 +102,14 @@ where
     conditional_drop[impl_Destruct_for_Box::drop_glue<'0, T, Global>[TraitClause0, {built_in impl Sized for Global}]] _2
     ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'2, T, Global>[TraitClause0, {built_in impl Sized for Global}]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Box::drop_glue<'1, T, Global>[TraitClause0, {built_in impl Sized for Global}]] x
-    ↳⚡ goto cleanup0
-    storage_dead(x)
-    return
-
-    cleanup0: {
         storage_dead(x)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[impl_Destruct_for_Box::drop_glue<'1, T, Global>[TraitClause0, {built_in impl Sized for Global}]] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
 }
 
 // Full name: test_crate::Wrapper
@@ -170,17 +167,14 @@ where
     conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'0, P>[TraitClause0]] _2
     ↳⚡ conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'2, P>[TraitClause0]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'1, P>[TraitClause0]] x
-    ↳⚡ goto cleanup0
-    storage_dead(x)
-    return
-
-    cleanup0: {
         storage_dead(x)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'1, P>[TraitClause0]] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
 }
 
 

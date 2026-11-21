@@ -96,16 +96,13 @@ where
     drop[{built_in impl core::marker::Destruct::<&_ mut _><'_1> for T0}::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[{built_in impl Destruct for T1}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    drop[{built_in impl Destruct for T1}::drop_glue<'2>] (*_1)._1
-    ↳⚡ goto cleanup0
-    storage_dead(_1)
-    return
-
-    cleanup0: {
         storage_dead(_1)
         unwind_continue
-    }
+    drop[{built_in impl Destruct for T1}::drop_glue<'2>] (*_1)._1
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::id
@@ -159,17 +156,14 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[(_, _)::impl_Destruct_for_tuple::drop_glue::<_, &_ mut _, _><'54, '46, u32, T>[{built_in impl core::marker::Sized::<&_ mut _><'46> for u32}]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[(_, _)::impl_Destruct_for_tuple::drop_glue::<_, &_ mut _, _><'45, '37, u32, T>[{built_in impl core::marker::Sized::<&_ mut _><'37> for u32}]] x
-    ↳⚡ goto cleanup0
-    storage_dead(x)
-    return
-
-    cleanup0: {
         storage_dead(x)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[(_, _)::impl_Destruct_for_tuple::drop_glue::<_, &_ mut _, _><'45, '37, u32, T>[{built_in impl core::marker::Sized::<&_ mut _><'37> for u32}]] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
 }
 
 

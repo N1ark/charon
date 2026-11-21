@@ -264,7 +264,9 @@ fn main()
     storage_live(_19)
     _19 = cast<fn(&'6 (dyn T + '7))>(read (*_13.metadata).method_by_ref)
     _12 = (read _19)(move _13)
-    ↳⚡ goto cleanup1
+    ↳⚡ conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     storage_dead(_13)
     storage_dead(_12)
     storage_live(_14)
@@ -276,7 +278,9 @@ fn main()
     _14 = (read _21)(move _20)
     ↳⚡ conditional_drop[{built_in impl Destruct for (dyn T + '25)}::drop_glue<'26>] _15
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
+        conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
     storage_dead(_15)
     storage_dead(_14)
     _0 = ()
@@ -292,12 +296,6 @@ fn main()
         conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
         ↳⚡ unwind_terminate(in_cleanup)
         unwind_continue
-    }
-
-    cleanup1: {
-        conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
     }
 }
 

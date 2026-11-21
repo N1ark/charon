@@ -245,18 +245,15 @@ pub fn test_new_non_zero_u32(x: u32) -> NonZero<u32>[{built_in impl Sized for u3
     storage_live(_3)
     _3 = copy x
     _2 = core::num::nonzero::{NonZero<T>[TraitClause0, TraitClause1]}::new<u32>[{built_in impl Sized for u32}, impl_ZeroablePrimitive_for_u32](move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     _0 = unwrap<NonZero<u32>[{built_in impl Sized for u32}, impl_ZeroablePrimitive_for_u32]>[{built_in impl Sized for NonZero<u32>[{built_in impl Sized for u32}, impl_ZeroablePrimitive_for_u32]}](move _2)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::test_vec_push

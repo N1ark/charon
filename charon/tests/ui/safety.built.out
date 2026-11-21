@@ -1181,21 +1181,18 @@ fn safe_call(f: fn())
     storage_live(_3)
     _3 = copy f
     _2 = (move _3)()
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(f)
+        unwind_continue
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     _4 = safe_raw_ptrs(const 0u32)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(f)
+        unwind_continue
     storage_dead(_4)
     _0 = ()
     storage_dead(f)
     return
-
-    cleanup0: {
-        storage_dead(f)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::safe_call_method

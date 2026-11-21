@@ -571,17 +571,14 @@ where
     _0 = len<'3, T>[TraitClause0](move _2)
     ↳⚡ conditional_drop[impl_Destruct_for_array::drop_glue<'4, T, 32usize>[TraitClause0]] s
         ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup0
-    storage_dead(_2)
-    conditional_drop[impl_Destruct_for_array::drop_glue<'5, T, 32usize>[TraitClause0]] s
-    ↳⚡ goto cleanup0
-    storage_dead(s)
-    return
-
-    cleanup0: {
         storage_dead(s)
         unwind_continue
-    }
+    storage_dead(_2)
+    conditional_drop[impl_Destruct_for_array::drop_glue<'5, T, 32usize>[TraitClause0]] s
+    ↳⚡ storage_dead(s)
+        unwind_continue
+    storage_dead(s)
+    return
 }
 
 // Full name: test_crate::shared_array_len
@@ -2486,7 +2483,9 @@ pub fn f3() -> u32
     ↳⚡ undefined_behavior
     _3 = copy (*_14)
     _2 = f2(move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_14)
+        storage_dead(_13)
+        unwind_continue
     storage_dead(_3)
     storage_dead(_4)
     storage_dead(_2)
@@ -2509,11 +2508,15 @@ pub fn f3() -> u32
     _12 = &b
     _11 = &(*_12)
     _10 = f4<'8>(move _11, const 16usize, const 18usize)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_14)
+        storage_dead(_13)
+        unwind_continue
     _9 = &(*_10) with_metadata(read _10.metadata)
     storage_dead(_11)
     _0 = sum2<'9, '10>(move _6, move _9)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(_14)
+        storage_dead(_13)
+        unwind_continue
     storage_dead(_9)
     storage_dead(_6)
     storage_dead(b)
@@ -2524,12 +2527,6 @@ pub fn f3() -> u32
     storage_dead(_14)
     storage_dead(_13)
     return
-
-    cleanup0: {
-        storage_dead(_14)
-        storage_dead(_13)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::SZ

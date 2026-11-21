@@ -197,27 +197,23 @@ where
     storage_live(_3)
     _3 = &x
     _2 = TraitClause1::ImpliedClause2::clone<'1>(move _3)
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     _0 = ()
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] x
-    ↳⚡ goto cleanup1
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(x)
     return
-
-    cleanup0: {
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        goto cleanup1
-    }
-
-    cleanup1: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::use_alias

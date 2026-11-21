@@ -292,23 +292,21 @@ fn mk_ptr(x: *mut u32) -> Box::<(dyn Consume), Global>
     storage_live(_4)
     _4 = copy x
     _3 = alloc::boxed::{Box::<*mut u32, Global>}::new::<*mut u32>(move _4)
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     _2 = unsize_cast<Box::<(dyn Consume), Global>, &{impl Consume for *mut u32}::{vtable}>(move _3)
     conditional_drop[{impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global><'0>] _3
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_4)
     storage_dead(_3)
     _0 = unsize_cast<Box::<(dyn Consume), Global>,  at []>(move _2)
     conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'1>] _2
-    ↳⚡ goto cleanup0
+    ↳⚡ storage_dead(x)
+        unwind_continue
     storage_dead(_2)
     storage_dead(x)
     return
-
-    cleanup0: {
-        storage_dead(x)
-        unwind_continue
-    }
 }
 
 // Full name: test_crate::main
