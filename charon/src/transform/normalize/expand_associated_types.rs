@@ -72,7 +72,7 @@
 use derive_generic_visitor::*;
 use itertools::Itertools;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use crate::{
     ast::*,
@@ -1002,8 +1002,8 @@ struct UpdateItemBody<'a> {
     binder_state: u32,
     pushed_sets: u32,
     caches: &'a RefCell<Caches>,
-    /// The error count when we started visiting this item.
-    initial_error_count: usize,
+    /// Whether we reported an error while visiting this item.
+    reported_error: Cell<bool>,
 }
 
 /// Caches for operations that walk whole types or trait refs, which can be big. The same inputs
@@ -1035,7 +1035,7 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
         None
     }
     fn may_record(&self) -> bool {
-        self.ctx.error_count() == self.initial_error_count
+        !self.reported_error.get()
     }
 }
 
@@ -1257,6 +1257,7 @@ impl UpdateItemBody<'_> {
                             .join("\n"),
                     );
                 }
+                self.reported_error.set(true);
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
             };
             args.types.push(ty);
@@ -1394,6 +1395,7 @@ impl VisitAstMut for UpdateItemBody<'_> {
                         Available: {:?}",
                         self.type_replacements,
                     );
+                    self.reported_error.set(true);
                 }
             }
         }
@@ -1667,7 +1669,7 @@ impl TransformPass for Transform {
                 binder_state: 0,
                 pushed_sets: 0,
                 caches: &caches.get(),
-                initial_error_count: ctx.error_count(),
+                reported_error: Cell::new(false),
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(

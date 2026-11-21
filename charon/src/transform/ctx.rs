@@ -246,14 +246,6 @@ impl TransformCtx {
         self.error_ctx().has_errors()
     }
 
-    /// The number of errors reported so far, including the ones of the item that this thread is
-    /// transforming in a parallel loop.
-    pub(crate) fn error_count(&self) -> usize {
-        let deferred = ITEM_EFFECTS
-            .with_borrow(|effects| effects.as_ref().map_or(0, |effects| effects.errors.len()));
-        self.error_ctx().error_count + deferred
-    }
-
     /// Span an error and register the error.
     pub(crate) fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
         let deferred = ITEM_EFFECTS.with_borrow_mut(|effects| {
