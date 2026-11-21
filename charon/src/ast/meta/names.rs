@@ -29,7 +29,7 @@ pub enum PathElem {
     /// This item was obtained by instantiating its parent with the given args. The binder binds
     /// the parameters of the new items. If the binder binds nothing then this is a
     /// monomorphization.
-    Instantiated(Box<Binder<GenericArgs>>),
+    Instantiated(Instantiation),
     /// This item is only available on the given target. Only appears in multi-target mode.
     #[serde_state(stateless)]
     Target(TargetTriple),
@@ -37,6 +37,65 @@ pub enum PathElem {
     /// tuples, or an item that has no name of its own such as a closure or a vtable.
     #[serde_state(stateless)]
     Builtin(BuiltinPathElem, Disambiguator),
+}
+
+/// The hash-consed arguments of an instantiated item.
+#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Drive, DriveMut, DriveTwo)]
+pub struct Instantiation(pub HashConsed<WithCachedTypeInfo<Binder<GenericArgs>>>);
+
+impl Instantiation {
+    pub fn new(binder: Binder<GenericArgs>) -> Self {
+        Instantiation(HashConsed::new(WithCachedTypeInfo::new(binder)))
+    }
+
+    /// Get mutable access to the binder. This clones it if it's shared and re-interns the
+    /// modified value at the end.
+    pub fn with_mut<R>(&mut self, f: impl FnOnce(&mut Binder<GenericArgs>) -> R) -> R {
+        self.0.with_inner_mut(|binder| binder.with_value_mut(f))
+    }
+}
+
+impl std::ops::Deref for Instantiation {
+    type Target = Binder<GenericArgs>;
+    fn deref(&self) -> &Self::Target {
+        self.0.inner()
+    }
+}
+
+/// Dummy impls, see the one on `Ty`.
+unsafe impl Send for Instantiation {}
+unsafe impl Sync for Instantiation {}
+
+impl std::fmt::Debug for Instantiation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+/// Serialized as the plain binder.
+impl<State: ?Sized> SerializeState<State> for Instantiation
+where
+    Binder<GenericArgs>: SerializeState<State>,
+{
+    fn serialize_state<S: serde::Serializer>(
+        &self,
+        state: &State,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_state(state, serializer)
+    }
+}
+impl<'de, State: ?Sized> DeserializeState<'de, State> for Instantiation
+where
+    Binder<GenericArgs>: DeserializeState<'de, State>,
+{
+    fn deserialize_state<D: serde::Deserializer<'de>>(
+        state: &State,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        Binder::deserialize_state(state, deserializer).map(Instantiation::new)
+    }
 }
 
 /// Used for builtin items, rather than hardcoding these as strings.
@@ -147,10 +206,6 @@ impl PathElem {
         let binder = self.as_instantiated()?;
         binder.params.is_empty().then_some(&binder.skip_binder)
     }
-    pub fn as_monomorphized_mut(&mut self) -> Option<&mut GenericArgs> {
-        let binder = self.as_instantiated_mut()?;
-        binder.params.is_empty().then_some(&mut binder.skip_binder)
-    }
     pub fn is_monomorphized(&self) -> bool {
         self.as_monomorphized().is_some()
     }
@@ -177,9 +232,14 @@ impl Name {
     pub fn mono_args(&self) -> Option<&GenericArgs> {
         self.name.last()?.as_monomorphized()
     }
-    /// If this item comes from monomorphization, return the arguments used.
-    pub fn mono_args_mut(&mut self) -> Option<&mut GenericArgs> {
-        self.name.last_mut()?.as_monomorphized_mut()
+    /// If this item comes from monomorphization, modify the arguments used.
+    pub fn with_mono_args_mut<R>(&mut self, f: impl FnOnce(&mut GenericArgs) -> R) -> Option<R> {
+        match self.name.last_mut()? {
+            PathElem::Instantiated(binder) if binder.params.is_empty() => {
+                Some(binder.with_mut(|binder| f(&mut binder.skip_binder)))
+            }
+            _ => None,
+        }
     }
 
     /// Strip the trailing `PathElem::Target` from a name, if any.
@@ -233,12 +293,15 @@ impl Name {
     /// the item was already instantiated, this merges the two instantiations.
     pub fn instantiate(mut self, binder: Binder<GenericArgs>) -> Self {
         if let [.., PathElem::Instantiated(x)] = self.name.as_mut_slice() {
-            // Put the new args in place; the params are what we want but the args are wrong.
-            let old_args = std::mem::replace(x.as_mut(), binder);
-            // Apply the new args to the old binder to get correct args.
-            x.skip_binder = old_args.apply(&x.skip_binder);
+            x.with_mut(|x| {
+                // Put the new args in place; the params are what we want but the args are wrong.
+                let old_args = std::mem::replace(x, binder);
+                // Apply the new args to the old binder to get correct args.
+                x.skip_binder = old_args.apply(&x.skip_binder);
+            });
         } else {
-            self.name.push(PathElem::Instantiated(Box::new(binder)));
+            self.name
+                .push(PathElem::Instantiated(Instantiation::new(binder)));
         }
         self
     }

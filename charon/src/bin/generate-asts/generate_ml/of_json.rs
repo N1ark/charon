@@ -62,6 +62,11 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
     ("HashConsed", r#"Error "use `dedup_val_of_json` instead""#), // Not actually used
     // Hash-consed on the Rust side but serialized as plain generic arguments.
     ("BoxedArgs", "generic_args_of_json ctx json"),
+    // Hash-consed on the Rust side but serialized as a plain binder.
+    (
+        "Instantiation",
+        "binder_of_json generic_args_of_json ctx json",
+    ),
     (
         "Ty",
         "dedup_val_of_json ctx.ty_dedup_tbl ty_kind_of_json ctx json",

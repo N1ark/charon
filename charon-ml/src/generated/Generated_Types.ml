@@ -1066,6 +1066,9 @@ and inhabited_predicate_kind =
   | InhabitedPredicateAnd of inhabited_predicate list
   | InhabitedPredicateOr of inhabited_predicate list
 
+(** The hash-consed arguments of an instantiated item. *)
+and instantiation = generic_args binder
+
 (** Meta information about an item (function, trait decl, trait impl, type decl,
     global). *)
 and item_meta = {
@@ -1503,7 +1506,7 @@ and offset_guarantee =
 and path_elem =
   | PeIdent of string * disambiguator
   | PeImpl of impl_elem
-  | PeInstantiated of generic_args binder
+  | PeInstantiated of instantiation
       (** This item was obtained by instantiating its parent with the given
           args. The binder binds the parameters of the new items. If the binder
           binds nothing then this is a monomorphization. *)

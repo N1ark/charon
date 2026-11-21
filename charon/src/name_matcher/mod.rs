@@ -101,7 +101,7 @@ impl Pattern {
                         name.with_ctx(&ctx.into_fmt()),
                         args.with_ctx(&ctx.into_fmt())
                     );
-                    Some(instantiation.as_ref().clone().apply(args))
+                    Some(Binder::clone(instantiation).apply(args))
                 }
             };
             args = instantiated_args.as_ref();

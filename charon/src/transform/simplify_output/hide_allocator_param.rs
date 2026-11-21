@@ -77,8 +77,11 @@ impl TransformPass for Transform {
             if let Some(tdecl) = ctx.translated.type_decls.get_mut(id) {
                 if tdecl.generics.types.is_empty() {
                     // We monomorpohized this type.
-                    let args = tdecl.item_meta.name.mono_args_mut().unwrap();
-                    args.types.pop().unwrap();
+                    tdecl
+                        .item_meta
+                        .name
+                        .with_mono_args_mut(|args| args.types.pop().unwrap())
+                        .unwrap();
                 } else {
                     struct SubstWithErrorVisitor(TypeVarId);
                     impl VarsVisitor for SubstWithErrorVisitor {

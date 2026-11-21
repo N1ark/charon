@@ -539,9 +539,12 @@ impl<'tcx> TranslateCtx<'tcx> {
                 bt_ctx.translate_generic_args_without_trait_refs(span, item_ref)
             })?;
             if !binder.skip_binder.is_empty() {
-                name.name.push(PathElem::Instantiated(Box::new(binder)));
+                name.name
+                    .push(PathElem::Instantiated(Instantiation::new(binder)));
             }
         }
+        // Names are built by pushing onto the parent's name; we keep many of them.
+        name.name.shrink_to_fit();
         Ok(name)
     }
 

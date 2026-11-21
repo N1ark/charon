@@ -3353,6 +3353,13 @@ and rustc_inline_attr_of_json (ctx : of_json_ctx) (js : json) :
         Ok (RustcInlineAttrForce (attr_span, reason))
     | _ -> Error "")
 
+and instantiation_of_json (ctx : of_json_ctx) (js : json) :
+    (instantiation, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | json -> binder_of_json generic_args_of_json ctx json
+    | _ -> Error "")
+
 and item_id_of_json (ctx : of_json_ctx) (js : json) : (item_id, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
@@ -3961,7 +3968,7 @@ and path_elem_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = impl_elem_of_json ctx _0 in
         Ok (PeImpl _0)
     | `Assoc [ ("Instantiated", _0) ] ->
-        let* _0 = box_of_json (binder_of_json generic_args_of_json) ctx _0 in
+        let* _0 = instantiation_of_json ctx _0 in
         Ok (PeInstantiated _0)
     | `Assoc [ ("Target", _0) ] ->
         let* _0 = string_of_json ctx _0 in

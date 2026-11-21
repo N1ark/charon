@@ -2614,6 +2614,11 @@ and rustc_inline_attr_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
          Ok (RustcInlineAttrForce (attr_span, reason))
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
 
+and instantiation_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (instantiation, string) result =
+  combine_error_msgs st __FUNCTION__
+    (binder_of_postcard generic_args_of_postcard ctx st)
+
 and item_id_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (item_id, string) result =
   combine_error_msgs st __FUNCTION__
@@ -3143,9 +3148,7 @@ and path_elem_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = impl_elem_of_postcard ctx st in
          Ok (PeImpl _0)
      | 2 ->
-         let* _0 =
-           box_of_postcard (binder_of_postcard generic_args_of_postcard) ctx st
-         in
+         let* _0 = instantiation_of_postcard ctx st in
          Ok (PeInstantiated _0)
      | 3 ->
          let* _0 = string_of_postcard ctx st in
