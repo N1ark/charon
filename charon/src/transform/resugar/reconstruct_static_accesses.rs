@@ -29,13 +29,13 @@ impl UllbcPass for Transform {
                 locs.zip(&block.statements)
             })
             .filter_map(|(loc, st)| {
-                let (dest, rvalue) = &st.kind.as_assign()?;
+                let (dest, rvalue) = st.kind.as_assignment()?;
                 let local = dest
                     .as_local()
                     .filter(|l| !body.locals.is_return_or_arg(*l))?;
                 // This is only sound to do for raw pointers! Eliminating refs would
                 // skip a retagging, which could miss UB
-                let global = match &***rvalue {
+                let global = match rvalue {
                     Rvalue::Use(Operand::Const(c), _)
                         if let ConstantExprKind::Ptr(_, pointee, _) = c.kind()
                             && let GlobalPlaceKind::Global(GlobalProvenance::Global(global)) =

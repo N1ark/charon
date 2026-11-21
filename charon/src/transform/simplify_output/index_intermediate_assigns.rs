@@ -72,14 +72,14 @@ impl UllbcPass for Transform {
             // Introduce an intermediate statement if both the rhs and the lhs contain an
             // "index" projection element (to avoid introducing too many intermediate
             // assignments).
-            if let StatementKind::Assign(lhs, rhs) = &mut st.kind
+            if let Some((lhs, rhs)) = st.kind.as_assignment_mut()
                 && lhs.contains_index_proj()
                 && rhs.contains_index_proj()
             {
                 // Fresh local variable for the temporary assignment
                 let tmp_var = ctx.fresh_var(None, lhs.ty().clone());
                 let tmp_rhs = std::mem::replace(
-                    &mut **rhs,
+                    &mut *rhs,
                     Rvalue::Use(Operand::Move(tmp_var.clone()), WithRetag::No),
                 );
                 // Introduce the intermediate let-binding

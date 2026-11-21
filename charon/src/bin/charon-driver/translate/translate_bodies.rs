@@ -291,9 +291,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let c = self.translate_constant_expr(span, &value)?;
             let mut bb = BodyBuilder::new(span, 0);
             let ret = bb.new_var(None, c.ty().clone());
-            bb.push_statement(StatementKind::Assign(
+            bb.push_statement(StatementKind::assign(
                 ret,
-                Box::new(Rvalue::Use(Operand::Const(c), WithRetag::No)),
+                Rvalue::Use(Operand::Const(c), WithRetag::No),
             ));
             Ok(Body::Unstructured(bb.build()))
         } else {
@@ -426,12 +426,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             hax::CtorOf::Struct => None,
             hax::CtorOf::Variant => Some(self.translate_variant_id(ctor.variant_id())),
         };
-        builder.push_statement(StatementKind::Assign(
+        builder.push_statement(StatementKind::assign(
             return_place,
-            Box::new(Rvalue::Aggregate(
-                AggregateKind::Adt(tref, variant, None),
-                args,
-            )),
+            Rvalue::Aggregate(AggregateKind::Adt(tref, variant, None), args),
         ));
         Ok(Body::Unstructured(builder.build()))
     }
@@ -558,12 +555,12 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 );
                 let meta = self.translate_unsizing_metadata(span, &meta)?;
                 let path = self.translate_metadata_path(&path);
-                StatementKind::Assign(
+                StatementKind::assign(
                     box_slice.clone(),
-                    Box::new(Rvalue::UnaryOp(
+                    Rvalue::UnaryOp(
                         UnOp::Cast(CastKind::Unsize(box_slice_ty, meta, path)),
                         Operand::Move(initialized_box),
-                    )),
+                    ),
                 )
             });
 
@@ -607,9 +604,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             ConstantExprKind::TypeId(type_id_ty),
             signature.output.clone(),
         );
-        builder.push_statement(StatementKind::Assign(
+        builder.push_statement(StatementKind::assign(
             return_place,
-            Box::new(Rvalue::Use(Operand::Const(type_id), WithRetag::No)),
+            Rvalue::Use(Operand::Const(type_id), WithRetag::No),
         ));
         Ok(Body::Unstructured(builder.build()))
     }
@@ -811,7 +808,7 @@ impl BodyTransformCtx for BlockTransCtx<'_, '_, '_, '_> {
     fn insert_assn_stmt(&mut self, place: Place, rvalue: Rvalue) {
         self.statements.push(Statement::new(
             self.span,
-            StatementKind::Assign(place, Box::new(rvalue)),
+            StatementKind::assign(place, rvalue),
         ));
     }
 }
@@ -1567,7 +1564,7 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
             mir::StatementKind::Assign((place, rvalue)) => {
                 let t_place = self.translate_place(span, place)?;
                 let t_rvalue = self.translate_mir_rvalue(span, rvalue, t_place.ty())?;
-                Some(StatementKind::Assign(t_place, Box::new(t_rvalue)))
+                Some(StatementKind::assign(t_place, t_rvalue))
             }
             mir::StatementKind::SetDiscriminant {
                 place,
@@ -1575,7 +1572,9 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
             } => {
                 let t_place = self.translate_place(span, place)?;
                 let variant_id = self.translate_variant_id(*variant_index);
-                Some(StatementKind::SetDiscriminant(t_place, variant_id))
+                Some(StatementKind::SetDiscriminant(Box::new((
+                    t_place, variant_id,
+                ))))
             }
             mir::StatementKind::StorageLive(local) => {
                 let var_id = self.translate_local(local).unwrap();
@@ -1625,7 +1624,7 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                 if place.is_local() {
                     None
                 } else {
-                    Some(StatementKind::PlaceMention(place))
+                    Some(StatementKind::PlaceMention(Box::new(place)))
                 }
             }
             mir::StatementKind::FakeRead((_, place)) => {

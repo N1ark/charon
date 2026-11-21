@@ -90,9 +90,9 @@ impl VisitBody for GatherCandidates<'_> {
     fn visit_ullbc_statement(&mut self, statement: &Statement) -> ControlFlow<Self::Break> {
         match &statement.kind {
             // A drop flag may only be assigned a constant value.
-            StatementKind::Assign(place, rval)
-                if let Some(_local) = place.as_local()
-                    && rval.as_const_bool().is_some() =>
+            StatementKind::Assign(assign)
+                if let Some(_local) = assign.0.as_local()
+                    && assign.1.as_const_bool().is_some() =>
             {
                 ControlFlow::Continue(())
             }
@@ -231,7 +231,8 @@ impl VisitBody for ComputeUpdates<'_, '_, '_> {
 
     fn exit_ullbc_statement(&mut self, statement: &Statement) {
         match &statement.kind {
-            StatementKind::Assign(assigned, rval) => {
+            StatementKind::Assign(assign) => {
+                let (assigned, rval) = &**assign;
                 let updates = &mut self.analysis.updates[self.block_id];
                 for (&flag, place) in self.analysis.flags.iter() {
                     if assigned.as_local() == Some(flag) {

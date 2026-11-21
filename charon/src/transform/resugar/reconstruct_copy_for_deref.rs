@@ -59,7 +59,7 @@ impl VisitBody for UseCollector<'_> {
     }
 
     fn visit_ullbc_statement(&mut self, st: &Statement) -> ControlFlow<Self::Break> {
-        if let StatementKind::Assign(dest, rvalue) = &st.kind
+        if let Some((dest, rvalue)) = st.kind.as_assignment()
             && let Some(local) = dest.as_local()
             && let Some(loc) = self.current_st
         {
@@ -69,7 +69,7 @@ impl VisitBody for UseCollector<'_> {
             } else if let Rvalue::Use(
                 Operand::Copy(source, _) | Operand::Read(source),
                 WithRetag::No,
-            ) = &**rvalue
+            ) = rvalue
                 && (matches!(source.ty().kind(), TyKind::Ref(..)) || source.ty().is_box())
                 && !info.invalid
             {

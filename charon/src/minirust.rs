@@ -356,14 +356,17 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                         if body.locals.is_return_or_arg(*local) => {}
 
                     // These casts are intrinsics for MiniRust.
-                    ullbc_ast::StatementKind::Assign(destination, rvalue)
-                        if let Rvalue::UnaryOp(
-                            UnOp::Cast(
-                                cast @ (CastKind::PtrExposeProvenance(..)
-                                | CastKind::PtrWithExposedProvenance(..)),
+                    ullbc_ast::StatementKind::Assign(assign)
+                        if let (
+                            destination,
+                            Rvalue::UnaryOp(
+                                UnOp::Cast(
+                                    cast @ (CastKind::PtrExposeProvenance(..)
+                                    | CastKind::PtrWithExposedProvenance(..)),
+                                ),
+                                operand,
                             ),
-                            operand,
-                        ) = &**rvalue =>
+                        ) = &**assign =>
                     {
                         let intrinsic = match cast {
                             CastKind::PtrExposeProvenance(..) => {
@@ -427,21 +430,23 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
         use ullbc_ast::StatementKind as S;
         let span = statement.span;
         match &statement.kind {
-            S::Assign(place, value) => {
+            S::Assign(assign) => {
+                let (place, value) = &**assign;
                 let destination = self.place(span, place)?;
                 let source = self.rvalue(span, value, statements)?;
                 statements.push(mini::Statement::Assign {
                     destination,
                     source,
                 });
-                if let Rvalue::Use(_, WithRetag::Yes) = &**value {
+                if let Rvalue::Use(_, WithRetag::Yes) = value {
                     statements.push(mini::Statement::Validate {
                         place: destination,
                         fn_entry: false,
                     });
                 }
             }
-            S::SetDiscriminant(place, variant) => {
+            S::SetDiscriminant(set_discr) => {
+                let (place, variant) = &**set_discr;
                 statements.push(mini::Statement::SetDiscriminant {
                     destination: self.place(span, place)?,
                     value: self.variant_discriminant(span, place.ty(), *variant)?,

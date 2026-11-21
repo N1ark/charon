@@ -62,9 +62,9 @@ pub struct Statement {
 #[derive(EnumAsInner)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub enum StatementKind {
-    Assign(Place, Box<Rvalue>),
+    Assign(Box<(Place, Rvalue)>),
     /// A call. For now, we don't support dynamic calls (i.e. to a function pointer in memory).
-    SetDiscriminant(Place, VariantId),
+    SetDiscriminant(Box<(Place, VariantId)>),
     /// Indicates that this local should be allocated; if it is already allocated, this frees
     /// the local and re-allocates it. The arguments do not receive a `StorageLive`. We ensure in
     /// the micro-pass `insert_storage_statements` that all other locals have a `StorageLive`
@@ -78,7 +78,7 @@ pub enum StatementKind {
     /// A place is mentioned, but not accessed. The place itself must still be valid though, so
     /// this statement is not a no-op: it can trigger UB if the place's projections are not valid
     /// (e.g. because they go out of bounds).
-    PlaceMention(Place),
+    PlaceMention(Box<Place>),
     /// Statements that only affect borrow-checking.
     Borrowck(Box<BorrowckStatement>),
     /// A non-diverging runtime check for a condition. This can be either:
@@ -390,6 +390,28 @@ impl UnwindKind {
             // Unwinding from an unwind block is not allowed to continue unwinding up the stack.
             Self::Cleanup | Self::Terminate => Self::Terminate,
         }
+    }
+}
+
+impl StatementKind {
+    pub fn assign(place: Place, rvalue: Rvalue) -> Self {
+        StatementKind::Assign(Box::new((place, rvalue)))
+    }
+
+    pub fn as_assignment(&self) -> Option<(&Place, &Rvalue)> {
+        let StatementKind::Assign(assign) = self else {
+            return None;
+        };
+        let (place, rvalue) = &**assign;
+        Some((place, rvalue))
+    }
+
+    pub fn as_assignment_mut(&mut self) -> Option<(&mut Place, &mut Rvalue)> {
+        let StatementKind::Assign(assign) = self else {
+            return None;
+        };
+        let (place, rvalue) = &mut **assign;
+        Some((place, rvalue))
     }
 }
 

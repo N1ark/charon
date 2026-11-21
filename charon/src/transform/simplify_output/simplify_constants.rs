@@ -286,17 +286,17 @@ impl UllbcPass for Transform {
         fun_decl.transform_ullbc_statements(ctx, |ctx, st| {
             let assigns_const = matches!(
                 &st.kind,
-                StatementKind::Assign(_, rvalue)
-                    if matches!(**rvalue, Rvalue::Use(Operand::Const(_), _))
+                StatementKind::Assign(assign)
+                    if matches!(assign.1, Rvalue::Use(Operand::Const(_), _))
             );
             st.kind
                 .dyn_visit_in_body_mut(|op: &mut Operand| transform_operand(ctx, op));
             // If we turned `x = const c` into `tmp = rval; x = move tmp`, assign `rval` directly.
             if assigns_const
-                && let StatementKind::Assign(_, rval) = &mut st.kind
-                && let Rvalue::Use(Operand::Move(tmp), _) = &**rval
+                && let Some((_, rval)) = st.kind.as_assignment_mut()
+                && let Rvalue::Use(Operand::Move(tmp), _) = rval
                 && let Some(last) = ctx.statements.last()
-                && let StatementKind::Assign(last_dest, last_rval) = &last.kind
+                && let Some((last_dest, last_rval)) = last.kind.as_assignment()
                 && last_dest == tmp
             {
                 *rval = last_rval.clone();

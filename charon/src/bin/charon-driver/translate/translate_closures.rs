@@ -541,9 +541,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                     let local_id = LocalId::new(i + 3);
                     Statement::new(
                         span,
-                        StatementKind::Assign(
+                        StatementKind::assign(
                             locals.place_for_var(local_id),
-                            Box::new(Rvalue::Use(Operand::Move(nth_field), WithRetag::No)),
+                            Rvalue::Use(Operand::Move(nth_field), WithRetag::No),
                         ),
                     )
                 });
@@ -611,14 +611,14 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 .into_ty();
                 let reborrow = builder.new_var(None, reborrow_ty);
 
-                builder.push_statement(StatementKind::Assign(
+                builder.push_statement(StatementKind::assign(
                     reborrow.clone(),
-                    Box::new(Rvalue::Ref {
+                    Rvalue::Ref {
                         place: deref_state,
                         kind: BorrowKind::Shared,
                         // The state must be Sized, hence `()` as ptr-metadata
                         ptr_metadata: Operand::mk_const_unit(),
-                    }),
+                    },
                 ));
 
                 builder.call(
@@ -922,21 +922,18 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let args_tupled = builder.new_var(Some("args".to_string()), args_tupled_ty.clone());
             let state = builder.new_var(Some("state".to_string()), state_ty.clone());
 
-            builder.push_statement(StatementKind::Assign(
+            builder.push_statement(StatementKind::assign(
                 args_tupled.clone(),
-                Box::new(Rvalue::Aggregate(
+                Rvalue::Aggregate(
                     AggregateKind::Adt(args_tupled_ty.as_adt().unwrap().clone(), None, None),
                     args.into_iter().map(Operand::Move).collect(),
-                )),
+                ),
             ));
 
             let state_ty_adt = state_ty.as_adt().unwrap();
-            builder.push_statement(StatementKind::Assign(
+            builder.push_statement(StatementKind::assign(
                 state.clone(),
-                Box::new(Rvalue::Aggregate(
-                    AggregateKind::Adt(state_ty_adt.clone(), None, None),
-                    vec![],
-                )),
+                Rvalue::Aggregate(AggregateKind::Adt(state_ty_adt.clone(), None, None), vec![]),
             ));
 
             builder.call(

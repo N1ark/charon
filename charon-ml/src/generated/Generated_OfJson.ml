@@ -1996,7 +1996,7 @@ module Ullbc = struct
       (match js with
       | `Assoc [ ("Assign", `List [ _0; _1 ]) ] ->
           let* _0 = place_of_json ctx _0 in
-          let* _1 = box_of_json rvalue_of_json ctx _1 in
+          let* _1 = rvalue_of_json ctx _1 in
           Ok (Assign (_0, _1))
       | `Assoc [ ("SetDiscriminant", `List [ _0; _1 ]) ] ->
           let* _0 = place_of_json ctx _0 in
@@ -2009,7 +2009,7 @@ module Ullbc = struct
           let* _0 = local_id_of_json ctx _0 in
           Ok (StorageDead _0)
       | `Assoc [ ("PlaceMention", _0) ] ->
-          let* _0 = place_of_json ctx _0 in
+          let* _0 = box_of_json place_of_json ctx _0 in
           Ok (PlaceMention _0)
       | `Assoc [ ("Borrowck", _0) ] ->
           let* _0 = box_of_json borrowck_statement_of_json ctx _0 in

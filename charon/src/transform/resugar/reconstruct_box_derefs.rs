@@ -99,7 +99,7 @@ impl VisitBody for LocalStatusCollector {
     }
 
     fn visit_ullbc_statement(&mut self, st: &ullbc_ast::Statement) -> ControlFlow<Self::Break> {
-        if let StatementKind::Assign(dst, rvalue) = &st.kind
+        if let Some((dst, rvalue)) = st.kind.as_assignment()
             && let Some(local) = dst.as_local()
             && let Some(box_place) = box_pointer_assignment(rvalue)
         {

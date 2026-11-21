@@ -1185,8 +1185,12 @@ impl<'a> ReconstructCtx<'a> {
     fn translate_statement(&self, st: &src::Statement) -> tgt::Statement {
         let span = st.span;
         let kind = match st.kind.clone() {
-            src::StatementKind::Assign(place, rvalue) => tgt::StatementKind::Assign(place, rvalue),
-            src::StatementKind::SetDiscriminant(place, variant_id) => {
+            src::StatementKind::Assign(assign) => {
+                let (place, rvalue) = *assign;
+                tgt::StatementKind::Assign(place, Box::new(rvalue))
+            }
+            src::StatementKind::SetDiscriminant(set_discr) => {
+                let (place, variant_id) = *set_discr;
                 tgt::StatementKind::SetDiscriminant(place, variant_id)
             }
             src::StatementKind::StorageLive(var_id) => tgt::StatementKind::StorageLive(var_id),
@@ -1198,7 +1202,7 @@ impl<'a> ReconstructCtx<'a> {
                     tgt::Statement::new(span, tgt::StatementKind::UnwindResume).into_block(),
                 ),
             },
-            src::StatementKind::PlaceMention(place) => tgt::StatementKind::PlaceMention(place),
+            src::StatementKind::PlaceMention(place) => tgt::StatementKind::PlaceMention(*place),
             src::StatementKind::Borrowck(statement) => tgt::StatementKind::Borrowck(statement),
             src::StatementKind::Nop => tgt::StatementKind::Nop,
         };

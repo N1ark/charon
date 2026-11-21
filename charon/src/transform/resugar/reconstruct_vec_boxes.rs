@@ -97,11 +97,11 @@ fn find_array_assign(body: &ExprBody, start: BlockId, src_local: LocalId) -> Opt
     let mut out = None;
     for (bid, block) in body.body.iter_enumerated() {
         for (idx, st) in block.statements.iter().enumerate() {
-            let Some((place, value)) = st.kind.as_assign() else {
+            let Some((place, value)) = st.kind.as_assignment() else {
                 continue;
             };
             if !matches!(
-                **value,
+                value,
                 Rvalue::Aggregate(AggregateKind::Array(..), _) | Rvalue::Repeat { .. }
             ) {
                 continue;
@@ -160,8 +160,8 @@ fn find_next_move_of(
         let block = &body.body[cursor.block];
         while cursor.statement < block.statements.len() {
             let st = &body[cursor];
-            if let Some((dst_place, rvalue)) = st.kind.as_assign()
-                && let Rvalue::Use(Operand::Move(src_place), _) = &**rvalue
+            if let Some((dst_place, rvalue)) = st.kind.as_assignment()
+                && let Rvalue::Use(Operand::Move(src_place), _) = rvalue
                 && src_place == src
             {
                 return Some((cursor, dst_place.clone()));
@@ -204,8 +204,8 @@ fn find_move_in_block(
 ) -> Option<StmtLoc> {
     let mut out = None;
     for (statement, st) in body.body[block].statements.iter().enumerate() {
-        if let Some((dst_place, rvalue)) = st.kind.as_assign()
-            && let Rvalue::Use(Operand::Move(src_place), _) = &**rvalue
+        if let Some((dst_place, rvalue)) = st.kind.as_assignment()
+            && let Rvalue::Use(Operand::Move(src_place), _) = rvalue
             && dst_place == dst
             && src_place == src
         {
@@ -385,7 +385,7 @@ impl UllbcPass for Transform {
                 rw.payload_loc.statement..=rw.payload_loc.statement,
                 [
                     StatementKind::StorageLive(array_lid),
-                    StatementKind::Assign(array_local.clone(), Box::new(rw.array_value)),
+                    StatementKind::assign(array_local.clone(), rw.array_value),
                 ]
                 .map(|k| Statement::new(rw.span, k)),
             );
@@ -431,9 +431,9 @@ impl UllbcPass for Transform {
             ));
             target_block.statements.push(Statement::new(
                 rw.span,
-                StatementKind::Assign(
+                StatementKind::assign(
                     rw.box_array,
-                    Box::new(Rvalue::Use(Operand::Move(box_array_local), WithRetag::No)),
+                    Rvalue::Use(Operand::Move(box_array_local), WithRetag::No),
                 ),
             ));
             target_block.statements.push(Statement::new(

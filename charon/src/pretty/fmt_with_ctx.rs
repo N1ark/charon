@@ -2524,18 +2524,22 @@ impl<C: AstFormatter> FmtWithCtx<C> for ullbc::Statement {
         }
         fmt_safety_comment(ctx, f, self)?;
         match &self.kind {
-            StatementKind::Assign(place, rvalue) => {
+            StatementKind::Assign(assign) => {
+                let (place, rvalue) = &**assign;
                 write!(f, "{tab}{} = {}", place.with_ctx(ctx), rvalue.with_ctx(ctx),)
             }
             StatementKind::Borrowck(statement) => {
                 write!(f, "{tab}{}", statement.with_ctx(ctx))
             }
-            StatementKind::SetDiscriminant(place, variant_id) => write!(
-                f,
-                "{tab}@discriminant({}) = {}",
-                place.with_ctx(ctx),
-                variant_id
-            ),
+            StatementKind::SetDiscriminant(set_discr) => {
+                let (place, variant_id) = &**set_discr;
+                write!(
+                    f,
+                    "{tab}@discriminant({}) = {}",
+                    place.with_ctx(ctx),
+                    variant_id
+                )
+            }
             StatementKind::StorageLive(var_id) => {
                 write!(f, "{tab}storage_live({})", var_id.with_ctx(ctx))
             }

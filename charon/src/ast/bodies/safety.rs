@@ -378,10 +378,11 @@ impl HasSafety for ullbc_ast::Statement {
     fn safety(&self, krate: &TranslatedCrate) -> Safety {
         use ullbc_ast::StatementKind;
         match &self.kind {
-            StatementKind::Assign(place, rvalue) => {
+            StatementKind::Assign(assign) => {
+                let (place, rvalue) = &**assign;
                 place.write_safety(krate).or_else(|| rvalue.safety(krate))
             }
-            StatementKind::SetDiscriminant(place, _) => place.write_safety(krate),
+            StatementKind::SetDiscriminant(set_discr) => set_discr.0.write_safety(krate),
             StatementKind::PlaceMention(place) => place.read_safety(krate),
             StatementKind::Borrowck(st) => st.safety(krate),
             StatementKind::Assert { assert, on_failure } => assert

@@ -37,7 +37,7 @@ impl UllbcPass for Transform {
 
         for (block_id, block) in body.body.iter_enumerated() {
             for (statement_id, statement) in block.statements.iter().enumerate() {
-                if let StatementKind::Assign(place, _) = &statement.kind
+                if let Some((place, _)) = statement.kind.as_assignment()
                     && let Some(flag) = place.as_local()
                     && body.locals.locals[flag].drop_flag_for.is_some()
                 {
