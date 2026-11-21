@@ -374,7 +374,8 @@ pub struct CliOpts {
     #[clap(long, value_parser)]
     #[serde(default)]
     pub dest_file: Option<PathBuf>,
-    /// Don't deduplicate values (types, trait refs) in the .(u)llbc file. This makes the file easier to inspect.
+    /// Don't deduplicate values (types, trait refs) in the .(u)llbc file, and write json structs
+    /// as objects with named fields instead of arrays. This makes the file easier to inspect.
     #[clap(long)]
     #[serde(default)]
     pub no_dedup_serialized_ast: bool,

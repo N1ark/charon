@@ -46,6 +46,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             (match json with
             | `Assoc
                 [ ("id", id); ("name", name); ("crate_name", crate_name); ("contents", contents) ]
+            | `List [ id; name; crate_name; contents ]
             ->
                 let* id = FileId.id_of_json ctx id in
                 let* name = file_name_of_json ctx name in
@@ -98,7 +99,8 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
             dedup_val_of_json ctx.span_dedup_tbl
               (fun ctx json ->
                 match json with
-                | `Assoc [ ("data", data); ("generated_from_span", generated_from_span) ] ->
+                | `Assoc [ ("data", data); ("generated_from_span", generated_from_span) ]
+                | `List [ data; generated_from_span ] ->
                     let* data = span_data_of_json ctx data in
                     let* generated_from_span =
                       option_of_json span_data_of_json ctx generated_from_span
@@ -318,19 +320,7 @@ impl<'a> GenerateCtx<'a> {
                 self.build_branch(&pat, fields, &construct)
             }
             TypeDeclKind::Struct(fields) => {
-                let pat: String = fields
-                    .iter()
-                    .map(|f| {
-                        let name = &f.name;
-                        let var = if f.is_opaque() {
-                            "_"
-                        } else {
-                            &make_ocaml_ident(name)
-                        };
-                        format!("(\"{name}\", {var});")
-                    })
-                    .join("\n");
-                let pat = format!("`Assoc [ {pat} ]");
+                let pat = struct_pattern(fields);
                 let construct = fields
                     .iter()
                     .filter(|f| !f.is_opaque())
@@ -363,19 +353,7 @@ impl<'a> GenerateCtx<'a> {
                                 }
                             } else {
                                 // Struct variant
-                                let pat = fields
-                                    .iter()
-                                    .map(|f| {
-                                        let name = &f.name;
-                                        let var = if f.is_opaque() {
-                                            "_"
-                                        } else {
-                                            &make_ocaml_ident(name)
-                                        };
-                                        format!("(\"{name}\", {var});")
-                                    })
-                                    .join(" ");
-                                format!("`Assoc [ {pat} ]")
+                                format!("({})", struct_pattern(fields))
                             };
                             let pat = format!("`Assoc [ (\"{name}\", {inner_pat}) ]");
                             let construct_fields = fields
@@ -404,4 +382,26 @@ impl<'a> GenerateCtx<'a> {
             .format("\n");
         format!("let rec ___ = ()\n{fns}")
     }
+}
+
+/// Structs are serialized either as objects keyed by field names, or as arrays of their fields
+/// (see `charon_lib::export::compact_json`); this matches both.
+fn struct_pattern<'a>(fields: impl IntoIterator<Item = &'a Field> + Copy) -> String {
+    let vars = fields
+        .into_iter()
+        .map(|f| {
+            if f.is_opaque() {
+                "_".to_owned()
+            } else {
+                make_ocaml_ident(&f.name)
+            }
+        })
+        .collect_vec();
+    let keyed = fields
+        .into_iter()
+        .zip(&vars)
+        .map(|(f, var)| format!("(\"{}\", {var});", f.name))
+        .join(" ");
+    let positional = vars.join("; ");
+    format!("`Assoc [ {keyed} ] | `List [ {positional} ]")
 }

@@ -215,7 +215,7 @@ Options:
           The destination file. By default this depends on `format` and `ullbc`. If this is set we ignore `dest_dir`. If used with `format=all`, will add an extension corresponding to the file format at the end of the provided file name
 
       --no-dedup-serialized-ast
-          Don't deduplicate values (types, trait refs) in the .(u)llbc file. This makes the file easier to inspect
+          Don't deduplicate values (types, trait refs) in the .(u)llbc file, and write json structs as objects with named fields instead of arrays. This makes the file easier to inspect
 
       --format <FORMAT>
           Serialization format for emitted files. Defaults to json

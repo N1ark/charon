@@ -1,3 +1,4 @@
+mod compact_json;
 mod merge;
 pub mod multi_crate;
 pub mod multi_target;
@@ -137,23 +138,20 @@ impl CrateData {
         deduplicate: bool,
     ) -> Result<(), ()> {
         for (target_filename, format) in targets {
-            if deduplicate {
-                self.serialize_to_file(&target_filename, format, &DedupSerializer::default())?;
-            } else {
-                self.serialize_to_file(&target_filename, format, &())?;
-            }
+            self.serialize_to_file(&target_filename, format, deduplicate)?;
         }
         Ok(())
     }
 
-    /// Export the translated definitions to a file.
-    /// Use a fresh [`DedupSerializer`] for each file, or `()` to disable deduplication.
+    /// Export the translated definitions to a file. With `deduplicate`, repeated values are
+    /// written only once and JSON structs are written as arrays of their fields (see
+    /// [`compact_json`]); without, the file is easier to inspect.
     #[allow(clippy::result_unit_err)]
     pub fn serialize_to_file(
         &self,
         target_filename: &Path,
         format: SerializationFormat,
-        state: &impl DedupSerializerState,
+        deduplicate: bool,
     ) -> Result<(), ()> {
         // Create the directory, if necessary (note that if the target directory
         // is not specified, there is no need to create it: otherwise we
@@ -173,10 +171,16 @@ impl CrateData {
             return Err(());
         };
         // Write to the file.
-        let with_state = serde_state::WithState::new(self, state);
         match format {
+            SerializationFormat::Json if deduplicate => {
+                if let Err(err) = self.serialize_compact_json(outfile) {
+                    error!("Could not serialize to `{target_filename:?}`: {err}");
+                    return Err(());
+                }
+            }
             SerializationFormat::Json => {
                 let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
+                let with_state = serde_state::WithState::new(self, &());
                 if let Err(err) = serde_json::to_writer(&mut writer, &with_state) {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
@@ -184,7 +188,16 @@ impl CrateData {
             }
             SerializationFormat::Postcard => {
                 let flavor = PostcardWriter::new(outfile);
-                if let Err(err) = postcard::serialize_with_flavor(&with_state, flavor) {
+                let result = if deduplicate {
+                    let state = DedupSerializer::default();
+                    postcard::serialize_with_flavor(
+                        &serde_state::WithState::new(self, &state),
+                        flavor,
+                    )
+                } else {
+                    postcard::serialize_with_flavor(&serde_state::WithState::new(self, &()), flavor)
+                };
+                if let Err(err) = result {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
                 }
@@ -212,6 +225,25 @@ impl CrateData {
         } else {
             info!("Generated the file: {}", target_filename.to_str().unwrap());
         }
+        Ok(())
+    }
+
+    /// Write the crate in the compact JSON format, deduplicating values.
+    fn serialize_compact_json(&self, file: File) -> Result<(), compact_json::Error> {
+        use serde::ser::{SerializeMap, Serializer};
+        let state = DedupSerializer::default();
+        let mut ser = compact_json::Serializer::new(file);
+        // The top-level object keeps its keys: `charon-ml` relies on them to detect files
+        // emitted by an incompatible version.
+        let mut map = (&mut ser).serialize_map(Some(3))?;
+        map.serialize_entry("charon_version", &self.charon_version)?;
+        map.serialize_entry(
+            "translated",
+            &serde_state::WithState::new(&self.translated, &state),
+        )?;
+        map.serialize_entry("has_errors", &self.has_errors)?;
+        map.end()?;
+        ser.finish()?;
         Ok(())
     }
 

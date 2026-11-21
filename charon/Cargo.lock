@@ -223,7 +223,7 @@ dependencies = [
 
 [[package]]
 name = "charon"
-version = "0.1.324"
+version = "0.1.325"
 dependencies = [
  "annotate-snippets",
  "anstream",
@@ -246,6 +246,7 @@ dependencies = [
  "indexmap",
  "indoc",
  "itertools 0.13.0",
+ "itoa",
  "lazy_static",
  "libc",
  "libtest-mimic",
@@ -261,6 +262,7 @@ dependencies = [
  "rustc_apfloat",
  "rustc_const_uneval",
  "rustc_trait_elaboration",
+ "ryu",
  "serde",
  "serde_json",
  "serde_stacker",

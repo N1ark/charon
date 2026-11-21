@@ -101,7 +101,7 @@ let string_option_of_json (ctx : 'ctx) (js : json) :
 let range_inclusive_of_json (a_of_json : 'ctx -> json -> ('a, string) result)
     (ctx : 'ctx) (js : json) : ('a * 'a, string) result =
   match js with
-  | `Assoc [ ("start", a); ("end", b) ] ->
+  | `Assoc [ ("start", a); ("end", b) ] | `List [ a; b ] ->
       let* a = a_of_json ctx a in
       let* b = a_of_json ctx b in
       Ok (a, b)
@@ -111,7 +111,7 @@ let key_value_pair_of_json (a_of_json : 'ctx -> json -> ('a, string) result)
     (b_of_json : 'ctx -> json -> ('b, string) result) (ctx : 'ctx) (js : json) :
     ('a * 'b, string) result =
   match js with
-  | `Assoc [ ("key", a); ("value", b) ] ->
+  | `Assoc [ ("key", a); ("value", b) ] | `List [ a; b ] ->
       let* a = a_of_json ctx a in
       let* b = b_of_json ctx b in
       Ok (a, b)
