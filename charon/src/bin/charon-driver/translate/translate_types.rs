@@ -1420,7 +1420,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 if prefix.is_some() || suffix.is_some() {
                     let prefix = prefix.unwrap_or_default();
                     let suffix = suffix.unwrap_or_default();
-                    variant_attrs.rename = Some(format!("{prefix}{variant_name}{suffix}"));
+                    variant_attrs.rename = Some(format!("{prefix}{variant_name}{suffix}").into());
                 }
             }
 

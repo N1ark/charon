@@ -13,6 +13,7 @@ use super::translate_crate::{RustcItem, VirtualImplKind};
 use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{BaseState, DefPathItem, SInto};
+use charon_lib::utils::ustr::Ustr;
 use charon_lib::{ast::*, name_matcher::NamePattern};
 
 /// The line and display column of `pos`, as given by
@@ -1041,7 +1042,10 @@ impl<'tcx> TranslateCtx<'tcx> {
             .collect_vec();
 
         let rename = {
-            let mut renames = attributes.iter().filter_map(|a| a.as_rename()).cloned();
+            let mut renames = attributes
+                .iter()
+                .filter_map(|a| a.as_rename())
+                .map(|rename| Ustr::from(rename.as_str()));
             let rename = renames.next();
             if renames.next().is_some() {
                 let span = self.translate_span(&def.span);
@@ -1140,7 +1144,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                     self.translate_rustc_lang_item(&lang_item)
                         .expect("all rustc LangItem variants should be translated")
                 });
-            let diagnostic_item = def.diagnostic_item.map(|s| s.to_string());
+            let diagnostic_item = def.diagnostic_item.map(|s| Ustr::from(s.as_str()));
             (attr_info, lang_item, diagnostic_item)
         } else {
             (AttrInfo::default(), None, None)
@@ -1166,7 +1170,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         ItemMeta {
             name,
             span,
-            source_text: def.source_text(self.tcx),
+            source_text: def.source_text(self.tcx).map(Ustr::from),
             attr_info,
             is_local,
             // Computed by `compute_started_from` after translation.

@@ -987,7 +987,7 @@ fn source_text() -> anyhow::Result<()> {
 
     let sources = crate_data
         .all_items()
-        .filter_map(|i| i.item_meta().source_text.as_ref())
+        .filter_map(|i| i.item_meta().source_text.as_deref())
         .collect_vec();
     assert_eq!(sources[0], "struct Foo { x: usize }");
     assert_eq!(

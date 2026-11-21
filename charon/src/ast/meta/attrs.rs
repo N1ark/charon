@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::utils::ustr::Ustr;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use serde::{Deserialize, Serialize};
@@ -77,7 +78,7 @@ pub struct AttrInfo {
     /// The name computed from `charon::rename` and `charon::variants_prefix` attributes, if any.
     /// This provides a custom name that can be used by consumers of llbc. E.g. Aeneas uses this to
     /// rename definitions in the extracted code.
-    pub rename: Option<String>,
+    pub rename: Option<Ustr>,
     /// Whether this item is declared public. Impl blocks and closures don't have visibility
     /// modifiers; we arbitrarily set this to `false` for them.
     ///
