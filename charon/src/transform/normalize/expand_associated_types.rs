@@ -335,7 +335,7 @@ mod trait_ref_path {
         /// that.
         pub fn on_real_tref(&self, krate: &TranslatedCrate, tref: TraitRef) -> Option<Ty> {
             let tref = self.tref.on_real_tref(krate, tref)?;
-            let ty = TyKind::TraitType(tref, self.type_id, GenericArgs::empty()).into_ty();
+            let ty = TyKind::TraitType(tref, self.type_id, GenericArgs::empty().into()).into_ty();
             Some(ty)
         }
 
@@ -682,8 +682,8 @@ impl ItemModifications {
             self.required_extra_assoc_types_with_ids()
                 .map(move |(path, type_id)| {
                     let path = path.on_tref(&base_path);
-                    let ty =
-                        TyKind::TraitType(tref.clone(), type_id, GenericArgs::empty()).into_ty();
+                    let ty = TyKind::TraitType(tref.clone(), type_id, GenericArgs::empty().into())
+                        .into_ty();
                     (path, ty)
                 });
         self.type_constraints
@@ -1073,7 +1073,7 @@ impl UpdateItemBody<'_> {
         let (_, type_id) = tmods
             .required_extra_assoc_types_with_ids()
             .find(|(p, _)| *p == path)?;
-        Some(TyKind::TraitType(tref.clone(), type_id, GenericArgs::empty()).into_ty())
+        Some(TyKind::TraitType(tref.clone(), type_id, GenericArgs::empty().into()).into_ty())
     }
 
     /// Look up the path using the facts available for this specific trait ref.
@@ -1391,7 +1391,7 @@ impl VisitAstMut for UpdateItemBody<'_> {
                     let self_path = TraitRefKind::ItemClause {
                         trait_ref: self_tref.clone(),
                         type_id,
-                        generics: assoc_ty.params.identity_args(),
+                        generics: assoc_ty.params.identity_args().into(),
                         clause_id,
                         clause_args: RegionArgs::erased(clause.trait_.regions.len()),
                     };
@@ -1598,7 +1598,7 @@ impl TransformPass for Transform {
                             implied_clauses: Default::default(),
                         },
                     ));
-                    TyKind::TraitType(self_tref.clone(), new_type_id, GenericArgs::empty()).into_ty()
+                    TyKind::TraitType(self_tref.clone(), new_type_id, GenericArgs::empty().into()).into_ty()
                 })
             } else {
                 modifications.compute_replacements(|path| {

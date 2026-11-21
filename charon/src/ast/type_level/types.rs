@@ -60,7 +60,7 @@ pub enum TyKind {
     ///
     /// A function pointer can have lifetime generics, e.g. `for<'a> fn(&'a mut u32) -> &'a u32`,
     /// hence the binder.
-    FnPtr(RegionBinder<FunSig>),
+    FnPtr(Box<RegionBinder<FunSig>>),
     /// `dyn Trait`: erased value known to implement `Trait`. A pointer to it will carry a vtable
     /// pointer that stores the methods that can be called on this value.
     DynTrait(DynPredicate),
@@ -74,7 +74,7 @@ pub enum TyKind {
     #[cfg_attr(feature = "charon_on_charon", charon::rename("TVar"))]
     TypeVar(TypeDbVar),
     /// A trait associated type: `<T as Trait>::AssocType<Args>`.
-    TraitType(TraitRef, AssocTypeId, GenericArgs),
+    TraitType(TraitRef, AssocTypeId, BoxedArgs),
     /// The type of pointer metadata for the given type; e.g. for `[T]`, this type is `usize`. The
     /// way to write this type in Rust is `<X as core::ptr::Pointee>::Metadata`.
     PtrMetadata(Ty),
@@ -191,7 +191,7 @@ pub struct DynPredicate {
     ///
     /// Only the first trait clause may have methods. We use the vtable of this trait in the `dyn
     /// Trait` pointer metadata.
-    pub binder: Binder<Ty>,
+    pub binder: Box<Binder<Ty>>,
 }
 
 /// A type-level pattern used by [`TyKind::Pattern`].

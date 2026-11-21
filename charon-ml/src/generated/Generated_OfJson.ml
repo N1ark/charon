@@ -793,7 +793,7 @@ and dyn_predicate_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("binder", binder) ] | `List [ binder ] ->
-        let* binder = binder_of_json ty_of_json ctx binder in
+        let* binder = box_of_json (binder_of_json ty_of_json) ctx binder in
         Ok ({ binder } : dyn_predicate)
     | _ -> Error "")
 
@@ -1693,7 +1693,7 @@ and trait_ref_kind_of_json (ctx : of_json_ctx) (js : json) :
         ] ->
         let* trait_ref = trait_ref_of_json ctx trait_ref in
         let* type_id = assoc_type_id_of_json ctx type_id in
-        let* generics = generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         let* clause_id = trait_clause_id_of_json ctx clause_id in
         let* clause_args = region_args_of_json ctx clause_args in
         Ok (ItemClause (trait_ref, type_id, generics, clause_id, clause_args))
@@ -1786,7 +1786,7 @@ and ty_kind_of_json (ctx : of_json_ctx) (js : json) : (ty_kind, string) result =
         let* _0 = region_binder_of_json fn_ptr_of_json ctx _0 in
         Ok (TFnDef _0)
     | `Assoc [ ("FnPtr", _0) ] ->
-        let* _0 = region_binder_of_json fun_sig_of_json ctx _0 in
+        let* _0 = box_of_json (region_binder_of_json fun_sig_of_json) ctx _0 in
         Ok (TFnPtr _0)
     | `Assoc [ ("DynTrait", _0) ] ->
         let* _0 = dyn_predicate_of_json ctx _0 in
@@ -1802,7 +1802,7 @@ and ty_kind_of_json (ctx : of_json_ctx) (js : json) : (ty_kind, string) result =
     | `Assoc [ ("TraitType", `List [ _0; _1; _2 ]) ] ->
         let* _0 = trait_ref_of_json ctx _0 in
         let* _1 = assoc_type_id_of_json ctx _1 in
-        let* _2 = generic_args_of_json ctx _2 in
+        let* _2 = boxed_args_of_json ctx _2 in
         Ok (TTraitType (_0, _1, _2))
     | `Assoc [ ("PtrMetadata", _0) ] ->
         let* _0 = ty_of_json ctx _0 in

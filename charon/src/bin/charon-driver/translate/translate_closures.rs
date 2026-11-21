@@ -423,7 +423,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 TyKind::FnDef(fn_ref).into_ty()
             }
             CallableKind::FnPtr => {
-                TyKind::FnPtr(self.translate_poly_fun_sig(span, callable.sig())?).into_ty()
+                TyKind::FnPtr(Box::new(self.translate_poly_fun_sig(span, callable.sig())?))
+                    .into_ty()
             }
         })
     }

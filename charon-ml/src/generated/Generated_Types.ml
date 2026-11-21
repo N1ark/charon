@@ -719,7 +719,7 @@ and trait_ref_kind =
             }
           ]} *)
   | ItemClause of
-      trait_ref * assoc_type_id * generic_args * trait_clause_id * region_args
+      trait_ref * assoc_type_id * boxed_args * trait_clause_id * region_args
       (** A clause defined on an associated type.
 
           Example:
@@ -859,7 +859,7 @@ and ty_kind =
           pattern. *)
   | TNever  (** The never type, the canonical uninhabited type. *)
   | TVar of type_var_id de_bruijn_var  (** A type variable. *)
-  | TTraitType of trait_ref * assoc_type_id * generic_args
+  | TTraitType of trait_ref * assoc_type_id * boxed_args
       (** A trait associated type: [<T as Trait>::AssocType<Args>]. *)
   | TPtrMetadata of ty
       (** The type of pointer metadata for the given type; e.g. for [[T]], this

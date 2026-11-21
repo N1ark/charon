@@ -677,7 +677,7 @@ and drop_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
 and dyn_predicate_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (dyn_predicate, string) result =
   combine_error_msgs st __FUNCTION__
-    (let* binder = binder_of_postcard ty_of_postcard ctx st in
+    (let* binder = box_of_postcard (binder_of_postcard ty_of_postcard) ctx st in
      Ok ({ binder } : dyn_predicate))
 
 and field_id_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
@@ -1366,7 +1366,7 @@ and trait_ref_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      | 3 ->
          let* trait_ref = trait_ref_of_postcard ctx st in
          let* type_id = assoc_type_id_of_postcard ctx st in
-         let* generics = generic_args_of_postcard ctx st in
+         let* generics = boxed_args_of_postcard ctx st in
          let* clause_id = trait_clause_id_of_postcard ctx st in
          let* clause_args = region_args_of_postcard ctx st in
          Ok (ItemClause (trait_ref, type_id, generics, clause_id, clause_args))
@@ -1443,7 +1443,11 @@ and ty_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = region_binder_of_postcard fn_ptr_of_postcard ctx st in
          Ok (TFnDef _0)
      | 7 ->
-         let* _0 = region_binder_of_postcard fun_sig_of_postcard ctx st in
+         let* _0 =
+           box_of_postcard
+             (region_binder_of_postcard fun_sig_of_postcard)
+             ctx st
+         in
          Ok (TFnPtr _0)
      | 8 ->
          let* _0 = dyn_predicate_of_postcard ctx st in
@@ -1459,7 +1463,7 @@ and ty_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      | 12 ->
          let* _0 = trait_ref_of_postcard ctx st in
          let* _1 = assoc_type_id_of_postcard ctx st in
-         let* _2 = generic_args_of_postcard ctx st in
+         let* _2 = boxed_args_of_postcard ctx st in
          Ok (TTraitType (_0, _1, _2))
      | 13 ->
          let* _0 = ty_of_postcard ctx st in

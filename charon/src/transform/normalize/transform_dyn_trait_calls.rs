@@ -233,13 +233,13 @@ fn transform_dyn_trait_call(
         } else {
             CallSafety::Inherit
         };
-        let real_sig_ty = TyKind::FnPtr(RegionBinder::empty(FunSig {
+        let real_sig_ty = TyKind::FnPtr(Box::new(RegionBinder::empty(FunSig {
             is_unsafe,
             abi: Abi::rust(),
             is_variadic: false,
             inputs: call.args.iter().map(|op| op.ty().clone()).collect(),
             output: dest.ty.clone(),
-        }))
+        })))
         .into_ty();
         let fn_ptr_place = ctx.fresh_var(None, real_sig_ty);
         let rval_cast = Rvalue::UnaryOp(

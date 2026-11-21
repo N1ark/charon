@@ -355,7 +355,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                         TraitRefKind::ItemClause {
                             trait_ref,
                             type_id: assoc_type_id,
-                            generics,
+                            generics: generics.into(),
                             clause_id: TraitClauseId::new(*index),
                             clause_args: self.translate_erased_region_args(*bound_region_count),
                         }

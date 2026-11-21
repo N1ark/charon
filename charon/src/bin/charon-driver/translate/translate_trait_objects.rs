@@ -392,7 +392,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                     } else {
                         let self_ty =
                             TyKind::TypeVar(DeBruijnVar::new_at_zero(TypeVarId::ZERO)).into_ty();
-                        let drop_ty = Ty::new(TyKind::FnPtr(self.drop_glue_fn_ptr_sig(self_ty)));
+                        let drop_ty =
+                            Ty::new(TyKind::FnPtr(Box::new(self.drop_glue_fn_ptr_sig(self_ty))));
                         ("drop".into(), drop_ty)
                     }
                 }
@@ -407,7 +408,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                         (field_name, erased_ptr_ty)
                     } else {
                         let sig = self.translate_poly_fun_sig(span, sig)?;
-                        let ty = TyKind::FnPtr(sig).into_ty();
+                        let ty = TyKind::FnPtr(Box::new(sig)).into_ty();
                         (field_name, ty)
                     }
                 }
@@ -523,14 +524,14 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
         let dyn_predicate = if mono {
             DynPredicate {
-                binder: Binder {
+                binder: Box::new(Binder {
                     params: GenericParams::empty(),
                     skip_binder: TyKind::Error(
                         "mono vtable dyn predicate is intentionally erased".to_string(),
                     )
                     .into_ty(),
                     kind: BinderKind::Dyn,
-                },
+                }),
             }
         } else {
             // The `dyn Trait<Args..>` type for this trait.
@@ -993,11 +994,11 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
 
                 let signature = self.translate_fun_sig(span, &vtable_sig.value)?;
                 // Add regions. this is ad-hoc...
-                let method_ty = Ty::new(TyKind::FnPtr(RegionBinder {
+                let method_ty = Ty::new(TyKind::FnPtr(Box::new(RegionBinder {
                     regions: self.outermost_generics().regions.clone(),
                     outlives: self.outermost_generics().outlives.clone(),
                     skip_binder: signature,
-                }));
+                })));
 
                 // Restore the orignal binding_levels.
                 self.binding_levels.pop();
@@ -1022,7 +1023,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 let bound_sig = self.translate_region_binder(span, vtable_sig, |ctx, sig| {
                     ctx.translate_fun_sig(span, sig)
                 })?;
-                let method_ty = TyKind::FnPtr(bound_sig).into_ty();
+                let method_ty = TyKind::FnPtr(Box::new(bound_sig)).into_ty();
                 Ok(VtableMethodValue::Cast(method_ty, shim))
             }
         }
@@ -1103,7 +1104,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                             .dyn_self()
                             .expect("vtable trait must be dyn-compatible");
                         let dyn_self = self.translate_ty(span, dyn_self)?;
-                        let shim_ty = TyKind::FnPtr(self.drop_glue_fn_ptr_sig(dyn_self)).into_ty();
+                        let shim_ty =
+                            TyKind::FnPtr(Box::new(self.drop_glue_fn_ptr_sig(dyn_self))).into_ty();
                         let shim =
                             ConstantExpr::new(ConstantExprKind::FnPtr(drop_shim), shim_ty.clone());
                         mk(ConstantExprKind::Cast(shim, CastKind::RawPtr(ty.clone())))

@@ -244,7 +244,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                     let assoc_type_id =
                         self.translate_assoc_type_id(trait_ref.trait_id(), &item.def_id)?;
                     let generics = self.translate_generic_args(span, item)?;
-                    TyKind::TraitType(trait_ref, assoc_type_id, generics)
+                    TyKind::TraitType(trait_ref, assoc_type_id, generics.into())
                 }
                 hax::AliasKind::Opaque { hidden_ty, .. } => {
                     return self.translate_ty(span, hidden_ty);
@@ -339,7 +339,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 trace!("FnPtr");
                 trace!("bound vars: {:?}", fn_ptr.sig.bound_vars);
                 let sig = self.translate_poly_fun_sig(span, &fn_ptr.sig)?;
-                TyKind::FnPtr(sig)
+                TyKind::FnPtr(Box::new(sig))
             }
             hax::TyKind::FnDef(fn_def) => {
                 let fnref =
@@ -385,7 +385,9 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                         );
                     }
                 }
-                TyKind::DynTrait(DynPredicate { binder })
+                TyKind::DynTrait(DynPredicate {
+                    binder: Box::new(binder),
+                })
             }
 
             hax::TyKind::Infer(_) => {

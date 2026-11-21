@@ -101,7 +101,7 @@ pub enum TraitRefKind {
         trait_ref: TraitRef,
         type_id: AssocTypeId,
         /// Generic arguments for the associated type.
-        generics: GenericArgs,
+        generics: BoxedArgs,
         /// Id of the clause among those for this item.
         clause_id: TraitClauseId,
         /// Region arguments that instantiate the higher-ranked item clause.
