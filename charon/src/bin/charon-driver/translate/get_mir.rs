@@ -62,7 +62,11 @@ fn get_mir_for_def_id_and_level<'tcx>(
     match def_id.base {
         hax::DefIdBase::Real(rust_def_id) => {
             if let Some(local_def_id) = rust_def_id.as_local() {
-                rustc_const_uneval::wait_for_rustc_checks(tcx, rust_def_id);
+                // Const-eval clones the elaborated MIR of const fns instead of stealing it, so we
+                // can read it while rustc's checks run.
+                if level != MirLevel::Elaborated || !tcx.def_kind(rust_def_id).is_fn_like() {
+                    rustc_const_uneval::wait_for_rustc_checks(tcx, rust_def_id);
+                }
                 match level {
                     MirLevel::Built => {
                         let body = tcx.mir_built(local_def_id);
