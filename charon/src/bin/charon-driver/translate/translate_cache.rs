@@ -628,7 +628,8 @@ struct EntryHead<'a> {
     /// The id of the item itself in the session that stored it.
     self_id: ItemId,
     has_body: bool,
-    files: Vec<File>,
+    /// The files of the entry, as indices in the file table of its pack.
+    files: Vec<u32>,
     /// The registrations made to compute the name of the item, if we stored its name.
     #[serde(borrow)]
     name_refs: Option<Vec<CachedRef<'a>>>,
@@ -656,6 +657,7 @@ pub(crate) struct CacheStats {
 /// The bytes of an entry, in the pack that holds them.
 struct EntryBytes {
     pack: Arc<Mmap>,
+    pack_index: usize,
     range: std::ops::Range<usize>,
 }
 
@@ -672,17 +674,23 @@ type EntryLoc = (usize, usize, usize);
 /// An entry in the index of a pack: hash, offset, length, whether the entry has a body.
 type PackIndexEntry = (u128, u64, u64, bool);
 
-/// Packs end with their index, its length as a `u64`, and this.
-const PACK_MAGIC: &[u8; 8] = b"CHRNPAK1";
+/// A pack is its entries, its file table (`Vec<File>`), its index, the lengths of the file table
+/// and the index as `u64`s, and this.
+const PACK_MAGIC: &[u8; 8] = b"CHRNPAK2";
 
 pub(crate) struct TranslationCache<'tcx> {
     dir: PathBuf,
     /// The pack files of the cache, and the entries they contain.
     packs: Vec<Arc<Mmap>>,
+    /// The file table of each pack, and the ids of these files in this session, once registered.
+    pack_files: Vec<Vec<File>>,
+    pack_file_ids: Vec<Vec<Option<FileId>>>,
     index: HashMap<u128, EntryLoc>,
-    /// The entries stored by this session, written to a new pack at the end.
+    /// The entries stored by this session, written to a new pack at the end, and the files they
+    /// mention.
     new_pack: Vec<u8>,
     new_index: Vec<PackIndexEntry>,
+    new_files: indexmap::IndexSet<FileId>,
     /// The keys of the registered items that have one, and the reverse map.
     keys: HashMap<ItemId, Rc<ItemKey>>,
     by_hash: HashMap<u128, ItemId>,
@@ -726,16 +734,20 @@ impl PendingItem {
     }
 }
 
-/// Read the index of a pack.
-fn read_pack_index(pack: &[u8]) -> Option<Vec<PackIndexEntry>> {
-    let footer_start = pack.len().checked_sub(16)?;
-    let (len_bytes, magic) = pack[footer_start..].split_at(8);
-    if magic != PACK_MAGIC {
+/// Read the file table and the index of a pack.
+fn read_pack_index(pack: &[u8]) -> Option<(Vec<File>, Vec<PackIndexEntry>)> {
+    let footer_start = pack.len().checked_sub(24)?;
+    let footer = &pack[footer_start..];
+    if &footer[16..] != PACK_MAGIC {
         return None;
     }
-    let index_len = u64::from_le_bytes(len_bytes.try_into().ok()?) as usize;
+    let files_len = u64::from_le_bytes(footer[..8].try_into().ok()?) as usize;
+    let index_len = u64::from_le_bytes(footer[8..16].try_into().ok()?) as usize;
     let index_start = footer_start.checked_sub(index_len)?;
-    postcard::from_bytes(&pack[index_start..footer_start]).ok()
+    let files_start = index_start.checked_sub(files_len)?;
+    let files = postcard::from_bytes(&pack[files_start..index_start]).ok()?;
+    let index = postcard::from_bytes(&pack[index_start..footer_start]).ok()?;
+    Some((files, index))
 }
 
 impl<'tcx> TranslationCache<'tcx> {
@@ -787,6 +799,7 @@ impl<'tcx> TranslationCache<'tcx> {
         std::fs::create_dir_all(&dir).ok()?;
 
         let mut packs = Vec::new();
+        let mut pack_files = Vec::new();
         let mut index = HashMap::default();
         let mut with_body = rustc_hash::FxHashSet::default();
         for entry in std::fs::read_dir(&dir).ok()?.flatten() {
@@ -794,7 +807,7 @@ impl<'tcx> TranslationCache<'tcx> {
                 && let Ok(file) = std::fs::File::open(entry.path())
                 // SAFETY: packs are never modified once written (we write then rename).
                 && let Ok(pack) = unsafe { Mmap::map(file) }
-                && let Some(pack_index) = read_pack_index(&pack)
+                && let Some((files, pack_index)) = read_pack_index(&pack)
             {
                 for (hash, offset, len, has_body) in pack_index {
                     // Prefer entries with a body.
@@ -807,14 +820,22 @@ impl<'tcx> TranslationCache<'tcx> {
                     }
                 }
                 packs.push(Arc::new(pack));
+                pack_files.push(files);
             }
         }
+        let pack_file_ids = pack_files
+            .iter()
+            .map(|files| vec![None; files.len()])
+            .collect();
         Some(Self {
             dir,
             packs,
+            pack_files,
+            pack_file_ids,
             index,
             new_pack: Default::default(),
             new_index: Default::default(),
+            new_files: Default::default(),
             keys: Default::default(),
             by_hash: Default::default(),
             known_key: None,
@@ -858,6 +879,7 @@ impl<'tcx> TranslationCache<'tcx> {
         let &(pack, offset, len) = self.index.get(&hash)?;
         Some(EntryBytes {
             pack: self.packs[pack].clone(),
+            pack_index: pack,
             range: offset..offset + len,
         })
     }
@@ -866,8 +888,16 @@ impl<'tcx> TranslationCache<'tcx> {
         self.unbound_queue.pop_front()
     }
 
+    /// The indices in the file table of the new pack of these files of the session.
+    fn store_files(&mut self, files: &indexmap::IndexSet<FileId>) -> Vec<u32> {
+        files
+            .iter()
+            .map(|fid| self.new_files.insert_full(*fid).0 as u32)
+            .collect()
+    }
+
     /// Write the entries stored during this session to a new pack.
-    pub(crate) fn finish(&mut self) {
+    pub(crate) fn finish(&mut self, session_files: &IndexVec<FileId, File>) {
         if std::env::var_os("CHARON_CACHE_STATS").is_some() {
             eprintln!("charon cache: {:?}", self.stats);
         }
@@ -876,8 +906,16 @@ impl<'tcx> TranslationCache<'tcx> {
         }
         let _guard = charon_lib::timing::scope("cache-write");
         let mut pack = std::mem::take(&mut self.new_pack);
+        let files: Vec<&File> = self
+            .new_files
+            .iter()
+            .map(|fid| &session_files[*fid])
+            .collect();
+        let files = postcard::to_allocvec(&files).unwrap();
         let index = postcard::to_allocvec(&self.new_index).unwrap();
+        pack.extend_from_slice(&files);
         pack.extend_from_slice(&index);
+        pack.extend_from_slice(&(files.len() as u64).to_le_bytes());
         pack.extend_from_slice(&(index.len() as u64).to_le_bytes());
         pack.extend_from_slice(PACK_MAGIC);
         // Write atomically, as other charon processes may be reading the cache.
@@ -1093,7 +1131,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         });
         cache.keys.insert(id, key);
 
-        let mut id_map: HashMap<ItemId, ItemId> = HashMap::default();
+        let mut id_map: HashMap<ItemId, ItemId> =
+            HashMap::with_capacity_and_hasher(name_refs.len() + 2, Default::default());
         id_map.insert(head.self_id, id);
         id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
         let name = 'name: {
@@ -1103,7 +1142,9 @@ impl<'tcx> TranslateCtx<'tcx> {
                 };
                 id_map.insert(name_ref.old_id, new_id);
             }
-            let files = self.cache_register_files(head.files);
+            let Some(files) = self.cache_register_files(bytes.pack_index, &head.files) else {
+                break 'name None;
+            };
             decode_entry_value::<Name>(name_bytes, &id_map, &files)
         };
         let name = match name {
@@ -1121,19 +1162,33 @@ impl<'tcx> TranslateCtx<'tcx> {
         Some(id)
     }
 
-    fn cache_register_files(&mut self, files: Vec<File>) -> Vec<FileId> {
-        files
-            .into_iter()
-            .map(|file| match self.file_to_id.get(&file.name) {
-                Some(id) => *id,
+    /// Register the files of an entry of this pack. Returns `None` if the entry is invalid.
+    fn cache_register_files(&mut self, pack: usize, files: &[u32]) -> Option<Vec<FileId>> {
+        let mut ids = Vec::with_capacity(files.len());
+        for &index in files {
+            let index = index as usize;
+            let cache = self.cache.as_mut().unwrap();
+            let id = match *cache.pack_file_ids[pack].get(index)? {
+                Some(id) => id,
                 None => {
-                    let name = file.name.clone();
-                    let new_id = self.translated.files.push_with(|id| File { id, ..file });
-                    self.file_to_id.insert(name, new_id);
-                    new_id
+                    let file = &cache.pack_files[pack][index];
+                    let id = match self.file_to_id.get(&file.name) {
+                        Some(id) => *id,
+                        None => {
+                            let file = file.clone();
+                            let name = file.name.clone();
+                            let id = self.translated.files.push_with(|id| File { id, ..file });
+                            self.file_to_id.insert(name, id);
+                            id
+                        }
+                    };
+                    self.cache.as_mut().unwrap().pack_file_ids[pack][index] = Some(id);
+                    id
                 }
-            })
-            .collect()
+            };
+            ids.push(id);
+        }
+        Some(ids)
     }
 
     /// Whether this item is translated, or loaded from the cache and waiting to be decoded.
@@ -1194,7 +1249,8 @@ impl<'tcx> TranslateCtx<'tcx> {
             src_id: id,
             span: None,
         });
-        let mut id_map: HashMap<ItemId, ItemId> = HashMap::default();
+        let mut id_map: HashMap<ItemId, ItemId> =
+            HashMap::with_capacity_and_hasher(refs.len() + 2, Default::default());
         for r in &refs {
             let Some(new_id) = self.cache_register_ref(&dep_src, r) else {
                 self.cache.as_mut().unwrap().recorders.pop();
@@ -1205,7 +1261,12 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         id_map.insert(head.self_id, id);
         id_map.insert(TypeDeclId::UNIT.into(), TypeDeclId::UNIT.into());
-        let files = self.cache_register_files(head.files);
+        let files = self.cache_register_files(bytes.pack_index, &head.files);
+        let Some(files) = files else {
+            self.cache.as_mut().unwrap().recorders.pop();
+            self.cache.as_mut().unwrap().stats.misses += 1;
+            return false;
+        };
         let Some(effects) = decode_entry_value::<Vec<Effect>>(effects, &id_map, &files) else {
             self.cache.as_mut().unwrap().recorders.pop();
             self.cache.as_mut().unwrap().stats.misses += 1;
@@ -1586,10 +1647,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             let head = EntryHead {
                 self_id: id,
                 has_body: true,
-                files: files
-                    .iter()
-                    .map(|fid| self.translated.files[*fid].clone())
-                    .collect(),
+                files: self.cache.as_mut().unwrap().store_files(&files),
                 name_refs: name_section.as_ref().map(|(refs, _)| refs.clone()),
             };
             let mut bytes = postcard::to_allocvec(&head).ok()?;
@@ -1644,10 +1702,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             let head = EntryHead {
                 self_id: id,
                 has_body: false,
-                files: files
-                    .iter()
-                    .map(|fid| self.translated.files[*fid].clone())
-                    .collect(),
+                files: self.cache.as_mut().unwrap().store_files(&files),
                 name_refs: Some(name_refs),
             };
             let Ok(mut bytes) = postcard::to_allocvec(&head) else {

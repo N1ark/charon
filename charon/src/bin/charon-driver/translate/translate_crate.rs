@@ -1614,7 +1614,7 @@ pub fn translate<'tcx>(
     ctx.compute_started_from();
     ctx.cache_store_names();
     if let Some(cache) = &mut ctx.cache {
-        cache.finish();
+        cache.finish(&ctx.translated.files);
     }
 
     // Drop the translation state, including the hax state and caches. The translated crate doesn't
