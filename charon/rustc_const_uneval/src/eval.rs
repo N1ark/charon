@@ -74,9 +74,19 @@ impl<'tcx> AllocTypes<'tcx> {
         view
     }
 
-    /// Gets the view for this allocation; if none had been decided, it is now viewed untyped.
-    pub(crate) fn get(&self, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
-        self.lookup(alloc_id, || AllocView::Untyped)
+    /// The view of this allocation, for a lookup that has no preference of its own: the decided
+    /// view, else plain bytes if possible (see `bytes_view`).
+    pub fn get(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
+        self.lookup(alloc_id, || match self.0.lock().views.get(&alloc_id) {
+            Some(view) => *view,
+            None => bytes_view(tcx, alloc_id),
+        })
+    }
+
+    /// Decide the view of this allocation as plain bytes if possible, unless it is already decided.
+    /// This is the view for the references that don't read the allocation at a type.
+    pub fn decide_bytes_view(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) {
+        self.lookup(alloc_id, || bytes_view(tcx, alloc_id));
     }
 
     /// The promoted MIR of this local item as rustc built it, unless rustc's checks stole it. We
@@ -158,13 +168,13 @@ impl<'tcx> AllocTypes<'tcx> {
         self.lookup(alloc_id, f);
     }
 
-    pub(crate) fn is_typed(&self, alloc_id: interpret::AllocId) -> bool {
-        matches!(self.get(alloc_id), AllocView::Typed(_))
+    pub(crate) fn is_typed(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> bool {
+        matches!(self.get(tcx, alloc_id), AllocView::Typed(_))
     }
 
     /// The type at which we view the allocation `alloc_id`.
     pub fn ty(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> Ty<'tcx> {
-        if let AllocView::Typed(ty) = self.get(alloc_id) {
+        if let AllocView::Typed(ty) = self.get(tcx, alloc_id) {
             return ty;
         }
         // if we haven't seen it with a type, then it's untyped!
@@ -179,12 +189,29 @@ impl<'tcx> AllocTypes<'tcx> {
     }
 }
 
+/// The view of an allocation as plain bytes: `[u8; N]` if all its bytes are initialized and none
+/// is part of a pointer, untyped otherwise.
+pub(crate) fn bytes_view<'tcx>(tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
+    let Some(alloc) = GlobalRef::Alloc(alloc_id).memory(tcx) else {
+        return AllocView::Untyped;
+    };
+    let alloc = alloc.inner();
+    let range = interpret::alloc_range(rustc_abi::Size::ZERO, alloc.size());
+    if alloc.init_mask().is_range_initialized(range).is_ok()
+        && alloc.provenance().range_empty(range, &tcx)
+    {
+        AllocView::Typed(Ty::new_array(tcx, tcx.types.u8, alloc.size().bytes()))
+    } else {
+        AllocView::Untyped
+    }
+}
+
 impl<'tcx> AllocTarget<'tcx> {
     /// Whether this target is read as its typed value.
-    pub(crate) fn is_read_typed(&self, views: &AllocTypes<'tcx>) -> bool {
+    pub(crate) fn is_read_typed(&self, tcx: TyCtxt<'tcx>, views: &AllocTypes<'tcx>) -> bool {
         match self {
             AllocTarget::Global(GlobalRef::Static(_)) => true,
-            AllocTarget::Global(GlobalRef::Alloc(alloc_id)) => views.is_typed(*alloc_id),
+            AllocTarget::Global(GlobalRef::Alloc(alloc_id)) => views.is_typed(tcx, *alloc_id),
             AllocTarget::Fn(_) | AllocTarget::VTable(..) | AllocTarget::TypeId(_) => false,
         }
     }

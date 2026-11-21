@@ -461,10 +461,11 @@ impl DefId {
         let cache = s.global_cache();
         let known = cache.anon_alloc_classes.lock().0.get(&alloc_id).copied();
         let alloc_id = known.unwrap_or_else(|| {
-            // Reading a pointer to the allocation decides its view; for the other references (e.g.
-            // pointers in raw memory), the first reference decides it.
-            cache.alloc_types.decide_view(alloc_id, None);
-            let view = cache.alloc_types.decided_view(alloc_id).unwrap();
+            // The references to the allocation decided its view.
+            let view = match cache.alloc_types.get(s.base().tcx, alloc_id) {
+                rustc_const_uneval::AllocView::Untyped => None,
+                rustc_const_uneval::AllocView::Typed(ty) => Some(ty),
+            };
             let contents =
                 crate::translate::translate_cache::anon_alloc_contents(s.base().tcx, alloc_id, view);
             let mut classes = cache.anon_alloc_classes.lock();

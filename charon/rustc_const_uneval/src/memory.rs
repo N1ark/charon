@@ -207,6 +207,10 @@ impl<'tcx> ConstReader<'tcx> {
     /// Use this, rather than building a [`Byte::Ptr`] manually, as this does some tricks to
     /// avoid leaking the hash of `TypeId` targets (which are encoded in the pointer's offset).
     fn ptr_byte(&self, target: AllocTarget<'tcx>, offset: Size, i: u8) -> Byte<'tcx> {
+        // Nothing reads the pointee at a type: it is viewed as plain bytes if possible.
+        if let AllocTarget::Global(GlobalRef::Alloc(alloc_id)) = target {
+            self.alloc_types.decide_bytes_view(self.tcx, alloc_id);
+        }
         if let AllocTarget::TypeId(ty) = target {
             let ptr_size = self.tcx.data_layout.pointer_size();
             let hash = self.type_id_hash(ty);
