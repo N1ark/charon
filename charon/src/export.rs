@@ -71,23 +71,31 @@ impl<W: Write> PostcardWriter<W> {
 
 impl<W: Write> postcard::ser_flavors::Flavor for PostcardWriter<W> {
     type Output = ();
-    #[inline]
+    #[inline(always)]
     fn try_push(&mut self, byte: u8) -> postcard::Result<()> {
-        self.buf.push(byte);
-        if self.buf.len() >= Self::FLUSH_THRESHOLD {
-            self.flush()?;
-        }
-        Ok(())
+        self.try_extend(&[byte])
     }
-    #[inline]
+    #[inline(always)]
     fn try_extend(&mut self, data: &[u8]) -> postcard::Result<()> {
-        // Most calls write a short varint: copying it with a known length avoids a `memcpy` call.
-        match *data {
-            [a] => self.buf.push(a),
-            [a, b] => self.buf.extend_from_slice(&[a, b]),
-            [a, b, c] => self.buf.extend_from_slice(&[a, b, c]),
-            [a, b, c, d] => self.buf.extend_from_slice(&[a, b, c, d]),
-            _ => self.buf.extend_from_slice(data),
+        // Most writes are short varints. We flush the buffer once it reaches `FLUSH_THRESHOLD`
+        // bytes and it has room for twice that, so these always fit.
+        let len = self.buf.len();
+        if data.len() <= 32 && self.buf.capacity() - len >= 32 {
+            // SAFETY: there is room for `data` in the buffer.
+            unsafe {
+                let dst = self.buf.as_mut_ptr().add(len);
+                // Copying with a known length avoids a `memcpy` call.
+                match *data {
+                    [a] => dst.write(a),
+                    [a, b] => dst.cast::<[u8; 2]>().write_unaligned([a, b]),
+                    [a, b, c] => dst.cast::<[u8; 3]>().write_unaligned([a, b, c]),
+                    [a, b, c, d] => dst.cast::<[u8; 4]>().write_unaligned([a, b, c, d]),
+                    _ => std::ptr::copy_nonoverlapping(data.as_ptr(), dst, data.len()),
+                }
+                self.buf.set_len(len + data.len());
+            }
+        } else {
+            self.buf.extend_from_slice(data);
         }
         if self.buf.len() >= Self::FLUSH_THRESHOLD {
             self.flush()?;
