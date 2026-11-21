@@ -122,24 +122,12 @@ where
     storage_live(_5)
     _5 = &x
     _3 = TraitClause2::eq<'2, '3>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _3 {
         storage_dead(_5)
         storage_dead(_4)
         _0 = TraitClause0::other_method()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(y)
-            storage_dead(x)
-            unwind_continue
+        ↳⚡ goto cleanup0
     } else {
         storage_dead(_5)
         storage_dead(_4)
@@ -147,18 +135,30 @@ where
     }
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'6>] y
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'7>] x
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(y)
     storage_dead(x)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        storage_dead(y)
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Override
@@ -206,20 +206,12 @@ where
     storage_live(_5)
     _5 = &x
     _3 = TraitClause3::eq<'2, '3>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _3 {
         storage_dead(_5)
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_Override::other_method<T>[TraitClause0, TraitClause1]()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(y)
-            storage_dead(x)
-            unwind_continue
+        ↳⚡ goto cleanup0
     } else {
         storage_dead(_5)
         storage_dead(_4)
@@ -227,12 +219,22 @@ where
     }
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'5>] y
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(y)
     storage_dead(x)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(y)
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl GenericTrait<Option<T>[TraitClause0]> for Override<T>[TraitClause0]}
@@ -294,24 +296,12 @@ where
     storage_live(_5)
     _5 = &x
     _3 = TraitClause3::eq<'2, '3>(move _4, move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _3 {
         storage_dead(_5)
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_NoOverride::other_method<T>[TraitClause0, TraitClause1]()
-        ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(y)
-            storage_dead(x)
-            unwind_continue
+        ↳⚡ goto cleanup0
     } else {
         storage_dead(_5)
         storage_dead(_4)
@@ -319,18 +309,30 @@ where
     }
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'6>] y
-    ↳⚡ conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'7>] x
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(y)
     storage_dead(x)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for U}::drop_glue<'4>] y
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'5>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        storage_dead(y)
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl GenericTrait<Option<T>[TraitClause0]> for NoOverride<T>[TraitClause0]}

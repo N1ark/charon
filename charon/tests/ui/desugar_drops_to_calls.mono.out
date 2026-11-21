@@ -207,60 +207,17 @@ unsafe fn impl_Destruct_for_Point::drop_glue<'_0>(_1: &'_0 mut Point)
         storage_live(drop_ret_5)
         drop_ret_5 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'3>(move drop_arg_4)
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_live(drop_arg_8)
-        drop_arg_8 = &mut (*_1).y
-        storage_live(drop_ret_9)
-        drop_ret_9 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'5>(move drop_arg_8)
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        storage_dead(drop_ret_11)
-        storage_dead(drop_arg_10)
-        storage_dead(drop_ret_9)
-        storage_dead(drop_arg_8)
-        storage_dead(drop_ret_7)
-        storage_dead(drop_arg_6)
-        storage_dead(drop_ret_5)
-        storage_dead(drop_arg_4)
-        unwind_continue
+        goto cleanup0
     storage_live(drop_arg_6)
     drop_arg_6 = &mut (*_1).x
     storage_live(drop_ret_7)
     drop_ret_7 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'4>(move drop_arg_6)
-    ↳⚡ storage_live(drop_arg_8)
-        drop_arg_8 = &mut (*_1).y
-        storage_live(drop_ret_9)
-        drop_ret_9 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'5>(move drop_arg_8)
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        storage_dead(drop_ret_11)
-        storage_dead(drop_arg_10)
-        storage_dead(drop_ret_9)
-        storage_dead(drop_arg_8)
-        storage_dead(drop_ret_7)
-        storage_dead(drop_arg_6)
-        storage_dead(drop_ret_5)
-        storage_dead(drop_arg_4)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(drop_arg_10)
     drop_arg_10 = &mut (*_1).y
     storage_live(drop_ret_11)
     drop_ret_11 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'6>(move drop_arg_10)
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        storage_dead(drop_ret_11)
-        storage_dead(drop_arg_10)
-        storage_dead(drop_ret_9)
-        storage_dead(drop_arg_8)
-        storage_dead(drop_ret_7)
-        storage_dead(drop_arg_6)
-        storage_dead(drop_ret_5)
-        storage_dead(drop_arg_4)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(_1)
@@ -273,6 +230,30 @@ unsafe fn impl_Destruct_for_Point::drop_glue<'_0>(_1: &'_0 mut Point)
     storage_dead(drop_ret_5)
     storage_dead(drop_arg_4)
     return
+
+    cleanup0: {
+        storage_live(drop_arg_8)
+        drop_arg_8 = &mut (*_1).y
+        storage_live(drop_ret_9)
+        drop_ret_9 = {impl Destruct for Box::<i32, Global>}::drop_glue::<i32, Global><'5>(move drop_arg_8)
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        storage_dead(drop_ret_11)
+        storage_dead(drop_arg_10)
+        storage_dead(drop_ret_9)
+        storage_dead(drop_arg_8)
+        storage_dead(drop_ret_7)
+        storage_dead(drop_arg_6)
+        storage_dead(drop_ret_5)
+        storage_dead(drop_arg_4)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Point::{impl Destruct for Point}

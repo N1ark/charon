@@ -126,10 +126,7 @@ where
     storage_live(_8)
     _8 = &(*args_3._0)
     _7 = new_debug<'0, '25, U>[TraitClause1, TraitClause5](move _8)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_13)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_8)
     args_6 = [move _7]
     storage_dead(_7)
@@ -145,19 +142,13 @@ where
     _12 = &args_6
     _11 = &(*_12)
     _2 = new<'1, 4usize, 1usize>(move _9, move _11)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_13)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_12)
     storage_dead(_11)
     storage_dead(_10)
     storage_dead(_9)
     _1 = _print<'33>(move _2)
-    ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_13)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_dead(args_6)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'34>] _5
@@ -169,6 +160,13 @@ where
     _0 = ()
     storage_dead(_13)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for U}::drop_glue<'26>] _5
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(_13)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Join<U> for T}

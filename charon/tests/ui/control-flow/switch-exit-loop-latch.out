@@ -140,9 +140,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             storage_live(_13)
             _13 = copy input
             _11 = (move _12)(const 0u32, move _13)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
+            ↳⚡ goto cleanup0
             storage_dead(_13)
             storage_dead(_12)
             match _11 {
@@ -186,9 +184,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             storage_live(_22)
             _22 = copy input
             _20 = (move _21)(const 1u32, move _22)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
+            ↳⚡ goto cleanup0
             storage_dead(_22)
             storage_dead(_21)
             match _20 {
@@ -232,9 +228,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             storage_live(_31)
             _31 = copy input
             _29 = (move _30)(const 2u32, move _31)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
+            ↳⚡ goto cleanup0
             storage_dead(_31)
             storage_dead(_30)
             match _29 {
@@ -278,9 +272,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             storage_live(_40)
             _40 = copy input
             _38 = (move _39)(const 3u32, move _40)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
+            ↳⚡ goto cleanup0
             storage_dead(_40)
             storage_dead(_39)
             match _38 {
@@ -324,9 +316,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
             storage_live(_49)
             _49 = copy input
             _47 = (move _48)(const 4u32, move _49)
-            ↳⚡ storage_dead(input)
-                storage_dead(parse)
-                unwind_continue
+            ↳⚡ goto cleanup0
             storage_dead(_49)
             storage_dead(_48)
             match _47 {
@@ -372,9 +362,7 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
         storage_live(_58)
         _58 = copy input
         _56 = (move _57)(const 5u32, move _58)
-        ↳⚡ storage_dead(input)
-            storage_dead(parse)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_58)
         storage_dead(_57)
         match _56 {
@@ -446,6 +434,12 @@ pub fn permutation(parse: fn(u32, u32) -> Result<u32, u32>[{built_in impl Sized 
     storage_dead(input)
     storage_dead(parse)
     return
+
+    cleanup0: {
+        storage_dead(input)
+        storage_dead(parse)
+        unwind_continue
+    }
 }
 
 

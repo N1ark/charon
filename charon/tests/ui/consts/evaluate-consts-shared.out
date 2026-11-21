@@ -43,14 +43,10 @@ pub fn use_generic() -> usize
     storage_live(_1)
     storage_live(_2)
     _2 = generic::<u8>(const 0u8)
-    ↳⚡ storage_dead(_5)
-        storage_dead(_4)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_3)
     _3 = generic::<u32>(const 0u32)
-    ↳⚡ storage_dead(_5)
-        storage_dead(_4)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _4 = copy _2 panic.+ copy _3
     _1 = move _4
     storage_dead(_3)
@@ -61,6 +57,12 @@ pub fn use_generic() -> usize
     storage_dead(_5)
     storage_dead(_4)
     return
+
+    cleanup0: {
+        storage_dead(_5)
+        storage_dead(_4)
+        unwind_continue
+    }
 }
 
 

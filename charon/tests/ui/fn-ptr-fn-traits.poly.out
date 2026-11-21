@@ -606,13 +606,16 @@ where
     drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Trait for u32}
@@ -661,19 +664,21 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for F}::drop_glue<'8>] f
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for F}::drop_glue<'7>] f
-    ↳⚡ storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     storage_dead(f)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        storage_dead(f)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::generic_call_once
@@ -704,41 +709,39 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for A}::drop_glue<'2>] _5
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'4>] _3
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'7>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     conditional_drop[{built_in impl Destruct for A}::drop_glue<'1>] _5
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'4>] _3
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'7>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for A}::drop_glue<'3>] x
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup1
     conditional_drop[{built_in impl Destruct for F}::drop_glue<'5>] f
-    ↳⚡ storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(x)
     storage_dead(f)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for F}::drop_glue<'4>] _3
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for A}::drop_glue<'7>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        storage_dead(x)
+        storage_dead(f)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::generic_call_once2
@@ -774,77 +777,58 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for B}::drop_glue<'2>] _7
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'4>] _6
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for B}::drop_glue<'9>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     conditional_drop[{built_in impl Destruct for B}::drop_glue<'1>] _7
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'4>] _6
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for B}::drop_glue<'9>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     conditional_drop[{built_in impl Destruct for A}::drop_glue<'3>] _6
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for B}::drop_glue<'9>] y
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for A}::drop_glue<'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_6)
     storage_dead(_5)
     storage_dead(_4)
     conditional_drop[{built_in impl Destruct for B}::drop_glue<'5>] y
-    ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup2
     conditional_drop[{built_in impl Destruct for A}::drop_glue<'7>] x
-    ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup3
     conditional_drop[{built_in impl Destruct for F}::drop_glue<'10>] f
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup4
     storage_dead(y)
     storage_dead(x)
     storage_dead(f)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for A}::drop_glue<'4>] _6
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for F}::drop_glue<'6>] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        conditional_drop[{built_in impl Destruct for B}::drop_glue<'9>] y
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        conditional_drop[{built_in impl Destruct for A}::drop_glue<'8>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup3: {
+        conditional_drop[{built_in impl Destruct for F}::drop_glue<'11>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup4
+    }
+
+    cleanup4: {
+        storage_dead(y)
+        storage_dead(x)
+        storage_dead(f)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::test

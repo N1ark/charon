@@ -93,8 +93,7 @@ where
     storage_live(_3)
     _3 = &x
     _2 = get_bool<'2>(move _3)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _2 {
     } else {
         storage_dead(_3)
@@ -107,12 +106,16 @@ where
     storage_live(_4)
     _4 = &x
     _0 = impl_BoolTrait_for_bool::ret_true<'3>(move _4)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_2)
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Test

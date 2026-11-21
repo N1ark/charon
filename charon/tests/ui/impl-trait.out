@@ -158,17 +158,21 @@ fn use_foo()
     storage_live(_5)
     _5 = &foo
     _4 = get_ty<'3>(move _5)
-    ↳⚡ unwind_continue
+    ↳⚡ goto cleanup0
     _3 = &(*_4)
     storage_dead(_5)
     _2 = impl_Clone_for_u32::clone<'5>(move _3)
-    ↳⚡ unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_4)
     storage_dead(_2)
     _0 = ()
     storage_dead(foo)
     return
+
+    cleanup0: {
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::RPITIT
@@ -240,20 +244,14 @@ where
     storage_live(_5)
     _5 = &foo
     _4 = TraitClause1::ImpliedClause2::get_ty<'3>(move _5)
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::make_foo_ty}::drop_glue<'4>] foo
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _3 = &(*_4) with_metadata(read _4.metadata)
     storage_dead(_5)
     _2 = TraitClause1::ImpliedClause2::ImpliedClause2::clone<'5>(move _3)
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::make_foo_ty}::drop_glue<'4>] foo
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for TraitClause1::ImpliedClause2::Type}::drop_glue<'6>] _2
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::make_foo_ty}::drop_glue<'4>] foo
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_2)
     _0 = ()
@@ -261,6 +259,12 @@ where
     ↳⚡ unwind_continue
     storage_dead(foo)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for TraitClause1::make_foo_ty}::drop_glue<'4>] foo
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::WrapClone
@@ -336,11 +340,7 @@ pub fn use_wrap()
     _0 = ()
     storage_live(f)
     f = wrap<u32>[{built_in impl Sized for u32}]()
-    ↳⚡ storage_dead(_7)
-        storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_8)
     storage_live(_9)
     storage_live(_10)
@@ -359,11 +359,7 @@ pub fn use_wrap()
     _5 = &(*_6)
     _4 = (move _5,)
     _2 = call_once<'14, u32>[{built_in impl Sized for u32}](move _3, move _4)
-    ↳⚡ storage_dead(_7)
-        storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
@@ -376,6 +372,14 @@ pub fn use_wrap()
     storage_dead(_9)
     storage_dead(_8)
     return
+
+    cleanup0: {
+        storage_dead(_7)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
+    }
 }
 
 

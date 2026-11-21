@@ -174,17 +174,19 @@ where
     ↳⚡ _4 = &mut (*_1)
         _5 = impl_Drop_for_Box::drop<'5, T, A>[TraitClause0, TraitClause1, TraitClause2](move _4)
         ↳⚡ unwind_terminate(in_cleanup)
-        drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+        goto cleanup0
     _2 = &mut (*_1)
     _3 = impl_Drop_for_Box::drop<'4, T, A>[TraitClause0, TraitClause1, TraitClause2](move _2)
-    ↳⚡ drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     drop[{built_in impl Destruct for A}::drop_glue<'7>] (*_1)._1
     ↳⚡ unwind_continue
     return
+
+    cleanup0: {
+        drop[{built_in impl Destruct for A}::drop_glue<'6>] (*_1)._1
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 // Full name: alloc::rc::RcInner

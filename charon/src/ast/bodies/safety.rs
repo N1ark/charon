@@ -367,6 +367,7 @@ impl HasSafety for llbc_ast::Statement {
             | StatementKind::Return
             | StatementKind::Panic { .. }
             | StatementKind::UnwindResume
+            | StatementKind::GotoCleanup(_)
             | StatementKind::UnwindTerminate(..) => Safety::Safe,
         }
     }

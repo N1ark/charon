@@ -86,16 +86,18 @@ where
     conditional_drop[{built_in impl Destruct for Q}::drop_glue<'0>] _k
     ↳⚡ conditional_drop[drop_glue<'2, S>[TraitClause0]] _x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_k)
-        storage_dead(_x)
-        unwind_continue
+        goto cleanup0
     conditional_drop[drop_glue<'1, S>[TraitClause0]] _x
-    ↳⚡ storage_dead(_k)
-        storage_dead(_x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_k)
     storage_dead(_x)
     return
+
+    cleanup0: {
+        storage_dead(_k)
+        storage_dead(_x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::top_level_get
@@ -115,16 +117,18 @@ where
     conditional_drop[{built_in impl Destruct for Q}::drop_glue<'0>] _k
     ↳⚡ conditional_drop[drop_glue<'2, S>[TraitClause0]] _x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_k)
-        storage_dead(_x)
-        unwind_continue
+        goto cleanup0
     conditional_drop[drop_glue<'1, S>[TraitClause0]] _x
-    ↳⚡ storage_dead(_k)
-        storage_dead(_x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_k)
     storage_dead(_x)
     return
+
+    cleanup0: {
+        storage_dead(_k)
+        storage_dead(_x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::test1

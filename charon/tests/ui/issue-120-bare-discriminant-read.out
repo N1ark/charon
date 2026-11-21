@@ -373,17 +373,20 @@ where
     _2 = discriminant_value<'2, T>[TraitClause0](move _3)
     ↳⚡ drop[drop_glue<'3, T>[TraitClause0]] opt
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(opt)
-        unwind_continue
+        goto cleanup0
     storage_dead(_3)
     _0 = move _2 != const 0isize
     storage_dead(_2)
     storage_dead(_4)
     drop[drop_glue<'4, T>[TraitClause0]] opt
-    ↳⚡ storage_dead(opt)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(opt)
     return
+
+    cleanup0: {
+        storage_dead(opt)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::my_is_some

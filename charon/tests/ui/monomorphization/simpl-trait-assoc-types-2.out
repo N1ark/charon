@@ -203,17 +203,7 @@ fn main()
     storage_live(_13)
     _13 = cast<fn(&'12 (dyn Trait<Item = bool> + '13))>(read (*_5.metadata).method_comsume)
     _4 = (read _13)(move _5)
-    ↳⚡ storage_dead(_12)
-        storage_dead(_11)
-        storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_16)
     storage_live(_19)
     storage_live(_20)
@@ -238,17 +228,7 @@ fn main()
     storage_live(_14)
     _14 = cast<fn(&'18 (dyn Trait<Item = u32> + '19))>(read (*_10.metadata).method_comsume)
     _9 = (read _14)(move _10)
-    ↳⚡ storage_dead(_12)
-        storage_dead(_11)
-        storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_10)
     storage_dead(_9)
     _0 = ()
@@ -265,6 +245,20 @@ fn main()
     storage_dead(_14)
     storage_dead(_13)
     return
+
+    cleanup0: {
+        storage_dead(_12)
+        storage_dead(_11)
+        storage_dead(_20)
+        storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(_17)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        unwind_continue
+    }
 }
 
 

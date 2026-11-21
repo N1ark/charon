@@ -86,7 +86,7 @@ and body =
 
           This is also the same structure as rustc's MIR, and is in fact a
           direct translation of it. *)
-  | StructuredBody of Generated_LlbcAst.block gexpr_body
+  | StructuredBody of Generated_LlbcAst.structured_body gexpr_body
       (** Body represented with structured control flow, i.e. with nested
           [if]/[match]/[loop] blocks. This is available when [--ullbc] is not
           passed to Charon.

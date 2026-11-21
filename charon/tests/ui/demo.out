@@ -255,11 +255,7 @@ where
             storage_live(_12)
             _12 = &test_crate::list_nth::{promoted_const} with_metadata(const 14usize)
             panic(panic(move _12))
-            ↳⚡ storage_dead(_11)
-                storage_dead(i)
-                storage_dead(l)
-                storage_dead(_12)
-                unwind_continue
+            ↳⚡ goto cleanup0
         },
     }
     storage_live(x)
@@ -283,11 +279,7 @@ where
         _9 = move _11
         storage_dead(_10)
         _7 = list_nth<'7, T>[TraitClause0](move _8, move _9)
-        ↳⚡ storage_dead(_11)
-            storage_dead(i)
-            storage_dead(l)
-            storage_dead(_12)
-            unwind_continue
+        ↳⚡ goto cleanup0
         _0 = &(*_7)
         storage_dead(_9)
         storage_dead(_8)
@@ -311,6 +303,14 @@ where
     storage_dead(l)
     storage_dead(_12)
     return
+
+    cleanup0: {
+        storage_dead(_11)
+        storage_dead(i)
+        storage_dead(l)
+        storage_dead(_12)
+        unwind_continue
+    }
 }
 
 pub const test_crate::list_nth_mut::{promoted_const}: str = "explicit panic" with_metadata(14usize)
@@ -351,11 +351,7 @@ where
             storage_live(_17)
             _17 = &test_crate::list_nth_mut::{promoted_const} with_metadata(const 14usize)
             panic(panic(move _17))
-            ↳⚡ storage_dead(_16)
-                storage_dead(i)
-                storage_dead(l)
-                storage_dead(_17)
-                unwind_continue
+            ↳⚡ goto cleanup0
         },
     }
     storage_live(x)
@@ -386,11 +382,7 @@ where
         _14 = move _16
         storage_dead(_15)
         _12 = list_nth_mut<'12, T>[TraitClause0](move _13, move _14)
-        ↳⚡ storage_dead(_16)
-            storage_dead(i)
-            storage_dead(l)
-            storage_dead(_17)
-            unwind_continue
+        ↳⚡ goto cleanup0
         _8 = &mut (*_12)
         storage_dead(_14)
         storage_dead(_13)
@@ -412,6 +404,14 @@ where
     storage_dead(l)
     storage_dead(_17)
     return
+
+    cleanup0: {
+        storage_dead(_16)
+        storage_dead(i)
+        storage_dead(l)
+        storage_dead(_17)
+        unwind_continue
+    }
 }
 
 pub const test_crate::list_nth_mut1::{promoted_const}: str = "explicit panic" with_metadata(14usize)

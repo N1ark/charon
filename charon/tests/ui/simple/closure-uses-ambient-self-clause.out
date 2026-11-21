@@ -129,39 +129,35 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'6>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] i
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_5)
-        storage_dead(i)
-        storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        unwind_continue
+        goto cleanup0
     conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'5>] _4
-    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] i
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_5)
-        storage_dead(i)
-        storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_3)
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'7>] i
-    ↳⚡ storage_dead(_5)
-        storage_dead(i)
-        storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_5)
     storage_dead(i)
     storage_dead(_8)
     storage_dead(_7)
     storage_dead(_6)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] i
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(_5)
+        storage_dead(i)
+        storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(_6)
+        unwind_continue
+    }
 }
 
 

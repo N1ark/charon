@@ -1116,16 +1116,24 @@ impl<T> GExprBody<T> {
     }
 }
 
-impl<C: AstFormatter> FmtWithCtx<C> for GExprBody<llbc_ast::Block> {
+impl<C: AstFormatter> FmtWithCtx<C> for GExprBody<llbc_ast::StructuredBody> {
     fn fmt_with_ctx(&self, ctx: &C, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Inference fails when this is a closure.
         fn fmt_body<C: AstFormatter>(
             f: &mut fmt::Formatter<'_>,
             ctx: &<<C as AstFormatter>::Reborrow<'_> as AstFormatter>::Reborrow<'_>,
-            body: &Block,
+            body: &llbc_ast::StructuredBody,
         ) -> Result<(), fmt::Error> {
             writeln!(f)?;
-            body.fmt_with_ctx(ctx, f)?;
+            body.block.fmt_with_ctx(ctx, f)?;
+            let tab = ctx.indent();
+            let inner_ctx = &ctx.increase_indent();
+            for (id, block) in body.cleanups.iter_enumerated() {
+                writeln!(f)?;
+                writeln!(f, "{tab}cleanup{}: {{", id.index())?;
+                block.fmt_with_ctx(inner_ctx, f)?;
+                writeln!(f, "{tab}}}")?;
+            }
             Ok(())
         }
         self.fmt_with_ctx_and_callback(ctx, f, fmt_body::<C>)
@@ -2672,6 +2680,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for llbc::Statement {
             }
             StatementKind::Return => write!(f, "return"),
             StatementKind::UnwindResume => write!(f, "unwind_continue"),
+            StatementKind::GotoCleanup(id) => write!(f, "goto cleanup{}", id.index()),
             StatementKind::Break(index) => write!(f, "break {index}"),
             StatementKind::Continue(index) => write!(f, "continue {index}"),
             StatementKind::Switch { data, branches } => match &data.scrutinee {

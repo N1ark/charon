@@ -60,14 +60,10 @@ pub fn m<'_0>(self: &'_0 S) -> u32
     storage_live(_4)
     storage_live(_2)
     _2 = foo()
-    ↳⚡ storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_3)
     _3 = name()
-    ↳⚡ storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _4 = copy _2 panic.+ copy _3
     _0 = move _4
     storage_dead(_3)
@@ -75,6 +71,12 @@ pub fn m<'_0>(self: &'_0 S) -> u32
     storage_dead(_4)
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Tr
@@ -98,14 +100,10 @@ pub fn d::<S><'_0>(self: &'_0 S) -> u32
     storage_live(_4)
     storage_live(_2)
     _2 = foo()
-    ↳⚡ storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_3)
     _3 = name()
-    ↳⚡ storage_dead(_4)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _4 = copy _2 panic.+ copy _3
     _0 = move _4
     storage_dead(_3)
@@ -113,6 +111,12 @@ pub fn d::<S><'_0>(self: &'_0 S) -> u32
     storage_dead(_4)
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Tr for S}
@@ -139,16 +143,10 @@ extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u32
     storage_live(_5)
     storage_live(_3)
     _3 = foo()
-    ↳⚡ storage_dead(_5)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_4)
     _4 = name()
-    ↳⚡ storage_dead(_5)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _5 = copy _3 panic.+ copy _4
     _0 = move _5
     storage_dead(_4)
@@ -157,6 +155,13 @@ extern "rust-call" fn call<'_0>(_1: &'_0 {closure}, tupled_args: ()) -> u32
     storage_dead(tupled_args)
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_5)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::closure_user
@@ -221,17 +226,7 @@ pub fn user() -> u32
     _10 = move _11
     _3 = &(*_10)
     _2 = m<'5>(move _3)
-    ↳⚡ storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_6)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_12)
     storage_live(_15)
     storage_live(_16)
@@ -244,17 +239,7 @@ pub fn user() -> u32
     _9 = move _12
     _5 = &(*_9)
     _4 = d::<S><'7>(move _5)
-    ↳⚡ storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_6)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     _6 = copy _2 panic.+ copy _4
     _1 = move _6
@@ -262,17 +247,7 @@ pub fn user() -> u32
     storage_dead(_2)
     storage_live(_7)
     _7 = closure_user()
-    ↳⚡ storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_6)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _8 = copy _1 panic.+ copy _7
     _0 = move _8
     storage_dead(_7)
@@ -288,6 +263,20 @@ pub fn user() -> u32
     storage_dead(_12)
     storage_dead(_11)
     return
+
+    cleanup0: {
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_6)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        unwind_continue
+    }
 }
 
 

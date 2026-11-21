@@ -576,36 +576,24 @@ fn use_inlines() -> u32
     storage_live(_2)
     storage_live(_3)
     _3 = inline_always()
-    ↳⚡ storage_dead(_9)
-        storage_dead(_7)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_4)
     _4 = inline_sometimes()
-    ↳⚡ storage_dead(_9)
-        storage_dead(_7)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _5 = copy _3 panic.+ copy _4
     _2 = move _5
     storage_dead(_4)
     storage_dead(_3)
     storage_live(_6)
     _6 = inline_never()
-    ↳⚡ storage_dead(_9)
-        storage_dead(_7)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _7 = copy _2 panic.+ copy _6
     _1 = move _7
     storage_dead(_6)
     storage_dead(_2)
     storage_live(_8)
     _8 = inline_generic<bool>[{built_in impl Sized for bool}]()
-    ↳⚡ storage_dead(_9)
-        storage_dead(_7)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _9 = copy _1 panic.+ copy _8
     _0 = move _9
     storage_dead(_8)
@@ -614,6 +602,13 @@ fn use_inlines() -> u32
     storage_dead(_7)
     storage_dead(_5)
     return
+
+    cleanup0: {
+        storage_dead(_9)
+        storage_dead(_7)
+        storage_dead(_5)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::bool_to_opt

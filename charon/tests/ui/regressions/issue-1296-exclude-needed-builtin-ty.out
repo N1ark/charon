@@ -25,10 +25,7 @@ fn main()
     (*_3).1.0 = [const 42i32]
     _2 = move _3
     conditional_drop[{impl#6}<MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}]}, {built_in impl Sized for Global}]::drop_glue<'0>] _3
-    ↳⚡ conditional_drop[{impl#6}<MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}]}, {built_in impl Sized for Global}]::drop_glue<'1>] _2
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(ret)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_live(b)
     b = move _2
@@ -36,22 +33,10 @@ fn main()
     storage_live(x)
     storage_live(y)
     x = assume_init<[i32; 1usize], Global>[{built_in impl Sized for [i32; 1usize]}, {built_in impl Sized for Global}](move b)
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        storage_dead(b)
-        conditional_drop[{impl#6}<MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}]}, {built_in impl Sized for Global}]::drop_glue<'1>] _2
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(ret)
-        unwind_continue
+    ↳⚡ goto cleanup1
     y = unsize_cast<Box<[i32]>[{built_in impl MetaSized for [i32]}, {built_in impl Sized for Global}], 1usize>(move x)
     ret = into_vec<i32, Global>[{built_in impl Sized for i32}, {built_in impl Sized for Global}](move y)
-    ↳⚡ storage_dead(y)
-        storage_dead(x)
-        storage_dead(b)
-        conditional_drop[{impl#6}<MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}]}, {built_in impl Sized for Global}]::drop_glue<'1>] _2
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(ret)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(y)
     storage_dead(x)
     storage_dead(b)
@@ -64,6 +49,20 @@ fn main()
     _0 = ()
     storage_dead(ret)
     return
+
+    cleanup0: {
+        conditional_drop[{impl#6}<MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[i32; 1usize]>[{built_in impl Sized for [i32; 1usize]}]}, {built_in impl Sized for Global}]::drop_glue<'1>] _2
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(ret)
+        unwind_continue
+    }
+
+    cleanup1: {
+        storage_dead(y)
+        storage_dead(x)
+        storage_dead(b)
+        goto cleanup0
+    }
 }
 
 

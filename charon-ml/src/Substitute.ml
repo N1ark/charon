@@ -444,7 +444,7 @@ let expr_body_substitute (subst : subst) (body : expr_body) : expr_body =
   {
     body with
     locals = st_substitute_visitor#visit_locals subst body.locals;
-    body = block_substitute subst body.body;
+    body = st_substitute_visitor#visit_structured_body subst body.body;
   }
 
 let trait_type_constraint_substitute (subst : subst)

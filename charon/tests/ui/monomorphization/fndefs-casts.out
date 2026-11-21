@@ -178,11 +178,7 @@ fn main()
     _8 = &a
     _7 = &(*_8)
     _5 = (move _6)<'17>(move _7)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     storage_dead(_6)
     storage_dead(_8)
@@ -198,11 +194,7 @@ fn main()
     _13 = &a
     _12 = &(*_13)
     _10 = (move _11)<'18>(move _12)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_12)
     storage_dead(_11)
     storage_dead(_13)
@@ -215,11 +207,7 @@ fn main()
     _17 = &b
     _16 = &(*_17)
     _14 = (move _15)<'19>(move _16)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_16)
     storage_dead(_15)
     storage_dead(_17)
@@ -232,11 +220,7 @@ fn main()
     _21 = &b
     _20 = &(*_21)
     _18 = (move _19)<'20>(move _20)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_28)
     storage_live(_29)
     storage_live(_30)
@@ -256,22 +240,14 @@ fn main()
     _25 = &(*_27)
     _24 = &(*_25)
     _22 = (move _23)<'22>(move _24)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_24)
     storage_dead(_23)
     storage_dead(_25)
     storage_dead(_22)
     storage_live(_26)
     _26 = takes_closure::<for<'a> foo::<u32><'a>>(const foo::<u32><'24>)
-    ↳⚡ storage_dead(_27)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_26)
     _0 = ()
     storage_dead(b)
@@ -284,6 +260,14 @@ fn main()
     storage_dead(_29)
     storage_dead(_28)
     return
+
+    cleanup0: {
+        storage_dead(_27)
+        storage_dead(_30)
+        storage_dead(_29)
+        storage_dead(_28)
+        unwind_continue
+    }
 }
 
 

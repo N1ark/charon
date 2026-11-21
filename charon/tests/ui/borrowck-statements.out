@@ -257,13 +257,16 @@ where
     drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Either
@@ -368,14 +371,17 @@ where
     conditional_drop[{built_in impl Destruct for Self}::drop_glue<'0>] value_2
     ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'2>] value_1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(value_1)
-        unwind_continue
+        goto cleanup0
     storage_dead(value_2)
     conditional_drop[{built_in impl Destruct for Self}::drop_glue<'1>] value_1
-    ↳⚡ storage_dead(value_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(value_1)
     return
+
+    cleanup0: {
+        storage_dead(value_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::impl_trait_binding
@@ -415,14 +421,17 @@ pub fn nested_impl_trait(value_1: Box<u32>[{built_in impl MetaSized for u32}, {b
     conditional_drop[impl_Destruct_for_Box::drop_glue<'0, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}]] value_2
     ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'2, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}]] value_1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(value_1)
-        unwind_continue
+        goto cleanup0
     storage_dead(value_2)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'1, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}]] value_1
-    ↳⚡ storage_dead(value_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(value_1)
     return
+
+    cleanup0: {
+        storage_dead(value_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::multiple_impl_traits
@@ -443,14 +452,17 @@ pub fn multiple_impl_traits(value_1: (u32, String))
     conditional_drop[impl_Destruct_for_tuple::drop_glue<'0, u32, String>[{built_in impl Sized for u32}]] value_2
     ↳⚡ conditional_drop[impl_Destruct_for_tuple::drop_glue<'2, u32, String>[{built_in impl Sized for u32}]] value_1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(value_1)
-        unwind_continue
+        goto cleanup0
     storage_dead(value_2)
     conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, u32, String>[{built_in impl Sized for u32}]] value_1
-    ↳⚡ storage_dead(value_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(value_1)
     return
+
+    cleanup0: {
+        storage_dead(value_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::higher_ranked_impl_trait
@@ -619,14 +631,17 @@ where
     conditional_drop[impl_Destruct_for_Box::drop_glue<'14, StaticCopy<'8>, Global>[{built_in impl MetaSized for StaticCopy<'8>}, {built_in impl Sized for Global}]] x
     ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'28, StaticCopy<'22>, Global>[{built_in impl MetaSized for StaticCopy<'22>}, {built_in impl Sized for Global}]] value
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(value)
-        unwind_continue
+        goto cleanup0
     storage_dead(x)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'21, StaticCopy<'15>, Global>[{built_in impl MetaSized for StaticCopy<'15>}, {built_in impl Sized for Global}]] value
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(value)
     return
+
+    cleanup0: {
+        storage_dead(value)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Project

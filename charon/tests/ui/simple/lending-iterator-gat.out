@@ -230,14 +230,7 @@ where
         storage_live(_5)
         _5 = &two-phase-mut iter
         _4 = TraitClause2::next<'8>(move _5)
-        ↳⚡ conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(_3)
-            storage_dead(f)
-            storage_dead(iter)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_5)
         match _4 {
             Option::Some => {
@@ -259,85 +252,63 @@ where
             ↳⚡ unwind_terminate(in_cleanup)
             conditional_drop[{built_in impl Destruct for TraitClause2::Item<'33>}::drop_glue<'34>] _9
             ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(_3)
-            storage_dead(f)
-            storage_dead(iter)
-            unwind_continue
+            goto cleanup1
         conditional_drop[{built_in impl Destruct for TraitClause2::Item<'30>}::drop_glue<'31>] _9
-        ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(_3)
-            storage_dead(f)
-            storage_dead(iter)
-            unwind_continue
+        ↳⚡ goto cleanup1
         storage_dead(_9)
         storage_dead(_8)
         storage_dead(_7)
         conditional_drop[{built_in impl Destruct for TraitClause2::Item<'35>}::drop_glue<'36>] item
-        ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(_3)
-            storage_dead(f)
-            storage_dead(iter)
-            unwind_continue
+        ↳⚡ goto cleanup2
         storage_dead(item)
         conditional_drop[impl_Destruct_for_Option::drop_glue<'45, TraitClause2::Item<'39>>[TraitClause2::Item<'40>::ImpliedClause0]] _4
-        ↳⚡ conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(_3)
-            storage_dead(f)
-            storage_dead(iter)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_4)
         continue 0
     }
     _0 = ()
     conditional_drop[impl_Destruct_for_Option::drop_glue<'17, TraitClause2::Item<'11>>[TraitClause2::Item<'12>::ImpliedClause0]] _4
-    ↳⚡ conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(f)
-        storage_dead(iter)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     conditional_drop[{built_in impl Destruct for T1}::drop_glue<'26>] f
-    ↳⚡ conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(f)
-        storage_dead(iter)
-        unwind_continue
+    ↳⚡ goto cleanup3
     conditional_drop[{built_in impl Destruct for I}::drop_glue<'32>] iter
-    ↳⚡ storage_dead(_3)
-        storage_dead(f)
-        storage_dead(iter)
-        unwind_continue
+    ↳⚡ goto cleanup4
     storage_dead(_3)
     storage_dead(f)
     storage_dead(iter)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for T1}::drop_glue<'9>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for TraitClause2::Item<'37>}::drop_glue<'38>] item
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        conditional_drop[impl_Destruct_for_Option::drop_glue<'52, TraitClause2::Item<'46>>[TraitClause2::Item<'47>::ImpliedClause0]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
+    }
+
+    cleanup3: {
+        conditional_drop[{built_in impl Destruct for I}::drop_glue<'10>] iter
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup4
+    }
+
+    cleanup4: {
+        storage_dead(_3)
+        storage_dead(f)
+        storage_dead(iter)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::main::{closure}
@@ -487,22 +458,7 @@ pub fn main()
     _7 = {closure} { _0: move _8 }
     storage_dead(_8)
     _5 = for_each<Option<&'49 i32>[{built_in impl Sized for &'49 i32}], {closure}<'50>>[{built_in impl Sized for Option<&'49 i32>[{built_in impl Sized for &'49 i32}]}, {built_in impl Sized for {closure}<'50>}, impl_LendingIterator_for_Option<'49, i32>[{built_in impl Sized for i32}], for<'a> impl_FnMut_tuple_for_closure<'50, '72>](move _6, move _7)
-    ↳⚡ storage_dead(_25)
-        storage_dead(_24)
-        storage_dead(_23)
-        storage_dead(_22)
-        storage_dead(_21)
-        storage_dead(_20)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(kind)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_28)
-        storage_dead(_27)
-        storage_dead(_26)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_27)
     storage_live(_30)
     storage_live(_31)
@@ -551,22 +507,7 @@ pub fn main()
         storage_live(_23)
         _23 = Option::None {  }
         panic(assert_failed<'90, '91, '92, i32, i32>[{built_in impl MetaSized for i32}, {built_in impl MetaSized for i32}, {impl#13}, {impl#13}](move _18, move _19, move _21, move _23))
-        ↳⚡ storage_dead(_25)
-            storage_dead(_24)
-            storage_dead(_23)
-            storage_dead(_22)
-            storage_dead(_21)
-            storage_dead(_20)
-            storage_dead(_19)
-            storage_dead(_18)
-            storage_dead(kind)
-            storage_dead(_31)
-            storage_dead(_30)
-            storage_dead(_29)
-            storage_dead(_28)
-            storage_dead(_27)
-            storage_dead(_26)
-            unwind_continue
+        ↳⚡ goto cleanup0
     }
     storage_dead(_16)
     storage_dead(_15)
@@ -594,6 +535,25 @@ pub fn main()
     storage_dead(_27)
     storage_dead(_26)
     return
+
+    cleanup0: {
+        storage_dead(_25)
+        storage_dead(_24)
+        storage_dead(_23)
+        storage_dead(_22)
+        storage_dead(_21)
+        storage_dead(_20)
+        storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(kind)
+        storage_dead(_31)
+        storage_dead(_30)
+        storage_dead(_29)
+        storage_dead(_28)
+        storage_dead(_27)
+        storage_dead(_26)
+        unwind_continue
+    }
 }
 
 

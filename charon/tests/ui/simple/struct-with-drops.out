@@ -111,28 +111,28 @@ unsafe fn impl_Destruct_for_B::drop_glue<'_0>(_1: &'_0 mut B)
     _3 = impl_Drop_for_B::drop<'2>(move _2)
     ↳⚡ drop[impl_Destruct_for_Box::drop_glue<'3, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).x
         ↳⚡ unwind_terminate(in_cleanup)
-        drop[impl_Destruct_for_Box::drop_glue<'5, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).y
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[impl_Destruct_for_Box::drop_glue<'4, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).x
-    ↳⚡ drop[impl_Destruct_for_Box::drop_glue<'5, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).y
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     drop[impl_Destruct_for_Box::drop_glue<'6, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).y
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(_1)
     return
+
+    cleanup0: {
+        drop[impl_Destruct_for_Box::drop_glue<'5, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).y
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::A::{impl Destruct for A}::drop_glue
@@ -146,13 +146,16 @@ unsafe fn impl_Destruct_for_A::drop_glue<'_0>(_1: &'_0 mut A)
     drop[impl_Destruct_for_Box::drop_glue<'1, u32, Global>[{built_in impl MetaSized for u32}, {built_in impl Sized for Global}, {built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] (*_1).x
     ↳⚡ drop[impl_Destruct_for_B::drop_glue<'3>] (*_1).b
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[impl_Destruct_for_B::drop_glue<'2>] (*_1).b
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::B::{impl Destruct for B}

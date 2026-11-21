@@ -712,6 +712,7 @@ impl LlbcPass for Transform {
                     }
                     Nop
                     | UnwindResume
+                    | GotoCleanup(..)
                     | InlineAsm { .. }
                     | Assert { .. }
                     | Panic { .. }

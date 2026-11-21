@@ -171,28 +171,28 @@ where
     conditional_drop[impl_Destruct_for_Marker::drop_glue<'0, V>[TraitClause2, TraitClause5]] _z
     ↳⚡ conditional_drop[impl_Destruct_for_Transitive::drop_glue<'2, U>[TraitClause1, TraitClause4]] _y
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Direct::drop_glue<'4, T>[TraitClause0, TraitClause3]] _x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_z)
-        storage_dead(_y)
-        storage_dead(_x)
-        unwind_continue
+        goto cleanup0
     conditional_drop[impl_Destruct_for_Transitive::drop_glue<'1, U>[TraitClause1, TraitClause4]] _y
-    ↳⚡ conditional_drop[impl_Destruct_for_Direct::drop_glue<'4, T>[TraitClause0, TraitClause3]] _x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_z)
-        storage_dead(_y)
-        storage_dead(_x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     conditional_drop[impl_Destruct_for_Direct::drop_glue<'3, T>[TraitClause0, TraitClause3]] _x
-    ↳⚡ storage_dead(_z)
-        storage_dead(_y)
-        storage_dead(_x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_z)
     storage_dead(_y)
     storage_dead(_x)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_Direct::drop_glue<'4, T>[TraitClause0, TraitClause3]] _x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(_z)
+        storage_dead(_y)
+        storage_dead(_x)
+        unwind_continue
+    }
 }
 
 

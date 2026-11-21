@@ -80,21 +80,23 @@ fn foo(f: Foo)
         ↳⚡ unwind_terminate(in_cleanup)
         drop[impl_Destruct_for_Box::drop_glue<'2, u32, Global>[{built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] f.z
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     _0 = ()
     drop[impl_Destruct_for_Box::drop_glue<'1, u32, Global>[{built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] f.y
     ↳⚡ drop[impl_Destruct_for_Box::drop_glue<'4, u32, Global>[{built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] f.z
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     drop[impl_Destruct_for_Box::drop_glue<'3, u32, Global>[{built_in impl Destruct for u32}, {built_in impl Destruct for Global}]] f.z
-    ↳⚡ storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(f)
     return
+
+    cleanup0: {
+        storage_dead(f)
+        unwind_continue
+    }
 }
 
 

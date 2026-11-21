@@ -343,34 +343,37 @@ where
     storage_live(_4)
     _4 = test_crate::wrap::{closure} { _0: move x }
     _3 = new<test_crate::wrap::{closure}<T>[TraitClause0]>[{built_in impl Sized for test_crate::wrap::{closure}<T>[TraitClause0]}](move _4)
-    ↳⚡ conditional_drop[{impl Destruct for test_crate::wrap::{closure}<T>[TraitClause0]}::drop_glue<'6, T>[TraitClause0]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'11>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _2 = unsize_cast<Box<(dyn FnOnce<(), Output = T> + '7)>[{built_in impl MetaSized for (dyn FnOnce<(), Output = T> + '9)}, {built_in impl Sized for Global}], &{impl FnOnce<()> for test_crate::wrap::{closure}<T>[TraitClause0]}::{vtable}<T>[TraitClause0]>(move _3)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'10, test_crate::wrap::{closure}<T>[TraitClause0], Global>[{built_in impl MetaSized for test_crate::wrap::{closure}<T>[TraitClause0]}, {built_in impl Sized for Global}]] _3
-    ↳⚡ conditional_drop[{impl Destruct for test_crate::wrap::{closure}<T>[TraitClause0]}::drop_glue<'6, T>[TraitClause0]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'11>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_3)
     _0 = unsize_cast<Box<(dyn FnOnce<(), Output = T> + '12)>[{built_in impl MetaSized for (dyn FnOnce<(), Output = T> + '14)}, {built_in impl Sized for Global}],  at []>(move _2)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'21, (dyn FnOnce<(), Output = T> + '15), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = T> + '15)}, {built_in impl Sized for Global}]] _2
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'11>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'22>] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(x)
     return
+
+    cleanup0: {
+        conditional_drop[{impl Destruct for test_crate::wrap::{closure}<T>[TraitClause0]}::drop_glue<'6, T>[TraitClause0]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'11>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 struct test_crate::main::{closure#3} {}
@@ -1250,19 +1253,7 @@ fn main()
     storage_live(_6)
     _6 = (const 1u32,)
     _y_4 = (read (*_5.metadata).method_call)<'77>(move _5, move _6)
-    ↳⚡ storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     storage_dead(_5)
     fake_read(_y_4)
@@ -1290,19 +1281,7 @@ fn main()
     storage_live(_15)
     _15 = (const 2u32,)
     _y_13 = (read (*_14.metadata).method_call)<'88>(move _14, move _15)
-    ↳⚡ storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_15)
     storage_dead(_14)
     fake_read(_y_13)
@@ -1315,68 +1294,20 @@ fn main()
     storage_live(_19)
     _19 = test_crate::main::{closure#2} { _0: move d }
     _18 = new<test_crate::main::{closure#2}>[{built_in impl Sized for test_crate::main::{closure#2}}](move _19)
-    ↳⚡ conditional_drop[{impl Destruct for test_crate::main::{closure#2}}::drop_glue<'89>] _19
-        ↳⚡ unwind_terminate(in_cleanup)
-        // A closure with a higher-ranked signature.
-        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup1
     _h = unsize_cast<Box<(dyn FnOnce<(), Output = Droppable> + '90)>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '92)}, {built_in impl Sized for Global}], &{impl FnOnce<()> for test_crate::main::{closure#2}}::{vtable}>(move _18)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'93, test_crate::main::{closure#2}, Global>[{built_in impl MetaSized for test_crate::main::{closure#2}}, {built_in impl Sized for Global}]] _18
-    ↳⚡ conditional_drop[{impl Destruct for test_crate::main::{closure#2}}::drop_glue<'89>] _19
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_19)
     storage_dead(_18)
     fake_read(_h)
     storage_live(_w)
     _w = wrap<u32>[{built_in impl Sized for u32}](const 3u32)
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'101, (dyn FnOnce<(), Output = Droppable> + '95), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '95)}, {built_in impl Sized for Global}]] _h
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_live(_34)
     storage_live(_39)
     storage_live(_40)
+    // A closure with a higher-ranked signature.
     _40 = const 4u32
     _39 = &_40
     _34 = move _39
@@ -1410,23 +1341,7 @@ fn main()
     _y_24 = (read (*_25.metadata).method_call)<'126>(move _25, move _26)
     ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'133, (dyn FnOnce<(), Output = u32> + '127), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = u32> + '127)}, {built_in impl Sized for Global}]] _w
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Box::drop_glue<'101, (dyn FnOnce<(), Output = Droppable> + '95), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '95)}, {built_in impl Sized for Global}]] _h
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+        goto cleanup2
     storage_dead(_27)
     storage_dead(_26)
     storage_dead(_25)
@@ -1436,55 +1351,13 @@ fn main()
     storage_dead(_y_24)
     storage_dead(k)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'140, (dyn FnOnce<(), Output = u32> + '134), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = u32> + '134)}, {built_in impl Sized for Global}]] _w
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'101, (dyn FnOnce<(), Output = Droppable> + '95), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '95)}, {built_in impl Sized for Global}]] _h
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(_w)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'147, (dyn FnOnce<(), Output = Droppable> + '141), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '141)}, {built_in impl Sized for Global}]] _h
-    ↳⚡ conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup3
     storage_dead(_h)
     conditional_drop[impl_Destruct_for_Droppable::drop_glue<'148>] d
-    ↳⚡ storage_dead(_31)
-        storage_dead(_30)
-        storage_dead(_29)
-        storage_dead(_40)
-        storage_dead(_39)
-        storage_dead(_38)
-        storage_dead(_37)
-        storage_dead(_36)
-        storage_dead(_35)
-        storage_dead(_34)
-        storage_dead(_33)
-        storage_dead(_32)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(d)
     storage_dead(_y_13)
     storage_dead(_11)
@@ -1505,6 +1378,40 @@ fn main()
     storage_dead(_33)
     storage_dead(_32)
     return
+
+    cleanup0: {
+        storage_dead(_31)
+        storage_dead(_30)
+        storage_dead(_29)
+        storage_dead(_40)
+        storage_dead(_39)
+        storage_dead(_38)
+        storage_dead(_37)
+        storage_dead(_36)
+        storage_dead(_35)
+        storage_dead(_34)
+        storage_dead(_33)
+        storage_dead(_32)
+        unwind_continue
+    }
+
+    cleanup1: {
+        conditional_drop[{impl Destruct for test_crate::main::{closure#2}}::drop_glue<'89>] _19
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup2: {
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'101, (dyn FnOnce<(), Output = Droppable> + '95), Global>[{built_in impl MetaSized for (dyn FnOnce<(), Output = Droppable> + '95)}, {built_in impl Sized for Global}]] _h
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup3: {
+        conditional_drop[impl_Destruct_for_Droppable::drop_glue<'94>] d
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
+    }
 }
 
 

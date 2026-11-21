@@ -109,14 +109,10 @@ fn main()
     ↳⚡ unwind_continue
     storage_live(_2)
     _2 = new()
-    ↳⚡ drop[impl_Destruct_for_String::drop_glue<'0>] s
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     drop[impl_Destruct_for_String::drop_glue<'1>] s
     ↳⚡ s = move _2
-        drop[impl_Destruct_for_String::drop_glue<'0>] s
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+        goto cleanup0
     s = move _2
     storage_dead(_2)
     _0 = ()
@@ -124,6 +120,12 @@ fn main()
     ↳⚡ unwind_continue
     storage_dead(s)
     return
+
+    cleanup0: {
+        drop[impl_Destruct_for_String::drop_glue<'0>] s
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 

@@ -156,19 +156,7 @@ fn main()
     _10 = move _11
     _2 = &(*_10)
     _1 = inherited::<u8><'12>(move _2)
-    ↳⚡ storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_12)
     storage_live(_16)
     storage_live(_17)
@@ -182,19 +170,7 @@ fn main()
     _9 = move _12
     _4 = &(*_9)
     _3 = overridden<'14>(move _4)
-    ↳⚡ storage_dead(_10)
-        storage_dead(_9)
-        storage_dead(_8)
-        storage_dead(_19)
-        storage_dead(_18)
-        storage_dead(_17)
-        storage_dead(_16)
-        storage_dead(_15)
-        storage_dead(_14)
-        storage_dead(_13)
-        storage_dead(_12)
-        storage_dead(_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_13)
     storage_live(_18)
     storage_live(_19)
@@ -227,6 +203,22 @@ fn main()
     storage_dead(_12)
     storage_dead(_11)
     return
+
+    cleanup0: {
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_19)
+        storage_dead(_18)
+        storage_dead(_17)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        unwind_continue
+    }
 }
 
 

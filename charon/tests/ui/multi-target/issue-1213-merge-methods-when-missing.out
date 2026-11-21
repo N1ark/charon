@@ -254,12 +254,10 @@ fn f<'_0>(blocks: &'_0 mut [u8])
     storage_live(_4)
     _4 = &two-phase-mut (*blocks) with_metadata(read blocks.metadata)
     _3 = iter_mut<'13, u8>[{built_in impl Sized for u8}](move _4)
-    ↳⚡ storage_dead(blocks)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     _2 = into_iter<IterMut<'14, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for IterMut<'14, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_IterMut<'14, u8>[{built_in impl Sized for u8}]](move _3)
-    ↳⚡ storage_dead(blocks)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_live(iter)
     iter = move _2
@@ -270,8 +268,7 @@ fn f<'_0>(blocks: &'_0 mut [u8])
         _8 = &mut iter
         _7 = &two-phase-mut (*_8)
         _6 = impl_Iterator_for_IterMut::next<'21, '22, u8>[{built_in impl Sized for u8}](move _7)
-        ↳⚡ storage_dead(blocks)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_7)
         match _6 {
             Option::None => {
@@ -291,6 +288,11 @@ fn f<'_0>(blocks: &'_0 mut [u8])
     storage_dead(_2)
     storage_dead(blocks)
     return
+
+    cleanup0: {
+        storage_dead(blocks)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::g
@@ -318,28 +320,20 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
     storage_live(_6)
     _6 = &(*s0) with_metadata(read s0.metadata)
     _5 = iter<'68, u8>[{built_in impl Sized for u8}](move _6)
-    ↳⚡ storage_dead(s1)
-        storage_dead(s0)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     storage_live(_7)
     storage_live(_8)
     _8 = &(*s1) with_metadata(read s1.metadata)
     _7 = iter<'69, u8>[{built_in impl Sized for u8}](move _8)
-    ↳⚡ storage_dead(s1)
-        storage_dead(s0)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_8)
     _4 = impl_Iterator_for_Iter::zip<'70, u8, Iter<'71, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for u8}, {built_in impl Sized for Iter<'71, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'70, u8>[{built_in impl Sized for u8}]}, impl_IntoIterator_for_T<Iter<'71, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'71, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'71, u8>[{built_in impl Sized for u8}]]](move _5, move _7)
-    ↳⚡ storage_dead(s1)
-        storage_dead(s0)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     storage_dead(_5)
     _3 = into_iter<Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}]>[{built_in impl Sized for Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}]}, impl_Iterator_for_Zip<Iter<'91, u8>[{built_in impl Sized for u8}], Iter<'94, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'91, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'94, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'91, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'94, u8>[{built_in impl Sized for u8}]]](move _4)
-    ↳⚡ storage_dead(s1)
-        storage_dead(s0)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_live(iter)
     iter = move _3
@@ -350,9 +344,7 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
         _12 = &mut iter
         _11 = &two-phase-mut (*_12)
         _10 = impl_Iterator_for_Zip::next<'159, Iter<'147, u8>[{built_in impl Sized for u8}], Iter<'148, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Iter<'147, u8>[{built_in impl Sized for u8}]}, {built_in impl Sized for Iter<'148, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Iter<'147, u8>[{built_in impl Sized for u8}], impl_Iterator_for_Iter<'148, u8>[{built_in impl Sized for u8}]](move _11)
-        ↳⚡ storage_dead(s1)
-            storage_dead(s0)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_11)
         match _10 {
             Option::None => {
@@ -373,6 +365,12 @@ fn g<'_0, '_1>(s0: &'_0 [u8], s1: &'_1 [u8])
     storage_dead(s1)
     storage_dead(s0)
     return
+
+    cleanup0: {
+        storage_dead(s1)
+        storage_dead(s0)
+        unwind_continue
+    }
 }
 
 

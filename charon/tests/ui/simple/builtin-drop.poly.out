@@ -256,13 +256,16 @@ where
     drop[TraitClause1::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[TraitClause2::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[TraitClause2::drop_glue<'2>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::drop_array

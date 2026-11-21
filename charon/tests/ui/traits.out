@@ -148,13 +148,16 @@ where
     drop[{built_in impl Destruct for A}::drop_glue<'1>] (*_1)._0
     ↳⚡ drop[{built_in impl Destruct for B}::drop_glue<'3>] (*_1)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[{built_in impl Destruct for B}::drop_glue<'2>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::BoolTrait
@@ -226,8 +229,7 @@ pub fn test_bool_trait_bool(x: bool) -> bool
     storage_live(_3)
     _3 = &x
     _2 = impl_BoolTrait_for_bool::get_bool<'2>(move _3)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _2 {
     } else {
         storage_dead(_3)
@@ -240,12 +242,16 @@ pub fn test_bool_trait_bool(x: bool) -> bool
     storage_live(_4)
     _4 = &x
     _0 = impl_BoolTrait_for_bool::ret_true<'3>(move _4)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_2)
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl BoolTrait for Option<T>[TraitClause0]}::get_bool
@@ -314,19 +320,13 @@ where
     storage_live(_3)
     _3 = &x
     _2 = impl_BoolTrait_for_Option::get_bool<'2, T>[TraitClause0](move _3)
-    ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'3, T>[TraitClause0]] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     if move _2 {
         storage_dead(_3)
         storage_live(_4)
         _4 = &x
         _0 = impl_BoolTrait_for_Option::ret_true<'4, T>[TraitClause0](move _4)
-        ↳⚡ conditional_drop[impl_Destruct_for_Option::drop_glue<'3, T>[TraitClause0]] x
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(x)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_4)
     } else {
         storage_dead(_3)
@@ -334,10 +334,20 @@ where
     }
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_Option::drop_glue<'5, T>[TraitClause0]] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(x)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_Option::drop_glue<'3, T>[TraitClause0]] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::test_bool_trait
@@ -356,14 +366,17 @@ where
     _0 = TraitClause1::get_bool<'1>(move _2)
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::ToU64
@@ -415,11 +428,7 @@ where
     _2 = TraitClause1::to_u64(move _3)
     ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'0>] _3
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, A, A>[TraitClause0]] self
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_6)
-        storage_dead(self)
-        unwind_continue
+        goto cleanup0
     storage_dead(_3)
     storage_live(_4)
     storage_live(_5)
@@ -427,23 +436,29 @@ where
     _4 = TraitClause1::to_u64(move _5)
     ↳⚡ conditional_drop[{built_in impl Destruct for A}::drop_glue<'2>] _5
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, A, A>[TraitClause0]] self
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_6)
-        storage_dead(self)
-        unwind_continue
+        goto cleanup0
     storage_dead(_5)
     _6 = copy _2 panic.+ copy _4
     _0 = move _6
     storage_dead(_4)
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_tuple::drop_glue<'3, A, A>[TraitClause0]] self
-    ↳⚡ storage_dead(_6)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_6)
     storage_dead(self)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, A, A>[TraitClause0]] self
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(_6)
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl ToU64 for (A, A)}
@@ -474,14 +489,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[impl_Destruct_for_tuple::drop_glue<'2, T, T>[TraitClause0]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, T, T>[TraitClause0]] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::g
@@ -502,14 +520,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[impl_Destruct_for_tuple::drop_glue<'2, T, T>[TraitClause0]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_tuple::drop_glue<'1, T, T>[TraitClause0]] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::h0
@@ -574,14 +595,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'2, T>[TraitClause0]] self
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(self)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'1, T>[TraitClause0]] self
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl ToU64 for Wrapper<T>[TraitClause0]}
@@ -631,14 +655,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'2, T>[TraitClause0]] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[impl_Destruct_for_Wrapper::drop_glue<'1, T>[TraitClause0]] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::ToType
@@ -702,14 +729,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for T2}::drop_glue<'2>] y
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T2}::drop_glue<'1>] y
-    ↳⚡ storage_dead(y)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(y)
     return
+
+    cleanup0: {
+        storage_dead(y)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::OfTypeBis
@@ -743,14 +773,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for T2}::drop_glue<'2>] y
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(y)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T2}::drop_glue<'1>] y
-    ↳⚡ storage_dead(y)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(y)
     return
+
+    cleanup0: {
+        storage_dead(y)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::TestType
@@ -810,11 +843,7 @@ where
     x_3 = TraitClause1::to_u64(move _4)
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x_2
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x_2)
-        storage_dead(self)
-        unwind_continue
+        goto cleanup0
     storage_dead(_4)
     fake_read(x_3)
     storage_live(y)
@@ -829,11 +858,7 @@ where
         storage_live(_8)
         _8 = &y
         _0 = impl_TestTrait_for_TestType1::test<'4>(move _8)
-        ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x_2
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(x_2)
-            storage_dead(self)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_8)
     } else {
         storage_dead(_7)
@@ -843,12 +868,22 @@ where
     storage_dead(y)
     storage_dead(x_3)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] x_2
-    ↳⚡ storage_dead(x_2)
-        storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(x_2)
     storage_dead(self)
     return
+
+    cleanup0: {
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] x_2
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup1
+    }
+
+    cleanup1: {
+        storage_dead(x_2)
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{TestType<T>[TraitClause0]}::test::TestTrait
@@ -1029,14 +1064,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for TraitClause1::W}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for TraitClause1::W}::drop_glue<'1>] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::test_where1

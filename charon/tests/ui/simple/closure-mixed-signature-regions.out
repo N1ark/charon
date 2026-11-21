@@ -278,19 +278,21 @@ where
     _0 = TraitClause1<'10>::call<'12>(move _3, move _4)
     ↳⚡ conditional_drop[{built_in impl Destruct for F}::drop_glue<'13>] f
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+        goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for F}::drop_glue<'14>] f
-    ↳⚡ storage_dead(x)
-        storage_dead(f)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     storage_dead(f)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        storage_dead(f)
+        unwind_continue
+    }
 }
 
 fn test_crate::call<'a, 'b, T>(x: &'b u8) -> (&'b u8, &'a u8)
@@ -306,17 +308,20 @@ where
     storage_live(_0)
     storage_live(_2)
     _2 = make<'a, T>[TraitClause0, TraitClause1]()
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_3)
     _3 = &(*x)
     _0 = apply<'10, '30, {closure}<'13, '12, T>[TraitClause0, TraitClause1]>[{built_in impl Sized for {closure}<'13, '12, T>[TraitClause0, TraitClause1]}, for<'c> impl_Fn_tuple_for_closure<'13, '12, '25, T>[TraitClause0, TraitClause1]](move _2, move _3)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 

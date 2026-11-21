@@ -165,7 +165,7 @@ module PatternTest = struct
             List.concat_map list_stmt_calls blk.statements
           in
           let calls =
-            list_block_calls (body_as_structured_exn decl.body).body
+            list_block_calls (body_as_structured_exn decl.body).body.block
           in
           let fn_ptrs =
             List.map

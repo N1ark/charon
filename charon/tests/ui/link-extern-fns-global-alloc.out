@@ -70,15 +70,11 @@ unsafe fn test_crate::_::__rust_alloc(size: usize, align: Alignment) -> *mut u8
     storage_live(_8)
     _8 = copy align
     _6 = from_size_alignment_unchecked(move _7, move _8)
-    ↳⚡ storage_dead(align)
-        storage_dead(size)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_8)
     storage_dead(_7)
     _0 = alloc<'4>(move _3, move _6)
-    ↳⚡ storage_dead(align)
-        storage_dead(size)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     storage_dead(_5)
     storage_dead(_4)
@@ -86,6 +82,12 @@ unsafe fn test_crate::_::__rust_alloc(size: usize, align: Alignment) -> *mut u8
     storage_dead(align)
     storage_dead(size)
     return
+
+    cleanup0: {
+        storage_dead(align)
+        storage_dead(size)
+        unwind_continue
+    }
 }
 
 #[rustc_allocator_zeroed_variant = "__rust_alloc_zeroed"]

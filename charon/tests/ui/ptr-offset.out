@@ -377,8 +377,7 @@ fn main()
     ↳⚡ undefined_behavior
     storage_dead(_4)
     ptr = as_ptr<'3, i32>[{built_in impl Sized for i32}](move _3)
-    ↳⚡ storage_dead(_9)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     fake_read(ptr)
     storage_live(_5)
@@ -387,8 +386,7 @@ fn main()
     storage_live(_8)
     _8 = copy ptr
     _7 = offset<i32>[{built_in impl Sized for i32}](move _8, const 1isize)
-    ↳⚡ storage_dead(_9)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_8)
     _6 = copy (*_7)
     _5 = move _6 == const 42i32
@@ -405,6 +403,11 @@ fn main()
     storage_dead(s)
     storage_dead(_9)
     return
+
+    cleanup0: {
+        storage_dead(_9)
+        unwind_continue
+    }
 }
 
 

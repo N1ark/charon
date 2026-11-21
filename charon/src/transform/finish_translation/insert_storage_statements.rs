@@ -140,7 +140,7 @@ impl Transform {
         let _ = storage_visitor.visit(body);
 
         let locals_with_missing_storage_lives = storage_visitor.locals_missing_storage_lives();
-        let first_span = if let Some(fst) = body.body.statements.first() {
+        let first_span = if let Some(fst) = body.body.block.statements.first() {
             fst.span
         } else {
             body.span
@@ -148,7 +148,7 @@ impl Transform {
         let new_statements = locals_with_missing_storage_lives.iter().map(|local| {
             llbc_ast::Statement::new(first_span, llbc_ast::StatementKind::StorageLive(*local))
         });
-        body.body.statements.splice(0..0, new_statements);
+        body.body.block.statements.splice(0..0, new_statements);
 
         if insert_missing_storage_deads {
             let locals_with_missing_storage_deads = storage_visitor.locals_missing_storage_deads();

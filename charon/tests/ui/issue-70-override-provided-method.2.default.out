@@ -35,21 +35,24 @@ where
     storage_live(_3)
     _3 = &(*self) with_metadata(read self.metadata)
     _2 = TraitClause0::required<'3>(move _3)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self) with_metadata(read self.metadata)
     _4 = TraitClause0::provided2<'4>(move _5)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 fn test_crate::Trait::provided2<'_0, Self>(self: &'_0 Self)
@@ -70,21 +73,24 @@ where
     storage_live(_3)
     _3 = &(*self) with_metadata(read self.metadata)
     _2 = TraitClause0::required<'3>(move _3)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self) with_metadata(read self.metadata)
     _4 = TraitClause0::provided1<'4>(move _5)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::Foo
@@ -106,21 +112,24 @@ fn impl_Trait_for_Foo::provided1<'_0>(self: &'_0 Foo)
     storage_live(_3)
     _3 = &(*self)
     _2 = impl_Trait_for_Foo::required<'3>(move _3)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
     _4 = impl_Trait_for_Foo::provided2<'4>(move _5)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Trait for Foo}::provided2
@@ -139,21 +148,24 @@ fn impl_Trait_for_Foo::provided2<'_0>(self: &'_0 Foo)
     storage_live(_3)
     _3 = &(*self)
     _2 = impl_Trait_for_Foo::required<'3>(move _3)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
     _4 = impl_Trait_for_Foo::provided1<'4>(move _5)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Trait for Foo}::required
@@ -207,21 +219,24 @@ fn impl_Trait_for_Bar::provided2<'_0>(self: &'_0 Bar)
     storage_live(_3)
     _3 = &(*self)
     _2 = impl_Trait_for_Bar::required<'3>(move _3)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = &(*self)
     _4 = impl_Trait_for_Bar::provided1<'4>(move _5)
-    ↳⚡ storage_dead(self)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _0 = ()
     storage_dead(self)
     return
+
+    cleanup0: {
+        storage_dead(self)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl Trait for Bar}::required

@@ -123,12 +123,7 @@ fn move_values(flag: bool)
     storage_dead(_5)
     storage_live(_18)
     _18 = new<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}](move _17)
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'1, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(flag)
-        storage_dead(ret_14)
-        storage_dead(ret_11)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(ret_11)
     storage_live(x_12)
     storage_live(y_13)
@@ -139,12 +134,7 @@ fn move_values(flag: bool)
     ret_11 = into_vec<NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}](move y_13)
     ↳⚡ storage_dead(y_13)
         storage_dead(x_12)
-        conditional_drop[impl_Destruct_for_Box::drop_glue<'1, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _4
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(flag)
-        storage_dead(ret_14)
-        storage_dead(ret_11)
-        unwind_continue
+        goto cleanup0
     storage_dead(y_13)
     storage_dead(x_12)
     _v = move ret_11
@@ -165,14 +155,7 @@ fn move_values(flag: bool)
         storage_dead(_10)
         storage_live(_20)
         _20 = new<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}](move _19)
-        ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'5, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _9
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[impl_Destruct_for_Vec::drop_glue<'2, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _v
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(flag)
-            storage_dead(ret_14)
-            storage_dead(ret_11)
-            unwind_continue
+        ↳⚡ goto cleanup1
         storage_live(ret_14)
         storage_live(x_15)
         storage_live(y_16)
@@ -183,14 +166,7 @@ fn move_values(flag: bool)
         ret_14 = into_vec<NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}](move y_16)
         ↳⚡ storage_dead(y_16)
             storage_dead(x_15)
-            conditional_drop[impl_Destruct_for_Box::drop_glue<'5, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _9
-            ↳⚡ unwind_terminate(in_cleanup)
-            conditional_drop[impl_Destruct_for_Vec::drop_glue<'2, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _v
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(flag)
-            storage_dead(ret_14)
-            storage_dead(ret_11)
-            unwind_continue
+            goto cleanup1
         storage_dead(y_16)
         storage_dead(x_15)
         _w = move ret_14
@@ -198,12 +174,7 @@ fn move_values(flag: bool)
         fake_read(_w)
         _0 = ()
         conditional_drop[impl_Destruct_for_Vec::drop_glue<'6, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _w
-        ↳⚡ conditional_drop[impl_Destruct_for_Vec::drop_glue<'2, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _v
-            ↳⚡ unwind_terminate(in_cleanup)
-            storage_dead(flag)
-            storage_dead(ret_14)
-            storage_dead(ret_11)
-            unwind_continue
+        ↳⚡ goto cleanup2
         storage_dead(_w)
         storage_dead(y_7)
     } else {
@@ -211,16 +182,38 @@ fn move_values(flag: bool)
     }
     storage_dead(_6)
     conditional_drop[impl_Destruct_for_Vec::drop_glue<'4, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _v
-    ↳⚡ storage_dead(flag)
-        storage_dead(ret_14)
-        storage_dead(ret_11)
-        unwind_continue
+    ↳⚡ goto cleanup3
     storage_dead(_v)
     storage_dead(x_2)
     storage_dead(flag)
     storage_dead(ret_14)
     storage_dead(ret_11)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'1, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _4
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup1: {
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'5, MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}], Global>[{built_in impl MetaSized for MaybeUninit<[NoCopy; 1usize]>[{built_in impl Sized for [NoCopy; 1usize]}]}, {built_in impl Sized for Global}]] _9
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        conditional_drop[impl_Destruct_for_Vec::drop_glue<'2, NoCopy, Global>[{built_in impl Sized for NoCopy}, {built_in impl Sized for Global}]] _v
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup3: {
+        storage_dead(flag)
+        storage_dead(ret_14)
+        storage_dead(ret_11)
+        unwind_continue
+    }
 }
 
 

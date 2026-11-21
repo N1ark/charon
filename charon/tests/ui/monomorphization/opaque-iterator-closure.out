@@ -267,24 +267,25 @@ extern "rust-call" fn call_once(_1: test_crate::main::{closure#2}, tupled_args: 
     storage_live(_5)
     _5 = move _1._0
     _4 = drop::<Thing>(move _5)
-    ↳⚡ storage_dead(x)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_live(_6)
     _6 = copy x
     _0 = callback(move _6)
-    ↳⚡ storage_dead(x)
-        storage_dead(tupled_args)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     storage_dead(x)
     storage_dead(tupled_args)
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 

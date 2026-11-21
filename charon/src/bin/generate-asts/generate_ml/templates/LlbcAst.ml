@@ -6,5 +6,6 @@ open Generated_Meta
 open Identifiers
 module StatementId = OrdIdGen ()
 module BlockId = OrdIdGen ()
+module CleanupId = OrdIdGen ()
 
 (* __REPLACE0__ *)

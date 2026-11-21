@@ -1983,11 +1983,9 @@ pub fn slice_index_range<'_0>(slice: &'_0 [u8]) -> &'_0 [u8]
     _4 = &(*slice) with_metadata(read slice.metadata)
     storage_live(_5)
     _5 = core::ops::range::{RangeInclusive<Idx>[TraitClause0]}::new<usize>[{built_in impl Sized for usize}](const 0usize, const 10usize)
-    ↳⚡ storage_dead(slice)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _3 = impl_Index_for_slice::index<'5, u8, RangeInclusive<usize>[{built_in impl Sized for usize}]>[{built_in impl Sized for u8}, {built_in impl Sized for RangeInclusive<usize>[{built_in impl Sized for usize}]}, impl_SliceIndex_slice_for_RangeInclusive_usize<u8>[{built_in impl Sized for u8}]](move _4, move _5)
-    ↳⚡ storage_dead(slice)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     _2 = &(*_3) with_metadata(read _3.metadata)
@@ -1996,6 +1994,11 @@ pub fn slice_index_range<'_0>(slice: &'_0 [u8]) -> &'_0 [u8]
     storage_dead(_2)
     storage_dead(slice)
     return
+
+    cleanup0: {
+        storage_dead(slice)
+        unwind_continue
+    }
 }
 
 

@@ -123,14 +123,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] value
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(value)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'1>] value
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(value)
     return
+
+    cleanup0: {
+        storage_dead(value)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::{impl PointerFamily for BoxFamily}
@@ -164,14 +167,17 @@ where
         ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'1>] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::main

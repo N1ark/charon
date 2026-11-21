@@ -478,9 +478,7 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_live(_6)
     storage_live(_7)
@@ -492,14 +490,18 @@ pub fn test_attributes::tests::test_ignore() -> TestDescAndFn
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
     conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 pub static test_attributes::tests::test_ignore: TestDescAndFn = test_attributes::tests::test_ignore()
@@ -631,9 +633,7 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_live(_6)
     storage_live(_7)
@@ -645,14 +645,18 @@ pub fn test_attributes::tests::test_should_panic() -> TestDescAndFn
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
     conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 pub static test_attributes::tests::test_should_panic: TestDescAndFn = test_attributes::tests::test_should_panic()
@@ -777,9 +781,7 @@ pub fn test_attributes::tests::test_foo() -> TestDescAndFn
     storage_dead(_4)
     storage_dead(_3)
     conditional_drop[impl_Destruct_for_TestName::drop_glue<'10>] _2
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_live(_6)
     storage_live(_7)
@@ -791,14 +793,18 @@ pub fn test_attributes::tests::test_foo() -> TestDescAndFn
     storage_dead(_7)
     _0 = TestDescAndFn { desc: move _1, testfn: move _6 }
     conditional_drop[impl_Destruct_for_TestFn::drop_glue<'11>] _6
-    ↳⚡ conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'13>] _1
     ↳⚡ unwind_continue
     storage_dead(_1)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_TestDesc::drop_glue<'12>] _1
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 pub static test_attributes::tests::test_foo: TestDescAndFn = test_attributes::tests::test_foo()

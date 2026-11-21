@@ -260,38 +260,10 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
     storage_live(_6)
     _6 = &(*a) with_metadata(read a.metadata)
     _5 = chunks<'15, u8>[{built_in impl Sized for u8}](move _6, const 3usize)
-    ↳⚡ storage_dead(_44)
-        storage_dead(_37)
-        storage_dead(result)
-        storage_dead(a)
-        storage_dead(_54)
-        storage_dead(_53)
-        storage_dead(_52)
-        storage_dead(_51)
-        storage_dead(_50)
-        storage_dead(_49)
-        storage_dead(_48)
-        storage_dead(_47)
-        storage_dead(_46)
-        storage_dead(_45)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     _4 = into_iter<Chunks<'16, u8>[{built_in impl Sized for u8}]>[{built_in impl Sized for Chunks<'16, u8>[{built_in impl Sized for u8}]}, impl_Iterator_for_Chunks<'16, u8>[{built_in impl Sized for u8}]](move _5)
-    ↳⚡ storage_dead(_44)
-        storage_dead(_37)
-        storage_dead(result)
-        storage_dead(a)
-        storage_dead(_54)
-        storage_dead(_53)
-        storage_dead(_52)
-        storage_dead(_51)
-        storage_dead(_50)
-        storage_dead(_49)
-        storage_dead(_48)
-        storage_dead(_47)
-        storage_dead(_46)
-        storage_dead(_45)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_live(iter)
     iter = move _4
@@ -302,21 +274,7 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
         _10 = &mut iter
         _9 = &two-phase-mut (*_10)
         _8 = next<'23, '24, u8>[{built_in impl Sized for u8}](move _9)
-        ↳⚡ storage_dead(_44)
-            storage_dead(_37)
-            storage_dead(result)
-            storage_dead(a)
-            storage_dead(_54)
-            storage_dead(_53)
-            storage_dead(_52)
-            storage_dead(_51)
-            storage_dead(_50)
-            storage_dead(_49)
-            storage_dead(_48)
-            storage_dead(_47)
-            storage_dead(_46)
-            storage_dead(_45)
-            unwind_continue
+        ↳⚡ goto cleanup0
         storage_dead(_9)
         match _8 {
             Option::None => {
@@ -498,6 +456,24 @@ fn f2<'_0, '_1>(a: &'_0 [u8], result: &'_1 mut [i16]) -> usize
     storage_dead(_46)
     storage_dead(_45)
     return
+
+    cleanup0: {
+        storage_dead(_44)
+        storage_dead(_37)
+        storage_dead(result)
+        storage_dead(a)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        unwind_continue
+    }
 }
 
 

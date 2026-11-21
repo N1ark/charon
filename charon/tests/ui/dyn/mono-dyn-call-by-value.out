@@ -225,9 +225,7 @@ fn main()
     storage_live(_16)
     _16 = cast<fn(&'4 (dyn T + '5))>(read (*_5.metadata).method_by_ref)
     _4 = (read _16)(move _5)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_live(_6)
@@ -240,13 +238,9 @@ fn main()
     _6 = (read _18)(move _17)
     ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'16>] _7
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+        goto cleanup0
     conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'17>] _7
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     storage_dead(_6)
     storage_live(f)
@@ -257,14 +251,10 @@ fn main()
     _10 = Foo::<()> { _0: move _11 }
     storage_dead(_11)
     _9 = alloc::boxed::{Box::<Foo::<()>, Global>}::new::<Foo::<()>>(move _10)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     f = unsize_cast<Box::<Foo::<(dyn T)>, Global>, &impl_T_for_unit::{vtable}>(move _9)
     conditional_drop[{impl Destruct for Box::<Foo::<()>, Global>}::drop_glue::<Foo::<()>, Global><'18>] _9
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_10)
     storage_dead(_9)
     fake_read(f)
@@ -274,11 +264,7 @@ fn main()
     storage_live(_19)
     _19 = cast<fn(&'6 (dyn T + '7))>(read (*_13.metadata).method_by_ref)
     _12 = (read _19)(move _13)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_13)
     storage_dead(_12)
     storage_live(_14)
@@ -290,23 +276,29 @@ fn main()
     _14 = (read _21)(move _20)
     ↳⚡ conditional_drop[{built_in impl Destruct for (dyn T + '25)}::drop_glue<'26>] _15
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+        goto cleanup1
     storage_dead(_15)
     storage_dead(_14)
     _0 = ()
     conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'27>] f
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(f)
     conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'28>] b
     ↳⚡ unwind_continue
     storage_dead(b)
     return
+
+    cleanup0: {
+        conditional_drop[{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'13>] b
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
+
+    cleanup1: {
+        conditional_drop[{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'22>] f
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
+    }
 }
 
 

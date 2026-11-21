@@ -2199,6 +2199,13 @@ module Llbc = struct
       | x -> BlockId.id_of_json ctx x
       | _ -> Error "")
 
+  and cleanup_id_of_json (ctx : of_json_ctx) (js : json) :
+      (cleanup_id, string) result =
+    combine_error_msgs js __FUNCTION__
+      (match js with
+      | x -> CleanupId.id_of_json ctx x
+      | _ -> Error "")
+
   and statement_of_json (ctx : of_json_ctx) (js : json) :
       (Generated_LlbcAst.statement, string) result =
     combine_error_msgs js __FUNCTION__
@@ -2362,9 +2369,25 @@ module Llbc = struct
           let* _1 = fun_decl_ref_of_json ctx _1 in
           Ok (UnwindTerminate (_0, _1))
       | `String "UnwindResume" -> Ok UnwindResume
+      | `Assoc [ ("GotoCleanup", _0) ] ->
+          let* _0 = cleanup_id_of_json ctx _0 in
+          Ok (GotoCleanup _0)
       | `String "Return" -> Ok Return
       | `String "UndefinedBehavior" -> Ok UndefinedBehavior
       | `String "Nop" -> Ok Nop
+      | _ -> Error "")
+
+  and structured_body_of_json (ctx : of_json_ctx) (js : json) :
+      (Generated_LlbcAst.structured_body, string) result =
+    combine_error_msgs js __FUNCTION__
+      (match js with
+      | `Assoc [ ("block", block); ("cleanups", cleanups) ]
+      | `List [ block; cleanups ] ->
+          let* block = block_of_json ctx block in
+          let* cleanups =
+            index_vec_of_json cleanup_id_of_json block_of_json ctx cleanups
+          in
+          Ok ({ block; cleanups } : Generated_LlbcAst.structured_body)
       | _ -> Error "")
 end
 
@@ -2657,7 +2680,7 @@ and body_of_json (ctx : of_json_ctx) (js : json) : (body, string) result =
         in
         Ok (UnstructuredBody _0)
     | `Assoc [ ("Structured", _0) ] ->
-        let* _0 = gexpr_body_of_json Llbc.block_of_json ctx _0 in
+        let* _0 = gexpr_body_of_json Llbc.structured_body_of_json ctx _0 in
         Ok (StructuredBody _0)
     | `Assoc [ ("TargetDispatch", _0) ] ->
         let* _0 =

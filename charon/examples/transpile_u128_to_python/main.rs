@@ -240,7 +240,7 @@ impl<'a> PythonTranspiler<'a> {
         .unwrap();
 
         // Write the function body.
-        self.write_block(output, &body.body, 0);
+        self.write_block(output, &body.body.block, 0);
         writeln!(output).unwrap();
     }
 

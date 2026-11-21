@@ -164,16 +164,14 @@ pub fn explicit_arguments(value: &'static u32)
     storage_live(_3)
     _3 = copy value
     _2 = foo<'static>(move _3)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     storage_dead(_2)
     storage_live(_4)
     storage_live(_5)
     _5 = copy value
     _4 = bar<&'static u32>[{built_in impl Sized for &'static u32}](move _5)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_live(_6)
@@ -183,13 +181,17 @@ pub fn explicit_arguments(value: &'static u32)
     _7 = Option::Some { _0: move _8 }
     storage_dead(_8)
     _6 = bar<Option<&'static u32>[{built_in impl Sized for &'static u32}]>[{built_in impl Sized for Option<&'static u32>[{built_in impl Sized for &'static u32}]}](move _7)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     storage_dead(_6)
     _0 = ()
     storage_dead(value)
     return
+
+    cleanup0: {
+        storage_dead(value)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::function_values
@@ -223,8 +225,7 @@ pub fn function_values(value: &'static u32)
     storage_live(_5)
     _5 = &(*value)
     _3 = foo<'2>(move _5)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     storage_dead(_4)
     storage_dead(_3)
@@ -237,8 +238,7 @@ pub fn function_values(value: &'static u32)
     storage_live(_9)
     _9 = &(*value)
     _7 = bar<&'8 u32>[{built_in impl Sized for &'8 u32}](move _9)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_9)
     storage_dead(_8)
     storage_dead(_7)
@@ -251,8 +251,7 @@ pub fn function_values(value: &'static u32)
     storage_live(_13)
     _13 = copy value
     _11 = (move _12)(move _13)
-    ↳⚡ storage_dead(value)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_13)
     storage_dead(_12)
     storage_dead(_11)
@@ -262,6 +261,11 @@ pub fn function_values(value: &'static u32)
     storage_dead(f_2)
     storage_dead(value)
     return
+
+    cleanup0: {
+        storage_dead(value)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::named_arguments
@@ -385,16 +389,18 @@ where
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'0>] _2
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] _1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'1>] _1
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::associated_items

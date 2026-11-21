@@ -292,21 +292,23 @@ fn mk_ptr(x: *mut u32) -> Box::<(dyn Consume), Global>
     storage_live(_4)
     _4 = copy x
     _3 = alloc::boxed::{Box::<*mut u32, Global>}::new::<*mut u32>(move _4)
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _2 = unsize_cast<Box::<(dyn Consume), Global>, &{impl Consume for *mut u32}::{vtable}>(move _3)
     conditional_drop[{impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global><'0>] _3
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_4)
     storage_dead(_3)
     _0 = unsize_cast<Box::<(dyn Consume), Global>,  at []>(move _2)
     conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'1>] _2
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_2)
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::main
@@ -339,11 +341,7 @@ fn main()
     storage_live(_10)
     _10 = cast<fn(&'0 (dyn Consume + '1)) -> u32>(read (*_3.metadata).method_read)
     _v_2 = (read _10)(move _3)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_11)
-        storage_dead(_10)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_3)
     fake_read(_v_2)
     storage_live(n)
@@ -355,11 +353,7 @@ fn main()
     _7 = &mut n
     _6 = &raw mut (*_7)
     p = mk_ptr(move _6)
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_11)
-        storage_dead(_10)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_6)
     fake_read(p)
     storage_dead(_7)
@@ -371,21 +365,13 @@ fn main()
     _v_8 = (read _11)(move _9)
     ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'12>] p
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_11)
-        storage_dead(_10)
-        unwind_continue
+        goto cleanup0
     storage_dead(_9)
     fake_read(_v_8)
     _0 = ()
     storage_dead(_v_8)
     conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'13>] p
-    ↳⚡ conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'8>] x
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_11)
-        storage_dead(_10)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(p)
     storage_dead(n)
     storage_dead(_v_2)
@@ -397,6 +383,14 @@ fn main()
     storage_dead(_11)
     storage_dead(_10)
     return
+
+    cleanup0: {
+        conditional_drop[{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'8>] x
+        ↳⚡ unwind_terminate(in_cleanup)
+        storage_dead(_11)
+        storage_dead(_10)
+        unwind_continue
+    }
 }
 
 

@@ -6,6 +6,7 @@ open Generated_Meta
 open Identifiers
 module StatementId = OrdIdGen ()
 module BlockId = OrdIdGen ()
+module CleanupId = OrdIdGen ()
 
 (** A sequence of statements. *)
 type block = {
@@ -15,6 +16,7 @@ type block = {
 }
 
 and block_id = (BlockId.id[@visitors.opaque])
+and cleanup_id = (CleanupId.id[@visitors.opaque])
 
 (** A statement, which can contain nested statements inside loops or switchers.
 *)
@@ -121,11 +123,22 @@ and statement_kind =
       (** Unwinding must stop for ABI reasons or because cleanup code panicked
           again. The function is the lang item that rustc calls in that case. *)
   | UnwindResume  (** Unwind out of the current function into its caller. *)
+  | GotoCleanup of cleanup_id
+      (** Continue unwinding with the given cleanup block of the body. Only ends
+          blocks that run during unwinding. *)
   | Return
   | UndefinedBehavior
       (** Reaching this point is undefined behavior in the Rust abstract
           machine. *)
   | Nop  (** No-op. *)
+
+(** The code of a body. *)
+and structured_body = {
+  block : block;  (** The statements of the body. *)
+  cleanups : block list;
+      (** Blocks run during unwinding that several unwind paths continue with,
+          using [[StatementKind::GotoCleanup]]. *)
+}
 [@@deriving
   show,
   eq,

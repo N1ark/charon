@@ -266,7 +266,7 @@ fn spans() -> anyhow::Result<()> {
 
     let body = &function.body.as_structured().unwrap();
     // Span of the function body
-    assert_eq!(repr_span(body.body.span), "4:16-11:9");
+    assert_eq!(repr_span(body.body.block.span), "4:16-11:9");
 
     let sum_var = &body.locals.locals[2];
     assert_eq!(sum_var.name.as_deref(), Some("sum"));
@@ -274,6 +274,7 @@ fn spans() -> anyhow::Result<()> {
 
     let the_loop = body
         .body
+        .block
         .statements
         .iter()
         .find(|st| st.kind.is_loop())
@@ -1019,7 +1020,7 @@ fn known_trait_method_call() -> anyhow::Result<()> {
         function.item_meta.name.debug_repr(&crate_data),
         "test_crate::use_default"
     );
-    let body = &function.body.as_structured().unwrap().body;
+    let body = &function.body.as_structured().unwrap().body.block;
     let call = body
         .statements
         .iter()

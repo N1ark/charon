@@ -82,18 +82,21 @@ fn foo_same() -> u64
     storage_live(_3)
     storage_live(_1)
     _1 = f2_same()
-    ↳⚡ storage_dead(_3)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_2)
     _2 = f3_different()
-    ↳⚡ storage_dead(_3)
-        unwind_continue
+    ↳⚡ goto cleanup0
     _3 = copy _1 panic.+ copy _2
     _0 = move _3
     storage_dead(_2)
     storage_dead(_1)
     storage_dead(_3)
     return
+
+    cleanup0: {
+        storage_dead(_3)
+        unwind_continue
+    }
 }
 
 

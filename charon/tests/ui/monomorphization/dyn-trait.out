@@ -104,14 +104,10 @@ fn main()
     _5 = unsize_cast<&'8 (dyn Display + '9), &impl_Display_for_String::{vtable}>(move _6)
     storage_dead(_6)
     _4 = dyn_to_string<'10>(move _5)
-    ↳⚡ conditional_drop[drop_glue<'11>] str
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_5)
     conditional_drop[drop_glue<'12>] _4
-    ↳⚡ conditional_drop[drop_glue<'11>] str
-        ↳⚡ unwind_terminate(in_cleanup)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_7)
     storage_dead(_4)
     _0 = ()
@@ -119,6 +115,12 @@ fn main()
     ↳⚡ unwind_continue
     storage_dead(str)
     return
+
+    cleanup0: {
+        conditional_drop[drop_glue<'11>] str
+        ↳⚡ unwind_terminate(in_cleanup)
+        unwind_continue
+    }
 }
 
 

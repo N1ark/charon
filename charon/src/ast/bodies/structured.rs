@@ -16,8 +16,22 @@ use crate::ast::*;
 generate_index_type!(StatementId);
 // Globally-unique identifier for each block.
 generate_index_type!(BlockId);
+// Identifier of a cleanup block of a body.
+generate_index_type!(CleanupId);
 
-pub type ExprBody = GExprBody<Block>;
+pub type ExprBody = GExprBody<StructuredBody>;
+
+/// The code of a body.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(state_implements = DedupSerializerState)]
+pub struct StructuredBody {
+    /// The statements of the body.
+    pub block: Block,
+    /// Blocks run during unwinding that several unwind paths continue with, using
+    /// [`StatementKind::GotoCleanup`].
+    pub cleanups: IndexVec<CleanupId, Block>,
+}
 
 /// A sequence of statements.
 #[derive(Debug, Clone, Eq)]
@@ -142,6 +156,9 @@ pub enum StatementKind {
     UnwindTerminate(UnwindTerminateReason, FunDeclRef),
     /// Unwind out of the current function into its caller.
     UnwindResume,
+    /// Continue unwinding with the given cleanup block of the body. Only ends blocks that run
+    /// during unwinding.
+    GotoCleanup(CleanupId),
 
     Return,
     /// Reaching this point is undefined behavior in the Rust abstract machine.
@@ -292,6 +309,7 @@ impl Block {
                     | StatementKind::Continue(..)
                     | StatementKind::UnwindTerminate(..)
                     | StatementKind::UnwindResume
+                    | StatementKind::GotoCleanup(..)
                     | StatementKind::Return
                     | StatementKind::UndefinedBehavior
                     | StatementKind::Nop => {}
@@ -300,6 +318,36 @@ impl Block {
             exit_blk(blk);
         }
         visit_block(self, &mut exit_blk, &mut enter_stmt);
+    }
+}
+
+impl StructuredBody {
+    /// The body block and the cleanup blocks.
+    pub fn blocks_mut(&mut self) -> impl Iterator<Item = &mut Block> {
+        std::iter::once(&mut self.block).chain(self.cleanups.iter_mut())
+    }
+
+    /// Apply a function to all the statements, in a top-down manner. See [`Block::visit_statements`].
+    pub fn visit_statements<F: FnMut(&mut Statement)>(&mut self, mut f: F) {
+        for block in self.blocks_mut() {
+            block.visit_statements(&mut f);
+        }
+    }
+
+    /// Apply a transformer to all the statements, in a bottom-up manner. See
+    /// [`Block::transform_sequences`].
+    pub fn transform_sequences<F: FnMut(&mut [Statement]) -> Vec<Statement>>(&mut self, mut f: F) {
+        for block in self.blocks_mut() {
+            block.transform_sequences(&mut f);
+        }
+    }
+
+    /// Visit the blocks and their sub-blocks in a bottom-up (post-order) traversal. See
+    /// [`Block::visit_blocks_bwd`].
+    pub fn visit_blocks_bwd<F: FnMut(&mut Block)>(&mut self, mut f: F) {
+        for block in self.blocks_mut() {
+            block.visit_blocks_bwd(&mut f);
+        }
     }
 }
 

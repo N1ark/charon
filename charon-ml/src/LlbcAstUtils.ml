@@ -40,7 +40,8 @@ let block_has_loops (blk : block) : bool =
 (** Check if a {!type:Charon.LlbcAst.fun_decl} contains loops *)
 let fun_decl_has_loops (fd : fun_decl) : bool =
   match fd.body with
-  | StructuredBody body -> block_has_loops body.body
+  | StructuredBody body ->
+      List.exists block_has_loops (body.body.block :: body.body.cleanups)
   | _ -> false
 
 let crate_get_item_meta (m : crate) (id : item_id) : Types.item_meta option =
@@ -74,7 +75,7 @@ class ['self] map_crate =
       let { span; locals; bound_body_regions; body } = body in
       let span = self#visit_span env span in
       let locals = self#visit_locals env locals in
-      let body = self#visit_block env body in
+      let body = self#visit_structured_body env body in
       { span; locals; bound_body_regions; body }
 
     method visit_fun_decl env (decl : fun_decl) : fun_decl =
@@ -87,7 +88,8 @@ class ['self] map_crate =
       let body =
         match body with
         | StructuredBody body ->
-            StructuredBody (self#visit_gexpr_body self#visit_block env body)
+            StructuredBody
+              (self#visit_gexpr_body self#visit_structured_body env body)
         | UnstructuredBody _ -> (* ULLBC in LLBC visitor: ignore *) body
         | ExternBody (symbol, definition) ->
             ExternBody
@@ -223,7 +225,7 @@ class ['self] iter_crate =
       self#visit_int env bound_body_regions;
       self#visit_span env span;
       self#visit_locals env locals;
-      self#visit_block env body
+      self#visit_structured_body env body
 
     method visit_fun_decl env (decl : fun_decl) : unit =
       let { def_id; item_meta; generics; signature; src; body } = decl in

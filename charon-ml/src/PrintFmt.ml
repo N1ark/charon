@@ -2348,6 +2348,8 @@ module Llbc = struct
           (AbortUnwindTerminate reason)
     | Return -> Format.fprintf fmt "%sreturn" indent
     | UnwindResume -> Format.fprintf fmt "%sunwind_continue" indent
+    | GotoCleanup id ->
+        Format.fprintf fmt "%sgoto cleanup%d" indent (CleanupId.to_int id)
     | Break i -> Format.fprintf fmt "%sbreak %d" indent i
     | Continue i -> Format.fprintf fmt "%scontinue %d" indent i
     | Nop -> Format.fprintf fmt "%snop" indent
@@ -2410,6 +2412,18 @@ module Llbc = struct
         | Nop -> ()
         | _ -> pp_string fmt "\n")
       b.statements
+
+  (** Print the body block, followed by the cleanup blocks. *)
+  and pp_structured_body (env : fmt_env) (indent : string)
+      (indent_incr : string) (fmt : Format.formatter) (body : structured_body) :
+      unit =
+    pp_block env indent indent_incr fmt body.block;
+    List.iteri
+      (fun i block ->
+        Format.fprintf fmt "\n%scleanup%d: {\n%a%s}\n" indent i
+          (pp_block env (indent ^ indent_incr) indent_incr)
+          block indent)
+      body.cleanups
 end
 
 module Ullbc = struct
@@ -2655,7 +2669,7 @@ let pp_fun_decl (env : fmt_env) (indent : string) (indent_incr : string)
       Format.fprintf fmt "\n%s{\n%a\n\n%a%s}" indent
         (pp_locals env body_indent)
         locals
-        (pp_llbc_block env body_indent indent_incr)
+        (Llbc.pp_structured_body env body_indent indent_incr)
         body indent
   | UnstructuredBody { locals; body; _ } ->
       let env = fmt_env_set_locals env locals in

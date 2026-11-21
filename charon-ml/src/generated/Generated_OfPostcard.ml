@@ -1749,6 +1749,10 @@ module Llbc = struct
       (Generated_LlbcAst.block_id, string) result =
     combine_error_msgs st __FUNCTION__ (BlockId.id_of_postcard ctx st)
 
+  and cleanup_id_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+      (cleanup_id, string) result =
+    combine_error_msgs st __FUNCTION__ (CleanupId.id_of_postcard ctx st)
+
   and statement_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
       (Generated_LlbcAst.statement, string) result =
     combine_error_msgs st __FUNCTION__
@@ -1846,10 +1850,22 @@ module Llbc = struct
            let* _1 = fun_decl_ref_of_postcard ctx st in
            Ok (UnwindTerminate (_0, _1))
        | 17 -> Ok UnwindResume
-       | 18 -> Ok Return
-       | 19 -> Ok UndefinedBehavior
-       | 20 -> Ok Nop
+       | 18 ->
+           let* _0 = cleanup_id_of_postcard ctx st in
+           Ok (GotoCleanup _0)
+       | 19 -> Ok Return
+       | 20 -> Ok UndefinedBehavior
+       | 21 -> Ok Nop
        | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
+
+  and structured_body_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
+      : (Generated_LlbcAst.structured_body, string) result =
+    combine_error_msgs st __FUNCTION__
+      (let* block = block_of_postcard ctx st in
+       let* cleanups =
+         index_vec_of_postcard cleanup_id_of_postcard block_of_postcard ctx st
+       in
+       Ok ({ block; cleanups } : Generated_LlbcAst.structured_body))
 end
 
 let rec ___ = ()
@@ -2089,7 +2105,9 @@ and body_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          in
          Ok (UnstructuredBody _0)
      | 1 ->
-         let* _0 = gexpr_body_of_postcard Llbc.block_of_postcard ctx st in
+         let* _0 =
+           gexpr_body_of_postcard Llbc.structured_body_of_postcard ctx st
+         in
          Ok (StructuredBody _0)
      | 2 ->
          let* _0 =

@@ -153,6 +153,7 @@ pub(crate) fn generate(
         ("charon_lib::ast::bodies::structured::StatementKind", ("Generated_LlbcAst", "Llbc")),
         ("charon_lib::ast::bodies::structured::Block", ("Generated_LlbcAst", "Llbc")),
         ("charon_lib::ast::bodies::structured::BlockId", ("Generated_LlbcAst", "Llbc")),
+        ("charon_lib::ast::bodies::structured::StructuredBody", ("Generated_LlbcAst", "Llbc")),
     ];
 
     let mut ctx = GenerateCtx::new(crate_data, ambiguous_types);
@@ -175,8 +176,10 @@ pub(crate) fn generate(
             &ctx.id_from_name("charon_lib::ast::type_level::type_info::WithCachedTypeInfo"),
         );
         all_types.remove(&ctx.id_from_name("charon_lib::utils::ustr::Ustr"));
-        let all_llbc_types: HashSet<_> =
-            ctx.children_of_many(&["charon_lib::ast::bodies::structured::Block"]);
+        let all_llbc_types: HashSet<_> = ctx.children_of_many(&[
+            "charon_lib::ast::bodies::structured::Block",
+            "charon_lib::ast::bodies::structured::StructuredBody",
+        ]);
         let all_ullbc_types: HashSet<_> = ctx.children_of_many(&[
             "charon_lib::ast::bodies::unstructured::BlockData",
             "charon_lib::ast::bodies::unstructured::BlockId",
@@ -369,6 +372,7 @@ pub(crate) fn generate(
                     extra_types: &[],
                 })), &[
                     "charon_lib::ast::bodies::structured::Statement",
+                    "charon_lib::ast::bodies::structured::StructuredBody",
                 ]),
             ]),
         },

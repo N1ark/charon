@@ -135,13 +135,16 @@ where
     drop[{built_in impl Destruct for T}::drop_glue<'1>] ((*_1) as variant List::Cons)._0
     ↳⚡ drop[impl_Destruct_for_Box::drop_glue<'3, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] ((*_1) as variant List::Cons)._1
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
+        goto cleanup0
     drop[impl_Destruct_for_Box::drop_glue<'2, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] ((*_1) as variant List::Cons)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(_1)
     return
+
+    cleanup0: {
+        storage_dead(_1)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::One
@@ -303,14 +306,17 @@ where
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'0>] _2
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'2>] x
         ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(x)
-        unwind_continue
+        goto cleanup0
     storage_dead(_2)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'1>] x
-    ↳⚡ storage_dead(x)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(x)
     return
+
+    cleanup0: {
+        storage_dead(x)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::cast_u32_to_i32
@@ -535,17 +541,13 @@ pub fn test_box1()
     _0 = ()
     storage_live(b)
     b = new<i32>[{built_in impl Sized for i32}](const 0i32)
-    ↳⚡ storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup0
     fake_read(b)
     storage_live(x_2)
     storage_live(_3)
     _3 = &two-phase-mut b
     x_2 = deref_mut<'4, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}](move _3)
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'5, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}]] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_3)
     fake_read(x_2)
     (*x_2) = const 1i32
@@ -553,10 +555,7 @@ pub fn test_box1()
     storage_live(_5)
     _5 = &b
     x_4 = deref<'6, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}](move _5)
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'5, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}]] b
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_5)
     fake_read(x_4)
     storage_live(_6)
@@ -574,11 +573,21 @@ pub fn test_box1()
     storage_dead(x_4)
     storage_dead(x_2)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'7, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}]] b
-    ↳⚡ storage_dead(_8)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(b)
     storage_dead(_8)
     return
+
+    cleanup0: {
+        storage_dead(_8)
+        unwind_continue
+    }
+
+    cleanup1: {
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'5, i32, Global>[{built_in impl MetaSized for i32}, {built_in impl Sized for Global}]] b
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
+    }
 }
 
 // Full name: test_crate::copy_int
@@ -666,11 +675,7 @@ where
             storage_live(_6)
             _6 = &test_crate::split_list::{promoted_const} with_metadata(const 14usize)
             panic(panic(move _6))
-            ↳⚡ conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
-                ↳⚡ unwind_terminate(in_cleanup)
-                storage_dead(l)
-                storage_dead(_6)
-                unwind_continue
+            ↳⚡ goto cleanup0
         },
     }
     storage_live(hd)
@@ -685,50 +690,46 @@ where
     conditional_drop[impl_Destruct_for_List::drop_glue<'1, T>[TraitClause0]] _5
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] _4
         ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_Box::drop_glue<'6, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] tl
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'8>] hd
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(l)
-        storage_dead(_6)
-        unwind_continue
+        goto cleanup1
     storage_dead(_5)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'3>] _4
-    ↳⚡ conditional_drop[impl_Destruct_for_Box::drop_glue<'6, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] tl
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[{built_in impl Destruct for T}::drop_glue<'8>] hd
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(l)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup1
     storage_dead(_4)
     conditional_drop[impl_Destruct_for_Box::drop_glue<'5, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] tl
-    ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'8>] hd
-        ↳⚡ unwind_terminate(in_cleanup)
-        conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(l)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup2
     storage_dead(tl)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'7>] hd
-    ↳⚡ conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
-        ↳⚡ unwind_terminate(in_cleanup)
-        storage_dead(l)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_dead(hd)
     conditional_drop[impl_Destruct_for_List::drop_glue<'9, T>[TraitClause0]] l
-    ↳⚡ storage_dead(l)
-        storage_dead(_6)
-        unwind_continue
+    ↳⚡ goto cleanup3
     storage_dead(l)
     storage_dead(_6)
     return
+
+    cleanup0: {
+        conditional_drop[impl_Destruct_for_List::drop_glue<'2, T>[TraitClause0]] l
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup3
+    }
+
+    cleanup1: {
+        conditional_drop[impl_Destruct_for_Box::drop_glue<'6, List<T>[TraitClause0], Global>[{built_in impl MetaSized for List<T>[TraitClause0]}, {built_in impl Sized for Global}]] tl
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup2
+    }
+
+    cleanup2: {
+        conditional_drop[{built_in impl Destruct for T}::drop_glue<'8>] hd
+        ↳⚡ unwind_terminate(in_cleanup)
+        goto cleanup0
+    }
+
+    cleanup3: {
+        storage_dead(l)
+        storage_dead(_6)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::test_char
@@ -872,11 +873,7 @@ pub fn test_even_odd()
     _0 = ()
     storage_live(_1)
     _1 = even(const 0u32)
-    ↳⚡ storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_5)
     _5 = &test_crate::test_even_odd::{promoted_const} with_metadata(const 25usize)
     assert(move _1 == true) else panic(panic(move _5))
@@ -888,11 +885,7 @@ pub fn test_even_odd()
     storage_dead(_1)
     storage_live(_2)
     _2 = even(const 4u32)
-    ↳⚡ storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_6)
     _6 = &test_crate::test_even_odd::{promoted_const#1} with_metadata(const 25usize)
     assert(move _2 == true) else panic(panic(move _6))
@@ -904,11 +897,7 @@ pub fn test_even_odd()
     storage_dead(_2)
     storage_live(_3)
     _3 = odd(const 1u32)
-    ↳⚡ storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_7)
     _7 = &test_crate::test_even_odd::{promoted_const#2} with_metadata(const 24usize)
     assert(move _3 == true) else panic(panic(move _7))
@@ -920,11 +909,7 @@ pub fn test_even_odd()
     storage_dead(_3)
     storage_live(_4)
     _4 = odd(const 5u32)
-    ↳⚡ storage_dead(_8)
-        storage_dead(_7)
-        storage_dead(_6)
-        storage_dead(_5)
-        unwind_continue
+    ↳⚡ goto cleanup0
     storage_live(_8)
     _8 = &test_crate::test_even_odd::{promoted_const#3} with_metadata(const 24usize)
     assert(move _4 == true) else panic(panic(move _8))
@@ -940,6 +925,14 @@ pub fn test_even_odd()
     storage_dead(_6)
     storage_dead(_5)
     return
+
+    cleanup0: {
+        storage_dead(_8)
+        storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_5)
+        unwind_continue
+    }
 }
 
 // Full name: test_crate::StructWithTuple

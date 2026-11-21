@@ -16,7 +16,7 @@ use itertools::Itertools;
 use petgraph::algo::dominators::{Dominators, simple_fast};
 use petgraph::graphmap::DiGraphMap;
 use petgraph::visit::{Dfs, DfsPostOrder, EdgeFiltered, EdgeRef, Walker};
-use rustc_hash::FxHashSet as HashSet;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use smallvec::SmallVec;
 use std::cmp::Reverse;
 use std::mem;
@@ -147,6 +147,9 @@ struct BlockData {
     pub only_reach_error: bool,
     /// Whether a switch is reachable from this node (including itself) in the forward graph.
     pub reaches_switch: bool,
+    /// Whether this node is translated once into a cleanup block of the body, that the unwind
+    /// paths that reach it continue with.
+    pub is_shared_cleanup: bool,
     /// The nodes reachable from this node in the forward graph, including itself.
     pub reachable: FixedBitSet,
     /// The nodes the flow of this node goes to, see [`Flow`].
@@ -181,6 +184,7 @@ impl BlockData {
             within_loops: Default::default(),
             only_reach_error: false,
             reaches_switch: false,
+            is_shared_cleanup: false,
             reachable: Default::default(),
             flow_targets: Default::default(),
             exit_info: Default::default(),
@@ -361,6 +365,30 @@ impl CfgInfo {
                 .collect();
             within_loops.retain(|id| loops_indirectly_within.contains(id));
             block_data[block_id].within_loops = within_loops;
+        }
+
+        // Several unwind paths may continue with the same unwind node: we translate it once into a
+        // cleanup block of the body, unless it does nothing but end unwinding.
+        let mut incoming_edges = body.map_ref(|_| 0usize);
+        for block in body {
+            for tgt in block.targets() {
+                incoming_edges[tgt] += 1;
+            }
+        }
+        for (block_id, block) in body.iter_enumerated() {
+            let data = &mut block_data[block_id];
+            let is_lone_terminator = block.statements.is_empty()
+                && matches!(
+                    block.terminator.kind,
+                    src::TerminatorKind::UnwindResume
+                        | src::TerminatorKind::UnwindTerminate(..)
+                        | src::TerminatorKind::UndefinedBehavior
+                );
+            data.is_shared_cleanup = data.is_unwind
+                && incoming_edges[block_id] >= 2
+                && !is_lone_terminator
+                && !data.is_loop_header
+                && data.within_loops.is_empty();
         }
 
         let mut cfg = CfgInfo {
@@ -1124,6 +1152,10 @@ struct ReconstructCtx<'a> {
     /// stack.
     special_jump_stack: Vec<SpecialJump>,
     mode: ReconstructMode,
+    /// The ids of the cleanup blocks we jumped to so far.
+    cleanup_ids: HashMap<BlockId, tgt::CleanupId>,
+    /// The nodes to translate into cleanup blocks, by cleanup id.
+    cleanups: IndexVec<tgt::CleanupId, BlockId>,
 }
 
 impl<'a> ReconstructCtx<'a> {
@@ -1145,6 +1177,8 @@ impl<'a> ReconstructCtx<'a> {
             } else {
                 ReconstructMode::ForwardBreak
             },
+            cleanup_ids: HashMap::default(),
+            cleanups: IndexVec::new(),
         })
     }
 
@@ -1206,9 +1240,31 @@ impl<'a> ReconstructCtx<'a> {
                     SpecialJumpKind::NextBlock => self.translate_block(target_block),
                 }
             }
+            None if self.cfg.block_data[target_block].is_shared_cleanup => {
+                self.goto_cleanup(span, target_block)
+            }
             // Translate the block without a jump.
             None => self.translate_block(target_block),
         }
+    }
+
+    /// Translate the unwind path that starts at the given node. The span is that of the
+    /// terminator that unwinds.
+    fn translate_unwind(&mut self, span: Span, block_id: src::BlockId) -> tgt::Block {
+        if self.cfg.block_data[block_id].is_shared_cleanup {
+            self.goto_cleanup(span, block_id)
+        } else {
+            self.translate_block(block_id)
+        }
+    }
+
+    /// Jump to the cleanup block that the given node translates to.
+    fn goto_cleanup(&mut self, span: Span, block_id: src::BlockId) -> tgt::Block {
+        let id = *self
+            .cleanup_ids
+            .entry(block_id)
+            .or_insert_with(|| self.cleanups.push(block_id));
+        tgt::Statement::new(span, tgt::StatementKind::GotoCleanup(id)).into_block()
     }
 
     /// Translate a terminator. A terminator that continues to a single block after its own
@@ -1228,7 +1284,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Call {
@@ -1246,7 +1302,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Drop {
@@ -1263,7 +1319,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::DropEmptyBox {
@@ -1278,7 +1334,7 @@ impl<'a> ReconstructCtx<'a> {
                 target,
                 on_unwind,
             } => {
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Assert {
@@ -1290,7 +1346,7 @@ impl<'a> ReconstructCtx<'a> {
                 return Next::AssertJump(*target);
             }
             src::TerminatorKind::Panic { call, on_unwind } => {
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 tgt::StatementKind::Panic {
                     call: Box::new(call.clone()),
                     on_unwind,
@@ -1313,7 +1369,7 @@ impl<'a> ReconstructCtx<'a> {
                 let labels = Box::new(
                     labels.map_ref(|target| self.translate_jump(terminator.span, *target)),
                 );
-                let on_unwind = Box::new(self.translate_block(*on_unwind));
+                let on_unwind = Box::new(self.translate_unwind(src_span, *on_unwind));
                 tgt::StatementKind::InlineAsm {
                     asm: asm.clone(),
                     fallthrough,
@@ -1369,10 +1425,11 @@ impl<'a> ReconstructCtx<'a> {
                 }
             };
             let span = block.terminator.span;
-            if self
-                .special_jump_stack
-                .iter()
-                .any(|jump| jump.target_block == target)
+            if self.cfg.block_data[target].is_shared_cleanup
+                || self
+                    .special_jump_stack
+                    .iter()
+                    .any(|jump| jump.target_block == target)
             {
                 break self.translate_jump(span, target);
             }
@@ -1551,6 +1608,7 @@ fn remove_useless_jump_blocks(body: &mut tgt::ExprBody) {
             | StatementKind::Continue(..)
             | StatementKind::UnwindTerminate(..)
             | StatementKind::UnwindResume
+            | StatementKind::GotoCleanup(..)
             | StatementKind::Return
             | StatementKind::UndefinedBehavior
             | StatementKind::Nop => SmallVec::new(),
@@ -1648,10 +1706,11 @@ fn remove_useless_jump_blocks(body: &mut tgt::ExprBody) {
         }
     }
 
-    let mut loop_stack = Vec::new();
-    let mut counts = Vec::new();
-    count_jumps(&mut body.body, &mut loop_stack, &mut counts);
-    remove_loops(&mut body.body, &mut Vec::new(), &mut counts.into_iter());
+    for block in body.body.blocks_mut() {
+        let mut counts = Vec::new();
+        count_jumps(block, &mut Vec::new(), &mut counts);
+        remove_loops(block, &mut Vec::new(), &mut counts.into_iter());
+    }
 }
 
 fn translate_body(ctx: &TransformCtx, body: &mut Body) {
@@ -1683,7 +1742,13 @@ fn translate_body(ctx: &TransformCtx, body: &mut Body) {
         }
     };
     // Translate the blocks using the computed data.
-    let tgt_body = ctx.translate_block(start_block);
+    let block = ctx.translate_block(start_block);
+    // Translating a cleanup block may jump to new ones.
+    let mut cleanups = IndexVec::new();
+    while let Some(&block_id) = ctx.cleanups.get(cleanups.next_idx()) {
+        cleanups.push(ctx.translate_block(block_id));
+    }
+    let tgt_body = tgt::StructuredBody { block, cleanups };
 
     let mut tgt_body = tgt::ExprBody {
         span: src_body.span,
