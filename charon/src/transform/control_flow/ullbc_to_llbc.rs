@@ -89,9 +89,6 @@ struct CfgInfo {
     pub dominator_tree: Dominators<BlockId>,
     /// Computed data about each block.
     pub block_data: IndexVec<BlockId, Box<BlockData>>,
-    /// If some switch exits were picked later than the best ones (see
-    /// [`ExitInfo::compute_switch_exits`]), the switch exits we would pick otherwise.
-    pub switch_exits_without_later_exits: Option<IndexVec<BlockId, Option<BlockId>>>,
 }
 
 #[derive(Debug)]
@@ -401,37 +398,19 @@ impl CfgInfo {
             switch_blocks,
             dominator_tree,
             block_data,
-            switch_exits_without_later_exits: None,
         };
 
         // Pick an exit block for each loop, if we find one.
         ExitInfo::compute_loop_exits(ctx, &mut cfg);
 
         // Pick an exit block for each switch, if we find one.
-        if ExitInfo::compute_switch_exits(&mut cfg, body, true) {
-            let with_later_exits = cfg.switch_exits();
-            cfg.set_switch_exits(&body.map_ref(|_| None));
-            ExitInfo::compute_switch_exits(&mut cfg, body, false);
-            cfg.switch_exits_without_later_exits = Some(cfg.switch_exits());
-            cfg.set_switch_exits(&with_later_exits);
-        }
+        ExitInfo::compute_switch_exits(&mut cfg, body);
 
         Ok(cfg)
     }
 
     fn block_data(&self, block_id: BlockId) -> &BlockData {
         &self.block_data[block_id]
-    }
-    fn switch_exits(&self) -> IndexVec<BlockId, Option<BlockId>> {
-        self.block_data
-            .iter()
-            .map(|data| data.exit_info.switch_exit)
-            .collect()
-    }
-    fn set_switch_exits(&mut self, exits: &IndexVec<BlockId, Option<BlockId>>) {
-        for (data, &exit) in self.block_data.iter_mut().zip(exits) {
-            data.exit_info.switch_exit = exit;
-        }
     }
     fn can_reach(&self, src: BlockId, tgt: BlockId) -> bool {
         self.block_data[src].reachable.contains(tgt.index())
@@ -918,15 +897,7 @@ impl ExitInfo {
     /// Note that with nested switches, the branches of the inner switches might
     /// goto the exits of the outer switches: for this reason, we give precedence
     /// to the outer switches.
-    ///
-    /// Returns whether it picked a later exit because branches bypass the best one (only if
-    /// `try_later_exits`).
-    fn compute_switch_exits(
-        cfg: &mut CfgInfo,
-        body: &src::BodyContents,
-        try_later_exits: bool,
-    ) -> bool {
-        let mut took_later_exit = false;
+    fn compute_switch_exits(cfg: &mut CfgInfo, body: &src::BodyContents) {
         let mut candidates = Self::compute_switch_exit_candidates(cfg, body);
         // We need to give precedence to the outer switches: we thus iterate
         // over the switch blocks in topological order.
@@ -1068,8 +1039,7 @@ impl ExitInfo {
                 .find(|&exit_id| can_be_exit(exit_id))
             {
                 let mut exit_bypassed = bypassed(exit_id);
-                while try_later_exits
-                    && let Some(merge) = first_branching(&exit_bypassed)
+                while let Some(merge) = first_branching(&exit_bypassed)
                     && can_be_exit(merge)
                 {
                     let merge_bypassed = bypassed(merge);
@@ -1079,7 +1049,6 @@ impl ExitInfo {
                         break;
                     }
                     (exit_id, exit_bypassed) = (merge, merge_bypassed);
-                    took_later_exit = true;
                 }
                 exits_set.insert(exit_id);
                 if cfg.block_data[exit_id].reaches_switch {
@@ -1092,7 +1061,6 @@ impl ExitInfo {
                 }
             }
         }
-        took_later_exit
     }
 }
 
@@ -1188,11 +1156,6 @@ struct ReconstructCtx<'a> {
     cleanup_ids: HashMap<BlockId, tgt::CleanupId>,
     /// The nodes to translate into cleanup blocks, by cleanup id.
     cleanups: IndexVec<tgt::CleanupId, BlockId>,
-    /// If set, the number of ULLBC statements and terminators we may still translate before
-    /// giving up.
-    fuel: Option<usize>,
-    /// Whether we gave up because we ran out of fuel.
-    out_of_fuel: bool,
 }
 
 impl<'a> ReconstructCtx<'a> {
@@ -1216,8 +1179,6 @@ impl<'a> ReconstructCtx<'a> {
             },
             cleanup_ids: HashMap::default(),
             cleanups: IndexVec::new(),
-            fuel: None,
-            out_of_fuel: false,
         })
     }
 
@@ -1447,16 +1408,6 @@ impl<'a> ReconstructCtx<'a> {
         let mut spans = Vec::new();
         let last_block = loop {
             let block = &body.body[block_id];
-            if let Some(fuel) = &mut self.fuel {
-                match fuel.checked_sub(block.statements.len() + 1) {
-                    Some(rest) => *fuel = rest,
-                    None => {
-                        // Give up: the result will be discarded.
-                        self.out_of_fuel = true;
-                        break tgt::Block::new(block.terminator.span, Vec::new());
-                    }
-                }
-            }
             let first = statements.len();
             statements.extend(
                 block
@@ -1501,68 +1452,6 @@ impl<'a> ReconstructCtx<'a> {
             .fold(last_block.span, |span, part| combine_span(part, &span));
         statements.extend(last_block.statements);
         tgt::Block::new(span, statements)
-    }
-
-    /// Translate the body with the switch exits picked with later exits and with
-    /// `without_later_exits`, and keep the smallest result.
-    ///
-    /// Picking later switch exits is meant to make the body smaller, but it is a heuristic that
-    /// also changes the exits the switches after them can use: either translation can duplicate
-    /// exponentially more code than the other. So we translate both with a budget that we
-    /// increase until one fits, and then the other with the budget the first one used.
-    fn translate_smallest(
-        &mut self,
-        without_later_exits: IndexVec<BlockId, Option<BlockId>>,
-    ) -> tgt::StructuredBody {
-        let with_later_exits = self.cfg.switch_exits();
-        let exit_sets = [with_later_exits, without_later_exits];
-        let size = self
-            .body
-            .body
-            .iter()
-            .map(|b| b.statements.len() + 1)
-            .sum::<usize>();
-        let mut budget = 2 * size;
-        let (first, mut first_body, used) = 'race: loop {
-            for (i, exits) in exit_sets.iter().enumerate() {
-                self.cfg.set_switch_exits(exits);
-                if let Some((body, used)) = self.translate_with_budget(budget) {
-                    break 'race (i, body, used);
-                }
-            }
-            budget *= 4;
-        };
-        let other = 1 - first;
-        self.cfg.set_switch_exits(&exit_sets[other]);
-        if let Some((mut other_body, _)) = self.translate_with_budget(used)
-            && (other_body.statement_count(), other) < (first_body.statement_count(), first)
-        {
-            return other_body;
-        }
-        first_body
-    }
-
-    /// Translate the body, giving up when that would translate more than `budget` ULLBC
-    /// statements and terminators. Returns the result and how much of the budget it used.
-    fn translate_with_budget(&mut self, budget: usize) -> Option<(tgt::StructuredBody, usize)> {
-        self.fuel = Some(budget);
-        self.out_of_fuel = false;
-        let body = self.translate();
-        let rest = self.fuel.take().unwrap();
-        (!self.out_of_fuel).then(|| (body, budget - rest))
-    }
-
-    /// Translate the body.
-    fn translate(&mut self) -> tgt::StructuredBody {
-        self.cleanup_ids.clear();
-        self.cleanups = IndexVec::new();
-        let block = self.translate_block(BlockId::ZERO);
-        // Translating a cleanup block may jump to new ones.
-        let mut cleanups = IndexVec::new();
-        while let Some(&block_id) = self.cleanups.get(cleanups.next_idx()) {
-            cleanups.push(self.translate_block(block_id));
-        }
-        tgt::StructuredBody { block, cleanups }
     }
 
     /// Translate a block including surrounding control-flow like looping.
@@ -1970,6 +1859,7 @@ fn translate_body(ctx: &TransformCtx, body: &mut Body) {
     });
 
     // Calculate info about the graph and heuristically determine loop and switch exit blocks.
+    let start_block = BlockId::ZERO;
     let mut ctx = match ReconstructCtx::build(ctx, src_body) {
         Ok(ctx) => ctx,
         Err(Irreducible(bid)) => {
@@ -1983,10 +1873,13 @@ fn translate_body(ctx: &TransformCtx, body: &mut Body) {
         }
     };
     // Translate the blocks using the computed data.
-    let mut tgt_body = match ctx.cfg.switch_exits_without_later_exits.take() {
-        None => ctx.translate(),
-        Some(without_later_exits) => ctx.translate_smallest(without_later_exits),
-    };
+    let block = ctx.translate_block(start_block);
+    // Translating a cleanup block may jump to new ones.
+    let mut cleanups = IndexVec::new();
+    while let Some(&block_id) = ctx.cleanups.get(cleanups.next_idx()) {
+        cleanups.push(ctx.translate_block(block_id));
+    }
+    let mut tgt_body = tgt::StructuredBody { block, cleanups };
     inline_small_cleanups(&mut tgt_body);
 
     let mut tgt_body = tgt::ExprBody {
