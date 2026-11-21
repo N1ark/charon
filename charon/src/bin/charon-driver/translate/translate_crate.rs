@@ -803,11 +803,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         } else if self.method_status.get(trait_id).is_some() {
             return Ok(());
         }
-        let trait_def = self.poly_hax_def(trait_def_id)?;
-        let hax::FullDefKind::Trait(t) = trait_def.kind() else {
-            unreachable!()
-        };
-        let items = t.items(&self.hax_state);
+        let tcx = self.tcx;
+        let rust_trait_id = trait_def_id.real_rust_def_id();
         let par = self.par.clone();
         let mut shared_methods = par.as_ref().map(|par| par.methods.lock());
         if let Some(methods) = &shared_methods
@@ -832,22 +829,21 @@ impl<'tcx> TranslateCtx<'tcx> {
             ),
         };
         let names = assoc_item_names.get_or_insert_with(trait_id, Default::default);
-        for item in items {
+        for item in tcx.associated_items(rust_trait_id).in_definition_order() {
             let name = TraitItemName(
-                item.name
-                    .as_ref()
+                hax::assoc_item_name(tcx, item)
                     .map(|n| n.to_string().into())
                     .unwrap_or_default(),
             );
             let id: AssocItemId = match item.kind {
-                hax::AssocKind::Type { .. } => names.types.push(name).into(),
-                hax::AssocKind::Fn { .. } => names.methods.push(name).into(),
-                hax::AssocKind::Const { .. } => names.consts.push(name).into(),
+                ty::AssocKind::Type { .. } => names.types.push(name).into(),
+                ty::AssocKind::Fn { .. } => names.methods.push(name).into(),
+                ty::AssocKind::Const { .. } => names.consts.push(name).into(),
             };
-            assoc_item_id_map.insert(item.def_id.clone(), id);
+            assoc_item_id_map.insert(item.def_id.sinto(&self.hax_state), id);
         }
         // Add a virtual method to the `Destruct` trait.
-        if trait_def.lang_item == Some(sym::destruct) {
+        if tcx.lang_items().destruct_trait() == Some(rust_trait_id) {
             let method_name = TraitItemName("drop_glue".into());
             names.methods.push(method_name);
         }

@@ -617,9 +617,22 @@ pub(crate) enum Effect {
 struct CachedRef<'a> {
     old_id: ItemId,
     enqueue: bool,
+    #[serde(with = "fixed_u128")]
     hash: u128,
     #[serde(borrow)]
     encoded: Cow<'a, [u8]>,
+}
+
+/// Hashes are random: their fixed-size encoding is smaller and faster to decode than a varint.
+mod fixed_u128 {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer>(x: &u128, serializer: S) -> Result<S::Ok, S::Error> {
+        x.to_le_bytes().serialize(serializer)
+    }
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u128, D::Error> {
+        Ok(u128::from_le_bytes(<[u8; 16]>::deserialize(deserializer)?))
+    }
 }
 
 /// An entry is: this head, the length of the serialized name and the name if `name_refs` is
@@ -1298,14 +1311,15 @@ impl<'tcx> TranslateCtx<'tcx> {
 
         for effect in effects {
             match effect {
-                Effect::RegisterAssocItems(trait_id) => {
-                    let trait_def_id = self.source_of(trait_id.into()).def_id().clone();
-                    let _ = self.register_assoc_items(&trait_def_id, trait_id);
-                }
-                Effect::MarkMethodUsed(trait_id, method_id) => {
-                    let trait_def_id = self.source_of(trait_id.into()).def_id().clone();
-                    let _ = self.register_assoc_items(&trait_def_id, trait_id);
-                    self.mark_method_as_used(trait_id, method_id);
+                Effect::RegisterAssocItems(trait_id) | Effect::MarkMethodUsed(trait_id, _) => {
+                    // The source of the trait is only needed if its items aren't registered yet.
+                    if self.method_status.get(trait_id).is_none() {
+                        let trait_def_id = self.source_of(trait_id.into()).def_id().clone();
+                        let _ = self.register_assoc_items(&trait_def_id, trait_id);
+                    }
+                    if let Effect::MarkMethodUsed(_, method_id) = effect {
+                        self.mark_method_as_used(trait_id, method_id);
+                    }
                 }
                 Effect::ImplVTable(impl_id, vtable) => {
                     let translated = self.is_translated(vtable.id.into());

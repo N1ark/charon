@@ -15,6 +15,21 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, TraitRef<'tcx>> for ty::TraitRef<'
     }
 }
 
+/// The name of an associated item. RPTITs, which rustc doesn't name, are named after their function.
+pub fn assoc_item_name(tcx: ty::TyCtxt<'_>, item: &ty::AssocItem) -> Option<Symbol> {
+    match item.opt_name() {
+        None if let ty::AssocKind::Type { data } = item.kind
+            && let ty::AssocTypeData::Rpitit(rpitit) = data =>
+        {
+            let (ty::ImplTraitInTraitData::Trait { fn_def_id, .. }
+            | ty::ImplTraitInTraitData::Impl { fn_def_id, .. }) = rpitit;
+            let fn_name = tcx.item_name(fn_def_id);
+            Some(Symbol::intern(&format!("{fn_name}_ty")))
+        }
+        opt_name => opt_name,
+    }
+}
+
 /// Reflects [`ty::AssocItem`]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AssocItem<'tcx> {
@@ -77,21 +92,9 @@ impl<'tcx> AssocItem<'tcx> {
                 .sinto(s),
             },
         };
-        let name = match item.opt_name() {
-            None if let ty::AssocKind::Type { data } = item.kind
-                && let ty::AssocTypeData::Rpitit(rpitit) = data =>
-            {
-                let (ty::ImplTraitInTraitData::Trait { fn_def_id, .. }
-                | ty::ImplTraitInTraitData::Impl { fn_def_id, .. }) = rpitit;
-                let fn_name = tcx.item_name(fn_def_id);
-                let name = Symbol::intern(&format!("{fn_name}_ty"));
-                Some(name)
-            }
-            opt_name => opt_name,
-        };
         AssocItem {
             def_id: item.def_id.sinto(s),
-            name,
+            name: assoc_item_name(tcx, item),
             kind: item.kind.sinto(s),
             container,
             has_value: item.defaultness(tcx).has_value(),
