@@ -140,14 +140,17 @@ impl Transform {
     pub fn new(ctx: &mut TransformCtx) -> CowBox<dyn UllbcPass> {
         let pat = NamePattern::parse(DISCRIMINANT_INTRINSIC).unwrap();
         // There can be many if we're in mono mode.
-        let discriminant_intrinsics = ctx
-            .translated
-            .item_names
-            .iter()
-            .filter(|(_, name)| pat.matches(&ctx.translated, name))
-            .filter_map(|(id, _)| id.as_fun())
-            .copied()
-            .collect();
+        let discriminant_intrinsics = if ctx.options.reconstruct_matches {
+            ctx.translated
+                .item_names
+                .iter()
+                .filter(|(_, name)| pat.matches(&ctx.translated, name))
+                .filter_map(|(id, _)| id.as_fun())
+                .copied()
+                .collect()
+        } else {
+            Default::default()
+        };
         CowBox::Owned(Box::new(Transform {
             discriminant_intrinsics,
         }))
