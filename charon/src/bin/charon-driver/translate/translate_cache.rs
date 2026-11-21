@@ -25,10 +25,15 @@
 //! Translation rarely reads translated items, so loading an item only replays its registrations
 //! and effects: we decode most items at the end of the translation, in parallel.
 //!
+//! With parallel translation, the workers give the snapshot's items their ids but leave the items
+//! the cache wants (see [`wants`]) to the main context, which loads them or translates and stores
+//! them.
+//!
 //! The snapshot lives in `$CHARON_TRANSLATION_CACHE/<env>/`, where `<env>` hashes everything else
 //! the translation depends on: the charon binary, the options and the upstream crates.
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use rayon::prelude::*;
 use rustc_data_structures::fingerprint::Fingerprint;
@@ -391,7 +396,7 @@ fn decode_src<'tcx>(
 
 /// The session-independent identity of an item.
 pub(crate) struct ItemKey {
-    hash: u128,
+    pub(crate) hash: u128,
     /// Encoding of the `TransItemSource`, decoded by `decode_src`.
     encoded: Vec<u8>,
 }
@@ -426,6 +431,18 @@ pub(crate) fn anon_alloc_contents<'tcx>(
     (!e.unencodable).then(|| hasher.finish())
 }
 
+/// Whether to translate this source with the cache: if it has a key, and the snapshot has its
+/// translation or no earlier session failed to store it.
+pub(crate) fn wants<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    s: &hax::StateWithBase<'tcx>,
+    snapshot_ids: &HashMap<u128, (ItemId, bool)>,
+    src: &TransItemSource<'tcx>,
+) -> bool {
+    compute_key(tcx, s, src)
+        .is_some_and(|key| snapshot_ids.get(&key.hash).is_none_or(|&(_, storable)| storable))
+}
+
 /// Encode the source without the choice of resolution. Returns `None` if that's not possible.
 fn encode_src<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -442,6 +459,9 @@ fn encode_src<'tcx>(
         RustcItem::Mono(item) => {
             e.emit_u8(1);
             encode_def_id(&mut e, s, &item.def_id);
+            if e.mentions_local {
+                return None;
+            }
             item.rustc_args(s).encode(&mut e);
         }
         RustcItem::MonoTrait(def_id) => {
@@ -454,7 +474,7 @@ fn encode_src<'tcx>(
 
 /// Compute the key of this source, if it has one, i.e. if it doesn't mention the local crate and
 /// its encoding round-trips.
-fn compute_key<'tcx>(
+pub(crate) fn compute_key<'tcx>(
     tcx: TyCtxt<'tcx>,
     s: &hax::StateWithBase<'tcx>,
     src: &TransItemSource<'tcx>,
@@ -571,6 +591,8 @@ struct IndexEntry {
     /// name (`CachedItem`): `(Vec<StoredRef>, &[u8], &[u8])`. AST values are serialized with a
     /// `DedupSerializer` each.
     body: Option<Loc>,
+    /// Whether a session translated it but couldn't store it.
+    unstorable: bool,
 }
 
 #[derive(SerializeState, DeserializeState)]
@@ -631,7 +653,7 @@ struct Header {
     index: Vec<IndexEntry>,
 }
 
-const SNAPSHOT_MAGIC: &[u8; 8] = b"CHRNSNP1";
+const SNAPSHOT_MAGIC: &[u8; 8] = b"CHRNSNP2";
 
 /// Read the header of a snapshot, and the end of its values.
 fn read_header(bytes: &[u8]) -> Option<(Header, usize)> {
@@ -667,6 +689,9 @@ pub(crate) struct TranslationCache<'tcx> {
     loaded: bool,
     /// The position in `header.index` of each item of the snapshot.
     entries: HashMap<ItemId, usize>,
+    /// The ids of the items of the snapshot by key hash, and whether they may be stored (see
+    /// `IndexEntry::unstorable`), for parallel translation.
+    snapshot_ids: Arc<HashMap<u128, (ItemId, bool)>>,
     /// The ids of the items that have a key: those of the snapshot and the new ones.
     by_hash: HashMap<u128, ItemId>,
     /// The keys of the items registered by this session that have one, and the reverse map.
@@ -685,6 +710,8 @@ pub(crate) struct TranslationCache<'tcx> {
     /// The translations this session stored, serialized as `IndexEntry::body`, by id in the next
     /// snapshot.
     bodies: HashMap<ItemId, Vec<u8>>,
+    /// The items this session translated but couldn't store, by id in the next snapshot.
+    unstorable: HashSet<ItemId>,
     /// One recorder per `translate_item` or name computation in progress.
     recorders: Vec<Recorder>,
     /// What computing the names of the items we registered did.
@@ -773,6 +800,7 @@ impl<'tcx> TranslationCache<'tcx> {
             stamp: None,
             loaded: false,
             entries: Default::default(),
+            snapshot_ids: Default::default(),
             by_hash: Default::default(),
             keys: Default::default(),
             known_key: None,
@@ -783,6 +811,7 @@ impl<'tcx> TranslationCache<'tcx> {
             new_files: Default::default(),
             next: Default::default(),
             bodies: Default::default(),
+            unstorable: Default::default(),
             recorders: Default::default(),
             name_records: Default::default(),
             memos: Default::default(),
@@ -857,7 +886,7 @@ impl<'tcx> TranslationCache<'tcx> {
     }
 
     /// Record the key of a new item, and give it an id in the next snapshot.
-    fn add_key(&mut self, id: ItemId, key: Rc<ItemKey>) {
+    pub(crate) fn add_key(&mut self, id: ItemId, key: Rc<ItemKey>) {
         let first = *self.by_hash.entry(key.hash).or_insert(id);
         self.keys.insert(id, key);
         let (kind, index) = kind_and_index(id);
@@ -875,6 +904,10 @@ impl<'tcx> TranslationCache<'tcx> {
             }
         };
         self.store_ids.insert(id, store_id);
+    }
+
+    pub(crate) fn snapshot_ids(&self) -> Arc<HashMap<u128, (ItemId, bool)>> {
+        self.snapshot_ids.clone()
     }
 
     pub(crate) fn pop_unbound(&mut self) -> Option<ItemId> {
@@ -1031,15 +1064,29 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         cache.entries.reserve(header.index.len());
         cache.by_hash.reserve(header.index.len());
+        let mut snapshot_ids = HashMap::default();
         for (i, entry) in header.index.iter().enumerate() {
-            cache.by_hash.insert(u128::from_le_bytes(entry.hash), entry.id);
+            let hash = u128::from_le_bytes(entry.hash);
+            cache.by_hash.insert(hash, entry.id);
             cache.entries.insert(entry.id, i);
+            snapshot_ids.insert(hash, (entry.id, !entry.unstorable));
         }
+        cache.snapshot_ids = Arc::new(snapshot_ids);
         cache.next = header.counts;
         cache.header = header;
         cache.values_end = values_end;
         cache.snapshot = Some(snapshot);
         cache.stamp = Some(stamp);
+    }
+
+    /// Record the files registered since there were `count`, while the cache was away.
+    pub(crate) fn cache_register_files_since(&mut self, count: usize) {
+        let local = self.tcx.crate_name(rustc_hir::def_id::LOCAL_CRATE).to_string();
+        if let Some(cache) = &mut self.cache {
+            for (id, file) in self.translated.files.iter_enumerated().skip(count) {
+                cache.register_file(id, file.crate_name == local);
+            }
+        }
     }
 
     /// If this source is the source of an item of the snapshot, bind it to that item.
@@ -1495,6 +1542,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         if let Some(why) = recorder.tainted {
             *cache.stats.tainted.entry(why).or_default() += 1;
+            if let Some(store_id) = cache.store_id(id) {
+                cache.unstorable.insert(store_id);
+            }
             return;
         }
         let stored = (|| {
@@ -1576,7 +1626,12 @@ impl<'tcx> TranslateCtx<'tcx> {
                 cache.stats.stored += 1;
                 cache.bodies.insert(store_id, body);
             }
-            Err(why) => *cache.stats.tainted.entry(why).or_default() += 1,
+            Err(why) => {
+                *cache.stats.tainted.entry(why).or_default() += 1;
+                if let Some(store_id) = cache.store_id(id) {
+                    cache.unstorable.insert(store_id);
+                }
+            }
         }
     }
 
@@ -1647,13 +1702,15 @@ impl<'tcx> TranslateCtx<'tcx> {
             let hash = key.hash.to_le_bytes();
             let key = push(&key.encoded);
             let name = self.cache_stored_name(id).map(|name| push(&name));
-            let body = self.cache.as_mut().unwrap().bodies.remove(&store_id);
+            let cache = self.cache.as_mut().unwrap();
+            let unstorable = cache.unstorable.contains(&store_id);
             index.push(IndexEntry {
                 hash,
                 id: store_id,
                 key,
                 name,
-                body: body.map(|body| push(&body)),
+                body: cache.bodies.remove(&store_id).map(|body| push(&body)),
+                unstorable,
             });
         }
         // The items of the snapshot that this session translated for the first time.
@@ -1663,6 +1720,15 @@ impl<'tcx> TranslateCtx<'tcx> {
                 && index[i].body.is_none()
             {
                 index[i].body = Some(push(body));
+                changed = true;
+            }
+        }
+        for store_id in &cache.unstorable {
+            if let Some(&i) = cache.entries.get(store_id)
+                && index[i].body.is_none()
+                && !index[i].unstorable
+            {
+                index[i].unstorable = true;
                 changed = true;
             }
         }

@@ -297,6 +297,8 @@ impl<'tcx> TranslateCtx<'tcx> {
         if !is_translated(self) {
             let item_source = self.source_of(id);
             self.translate_item(&item_source);
+            // The translation cache may have only loaded it.
+            self.cache_decode_now(id);
             if !is_translated(self) {
                 let span = self.def_span(item_source.def_id());
                 let name = id.to_string_with_ctx(&self.into_fmt());

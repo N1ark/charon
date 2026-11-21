@@ -5,6 +5,7 @@
 //! the caches of computations that don't depend on the item (names, context-free types), and the
 //! state of method usage. Once the worklist is empty, we merge the workers' results into the main
 //! context; ids are in whatever order the workers encountered items (see `translate_order`).
+use super::translate_cache::ItemKey;
 use super::translate_crate::*;
 use super::translate_ctx::*;
 use crate::driver::{BodyRequest, BodyRequests};
@@ -19,6 +20,7 @@ use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rustc_middle::ty::TyCtxt;
 use std::collections::VecDeque;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -49,6 +51,13 @@ pub(crate) struct ParShared<'tcx> {
     pub(crate) cached_names: ShardedMap<RustcItem<'tcx>, Name>,
     /// See `TranslateCtx::mono_type_cache`.
     pub(crate) mono_types: ShardedMap<hax::Ty<'tcx>, MonoType>,
+    /// With the translation cache: the ids of the items of its snapshot, which the workers give to
+    /// these items, and the items the cache wants, which the workers leave to the main context
+    /// (see `translate_in_parallel`).
+    pub(crate) snapshot_ids: Option<Arc<HashMap<u128, (ItemId, bool)>>>,
+    deferred: Lock<Vec<TransItemSource<'tcx>>>,
+    /// The keys of the items the workers registered, for the cache.
+    pub(crate) keys: Lock<Vec<(ItemId, ItemKey)>>,
     /// The translation contexts not in use by a job.
     ctxs: Mutex<Vec<AssertSend<Box<TranslateCtx<'tcx>>>>>,
     max_jobs: usize,
@@ -152,7 +161,6 @@ pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>, cli_options: &Cl
             cli_options.format,
             Some(charon_lib::options::SerializationFormatArg::MiniRust)
         )
-        && ctx.cache.is_none()
         && ctx.errors.borrow().continue_on_failure()
         && !ctx.options.collect_instantiated_layouts
         // Matching an impl pattern needs the impl, which may be in another worker's crate (except
@@ -164,8 +172,17 @@ pub(crate) fn can_translate_in_parallel(ctx: &TranslateCtx<'_>, cli_options: &Cl
 }
 
 impl<'tcx> TranslateCtx<'tcx> {
-    /// Translate the items in the worklist in parallel with `threads` workers.
-    pub(crate) fn translate_in_parallel(&mut self, cli_options: &CliOpts, threads: usize) {
+    /// Translate the items in the worklist in parallel with `threads` workers. With the translation
+    /// cache, the workers leave the items that the cache wants (see `translate_cache::wants`) to
+    /// this context, and we return these: this context loads them from the cache, or translates and
+    /// stores them.
+    pub(crate) fn translate_in_parallel(
+        &mut self,
+        cli_options: &CliOpts,
+        threads: usize,
+    ) -> Vec<TransItemSource<'tcx>> {
+        let cache = self.cache.take();
+        let files = self.translated.files.len();
         let shared = Arc::new(ParShared {
             env: WorkerEnv {
                 tcx: self.tcx,
@@ -188,6 +205,9 @@ impl<'tcx> TranslateCtx<'tcx> {
             files: Default::default(),
             cached_names: Default::default(),
             mono_types: Default::default(),
+            snapshot_ids: cache.as_ref().map(|cache| cache.snapshot_ids()),
+            deferred: Default::default(),
+            keys: Default::default(),
             ctxs: Default::default(),
             max_jobs: threads,
             jobs: Default::default(),
@@ -208,7 +228,7 @@ impl<'tcx> TranslateCtx<'tcx> {
                     break;
                 };
                 TRANSLATING.set(true);
-                ctx.translate_item(&src);
+                ctx.translate_or_defer(&shared, &src);
                 TRANSLATING.set(false);
                 shared.done(ctx, &src);
             }
@@ -225,8 +245,30 @@ impl<'tcx> TranslateCtx<'tcx> {
             worker.par = None;
         }
         let shared = Arc::into_inner(shared).expect("the workers are done");
+        let deferred = std::mem::take(&mut *shared.deferred.lock());
+        let keys = std::mem::take(&mut *shared.keys.lock());
         charon_lib::timing::time("translate-merge", || self.merge_workers(shared, workers));
         purge_freed_memory();
+        self.cache = cache;
+        if let Some(cache) = &mut self.cache {
+            for (id, key) in keys {
+                cache.add_key(id, Rc::new(key));
+            }
+        }
+        self.cache_register_files_since(files);
+        deferred
+    }
+
+    /// Translate this item, unless the translation cache wants it: then we leave it to the main
+    /// context.
+    fn translate_or_defer(&mut self, shared: &ParShared<'tcx>, src: &TransItemSource<'tcx>) {
+        if let Some(snapshot_ids) = &shared.snapshot_ids
+            && super::translate_cache::wants(self.tcx, &self.hax_state, snapshot_ids, src)
+        {
+            shared.deferred.lock().push(src.clone());
+        } else {
+            self.translate_item(src);
+        }
     }
 
     /// Move the state the workers share from this context to `shared`.
@@ -517,7 +559,7 @@ impl<'tcx> ParShared<'tcx> {
         };
         while let Some(src) = self.pop() {
             TRANSLATING.set(true);
-            ctx.translate_item(&src);
+            ctx.translate_or_defer(&self, &src);
             TRANSLATING.set(false);
             self.done(&ctx, &src);
         }

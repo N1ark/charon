@@ -596,18 +596,39 @@ impl<'tcx> TranslateCtx<'tcx> {
         let item_id = match self.id_map.get(src).copied() {
             Some(tid) => tid,
             None if let Some(par) = self.par.clone() => {
+                // An item of the snapshot of the translation cache keeps its id. We compute its key
+                // outside the lock, since that runs rustc queries.
+                let key = match &par.snapshot_ids {
+                    Some(_) if par.ids.get(src).is_none() => {
+                        super::translate_cache::compute_key(self.tcx, &self.hax_state, src)
+                    }
+                    _ => None,
+                };
+                let cached_id = key
+                    .as_ref()
+                    .and_then(|key| Some(par.snapshot_ids.as_ref()?.get(&key.hash)?.0));
                 let (trans_id, new) = {
                     let mut ids = par.ids.shard(src).lock();
                     match ids.get(src) {
                         Some(&id) => (id, false),
                         None => {
-                            let Some(trans_id) = par.reserve_item_id(src.kind) else {
-                                let id = ItemOrModuleId::Module(src.def_id().real_rust_def_id());
-                                return (id, false);
+                            let trans_id = match cached_id {
+                                Some(id) => id,
+                                None => match par.reserve_item_id(src.kind) {
+                                    Some(id) => id,
+                                    None => {
+                                        let id =
+                                            ItemOrModuleId::Module(src.def_id().real_rust_def_id());
+                                        return (id, false);
+                                    }
+                                },
                             };
                             ids.insert(src.clone(), trans_id);
                             // Before others can see the id.
                             par.reverse_ids.insert(trans_id, src.clone());
+                            if let Some(key) = key {
+                                par.keys.lock().push((trans_id, key));
+                            }
                             (trans_id, true)
                         }
                     }
@@ -615,14 +636,16 @@ impl<'tcx> TranslateCtx<'tcx> {
                 self.id_map.insert(src.clone(), trans_id);
                 // Each worker keeps the names of the items it knows in its crate too, as some
                 // lookups need them.
-                if new {
+                if let Some(name) = par.names.get(&trans_id) {
+                    // E.g. an item the cache registered without its source.
+                    is_new = new;
+                    self.translated.item_names.insert(trans_id, name);
+                } else if new {
                     is_new = true;
                     if let Ok(name) = self.translate_name(src) {
                         self.translated.item_names.insert(trans_id, name.clone());
                         par.names.insert(trans_id, name);
                     }
-                } else if let Some(name) = par.names.get(&trans_id) {
-                    self.translated.item_names.insert(trans_id, name);
                 } else if let Ok(name) = self.translate_name(src) {
                     // Another worker is computing the name, or failed to.
                     self.translated.item_names.insert(trans_id, name);
@@ -1520,7 +1543,7 @@ impl<'tcx> TranslateCtx<'tcx> {
             lt_mutability_computer: Default::default(),
             monomorphic_layouts: Default::default(),
             mono_type_cache: Default::default(),
-            cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
+            cache: None,
             extra_early_regions_cache: Default::default(),
             intrinsic_def_ids: Default::default(),
             view_lookups: Default::default(),
@@ -1583,6 +1606,7 @@ pub fn translate<'tcx>(
         cli_options,
         body_requests,
     );
+    ctx.cache = super::translate_cache::TranslationCache::new(tcx, cli_options);
     // Debugging aid: translate items in another order (last in first out, or pseudo-random if
     // given a seed).
     let scramble_seed = std::env::var("CHARON_SCRAMBLE_ORDER").ok();
@@ -1752,9 +1776,14 @@ pub fn translate<'tcx>(
         ctx.start_recording();
     }
     if parallel {
-        charon_lib::timing::time("translate-parallel", || {
+        // With the translation cache, the workers leave the items it wants to this context, which
+        // loads them from the cache or translates and stores them, with the items these enqueue.
+        let deferred = charon_lib::timing::time("translate-parallel", || {
             ctx.translate_in_parallel(cli_options, threads)
         });
+        for item_src in deferred {
+            ctx.translate_item(&item_src);
+        }
     }
     loop {
         let next = if scramble && rng != 0 && !ctx.items_to_translate.is_empty() {
