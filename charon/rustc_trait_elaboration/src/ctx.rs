@@ -1,12 +1,12 @@
 use rustc_data_structures::sharded::ShardedHashMap;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
 use rustc_middle::ty;
 use std::cell::{RefCell, RefMut};
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
-    TraitProof, TraitProofContents,
+    ToPolyTraitRef, TraitProof, TraitProofContents, normalize_bound_val,
 };
 
 pub mod intern {
@@ -102,6 +102,8 @@ struct ElaborationData<'tcx, Id: ItemId = DefId> {
     empty_env_searcher: RefCell<Option<PredicateSearcher<'tcx, Id>>>,
     concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
     concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
+    /// The trait clauses of each environment, normalized and erased like the trait refs we resolve.
+    caller_bound_trefs: RefCell<FxHashMap<ty::ParamEnv<'tcx>, FxHashSet<ty::PolyTraitRef<'tcx>>>>,
     required_predicates: PredicateCache<'tcx, Id>,
     required_recursively_predicates: PredicateCache<'tcx, Id>,
     implied_predicates: PredicateCache<'tcx, Id>,
@@ -116,6 +118,7 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             empty_env_searcher: Default::default(),
             concrete_item_refs: Default::default(),
             concrete_trait_proofs: Default::default(),
+            caller_bound_trefs: Default::default(),
             required_predicates: Default::default(),
             required_recursively_predicates: Default::default(),
             implied_predicates: Default::default(),
@@ -204,6 +207,32 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         contents: TraitProofContents<'tcx, Id>,
     ) -> TraitProof<'tcx, Id> {
         self.data.intern_trait_proof(contents)
+    }
+
+    /// Whether `tref`, normalized and erased, is one of the trait clauses of `typing_env`.
+    pub(crate) fn is_caller_bound(
+        &self,
+        typing_env: ty::TypingEnv<'tcx>,
+        tref: ty::PolyTraitRef<'tcx>,
+    ) -> bool {
+        let tcx = self.tcx;
+        let mut caller_bound_trefs = self.data.caller_bound_trefs.borrow_mut();
+        caller_bound_trefs
+            .entry(typing_env.param_env)
+            .or_insert_with(|| {
+                typing_env
+                    .param_env
+                    .caller_bounds()
+                    .filter_map(|clause| clause.as_trait_clause())
+                    .filter(|clause| clause.polarity() == ty::ClausePolarity::Positive)
+                    .map(|clause| {
+                        let tref = ty::set_aliases_to_non_rigid(tcx, clause.to_poly_trait_ref())
+                            .skip_normalization();
+                        normalize_bound_val(tcx, typing_env, tref)
+                    })
+                    .collect()
+            })
+            .contains(&tref)
     }
 
     pub fn predicate_searcher_for(

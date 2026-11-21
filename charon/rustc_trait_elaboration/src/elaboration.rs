@@ -156,6 +156,30 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             .any(|clause| !clause.has_non_region_param())
     }
 
+    /// Whether rustc's selection would prove this normalized and erased trait ref with a
+    /// where-clause, answering `Param` or ambiguity (e.g. if an impl applies too). That's the case
+    /// when the trait ref mentions a type parameter and is one of the where-clauses of the
+    /// environment, unless a builtin impl could compete: those exist for `dyn` types, auto traits,
+    /// trait aliases and the traits the solver knows about, though type parameters don't get
+    /// builtin impls of the listed ones.
+    fn where_clause_takes_precedence(&self, tref: PolyTraitRef<'tcx>) -> bool {
+        use SolverTraitLangItem::*;
+        let tcx = self.elab_ctx.tcx;
+        let trait_def_id = tref.def_id();
+        let self_ty = tref.self_ty().skip_binder();
+        let builtin_impls_possible = match tcx.as_trait_lang_item(trait_def_id) {
+            None => tcx.trait_is_auto(trait_def_id) || tcx.trait_is_alias(trait_def_id),
+            Some(Clone | Copy | Fn | FnMut | FnOnce | Iterator) => {
+                !matches!(self_ty.kind(), ty::Param(_))
+            }
+            Some(_) => true,
+        };
+        !builtin_impls_possible
+            && !matches!(self_ty.kind(), ty::Dynamic(..))
+            && tref.has_non_region_param()
+            && self.elab_ctx.is_caller_bound(self.typing_env, tref)
+    }
+
     /// Insert the bound clauses in the search context. Prefer inserting them all at once as this
     /// will give priority to shorter resolution paths. Bound clauses are numbered from `0` in
     /// insertion order.
@@ -508,6 +532,8 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             )
             && self.candidates.contains_key(&erased_tref.upcast(tcx))
         {
+            Ok(ImplSource::Param(Default::default()))
+        } else if self.where_clause_takes_precedence(erased_tref) {
             Ok(ImplSource::Param(Default::default()))
         } else if trait_def_id == destruct_trait
             && !matches!(self_ty.kind(), ty::Alias(..))
