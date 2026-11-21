@@ -403,14 +403,14 @@ mod type_constraint_set {
     use crate::{ast::*, ids::IndexVec};
 
     /// A set of local `TraitTypeConstraint`s, represented as a trie.
-    #[derive(Default, Clone)]
+    #[derive(Default, Clone, PartialEq, Eq)]
     pub struct TypeConstraintSet {
         /// For each base clause, a sub-trie of type constraints.
         clauses: HashMap<BaseClause, TypeConstraintSetInner>,
     }
 
     /// A set of `TraitTypeConstraint`s that apply to a trait.
-    #[derive(Debug, Default, Clone)]
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
     struct TypeConstraintSetInner {
         /// The trait that the clause at the current path implements, if known. Must be `Some` if
         /// `assoc_tys` is non-empty.
@@ -420,6 +420,17 @@ mod type_constraint_set {
         assoc_tys: IndexMap<AssocTypeId, (Option<TraitTypeConstraintId>, Ty)>,
         /// The types constraints that depend on the ith parent clause.
         parent_clauses: IndexVec<TraitClauseId, Self>,
+    }
+
+    impl std::hash::Hash for TypeConstraintSet {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            use std::hash::BuildHasher;
+            // The order of the clauses in the map doesn't matter.
+            let hashes = self.clauses.iter().fold(0u64, |acc, entry| {
+                acc.wrapping_add(rustc_hash::FxBuildHasher.hash_one(entry))
+            });
+            state.write_u64(hashes);
+        }
     }
 
     impl TypeConstraintSet {
@@ -1004,16 +1015,13 @@ struct UpdateItemBody<'a> {
     type_replacements: BindingStack<TypeConstraintSet>,
     memo: &'a mut HashConsMemo<()>,
     /// Memo for the values that mention their environment, keyed by the binder state (see
-    /// `binder_states`). Only valid within the current item.
-    item_memo: HashConsMemo<u32>,
-    /// Identifies the states of `type_replacements` we've been in, as the state below and the
-    /// pushed replacements (`0` if empty, else unique to this push). Two equal ids are two equal
-    /// states.
-    binder_states: HashMap<(u32, u32), u32>,
+    /// `Caches::binder_states`). Only valid for items with the same item-level replacements.
+    state_memo: &'a mut HashConsMemo<u32>,
+    /// The state of `type_replacements`.
     binder_state: u32,
-    /// The replacement ids (as above) of the binders we're under, outermost first.
+    /// The ids of the replacements (see `Caches::set_ids`) of the binders we're under, outermost
+    /// first.
     set_ids: Vec<u32>,
-    pushed_sets: u32,
     caches: &'a RefCell<Caches>,
     /// Whether we reported an error while visiting this item.
     reported_error: Cell<bool>,
@@ -1048,6 +1056,13 @@ struct Caches {
     path_names: HashMap<AssocTypePath, String>,
     /// The types of the type variables at binder level zero, by variable id.
     type_vars: Vec<Ty>,
+    /// The item-level replacements of the items that the ids below are for.
+    item_replacements: Option<TypeConstraintSet>,
+    /// Identifies the replacement sets we pushed by their contents; `0` is the empty set.
+    set_ids: HashMap<TypeConstraintSet, u32>,
+    /// Identifies the states of `type_replacements` we've been in, as the state below and the
+    /// id of the pushed replacements; `0` is the item level. Two equal ids are two equal states.
+    binder_states: HashMap<(u32, u32), u32>,
 }
 
 impl Caches {
@@ -1057,6 +1072,26 @@ impl Caches {
             self.type_vars.push(ty);
         }
         self.type_vars[id.index()].clone()
+    }
+
+    fn set_id(&mut self, set: &TypeConstraintSet) -> u32 {
+        if set.is_empty() {
+            return 0;
+        }
+        if let Some(&id) = self.set_ids.get(set) {
+            return id;
+        }
+        let id = self.set_ids.len() as u32 + 1;
+        self.set_ids.insert(set.clone(), id);
+        id
+    }
+
+    fn binder_state_id(&mut self, outer_state: u32, set_id: u32) -> u32 {
+        let next_state = self.binder_states.len() as u32 + 1;
+        *self
+            .binder_states
+            .entry((outer_state, set_id))
+            .or_insert(next_state)
     }
 
     fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> String {
@@ -1149,12 +1184,7 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
 
 impl UpdateItemBody<'_> {
     fn under_binder<R>(&mut self, repls: TypeConstraintSet, f: impl FnOnce(&mut Self) -> R) -> R {
-        let set_id = if repls.is_empty() {
-            0
-        } else {
-            self.pushed_sets += 1;
-            self.pushed_sets
-        };
+        let set_id = self.caches.borrow_mut().set_id(&repls);
         let state = self.binder_state_id(self.binder_state, set_id);
         let outer_state = std::mem::replace(&mut self.binder_state, state);
         self.set_ids.push(set_id);
@@ -1166,12 +1196,10 @@ impl UpdateItemBody<'_> {
         ret
     }
 
-    fn binder_state_id(&mut self, outer_state: u32, set_id: u32) -> u32 {
-        let next_state = self.binder_states.len() as u32 + 1;
-        *self
-            .binder_states
-            .entry((outer_state, set_id))
-            .or_insert(next_state)
+    fn binder_state_id(&self, outer_state: u32, set_id: u32) -> u32 {
+        self.caches
+            .borrow_mut()
+            .binder_state_id(outer_state, set_id)
     }
 
     /// The binder state that the rewrite of `x` depends on: the replacements of the binders whose
@@ -1702,17 +1730,17 @@ impl VisitAstMut for UpdateItemBody<'_> {
         if x.type_info().is_closed() {
             return self.visit_memoized(x);
         }
-        // Within an item, the rewrite of a value that mentions its environment only depends on
-        // the value and on `type_replacements`.
+        // The rewrite of a value that mentions its environment only depends on the value and on
+        // `type_replacements`.
         let state = Some(self.memo_state(x));
-        if let Some(new) = self.item_memo.get(x, state) {
+        if let Some(new) = self.state_memo.get(x, state) {
             *x = new;
             return Continue(());
         }
         let old = x.clone();
         self.visit_inner(x)?;
         if self.may_record() {
-            self.item_memo.insert(old, state, x.clone());
+            self.state_memo.insert(old, state, x.clone());
         }
         Continue(())
     }
@@ -1788,9 +1816,10 @@ impl TransformPass for Transform {
             item_modifications
         };
 
-        // Apply the computed modifications to each item. The memo and the caches only depend on
-        // `item_modifications`, so each thread can have its own.
+        // Apply the computed modifications to each item. The memos and the caches only depend on
+        // `item_modifications` and on what they're keyed by, so each thread can have its own.
         let memos = PerThread::<HashConsMemo<()>>::new();
+        let state_memos = PerThread::<HashConsMemo<u32>>::new();
         let caches = PerThread::<RefCell<Caches>>::new();
         // `type_replacements` are the replaced paths with their associated value, if already
         // computed.
@@ -1837,6 +1866,20 @@ impl TransformPass for Transform {
             // Update the rest of the items: all the `GenericArgs` and the non-top-level binders
             // (trait methods and inherent impls in `Name`s).
             let is_type_alias = matches!(&item, ItemRefMut::Type(tdecl) if matches!(tdecl.kind, TypeDeclKind::Alias(..)));
+            let caches = &caches.get();
+            let state_memo = &mut state_memos.get();
+            // Items with the same generics, e.g. a function and its closures, often have the same
+            // replacements and mention the same values: we keep the binder states and the state
+            // memo of the previous item if it had the same replacements.
+            {
+                let mut caches = caches.borrow_mut();
+                if caches.item_replacements.as_ref() != Some(&type_replacements) {
+                    caches.item_replacements = Some(type_replacements.clone());
+                    caches.set_ids.clear();
+                    caches.binder_states.clear();
+                    **state_memo = Default::default();
+                }
+            }
             let mut visitor = UpdateItemBody {
                 ctx,
                 span,
@@ -1844,12 +1887,10 @@ impl TransformPass for Transform {
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
                 memo: &mut memos.get(),
-                item_memo: Default::default(),
-                binder_states: Default::default(),
+                state_memo,
                 binder_state: 0,
                 set_ids: vec![],
-                pushed_sets: 0,
-                caches: &caches.get(),
+                caches,
                 reported_error: Cell::new(false),
                 error_msgs: Default::default(),
             };
