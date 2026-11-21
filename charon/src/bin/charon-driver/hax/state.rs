@@ -46,6 +46,9 @@ mod base {
         pub fn get(&self, k: &K) -> Option<V> {
             self.shard(k).lock().get(k).cloned()
         }
+        pub fn len(&self) -> usize {
+            self.shards.iter().map(|shard| shard.lock().len()).sum()
+        }
         pub fn into_entries(self) -> impl Iterator<Item = (K, V)> {
             self.shards
                 .into_iter()

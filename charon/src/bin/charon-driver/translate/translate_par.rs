@@ -234,7 +234,6 @@ impl<'tcx> TranslateCtx<'tcx> {
         for worker in &mut workers {
             worker.par = None;
         }
-        purge_freed_memory();
         let shared = Arc::into_inner(shared).expect("the workers are done");
         charon_lib::timing::time("translate-merge", || self.merge_workers(shared, workers));
         purge_freed_memory();
@@ -305,8 +304,6 @@ impl<'tcx> TranslateCtx<'tcx> {
             files,
             ..
         } = shared;
-        self.id_map = ids.into_entries().collect();
-        self.reverse_id_map = reverse_ids.into_entries().collect();
         let queue = queue.into_inner();
         self.processed = queue.processed;
         let methods = methods.into_inner();
@@ -320,9 +317,6 @@ impl<'tcx> TranslateCtx<'tcx> {
         krate.fun_decls = funs.into_inner();
         krate.global_decls = globals.into_inner();
         krate.trait_impls = impls.into_inner();
-        for (id, name) in names.into_entries() {
-            krate.item_names.insert(id, name);
-        }
         let counts = counts.map(|count| count.into_inner());
         fn extend<I: charon_lib::ids::Idx, T>(items: &mut IndexMap<I, T>, count: usize) {
             items.reserve_slots(count.saturating_sub(items.slot_count()));
@@ -363,7 +357,18 @@ impl<'tcx> TranslateCtx<'tcx> {
                 self.containment_graph.add_edge(parent, child, ());
             }
             logs.push(*worker.log.take().unwrap());
+            // Give the memory of this worker back before merging the next one.
+            drop(worker);
+            purge_freed_memory();
         }
+        // Sized upfront, as growing them would hold two copies at once.
+        self.id_map.reserve(ids.len());
+        self.id_map.extend(ids.into_entries());
+        self.reverse_id_map.reserve(reverse_ids.len());
+        self.reverse_id_map.extend(reverse_ids.into_entries());
+        let krate = &mut self.translated;
+        krate.item_names.reserve(names.len());
+        krate.item_names.extend(names.into_entries());
         // The memoized computations of this context may have raised errors formatted without all
         // the names, we don't want to reuse them.
         self.cached_item_metas.clear();
