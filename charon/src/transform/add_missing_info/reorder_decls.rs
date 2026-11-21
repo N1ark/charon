@@ -444,7 +444,16 @@ fn compute_declarations_graph(
                 let item = ctx.translated.get_item(id)?;
                 let mut visitor = DepsForItem::new(ctx, item);
                 item.drive(&mut visitor);
-                Some((id, visitor.edges, visitor.reachable))
+                let DepsForItem {
+                    mut edges,
+                    mut reachable,
+                    ..
+                } = visitor;
+                edges.sort_unstable();
+                edges.dedup();
+                reachable.sort_unstable();
+                reachable.dedup();
+                Some((id, edges, reachable))
             })
             .collect();
         frontier.clear();

@@ -1,8 +1,6 @@
 //! Remove unused trait clauses from items. A clause is unused if it is only used to build proofs
 //! for other unused clauses.
 use derive_generic_visitor::*;
-use petgraph::visit::Walker;
-use petgraph::{graphmap::DiGraphMap, visit::Dfs};
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -200,8 +198,8 @@ impl TransformPass for Transform {
     }
 
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        // Build a dependency graph between all item clauses of the crate. We gather the edges of
-        // each item in parallel.
+        // Build a dependency graph between all item clauses of the crate, as a map from each node
+        // to the nodes it uses. We gather the edges of each item in parallel.
         let item_edges: Vec<Vec<(ClauseNode, ClauseNode)>> = ctx
             .translated
             .all_items()
@@ -237,15 +235,22 @@ impl TransformPass for Transform {
                 edges
             })
             .collect();
-        let mut graph: DiGraphMap<ClauseNode, (), rustc_hash::FxBuildHasher> = DiGraphMap::new();
+        let mut graph: HashMap<ClauseNode, Vec<ClauseNode>> = HashMap::default();
         for (src, tgt) in item_edges.into_iter().flatten() {
-            graph.add_edge(src, tgt, ());
+            graph.entry(src).or_default().push(tgt);
         }
 
         // Remove the unused clauses and collect a global remapping of clause ids.
         let remaps: HashMap<ItemId, IndexVec<TraitClauseId, Option<TraitClauseId>>> = {
-            let reachable: HashSet<ClauseNode> =
-                Dfs::new(&graph, ClauseNode::Root).iter(&graph).collect();
+            let mut reachable: HashSet<ClauseNode> = HashSet::default();
+            let mut stack = vec![ClauseNode::Root];
+            while let Some(node) = stack.pop() {
+                if reachable.insert(node)
+                    && let Some(targets) = graph.get(&node)
+                {
+                    stack.extend(targets);
+                }
+            }
             ctx.translated
                 .all_items_mut()
                 .filter_map(|mut item| {
