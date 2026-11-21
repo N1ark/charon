@@ -311,7 +311,7 @@ impl<'tcx> FullDef<'tcx> {
         s: &impl BaseState<'tcx>,
         vtrait: VirtualTrait,
     ) -> &VirtualTraitImpl<'tcx> {
-        self.virtual_impls[vtrait as usize].get_or_init(|| {
+        self.virtual_impls[vtrait as usize].get_or_compute(|| {
             let s = &s.with_hax_owner(&self.this.def_id);
             let tcx = s.base().tcx;
             let trait_def_id = tcx.require_lang_item(vtrait.lang_item(), rustc_span::DUMMY_SP);
@@ -636,7 +636,7 @@ impl<'tcx> Trait<'tcx> {
     /// Proofs of the implied predicates. Most often uses the `Self` clause, except for builtin
     /// traits like `Sized`.
     pub fn implied_trait_proofs(&self, s: &impl BaseState<'tcx>) -> &[TraitProof<'tcx>] {
-        self.implied_trait_proofs.get_or_init(|| {
+        self.implied_trait_proofs.get_or_compute(|| {
             let s = &s.with_hax_owner(&self.def_id);
             let args = self.args.unwrap_or_else(|| self.def_id.identity_args(s));
             solve_item_implied_traits(s, self.def_id.real_rust_def_id(), args)
@@ -649,7 +649,7 @@ impl<'tcx> Trait<'tcx> {
     /// Associated items, in definition order.
     pub fn items(&self, s: &impl BaseState<'tcx>) -> &[AssocItem<'tcx>] {
         self.items
-            .get_or_init(|| assoc_items_of(&s.with_hax_owner(&self.def_id), self.args))
+            .get_or_compute(|| assoc_items_of(&s.with_hax_owner(&self.def_id), self.args))
     }
     /// `dyn Trait<Args.., Ty = <Self as Trait>::Ty..>` for this trait. This is `Some` iff this
     /// trait is dyn-compatible.
@@ -740,7 +740,7 @@ impl<'tcx> TraitImpl<'tcx> {
     }
     /// Associated items, in the order of the trait declaration. Includes defaulted items.
     pub fn items(&self, s: &impl BaseState<'tcx>) -> &[ImplAssocItem<'tcx>] {
-        self.items.get_or_init(|| self.compute_items(s))
+        self.items.get_or_compute(|| self.compute_items(s))
     }
 
     fn compute_items(&self, s: &impl BaseState<'tcx>) -> Vec<ImplAssocItem<'tcx>> {
@@ -832,7 +832,7 @@ impl<'tcx> InherentImpl<'tcx> {
     /// Associated items, in definition order.
     pub fn items(&self, s: &impl BaseState<'tcx>) -> &[AssocItem<'tcx>] {
         self.items
-            .get_or_init(|| assoc_items_of(&s.with_hax_owner(&self.def_id), self.args))
+            .get_or_compute(|| assoc_items_of(&s.with_hax_owner(&self.def_id), self.args))
     }
 }
 
@@ -1079,8 +1079,9 @@ pub struct Mod {
 
 impl Mod {
     pub fn items<'tcx>(&self, s: &impl BaseState<'tcx>) -> &[(Option<Ident>, DefId)] {
-        self.items
-            .get_or_init(|| get_mod_children(s.base().tcx, self.def_id.real_rust_def_id()).sinto(s))
+        self.items.get_or_compute(|| {
+            get_mod_children(s.base().tcx, self.def_id.real_rust_def_id()).sinto(s)
+        })
     }
 }
 
@@ -1587,7 +1588,7 @@ impl<'tcx> VirtualTraitImpl<'tcx> {
     /// vtables so we compute it on demand.
     fn dyn_data(&self, s: &impl BaseState<'tcx>) -> Option<&(Ty<'tcx>, Vec<PolyFnSig<'tcx>>)> {
         self.dyn_data
-            .get_or_init(|| {
+            .get_or_compute(|| {
                 let s = &s.with_hax_owner(&self.owner);
                 let tcx = s.base().tcx;
                 let trait_ref = self.trait_ref;

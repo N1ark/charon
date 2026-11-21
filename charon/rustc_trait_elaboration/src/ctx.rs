@@ -188,6 +188,34 @@ impl<'tcx, Id: ItemId> ElaborationData<'tcx, Id> {
     }
 }
 
+/// A predicate searcher for our use: the shared searcher of an item, or a private one if another
+/// thread is using the shared one. We don't wait for it: resolving runs rustc queries, and a thread
+/// that waits for a query gives up its rustc thread slot and must get one back afterwards, which
+/// can't happen if the threads waiting for this searcher keep theirs.
+pub enum SearcherGuard<'tcx, Id: ItemId> {
+    Shared(LockGuard<'tcx, PredicateSearcher<'tcx, Id>>),
+    Private(Box<PredicateSearcher<'tcx, Id>>),
+}
+
+impl<'tcx, Id: ItemId> std::ops::Deref for SearcherGuard<'tcx, Id> {
+    type Target = PredicateSearcher<'tcx, Id>;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            SearcherGuard::Shared(searcher) => searcher,
+            SearcherGuard::Private(searcher) => searcher,
+        }
+    }
+}
+
+impl<'tcx, Id: ItemId> std::ops::DerefMut for SearcherGuard<'tcx, Id> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            SearcherGuard::Shared(searcher) => searcher,
+            SearcherGuard::Private(searcher) => searcher,
+        }
+    }
+}
+
 impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
     /// Warning: only create a single one.
     pub fn new(tcx: ty::TyCtxt<'tcx>, bounds_options: BoundsOptions) -> Self {
@@ -241,23 +269,29 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         tref: ty::PolyTraitRef<'tcx>,
     ) -> bool {
         let tcx = self.tcx;
-        let mut caller_bound_trefs = self.data.caller_bound_trefs.lock();
-        caller_bound_trefs
-            .entry(typing_env.param_env)
-            .or_insert_with(|| {
-                typing_env
-                    .param_env
-                    .caller_bounds()
-                    .filter_map(|clause| clause.as_trait_clause())
-                    .filter(|clause| clause.polarity() == ty::ClausePolarity::Positive)
-                    .map(|clause| {
-                        let tref = ty::set_aliases_to_non_rigid(tcx, clause.to_poly_trait_ref())
-                            .skip_normalization();
-                        normalize_bound_val(tcx, typing_env, tref)
-                    })
-                    .collect()
+        let caller_bound_trefs = &self.data.caller_bound_trefs;
+        if let Some(trefs) = caller_bound_trefs.lock().get(&typing_env.param_env) {
+            return trefs.contains(&tref);
+        }
+        // Normalizing runs rustc queries: we must not hold the lock meanwhile, as other threads
+        // waiting for it would keep their rustc thread slots, which we may need to continue.
+        let trefs: FxHashSet<_> = typing_env
+            .param_env
+            .caller_bounds()
+            .filter_map(|clause| clause.as_trait_clause())
+            .filter(|clause| clause.polarity() == ty::ClausePolarity::Positive)
+            .map(|clause| {
+                let tref = ty::set_aliases_to_non_rigid(tcx, clause.to_poly_trait_ref())
+                    .skip_normalization();
+                normalize_bound_val(tcx, typing_env, tref)
             })
-            .contains(&tref)
+            .collect();
+        let found = trefs.contains(&tref);
+        caller_bound_trefs
+            .lock()
+            .entry(typing_env.param_env)
+            .or_insert(trefs);
+        found
     }
 
     /// Rustc's trait selection, cached.
@@ -281,7 +315,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> LockGuard<'tcx, PredicateSearcher<'tcx, Id>> {
+    ) -> SearcherGuard<'tcx, Id> {
         let searchers = &self.data.predicate_searchers;
         let found = searchers.lock().of_item.get(&def_id).copied();
         let searcher = match found {
@@ -307,11 +341,17 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
                         }
                     }
                 };
-                searchers.lock().of_item.insert(def_id, searcher);
+                searchers.lock().of_item.insert(def_id.clone(), searcher);
                 searcher
             }
         };
-        searcher.lock()
+        match searcher.try_lock() {
+            Some(searcher) => SearcherGuard::Shared(searcher),
+            None => {
+                let key = SearcherKey::for_owner(*self, state, &def_id);
+                SearcherGuard::Private(Box::new(PredicateSearcher::new(*self, state, &key)))
+            }
+        }
     }
 
     /// Resolve the trait proofs of an item reference that left them unresolved. Since they don't
@@ -333,10 +373,17 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         def_id: &Id,
         generics: ty::GenericArgsRef<'tcx>,
     ) -> Vec<TraitProof<'tcx, Id>> {
-        let mut searcher = self.data.empty_env_searcher.lock();
-        searcher
-            .get_or_insert_with(|| PredicateSearcher::new_empty(*self))
-            .resolve_item_required_predicates(state, def_id.clone(), generics)
+        // See `SearcherGuard` for why we don't wait for the shared searcher.
+        match self.data.empty_env_searcher.try_lock() {
+            Some(mut searcher) => searcher
+                .get_or_insert_with(|| PredicateSearcher::new_empty(*self))
+                .resolve_item_required_predicates(state, def_id.clone(), generics),
+            None => PredicateSearcher::new_empty(*self).resolve_item_required_predicates(
+                state,
+                def_id.clone(),
+                generics,
+            ),
+        }
     }
 
     pub(crate) fn cached_required_predicates(

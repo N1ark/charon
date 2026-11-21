@@ -57,17 +57,12 @@ pub(crate) struct ParShared<'tcx> {
     ctx_count: AtomicUsize,
     max_jobs: usize,
     jobs: AtomicUsize,
-    /// The main thread waits on this for new items or the end of the translation.
-    idle: Mutex<()>,
-    wake_up: std::sync::Condvar,
 }
 
 #[derive(Default)]
 pub(crate) struct Worklist<'tcx> {
     pub(crate) queue: VecDeque<TransItemSource<'tcx>>,
     pub(crate) processed: HashSet<TransItemSource<'tcx>>,
-    /// The number of items being translated.
-    in_flight: usize,
 }
 
 /// See the fields of the same name of `TranslateCtx` and `TranslatedCrate`.
@@ -191,10 +186,8 @@ impl<'tcx> TranslateCtx<'tcx> {
             mono_types: Default::default(),
             ctxs: Default::default(),
             ctx_count: AtomicUsize::new(1),
-            max_jobs: threads - 1,
+            max_jobs: threads,
             jobs: Default::default(),
-            idle: Default::default(),
-            wake_up: Default::default(),
         });
         self.share_state(&shared);
         self.par = Some(shared.clone());
@@ -203,24 +196,18 @@ impl<'tcx> TranslateCtx<'tcx> {
         rustc_thread_pool::scope(move |scope| {
             let (ctx, shared) = main.into_inner();
             let old_scope = SCOPE.replace(scope as *const _ as *const ());
+            // Once the queue is empty, the workers translate what they enqueue themselves, and the
+            // scope waits for them. Meanwhile this thread is an idle thread of the pool: it helps
+            // with the jobs, and else gives up its rustc thread slot, which the workers may need.
             loop {
                 shared.spawn_jobs();
-                if let Some(src) = shared.pop() {
-                    TRANSLATING.set(true);
-                    ctx.translate_item(&src);
-                    TRANSLATING.set(false);
-                    shared.done(ctx, &src);
-                    continue;
-                }
-                if shared.is_done() {
+                let Some(src) = shared.pop() else {
                     break;
-                }
-                // Help with the pending jobs, else wait for new items.
-                if rustc_thread_pool::yield_now() != Some(rustc_thread_pool::Yield::Executed) {
-                    let idle = shared.idle.lock().unwrap();
-                    let wait = std::time::Duration::from_micros(500);
-                    drop(shared.wake_up.wait_timeout(idle, wait).unwrap());
-                }
+                };
+                TRANSLATING.set(true);
+                ctx.translate_item(&src);
+                TRANSLATING.set(false);
+                shared.done(ctx, &src);
             }
             SCOPE.set(old_scope);
         });
@@ -454,7 +441,6 @@ impl<'tcx> ParShared<'tcx> {
 
     pub(crate) fn push(self: &Arc<Self>, src: TransItemSource<'tcx>) {
         self.queue.lock().queue.push_back(src);
-        self.wake_up.notify_one();
         self.spawn_jobs();
     }
 
@@ -463,7 +449,6 @@ impl<'tcx> ParShared<'tcx> {
         let mut worklist = self.queue.lock();
         while let Some(src) = worklist.queue.pop_front() {
             if worklist.processed.insert(src.clone()) {
-                worklist.in_flight += 1;
                 return Some(src);
             }
         }
@@ -471,22 +456,9 @@ impl<'tcx> ParShared<'tcx> {
     }
 
     fn done(&self, ctx: &TranslateCtx<'tcx>, src: &TransItemSource<'tcx>) {
-        let in_flight = {
-            let mut worklist = self.queue.lock();
-            worklist.in_flight -= 1;
-            worklist.in_flight
-        };
-        if in_flight == 0 {
-            self.wake_up.notify_one();
-        }
         if let Some(request) = self.requested_bodies.lock().remove(src) {
             ctx.body_requests.discard(request);
         }
-    }
-
-    fn is_done(&self) -> bool {
-        let worklist = self.queue.lock();
-        worklist.queue.is_empty() && worklist.in_flight == 0
     }
 
     /// Spawn jobs while there are queued items and free threads.

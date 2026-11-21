@@ -48,13 +48,23 @@ impl<'tcx> AllocTypes<'tcx> {
         alloc_id: interpret::AllocId,
         default: impl FnOnce() -> AllocView<'tcx>,
     ) -> AllocView<'tcx> {
+        {
+            let data = self.0.lock();
+            if data.lookups.is_none()
+                && let Some(view) = data.views.get(&alloc_id)
+            {
+                return *view;
+            }
+        }
+        // `default` may run rustc queries: other threads must not wait for us meanwhile, as they
+        // would keep their rustc thread slots, which we may need to continue.
+        let default = default();
         let mut data = self.0.lock();
         let data = &mut *data;
-        let Some(lookups) = &mut data.lookups else {
-            return *data.views.entry(alloc_id).or_insert_with(default);
-        };
-        let default = default();
         let view = *data.views.entry(alloc_id).or_insert(default);
+        let Some(lookups) = &mut data.lookups else {
+            return view;
+        };
         let lookups = lookups.entry(std::thread::current().id()).or_default();
         lookups.push(ViewLookup {
             alloc_id,

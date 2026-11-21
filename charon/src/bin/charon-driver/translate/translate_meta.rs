@@ -83,12 +83,16 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// `span` must be a span from which we obtained that filename.
     fn register_file(&mut self, filename: FileName, span: rustc_span::Span) -> FileId {
         if let Some(par) = &self.par {
+            if let Some(id) = par.files.lock().file_to_id.get(&filename) {
+                return *id;
+            }
+            // We don't hold the lock across this query, see `hax::OnceLockExt`.
+            let source_file = self.tcx.sess.source_map().lookup_source_file(span.lo());
+            let crate_name = self.tcx.crate_name(source_file.cnum).to_string();
             let mut files = par.files.lock();
             if let Some(id) = files.file_to_id.get(&filename) {
                 return *id;
             }
-            let source_file = self.tcx.sess.source_map().lookup_source_file(span.lo());
-            let crate_name = self.tcx.crate_name(source_file.cnum).to_string();
             let id = files.files.push_with(|id| File {
                 id,
                 name: filename.clone(),

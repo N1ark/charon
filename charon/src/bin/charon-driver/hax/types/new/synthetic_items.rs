@@ -227,10 +227,10 @@ impl<'tcx> GlobalCache<'tcx> {
         item: SyntheticItem,
         borrowed_param_def_ids: GenericParamDefIds,
     ) -> SyntheticItemData<'tcx> {
-        let mut synthetic_item_data = self.synthetic_item_data.lock();
-        if let Some(data) = synthetic_item_data.get(&item) {
+        if let Some(data) = self.synthetic_item_data.lock().get(&item) {
             return *data;
         }
+        // We compute it without holding the lock, see `OnceLockExt`.
         let tcx = s.base().tcx;
         let mut generics = ty::Generics {
             parent: None,
@@ -451,8 +451,7 @@ impl<'tcx> GlobalCache<'tcx> {
             late_bound_scope: matches!(item, SyntheticItem::FnPtr(_))
                 .then(|| tcx.parent(borrowed_param_def_ids.lt)),
         };
-        synthetic_item_data.insert(item, data);
-        data
+        *self.synthetic_item_data.lock().entry(item).or_insert(data)
     }
 }
 

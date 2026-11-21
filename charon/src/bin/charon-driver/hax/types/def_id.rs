@@ -500,7 +500,10 @@ impl DefId {
     /// Get the span of the definition of this item. This is the span used in diagnostics when
     /// referring to the item.
     pub fn def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
-        *self.facts.def_span.get_or_init(|| self.compute_def_span(s))
+        *self
+            .facts
+            .def_span
+            .get_or_compute(|| self.compute_def_span(s))
     }
 
     fn compute_def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
@@ -621,7 +624,7 @@ impl DefId {
         *self
             .facts
             .rustc_def_kind
-            .get_or_init(|| get_def_kind(s.base().tcx, self.real_rust_def_id()))
+            .get_or_compute(|| get_def_kind(s.base().tcx, self.real_rust_def_id()))
     }
 
     /// The `parent` and `count()` of `self.generics_of(s)`.
@@ -634,7 +637,7 @@ impl DefId {
             (generics.parent, generics.count())
         };
         match self.base {
-            DefIdBase::Real(..) => *self.facts.generics_parent_and_count.get_or_init(compute),
+            DefIdBase::Real(..) => *self.facts.generics_parent_and_count.get_or_compute(compute),
             _ => compute(),
         }
     }
@@ -644,30 +647,35 @@ impl DefId {
         match self.base {
             DefIdBase::Real(def_id) => tcx.generics_of(def_id),
             DefIdBase::Synthetic(synthetic) => synthetic.generics_of(s),
-            DefIdBase::Promoted(..) | DefIdBase::Alloc(..) => s.with_item_cache(self, |cache| {
-                if let Some(generics) = cache.virtual_generics {
+            DefIdBase::Promoted(..) | DefIdBase::Alloc(..) => {
+                if let Some(generics) = s.with_item_cache(self, |cache| cache.virtual_generics) {
                     return generics;
                 }
+                // Computed without holding the cache, see `OnceLockExt`.
                 let parent = match self.base {
                     DefIdBase::Promoted(def_id, ..) => Some(def_id),
                     _ => None,
                 };
-                let generics = Box::leak(Box::new(ty::Generics {
+                let generics = ty::Generics {
                     parent,
                     parent_count: parent.map_or(0, |p| tcx.generics_of(p).count()),
                     own_params: Default::default(),
                     param_def_id_to_index: Default::default(),
                     has_self: false,
                     has_late_bound_regions: None,
-                }));
-                cache.virtual_generics = Some(generics);
-                generics
-            }),
-            DefIdBase::ImplAssocItem(id) => s.with_item_cache(self, |cache| {
-                if let Some(generics) = cache.virtual_generics {
+                };
+                s.with_item_cache(self, |cache| {
+                    *cache
+                        .virtual_generics
+                        .get_or_insert_with(|| Box::leak(Box::new(generics)))
+                })
+            }
+            DefIdBase::ImplAssocItem(id) => {
+                if let Some(generics) = s.with_item_cache(self, |cache| cache.virtual_generics) {
                     return generics;
                 }
-                // We build a custom environment here.
+                // We build a custom environment here, without holding the cache (see
+                // `OnceLockExt`).
                 let item_id = id.item_impl_id;
                 let decl_generics = tcx.generics_of(item_id);
                 let parent_count = tcx.generics_of(id.trait_impl_id).count();
@@ -686,17 +694,20 @@ impl DefId {
                     .iter()
                     .map(|param| (param.def_id, param.index))
                     .collect();
-                let generics = Box::leak(Box::new(ty::Generics {
+                let generics = ty::Generics {
                     parent: Some(id.trait_impl_id),
                     parent_count,
                     own_params,
                     param_def_id_to_index,
                     has_self: decl_generics.has_self,
                     has_late_bound_regions: decl_generics.has_late_bound_regions,
-                }));
-                cache.virtual_generics = Some(generics);
-                generics
-            }),
+                };
+                s.with_item_cache(self, |cache| {
+                    *cache
+                        .virtual_generics
+                        .get_or_insert_with(|| Box::leak(Box::new(generics)))
+                })
+            }
         }
     }
 

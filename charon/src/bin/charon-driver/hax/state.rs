@@ -3,6 +3,30 @@ use annotate_snippets::Level;
 use rustc_data_structures::sync::Lock;
 use rustc_middle::ty::{self, TyCtxt};
 
+/// Lazy initialization that doesn't make other threads wait.
+///
+/// Translation threads run in rustc's thread pool, which only lets a bounded number of threads run:
+/// a thread that waits for a query another thread is running gives up its slot, and must get one
+/// back once the query is done. A thread blocked on one of our locks or `OnceLock`s keeps its
+/// slot, so if the thread it waits for is itself waiting for a query, the slots can run out and
+/// nothing progresses. Hence we never hold a lock other threads may wait for across rustc
+/// queries; this extension initializes a `OnceLock` in that spirit.
+pub trait OnceLockExt<T> {
+    /// Like `get_or_init`, except that other threads that need the value meanwhile compute it too
+    /// rather than wait: the first value stored wins.
+    fn get_or_compute(&self, f: impl FnOnce() -> T) -> &T;
+}
+
+impl<T> OnceLockExt<T> for std::sync::OnceLock<T> {
+    fn get_or_compute(&self, f: impl FnOnce() -> T) -> &T {
+        if let Some(value) = self.get() {
+            return value;
+        }
+        let _ = self.set(f());
+        self.get().unwrap()
+    }
+}
+
 mod base {
     use crate::hax::prelude::*;
     use itertools::Itertools;
@@ -105,7 +129,7 @@ mod base {
 
         pub fn crate_name(&self, tcx: ty::TyCtxt<'tcx>, krate: CrateNum) -> (Symbol, u32) {
             self.disambiguated_crate_names
-                .get_or_init(|| {
+                .get_or_compute(|| {
                     std::iter::once(LOCAL_CRATE)
                         .chain(tcx.crates(()).iter().copied())
                         .into_group_map_by(|&cnum| tcx.crate_name(cnum))

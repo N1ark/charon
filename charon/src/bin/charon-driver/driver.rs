@@ -215,7 +215,8 @@ pub enum BodyRequest<'tcx> {
 
 enum Prepared<'tcx> {
     Queued,
-    InProgress,
+    /// Being prepared, with a flag for each translation thread waiting for it.
+    InProgress(Vec<Arc<AtomicBool>>),
     /// The instantiated body, if any; `None` if computing it panicked.
     Ready(Option<Option<mir::Body<'tcx>>>),
 }
@@ -229,8 +230,6 @@ struct Requests<'tcx> {
     ready: usize,
     /// The number of threads waiting on `work_available`.
     workers_waiting: usize,
-    /// The number of translation threads waiting on `body_ready`.
-    translations_waiting: usize,
     translation_done: bool,
 }
 
@@ -286,24 +285,37 @@ impl<'tcx> BodyRequests<'tcx> {
     pub fn take(&self, request: BodyRequest<'tcx>) -> Option<Option<mir::Body<'tcx>>> {
         let mut requests = self.requests.lock().unwrap();
         loop {
-            match requests.prepared.get(&request)? {
-                Prepared::InProgress => {
-                    requests.translations_waiting += 1;
-                    requests = self.body_ready.wait(requests).unwrap();
-                    requests.translations_waiting -= 1;
-                    continue;
+            let r = &mut *requests;
+            let ready = match r.prepared.get_mut(&request)? {
+                Prepared::InProgress(waiters) => {
+                    let ready = Arc::new(AtomicBool::new(false));
+                    waiters.push(ready.clone());
+                    ready
                 }
-                Prepared::Queued => {}
-                Prepared::Ready(_) => requests.ready -= 1,
-            }
-            let Prepared::Ready(body) = requests.prepared.remove(&request).unwrap() else {
-                return None;
+                Prepared::Queued => break,
+                Prepared::Ready(_) => {
+                    r.ready -= 1;
+                    break;
+                }
             };
-            if requests.worker_should_wake() {
-                self.work_available.notify_all();
-            }
-            return body;
+            // Like rustc waiting for a query, we give up our rustc thread slot while we wait: the
+            // thread preparing the body may need one to finish.
+            let mut guard = Some(requests);
+            rustc_thread_pool::mark_blocked_and_wait(|| {
+                let mut requests = guard.take().unwrap();
+                while !ready.load(Ordering::Acquire) {
+                    requests = self.body_ready.wait(requests).unwrap();
+                }
+            });
+            requests = self.requests.lock().unwrap();
         }
+        let Prepared::Ready(body) = requests.prepared.remove(&request).unwrap() else {
+            return None;
+        };
+        if requests.worker_should_wake() {
+            self.work_available.notify_all();
+        }
+        body
     }
 
     /// Forget this body, which the translation won't read anymore.
@@ -349,7 +361,7 @@ impl<'tcx> BodyRequests<'tcx> {
                     && let Some(request) = requests.queue.pop_front()
                 {
                     if let Some(prepared @ Prepared::Queued) = requests.prepared.get_mut(&request) {
-                        *prepared = Prepared::InProgress;
+                        *prepared = Prepared::InProgress(Vec::new());
                         break request;
                     }
                     continue;
@@ -382,11 +394,21 @@ impl<'tcx> BodyRequests<'tcx> {
             }),
         });
         let requests = &mut *self.requests.lock().unwrap();
-        if let Some(prepared) = requests.prepared.get_mut(&request) {
-            *prepared = Prepared::Ready(body);
-            requests.ready += 1;
-        }
-        if requests.translations_waiting != 0 {
+        let Some(prepared) = requests.prepared.get_mut(&request) else {
+            return true;
+        };
+        let Prepared::InProgress(waiters) = std::mem::replace(prepared, Prepared::Ready(body))
+        else {
+            unreachable!()
+        };
+        requests.ready += 1;
+        if !waiters.is_empty() {
+            // As rustc does when it finishes a query that threads wait for.
+            let registry = rustc_thread_pool::Registry::current();
+            for ready in waiters {
+                rustc_thread_pool::mark_unblocked(&registry);
+                ready.store(true, Ordering::Release);
+            }
             self.body_ready.notify_all();
         }
         true

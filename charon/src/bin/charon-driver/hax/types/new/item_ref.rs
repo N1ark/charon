@@ -121,7 +121,7 @@ impl<'tcx> ItemRefContents<'tcx> {
     pub fn trait_proofs<'a, S: UnderOwnerState<'tcx>>(&'a self, s: &S) -> &'a [TraitProof<'tcx>] {
         match &self.trait_proofs {
             TraitProofs::Resolved(trait_proofs) => trait_proofs,
-            TraitProofs::Lazy(item, trait_proofs) => trait_proofs.get_or_init(|| {
+            TraitProofs::Lazy(item, trait_proofs) => trait_proofs.get_or_compute(|| {
                 let all_proofs = s
                     .base()
                     .elab_ctx
