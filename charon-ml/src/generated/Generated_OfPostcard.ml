@@ -2395,7 +2395,7 @@ and fun_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
   combine_error_msgs st __FUNCTION__
     (let* def_id = fun_decl_id_of_postcard ctx st in
      let* item_meta = item_meta_of_postcard ctx st in
-     let* generics = generic_params_of_postcard ctx st in
+     let* generics = item_generics_of_postcard ctx st in
      let* signature = box_of_postcard fun_sig_of_postcard ctx st in
      let* src = fun_source_of_postcard ctx st in
      let* body = body_of_postcard ctx st in
@@ -2473,7 +2473,7 @@ and global_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
   combine_error_msgs st __FUNCTION__
     (let* def_id = global_decl_id_of_postcard ctx st in
      let* item_meta = item_meta_of_postcard ctx st in
-     let* generics = generic_params_of_postcard ctx st in
+     let* generics = item_generics_of_postcard ctx st in
      let* ty = ty_of_postcard ctx st in
      let* size = size_of_postcard ctx st in
      let* align = size_of_postcard ctx st in
@@ -2636,6 +2636,10 @@ and instantiation_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (instantiation, string) result =
   combine_error_msgs st __FUNCTION__
     (binder_of_postcard generic_args_of_postcard ctx st)
+
+and item_generics_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (item_generics, string) result =
+  combine_error_msgs st __FUNCTION__ (generic_params_of_postcard ctx st)
 
 and item_id_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (item_id, string) result =
@@ -3377,7 +3381,7 @@ and trait_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      let* item_meta = item_meta_of_postcard ctx st in
      let* src = trait_decl_source_of_postcard ctx st in
      let* is_unsafe = bool_of_postcard ctx st in
-     let* generics = generic_params_of_postcard ctx st in
+     let* generics = item_generics_of_postcard ctx st in
      let* implied_clauses =
        index_vec_of_postcard trait_clause_id_of_postcard trait_param_of_postcard
          ctx st
@@ -3439,7 +3443,7 @@ and trait_impl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      let* impl_trait = trait_decl_ref_of_postcard ctx st in
      let* is_negative = bool_of_postcard ctx st in
      let* is_unsafe = bool_of_postcard ctx st in
-     let* generics = generic_params_of_postcard ctx st in
+     let* generics = item_generics_of_postcard ctx st in
      let* implied_trait_refs =
        index_vec_of_postcard trait_clause_id_of_postcard
          poly_trait_ref_of_postcard ctx st
@@ -3600,7 +3604,7 @@ and type_decl_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
   combine_error_msgs st __FUNCTION__
     (let* def_id = type_decl_id_of_postcard ctx st in
      let* item_meta = item_meta_of_postcard ctx st in
-     let* generics = generic_params_of_postcard ctx st in
+     let* generics = item_generics_of_postcard ctx st in
      let* src = type_source_of_postcard ctx st in
      let* kind = type_decl_kind_of_postcard ctx st in
      let* layout = target_layouts_of_postcard ctx st in

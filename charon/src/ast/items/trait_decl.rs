@@ -56,7 +56,7 @@ pub struct TraitDecl {
     pub src: TraitDeclSource,
     /// Whether this is an `unsafe trait`, i.e. implementing it requires `unsafe impl`.
     pub is_unsafe: bool,
-    pub generics: GenericParams,
+    pub generics: ItemGenerics,
     /// The "parent" clauses: the supertraits.
     ///
     /// Supertraits are actually regular where clauses, but we decided to have

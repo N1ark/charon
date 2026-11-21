@@ -35,7 +35,7 @@ fn new_promoted_global(
                 true,
                 ItemOpacity::Transparent,
             ),
-            generics: GenericParams::empty(),
+            generics: GenericParams::empty().into(),
             ty: ty.clone(),
             size: Size::from_expr(SizeExpr::size_of(&ty)),
             align: Size::from_expr(SizeExpr::align_of(&ty)),

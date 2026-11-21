@@ -29,7 +29,7 @@ pub struct TraitImpl {
     pub is_negative: bool,
     /// Whether this is an `unsafe impl`.
     pub is_unsafe: bool,
-    pub generics: GenericParams,
+    pub generics: ItemGenerics,
     /// The trait references for the parent clauses (see [TraitDecl]).
     pub implied_trait_refs: IndexVec<TraitClauseId, PolyTraitRef>,
     /// The implemented associated constants.

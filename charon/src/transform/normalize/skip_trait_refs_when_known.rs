@@ -107,7 +107,7 @@ fn normalize_method_call(ctx: &TransformCtx, fn_ptr: &FnPtr) -> Option<FnPtr> {
     // the method.
     let fn_ref: Binder<Binder<FunDeclRef>> = Binder::new(
         BinderKind::Other,
-        trait_impl.generics.clone(),
+        GenericParams::clone(&trait_impl.generics),
         bound_fn.clone(),
     );
     // Substitute the appropriate generics into the function call.

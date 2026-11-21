@@ -588,7 +588,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(TypeDecl {
             def_id: type_id,
             item_meta,
-            generics,
+            generics: generics.into(),
             src: TypeSource::VTable {
                 dyn_predicate,
                 field_map,
@@ -878,7 +878,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(GlobalDecl {
             def_id: global_id,
             item_meta,
-            generics: self.into_generics(),
+            generics: self.into_generics().into(),
             src,
             global_kind: GlobalKind::VTable,
             ty,
@@ -1325,7 +1325,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(FunDecl {
             def_id: fun_id,
             item_meta,
-            generics: self.into_generics(),
+            generics: self.into_generics().into(),
             signature: Box::new(signature),
             src: FunSource::VTableShim,
             body,
@@ -1443,7 +1443,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(FunDecl {
             def_id: fun_id,
             item_meta,
-            generics: self.into_generics(),
+            generics: self.into_generics().into(),
             signature: Box::new(signature),
             src: FunSource::VTableShim,
             body,

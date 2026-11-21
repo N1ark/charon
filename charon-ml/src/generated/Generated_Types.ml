@@ -1069,6 +1069,10 @@ and inhabited_predicate_kind =
 (** The hash-consed arguments of an instantiated item. *)
 and instantiation = generic_args binder
 
+(** The generic parameters of an item. We only allocate them when there are
+    some: monomorphized items have none. *)
+and item_generics = generic_params
+
 (** Meta information about an item (function, trait decl, trait impl, type decl,
     global). *)
 and item_meta = {
@@ -1622,7 +1626,7 @@ and target_layouts = (string * layout) list
 and type_decl = {
   def_id : type_decl_id;
   item_meta : item_meta;  (** Meta information associated with the item. *)
-  generics : generic_params;
+  generics : item_generics;
   src : type_source;
       (** The context of the type: distinguishes top-level items from
           closure-related items etc. *)

@@ -123,7 +123,7 @@ impl VisitAstMut for RemoveAdtClausesVisitor<'_> {
         // The wrapper has already pushed the (uncleared) generic params onto the binder stack.
         // Replace the top with the cleared version so dangling-clause detection works as we
         // descend into the body.
-        *self.binder_stack.innermost_mut() = decl.generics.clone();
+        *self.binder_stack.innermost_mut() = GenericParams::clone(&decl.generics);
     }
 
     fn exit_type_decl(&mut self, _decl: &mut TypeDecl) {

@@ -25,7 +25,7 @@ pub struct GlobalDecl {
     ///     let l = V::<N, T>::LEN; // We need to provided a substitution here
     /// }
     /// ```
-    pub generics: GenericParams,
+    pub generics: ItemGenerics,
     pub ty: Ty,
     /// The size in bytes of the global's allocation.
     pub size: Size,

@@ -176,6 +176,111 @@ pub struct GenericParams {
     pub trait_type_constraints: IndexVec<TraitTypeConstraintId, RegionBinder<TraitTypeConstraint>>,
 }
 
+/// The generic parameters of an item. We only allocate them when there are some: monomorphized
+/// items have none.
+#[derive(Default, Clone)]
+pub struct ItemGenerics(Option<Box<GenericParams>>);
+
+impl ItemGenerics {
+    pub fn new(params: GenericParams) -> Self {
+        ItemGenerics((!params.is_empty()).then(|| Box::new(params)))
+    }
+
+    /// Take the parameters out, leaving none.
+    pub fn take(&mut self) -> GenericParams {
+        self.0.take().map(|params| *params).unwrap_or_default()
+    }
+}
+
+impl From<GenericParams> for ItemGenerics {
+    fn from(params: GenericParams) -> Self {
+        ItemGenerics::new(params)
+    }
+}
+
+impl std::ops::Deref for ItemGenerics {
+    type Target = GenericParams;
+    fn deref(&self) -> &GenericParams {
+        static EMPTY: std::sync::LazyLock<GenericParams> =
+            std::sync::LazyLock::new(GenericParams::default);
+        self.0.as_deref().unwrap_or(&EMPTY)
+    }
+}
+
+impl std::ops::DerefMut for ItemGenerics {
+    fn deref_mut(&mut self) -> &mut GenericParams {
+        self.0.get_or_insert_default()
+    }
+}
+
+impl PartialEq for ItemGenerics {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+impl Eq for ItemGenerics {}
+
+impl std::hash::Hash for ItemGenerics {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (**self).hash(state)
+    }
+}
+
+impl std::fmt::Debug for ItemGenerics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+impl<'s, V: Visit<'s, GenericParams>> Drive<'s, V> for ItemGenerics {
+    fn drive_inner(&'s self, v: &mut V) -> std::ops::ControlFlow<V::Break> {
+        v.visit(&**self)
+    }
+}
+impl<'s, V: for<'a> VisitMut<'a, GenericParams>> DriveMut<'s, V> for ItemGenerics {
+    fn drive_inner_mut(&'s mut self, v: &mut V) -> std::ops::ControlFlow<V::Break> {
+        match &mut self.0 {
+            Some(params) => v.visit(&mut **params),
+            None => {
+                let mut params = GenericParams::default();
+                let ret = v.visit(&mut params);
+                *self = ItemGenerics::new(params);
+                ret
+            }
+        }
+    }
+}
+impl<'s, V: VisitTwo<'s, GenericParams>> DriveTwo<'s, V> for ItemGenerics {
+    fn drive_two_inner(&'s self, other: &'s Self, v: &mut V) -> std::ops::ControlFlow<V::Break> {
+        v.visit(&**self, &**other)
+    }
+}
+
+/// Serialized as the plain parameters.
+impl<State: ?Sized> SerializeState<State> for ItemGenerics
+where
+    GenericParams: SerializeState<State>,
+{
+    fn serialize_state<S: serde::Serializer>(
+        &self,
+        state: &State,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_state(state, serializer)
+    }
+}
+impl<'de, State: ?Sized> DeserializeState<'de, State> for ItemGenerics
+where
+    GenericParams: DeserializeState<'de, State>,
+{
+    fn deserialize_state<D: serde::Deserializer<'de>>(
+        state: &State,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        GenericParams::deserialize_state(state, deserializer).map(ItemGenerics::new)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 #[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("BK"))]

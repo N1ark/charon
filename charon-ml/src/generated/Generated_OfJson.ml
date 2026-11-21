@@ -3031,7 +3031,7 @@ and fun_decl_of_json (ctx : of_json_ctx) (js : json) : (fun_decl, string) result
     | `List [ def_id; item_meta; generics; signature; src; body ] ->
         let* def_id = fun_decl_id_of_json ctx def_id in
         let* item_meta = item_meta_of_json ctx item_meta in
-        let* generics = generic_params_of_json ctx generics in
+        let* generics = item_generics_of_json ctx generics in
         let* signature = box_of_json fun_sig_of_json ctx signature in
         let* src = fun_source_of_json ctx src in
         let* body = body_of_json ctx body in
@@ -3163,7 +3163,7 @@ and global_decl_of_json (ctx : of_json_ctx) (js : json) :
         ] ->
         let* def_id = global_decl_id_of_json ctx def_id in
         let* item_meta = item_meta_of_json ctx item_meta in
-        let* generics = generic_params_of_json ctx generics in
+        let* generics = item_generics_of_json ctx generics in
         let* ty = ty_of_json ctx ty in
         let* size = size_of_json ctx size in
         let* align = size_of_json ctx align in
@@ -3381,6 +3381,13 @@ and instantiation_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | json -> binder_of_json generic_args_of_json ctx json
+    | _ -> Error "")
+
+and item_generics_of_json (ctx : of_json_ctx) (js : json) :
+    (item_generics, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | json -> generic_params_of_json ctx json
     | _ -> Error "")
 
 and item_id_of_json (ctx : of_json_ctx) (js : json) : (item_id, string) result =
@@ -4325,7 +4332,7 @@ and trait_decl_of_json (ctx : of_json_ctx) (js : json) :
         let* item_meta = item_meta_of_json ctx item_meta in
         let* src = trait_decl_source_of_json ctx src in
         let* is_unsafe = bool_of_json ctx is_unsafe in
-        let* generics = generic_params_of_json ctx generics in
+        let* generics = item_generics_of_json ctx generics in
         let* implied_clauses =
           index_vec_of_json trait_clause_id_of_json trait_param_of_json ctx
             implied_clauses
@@ -4418,7 +4425,7 @@ and trait_impl_of_json (ctx : of_json_ctx) (js : json) :
         let* impl_trait = trait_decl_ref_of_json ctx impl_trait in
         let* is_negative = bool_of_json ctx is_negative in
         let* is_unsafe = bool_of_json ctx is_unsafe in
-        let* generics = generic_params_of_json ctx generics in
+        let* generics = item_generics_of_json ctx generics in
         let* implied_trait_refs =
           index_vec_of_json trait_clause_id_of_json poly_trait_ref_of_json ctx
             implied_trait_refs
@@ -4651,7 +4658,7 @@ and type_decl_of_json (ctx : of_json_ctx) (js : json) :
         ] ->
         let* def_id = type_decl_id_of_json ctx def_id in
         let* item_meta = item_meta_of_json ctx item_meta in
-        let* generics = generic_params_of_json ctx generics in
+        let* generics = item_generics_of_json ctx generics in
         let* src = type_source_of_json ctx src in
         let* kind = type_decl_kind_of_json ctx kind in
         let* layout = target_layouts_of_json ctx layout in

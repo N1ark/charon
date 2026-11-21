@@ -108,7 +108,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         Ok(FunDecl {
             def_id,
             item_meta,
-            generics: self.into_generics(),
+            generics: self.into_generics().into(),
             signature: Box::new(signature),
             src,
             body,

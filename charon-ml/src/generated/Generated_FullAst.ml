@@ -214,7 +214,7 @@ and rustc_env =
 and fun_decl = {
   def_id : fun_decl_id;
   item_meta : item_meta;  (** The meta data associated with the declaration. *)
-  generics : generic_params;
+  generics : item_generics;
   signature : fun_sig;
       (** The signature contains the inputs/output types and ABI details. *)
   src : fun_source;

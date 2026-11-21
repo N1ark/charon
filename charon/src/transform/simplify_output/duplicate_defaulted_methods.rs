@@ -29,7 +29,7 @@ impl Transform {
         // Flatten the impl binder and the method binder. The resulting substitution maps the
         // trait default method into the generic context of the duplicated impl method.
         let subst: Binder<FunDeclRef> = Binder {
-            params: trait_impl.generics.clone(),
+            params: GenericParams::clone(&trait_impl.generics),
             skip_binder: method.clone(),
             kind: BinderKind::Other,
         }

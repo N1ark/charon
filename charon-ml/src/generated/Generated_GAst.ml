@@ -418,7 +418,7 @@ and unwind_terminate_reason =
 type global_decl = {
   def_id : global_decl_id;
   item_meta : item_meta;  (** The meta data associated with the declaration. *)
-  generics : generic_params;
+  generics : item_generics;
       (** Remark: constants can actually have generic parameters.
           {@rust[
             struct V<const N: usize, T> {
@@ -573,7 +573,7 @@ and trait_decl = {
   is_unsafe : bool;
       (** Whether this is an [unsafe trait], i.e. implementing it requires
           [unsafe impl]. *)
-  generics : generic_params;
+  generics : item_generics;
   implied_clauses : trait_param list;
       (** The "parent" clauses: the supertraits.
 
@@ -678,7 +678,7 @@ and trait_impl = {
   is_negative : bool;
       (** Whether this is a negative impl ([impl !Trait for Type]). *)
   is_unsafe : bool;  (** Whether this is an [unsafe impl]. *)
-  generics : generic_params;
+  generics : item_generics;
   implied_trait_refs : poly_trait_ref list;
       (** The trait references for the parent clauses (see [TraitDecl]). *)
   consts : global_decl_ref assoc_const_id_map;

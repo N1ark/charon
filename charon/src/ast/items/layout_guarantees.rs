@@ -964,7 +964,7 @@ mod tests {
                     true,
                     ItemOpacity::Transparent,
                 ),
-                generics,
+                generics: generics.into(),
                 src: TypeSource::Normal,
                 kind: TypeDeclKind::Opaque,
                 layout: TargetLayouts(layouts),

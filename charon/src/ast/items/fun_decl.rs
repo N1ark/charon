@@ -11,7 +11,7 @@ pub struct FunDecl {
     pub def_id: FunDeclId,
     /// The meta data associated with the declaration.
     pub item_meta: ItemMeta,
-    pub generics: GenericParams,
+    pub generics: ItemGenerics,
     /// The signature contains the inputs/output types and ABI details.
     pub signature: Box<FunSig>,
     /// The function kind: "regular" function, trait method declaration, etc.
@@ -109,7 +109,7 @@ impl FunDecl {
         FunDecl {
             def_id,
             item_meta,
-            generics: subst.params,
+            generics: subst.params.into(),
             signature,
             src,
             body,
