@@ -1,0 +1,2261 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::ops::index::Index
+#[lang_item(Index)]
+pub trait Index<Self, Idx>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Idx: MetaSized)
+    proof ImpliedClause2: (Self::Output: MetaSized)
+    type Output
+    #[track_caller]
+    fn index<'_0_1, Outlives0: (Self: '_0_1), Outlives1: (Self::Output: '_0_1)>;
+    vtable: core::ops::index::Index::{vtable}<Idx, Self::Output>
+}
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::array::{impl Index<I> for [T; N]}::index
+pub fn impl_Index_for_array::index<'_0, T, I, const N : usize>(_1: &'_0 [T; N], _2: I) -> &'_0 TraitClause2::Output
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: ([T]: Index<I>),
+    Outlives0: (T: '_0),
+    Outlives1: (TraitClause2::Output: '_0),
+= <opaque>
+
+// Full name: core::ops::index::IndexMut
+#[lang_item(IndexMut)]
+pub trait IndexMut<Self, Idx>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Index<Idx>)
+    proof ImpliedClause2: (Idx: MetaSized)
+    #[track_caller]
+    fn index_mut<'_0_1, Outlives0: (Self: '_0_1), Outlives1: (Self::ImpliedClause1::Output: '_0_1)>;
+    vtable: core::ops::index::IndexMut::{vtable}<Idx, Self::ImpliedClause1::Output>
+}
+
+// Full name: core::array::{impl IndexMut<I> for [T; N]}::index_mut
+pub fn impl_IndexMut_for_array::index_mut<'_0, T, I, const N : usize>(_1: &'_0 mut [T; N], _2: I) -> &'_0 mut TraitClause2::ImpliedClause1::Output
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: ([T]: IndexMut<I>),
+    Outlives0: (T: '_0),
+    Outlives1: (TraitClause2::ImpliedClause1::Output: '_0),
+= <opaque>
+
+// Full name: core::convert::From
+#[lang_item(From)]
+#[diagnostic_item("From")]
+pub trait From<Self, T>
+{
+    proof ImpliedClause0: (Self: Sized)
+    proof ImpliedClause1: (T: Sized)
+    fn from;
+    non-dyn-compatible
+}
+
+// Full name: core::convert::{impl From<T> for T}::from
+pub fn from<T>(_1: T) -> T
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+// Full name: core::convert::{impl From<T> for T}
+impl<T> "impl_From_for_T" From<T> for T
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (T: Sized) = TraitClause0
+    proof ImpliedClause1: (T: Sized) = TraitClause0
+    fn from = from<T>[TraitClause0]
+    non-dyn-compatible
+}
+
+// Full name: core::ops::control_flow::ControlFlow
+#[diagnostic_item("ControlFlow")]
+pub enum ControlFlow<B, C>
+where
+    TraitClause0: (B: Sized),
+    TraitClause1: (C: Sized),
+{
+  Continue { _0: C },
+  Break { _0: B },
+}
+
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T>
+where
+    TraitClause0: (T: Sized),
+{
+  None,
+  Some { _0: T },
+}
+
+// Full name: core::option::{Option<T>[TraitClause0]}::is_none
+pub fn is_none<'_0, T>(_1: &'_0 Option<T>[TraitClause0]) -> bool
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::result::Result
+#[diagnostic_item("Result")]
+pub enum Result<T, E>
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (E: Sized),
+{
+  Ok { _0: T },
+  Err { _0: E },
+}
+
+// Full name: core::result::{impl Try for Result<T, E>[TraitClause0, TraitClause1]}::branch
+pub fn branch<T, E>(_1: Result<T, E>[TraitClause0, TraitClause1]) -> ControlFlow<Result<!, E>[{built_in impl Sized for !}, TraitClause1], T>[{built_in impl Sized for Result<!, E>[{built_in impl Sized for !}, TraitClause1]}, TraitClause0]
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (E: Sized),
+= <opaque>
+
+// Full name: core::result::{impl FromResidual<Result<!, E>[{built_in impl Sized for !}, TraitClause1]> for Result<T, F>[TraitClause0, TraitClause2]}::from_residual
+#[track_caller]
+pub fn from_residual<T, E, F>(_1: Result<!, E>[{built_in impl Sized for !}, TraitClause1]) -> Result<T, F>[TraitClause0, TraitClause2]
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (E: Sized),
+    TraitClause2: (F: Sized),
+    TraitClause3: (F: From<E>),
+= <opaque>
+
+// Full name: core::slice::index::SliceIndex
+#[diagnostic_item("SliceIndex")]
+pub unsafe trait SliceIndex<Self, T>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (T: MetaSized)
+    proof ImpliedClause2: (Self::Output: MetaSized)
+    type Output
+    fn get<'_0_1, Outlives0: (T: '_0_1), Outlives1: (Self::Output: '_0_1)>;
+    fn get_mut<'_0_1, Outlives0: (T: '_0_1), Outlives1: (Self::Output: '_0_1)>;
+    fn get_unchecked;
+    fn get_unchecked_mut;
+    #[track_caller]
+    fn index<'_0_1, Outlives0: (T: '_0_1), Outlives1: (Self::Output: '_0_1)>;
+    #[track_caller]
+    fn index_mut<'_0_1, Outlives0: (T: '_0_1), Outlives1: (Self::Output: '_0_1)>;
+    vtable: core::slice::index::SliceIndex::{vtable}<T, Self::Output>
+}
+
+// Full name: core::slice::index::{impl Index<I> for [T]}::index
+pub fn impl_Index_for_slice::index<'_0, T, I>(_1: &'_0 [T], _2: I) -> &'_0 TraitClause2::Output
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: (I: SliceIndex<[T]>),
+    Outlives0: (T: '_0),
+    Outlives1: (TraitClause2::Output: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl Index<I> for [T]}
+impl<T, I> "impl_Index_for_slice" Index<I> for [T]
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: (I: SliceIndex<[T]>),
+{
+    proof ImpliedClause0: ([T]: MetaSized) = {built_in impl MetaSized for [T]}
+    proof ImpliedClause1: (I: MetaSized) = TraitClause1::ImpliedClause0
+    proof ImpliedClause2: (TraitClause2::Output: MetaSized) = TraitClause2::ImpliedClause2
+    type Output = TraitClause2::Output
+    fn index<'_0_1> = impl_Index_for_slice::index<'_0_1, T, I>[TraitClause0, TraitClause1, TraitClause2]
+    vtable: lazy
+}
+
+// Full name: core::slice::index::{impl IndexMut<I> for [T]}::index_mut
+#[rustc_no_writable]
+pub fn impl_IndexMut_for_slice::index_mut<'_0, T, I>(_1: &'_0 mut [T], _2: I) -> &'_0 mut TraitClause2::Output
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: (I: SliceIndex<[T]>),
+    Outlives0: (T: '_0),
+    Outlives1: (TraitClause2::Output: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl IndexMut<I> for [T]}
+impl<T, I> "impl_IndexMut_for_slice" IndexMut<I> for [T]
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (I: Sized),
+    TraitClause2: (I: SliceIndex<[T]>),
+{
+    proof ImpliedClause0: ([T]: MetaSized) = {built_in impl MetaSized for [T]}
+    proof ImpliedClause1: ([T]: Index<I>) = impl_Index_for_slice<T, I>[TraitClause0, TraitClause1, TraitClause2]
+    proof ImpliedClause2: (I: MetaSized) = TraitClause1::ImpliedClause0
+    fn index_mut<'_0_1> = impl_IndexMut_for_slice::index_mut<'_0_1, T, I>[TraitClause0, TraitClause1, TraitClause2]
+    vtable: lazy
+}
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::index_mut
+#[rustc_no_writable]
+pub fn impl_SliceIndex_slice_for_usize::index_mut<'_0, T>(_1: usize, _2: &'_0 mut [T]) -> &'_0 mut T
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::index
+pub fn impl_SliceIndex_slice_for_usize::index<'_0, T>(_1: usize, _2: &'_0 [T]) -> &'_0 T
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_unchecked_mut
+#[track_caller]
+pub unsafe fn impl_SliceIndex_slice_for_usize::get_unchecked_mut<T>(_1: usize, _2: *mut [T]) -> *mut T
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_unchecked
+#[track_caller]
+pub unsafe fn impl_SliceIndex_slice_for_usize::get_unchecked<T>(_1: usize, _2: *const [T]) -> *const T
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get_mut
+#[rustc_no_writable]
+pub fn impl_SliceIndex_slice_for_usize::get_mut<'_0, T>(_1: usize, _2: &'_0 mut [T]) -> Option<&'_0 mut T>[{built_in impl Sized for &'_0 mut T}]
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}::get
+pub fn impl_SliceIndex_slice_for_usize::get<'_0, T>(_1: usize, _2: &'_0 [T]) -> Option<&'_0 T>[{built_in impl Sized for &'_0 T}]
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: '_0),
+= <opaque>
+
+// Full name: core::slice::index::{impl SliceIndex<[T]> for usize}
+unsafe impl<T> "impl_SliceIndex_slice_for_usize" SliceIndex<[T]> for usize
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (usize: MetaSized) = {built_in impl MetaSized for usize}
+    proof ImpliedClause1: ([T]: MetaSized) = {built_in impl MetaSized for [T]}
+    proof ImpliedClause2: (T: MetaSized) = TraitClause0::ImpliedClause0
+    type Output = T
+    fn get<'_0_1> = impl_SliceIndex_slice_for_usize::get<'_0_1, T>[TraitClause0]
+    fn get_mut<'_0_1> = impl_SliceIndex_slice_for_usize::get_mut<'_0_1, T>[TraitClause0]
+    fn get_unchecked = impl_SliceIndex_slice_for_usize::get_unchecked<T>[TraitClause0]
+    fn get_unchecked_mut = impl_SliceIndex_slice_for_usize::get_unchecked_mut<T>[TraitClause0]
+    fn index<'_0_1> = impl_SliceIndex_slice_for_usize::index<'_0_1, T>[TraitClause0]
+    fn index_mut<'_0_1> = impl_SliceIndex_slice_for_usize::index_mut<'_0_1, T>[TraitClause0]
+    vtable: lazy
+}
+
+struct () {}
+
+// Full name: test_crate::sequence
+pub fn sequence<'_0>(first: bool, state: &'_0 mut [Option<u32>[{built_in impl Sized for u32}]; 3usize], parse: fn(usize) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]
+{
+    let mut _0: Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // return
+    let first: bool; // arg #1
+    let state: &'0 mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // arg #2
+    let parse: fn(usize) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // arg #3
+    let mut _4: bool; // anonymous local
+    let mut _5: bool; // anonymous local
+    let mut _6: &'1 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let _7: usize; // anonymous local
+    let mut _8: Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _9: u32; // anonymous local
+    let mut _10: ControlFlow<Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}], u32>[{built_in impl Sized for Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]}, {built_in impl Sized for u32}]; // anonymous local
+    let mut _11: Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let mut _12: fn(usize) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let residual_13: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // local
+    let mut _14: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // anonymous local
+    let val_15: u32; // local
+    let _16: usize; // anonymous local
+    let mut _17: bool; // anonymous local
+    let mut _18: bool; // anonymous local
+    let mut _19: &'2 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let _20: usize; // anonymous local
+    let mut _21: Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _22: u32; // anonymous local
+    let mut _23: ControlFlow<Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}], u32>[{built_in impl Sized for Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]}, {built_in impl Sized for u32}]; // anonymous local
+    let mut _24: Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let mut _25: fn(usize) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let residual_26: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // local
+    let mut _27: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // anonymous local
+    let val_28: u32; // local
+    let _29: usize; // anonymous local
+    let mut _30: bool; // anonymous local
+    let mut _31: bool; // anonymous local
+    let mut _32: &'3 Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let _33: usize; // anonymous local
+    let mut _34: Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _35: u32; // anonymous local
+    let mut _36: ControlFlow<Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}], u32>[{built_in impl Sized for Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]}, {built_in impl Sized for u32}]; // anonymous local
+    let mut _37: Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let mut _38: fn(usize) -> Result<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}]; // anonymous local
+    let residual_39: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // local
+    let mut _40: Result<!, ()>[{built_in impl Sized for !}, {built_in impl Sized for ()}]; // anonymous local
+    let val_41: u32; // local
+    let _42: usize; // anonymous local
+    let mut _43: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _44: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _45: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _46: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _47: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _48: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _49: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _50: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _51: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _52: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _53: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _54: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _55: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _56: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _57: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _58: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _59: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _60: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _61: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _62: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _63: &'_ [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _64: &'_ Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _65: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _66: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _67: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _68: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+    let mut _69: &'_ mut [Option<u32>[{built_in impl Sized for u32}]; 3usize]; // anonymous local
+    let mut _70: &'_ mut Option<u32>[{built_in impl Sized for u32}]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    _4 = copy first
+    if move _4 {
+    } else {
+        storage_live(_5)
+        storage_live(_6)
+        storage_live(_7)
+        _7 = const 0usize
+        fake_read((*state))
+        storage_live(_55)
+        _55 = &(*state)
+        storage_live(_56)
+        _56 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _55, copy _7)
+        ↳⚡ undefined_behavior
+        _6 = &(*_56)
+        _5 = is_none<'4, u32>[{built_in impl Sized for u32}](move _6)
+        ↳⚡ storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            unwind_continue
+        if move _5 {
+            storage_dead(_7)
+            storage_dead(_6)
+        } else {
+            storage_dead(_7)
+            storage_dead(_6)
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_live(_17)
+            _17 = copy first
+            if move _17 {
+            } else {
+                storage_live(_18)
+                storage_live(_19)
+                storage_live(_20)
+                _20 = const 1usize
+                fake_read((*state))
+                storage_live(_47)
+                _47 = &(*state)
+                storage_live(_48)
+                _48 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _47, copy _20)
+                ↳⚡ undefined_behavior
+                _19 = &(*_48)
+                _18 = is_none<'5, u32>[{built_in impl Sized for u32}](move _19)
+                ↳⚡ storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    unwind_continue
+                if move _18 {
+                    storage_dead(_20)
+                    storage_dead(_19)
+                } else {
+                    storage_dead(_20)
+                    storage_dead(_19)
+                    storage_dead(_18)
+                    storage_dead(_17)
+                    storage_live(_30)
+                    _30 = copy first
+                    if move _30 {
+                    } else {
+                        storage_live(_31)
+                        storage_live(_32)
+                        storage_live(_33)
+                        _33 = const 2usize
+                        fake_read((*state))
+                        storage_live(_43)
+                        _43 = &(*state)
+                        storage_live(_44)
+                        _44 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _43, copy _33)
+                        ↳⚡ undefined_behavior
+                        _32 = &(*_44)
+                        _31 = is_none<'6, u32>[{built_in impl Sized for u32}](move _32)
+                        ↳⚡ storage_dead(parse)
+                            storage_dead(state)
+                            storage_dead(first)
+                            storage_dead(_70)
+                            storage_dead(_69)
+                            storage_dead(_68)
+                            storage_dead(_67)
+                            storage_dead(_66)
+                            storage_dead(_65)
+                            storage_dead(_64)
+                            storage_dead(_63)
+                            storage_dead(_62)
+                            storage_dead(_61)
+                            storage_dead(_60)
+                            storage_dead(_59)
+                            storage_dead(_58)
+                            storage_dead(_57)
+                            storage_dead(_56)
+                            storage_dead(_55)
+                            storage_dead(_54)
+                            storage_dead(_53)
+                            storage_dead(_52)
+                            storage_dead(_51)
+                            storage_dead(_50)
+                            storage_dead(_49)
+                            storage_dead(_48)
+                            storage_dead(_47)
+                            storage_dead(_46)
+                            storage_dead(_45)
+                            storage_dead(_44)
+                            storage_dead(_43)
+                            unwind_continue
+                        if move _31 {
+                            storage_dead(_33)
+                            storage_dead(_32)
+                        } else {
+                            storage_dead(_33)
+                            storage_dead(_32)
+                            storage_dead(_31)
+                            storage_dead(_30)
+                            _0 = Result::Ok { _0: const 0u32 }
+                            storage_dead(parse)
+                            storage_dead(state)
+                            storage_dead(first)
+                            storage_dead(_70)
+                            storage_dead(_69)
+                            storage_dead(_68)
+                            storage_dead(_67)
+                            storage_dead(_66)
+                            storage_dead(_65)
+                            storage_dead(_64)
+                            storage_dead(_63)
+                            storage_dead(_62)
+                            storage_dead(_61)
+                            storage_dead(_60)
+                            storage_dead(_59)
+                            storage_dead(_58)
+                            storage_dead(_57)
+                            storage_dead(_56)
+                            storage_dead(_55)
+                            storage_dead(_54)
+                            storage_dead(_53)
+                            storage_dead(_52)
+                            storage_dead(_51)
+                            storage_dead(_50)
+                            storage_dead(_49)
+                            storage_dead(_48)
+                            storage_dead(_47)
+                            storage_dead(_46)
+                            storage_dead(_45)
+                            storage_dead(_44)
+                            storage_dead(_43)
+                            return
+                        }
+                    }
+                    storage_live(_34)
+                    storage_live(_35)
+                    storage_live(_36)
+                    storage_live(_37)
+                    storage_live(_38)
+                    _38 = copy parse
+                    _37 = (move _38)(const 2usize)
+                    ↳⚡ storage_dead(parse)
+                        storage_dead(state)
+                        storage_dead(first)
+                        storage_dead(_70)
+                        storage_dead(_69)
+                        storage_dead(_68)
+                        storage_dead(_67)
+                        storage_dead(_66)
+                        storage_dead(_65)
+                        storage_dead(_64)
+                        storage_dead(_63)
+                        storage_dead(_62)
+                        storage_dead(_61)
+                        storage_dead(_60)
+                        storage_dead(_59)
+                        storage_dead(_58)
+                        storage_dead(_57)
+                        storage_dead(_56)
+                        storage_dead(_55)
+                        storage_dead(_54)
+                        storage_dead(_53)
+                        storage_dead(_52)
+                        storage_dead(_51)
+                        storage_dead(_50)
+                        storage_dead(_49)
+                        storage_dead(_48)
+                        storage_dead(_47)
+                        storage_dead(_46)
+                        storage_dead(_45)
+                        storage_dead(_44)
+                        storage_dead(_43)
+                        unwind_continue
+                    storage_dead(_38)
+                    _36 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _37)
+                    ↳⚡ storage_dead(parse)
+                        storage_dead(state)
+                        storage_dead(first)
+                        storage_dead(_70)
+                        storage_dead(_69)
+                        storage_dead(_68)
+                        storage_dead(_67)
+                        storage_dead(_66)
+                        storage_dead(_65)
+                        storage_dead(_64)
+                        storage_dead(_63)
+                        storage_dead(_62)
+                        storage_dead(_61)
+                        storage_dead(_60)
+                        storage_dead(_59)
+                        storage_dead(_58)
+                        storage_dead(_57)
+                        storage_dead(_56)
+                        storage_dead(_55)
+                        storage_dead(_54)
+                        storage_dead(_53)
+                        storage_dead(_52)
+                        storage_dead(_51)
+                        storage_dead(_50)
+                        storage_dead(_49)
+                        storage_dead(_48)
+                        storage_dead(_47)
+                        storage_dead(_46)
+                        storage_dead(_45)
+                        storage_dead(_44)
+                        storage_dead(_43)
+                        unwind_continue
+                    storage_dead(_37)
+                    match _36 {
+                        ControlFlow::Continue => {
+                        },
+                        ControlFlow::Break => {
+                            storage_live(residual_39)
+                            residual_39 = copy (_36 as variant ControlFlow::Break)._0
+                            storage_live(_40)
+                            _40 = copy residual_39
+                            _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _40)
+                            ↳⚡ storage_dead(parse)
+                                storage_dead(state)
+                                storage_dead(first)
+                                storage_dead(_70)
+                                storage_dead(_69)
+                                storage_dead(_68)
+                                storage_dead(_67)
+                                storage_dead(_66)
+                                storage_dead(_65)
+                                storage_dead(_64)
+                                storage_dead(_63)
+                                storage_dead(_62)
+                                storage_dead(_61)
+                                storage_dead(_60)
+                                storage_dead(_59)
+                                storage_dead(_58)
+                                storage_dead(_57)
+                                storage_dead(_56)
+                                storage_dead(_55)
+                                storage_dead(_54)
+                                storage_dead(_53)
+                                storage_dead(_52)
+                                storage_dead(_51)
+                                storage_dead(_50)
+                                storage_dead(_49)
+                                storage_dead(_48)
+                                storage_dead(_47)
+                                storage_dead(_46)
+                                storage_dead(_45)
+                                storage_dead(_44)
+                                storage_dead(_43)
+                                unwind_continue
+                            storage_dead(_40)
+                            storage_dead(residual_39)
+                            storage_dead(_35)
+                            storage_dead(_34)
+                            storage_dead(_36)
+                            storage_dead(_31)
+                            storage_dead(_30)
+                            storage_dead(parse)
+                            storage_dead(state)
+                            storage_dead(first)
+                            storage_dead(_70)
+                            storage_dead(_69)
+                            storage_dead(_68)
+                            storage_dead(_67)
+                            storage_dead(_66)
+                            storage_dead(_65)
+                            storage_dead(_64)
+                            storage_dead(_63)
+                            storage_dead(_62)
+                            storage_dead(_61)
+                            storage_dead(_60)
+                            storage_dead(_59)
+                            storage_dead(_58)
+                            storage_dead(_57)
+                            storage_dead(_56)
+                            storage_dead(_55)
+                            storage_dead(_54)
+                            storage_dead(_53)
+                            storage_dead(_52)
+                            storage_dead(_51)
+                            storage_dead(_50)
+                            storage_dead(_49)
+                            storage_dead(_48)
+                            storage_dead(_47)
+                            storage_dead(_46)
+                            storage_dead(_45)
+                            storage_dead(_44)
+                            storage_dead(_43)
+                            return
+                        },
+                    }
+                    storage_live(val_41)
+                    val_41 = copy (_36 as variant ControlFlow::Continue)._0
+                    _35 = copy val_41
+                    storage_dead(val_41)
+                    _34 = Option::Some { _0: move _35 }
+                    storage_dead(_35)
+                    storage_live(_42)
+                    _42 = const 2usize
+                    fake_read((*state))
+                    storage_live(_45)
+                    _45 = &mut (*state)
+                    storage_live(_46)
+                    _46 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _45, copy _42)
+                    ↳⚡ undefined_behavior
+                    (*_46) = move _34
+                    storage_dead(_34)
+                    storage_dead(_42)
+                    storage_dead(_36)
+                    storage_dead(_31)
+                    storage_dead(_30)
+                    _0 = Result::Ok { _0: const 0u32 }
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                }
+            }
+            storage_live(_21)
+            storage_live(_22)
+            storage_live(_23)
+            storage_live(_24)
+            storage_live(_25)
+            _25 = copy parse
+            _24 = (move _25)(const 1usize)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_25)
+            _23 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _24)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_24)
+            match _23 {
+                ControlFlow::Continue => {
+                },
+                ControlFlow::Break => {
+                    storage_live(residual_26)
+                    residual_26 = copy (_23 as variant ControlFlow::Break)._0
+                    storage_live(_27)
+                    _27 = copy residual_26
+                    _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _27)
+                    ↳⚡ storage_dead(parse)
+                        storage_dead(state)
+                        storage_dead(first)
+                        storage_dead(_70)
+                        storage_dead(_69)
+                        storage_dead(_68)
+                        storage_dead(_67)
+                        storage_dead(_66)
+                        storage_dead(_65)
+                        storage_dead(_64)
+                        storage_dead(_63)
+                        storage_dead(_62)
+                        storage_dead(_61)
+                        storage_dead(_60)
+                        storage_dead(_59)
+                        storage_dead(_58)
+                        storage_dead(_57)
+                        storage_dead(_56)
+                        storage_dead(_55)
+                        storage_dead(_54)
+                        storage_dead(_53)
+                        storage_dead(_52)
+                        storage_dead(_51)
+                        storage_dead(_50)
+                        storage_dead(_49)
+                        storage_dead(_48)
+                        storage_dead(_47)
+                        storage_dead(_46)
+                        storage_dead(_45)
+                        storage_dead(_44)
+                        storage_dead(_43)
+                        unwind_continue
+                    storage_dead(_27)
+                    storage_dead(residual_26)
+                    storage_dead(_22)
+                    storage_dead(_21)
+                    storage_dead(_23)
+                    storage_dead(_18)
+                    storage_dead(_17)
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                },
+            }
+            storage_live(val_28)
+            val_28 = copy (_23 as variant ControlFlow::Continue)._0
+            _22 = copy val_28
+            storage_dead(val_28)
+            _21 = Option::Some { _0: move _22 }
+            storage_dead(_22)
+            storage_live(_29)
+            _29 = const 1usize
+            fake_read((*state))
+            storage_live(_51)
+            _51 = &mut (*state)
+            storage_live(_52)
+            _52 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _51, copy _29)
+            ↳⚡ undefined_behavior
+            (*_52) = move _21
+            storage_dead(_21)
+            storage_dead(_29)
+            storage_dead(_23)
+            storage_dead(_18)
+            storage_dead(_17)
+            storage_live(_30)
+            _30 = copy first
+            if move _30 {
+            } else {
+                storage_live(_31)
+                storage_live(_32)
+                storage_live(_33)
+                _33 = const 2usize
+                fake_read((*state))
+                storage_live(_49)
+                _49 = &(*state)
+                storage_live(_50)
+                _50 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _49, copy _33)
+                ↳⚡ undefined_behavior
+                _32 = &(*_50)
+                _31 = is_none<'6, u32>[{built_in impl Sized for u32}](move _32)
+                ↳⚡ storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    unwind_continue
+                if move _31 {
+                    storage_dead(_33)
+                    storage_dead(_32)
+                } else {
+                    storage_dead(_33)
+                    storage_dead(_32)
+                    storage_dead(_31)
+                    storage_dead(_30)
+                    _0 = Result::Ok { _0: const 0u32 }
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                }
+            }
+            storage_live(_34)
+            storage_live(_35)
+            storage_live(_36)
+            storage_live(_37)
+            storage_live(_38)
+            _38 = copy parse
+            _37 = (move _38)(const 2usize)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_38)
+            _36 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _37)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_37)
+            match _36 {
+                ControlFlow::Continue => {
+                },
+                ControlFlow::Break => {
+                    storage_live(residual_39)
+                    residual_39 = copy (_36 as variant ControlFlow::Break)._0
+                    storage_live(_40)
+                    _40 = copy residual_39
+                    _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _40)
+                    ↳⚡ storage_dead(parse)
+                        storage_dead(state)
+                        storage_dead(first)
+                        storage_dead(_70)
+                        storage_dead(_69)
+                        storage_dead(_68)
+                        storage_dead(_67)
+                        storage_dead(_66)
+                        storage_dead(_65)
+                        storage_dead(_64)
+                        storage_dead(_63)
+                        storage_dead(_62)
+                        storage_dead(_61)
+                        storage_dead(_60)
+                        storage_dead(_59)
+                        storage_dead(_58)
+                        storage_dead(_57)
+                        storage_dead(_56)
+                        storage_dead(_55)
+                        storage_dead(_54)
+                        storage_dead(_53)
+                        storage_dead(_52)
+                        storage_dead(_51)
+                        storage_dead(_50)
+                        storage_dead(_49)
+                        storage_dead(_48)
+                        storage_dead(_47)
+                        storage_dead(_46)
+                        storage_dead(_45)
+                        storage_dead(_44)
+                        storage_dead(_43)
+                        unwind_continue
+                    storage_dead(_40)
+                    storage_dead(residual_39)
+                    storage_dead(_35)
+                    storage_dead(_34)
+                    storage_dead(_36)
+                    storage_dead(_31)
+                    storage_dead(_30)
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                },
+            }
+            storage_live(val_41)
+            val_41 = copy (_36 as variant ControlFlow::Continue)._0
+            _35 = copy val_41
+            storage_dead(val_41)
+            _34 = Option::Some { _0: move _35 }
+            storage_dead(_35)
+            storage_live(_42)
+            _42 = const 2usize
+            fake_read((*state))
+            storage_live(_53)
+            _53 = &mut (*state)
+            storage_live(_54)
+            _54 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _53, copy _42)
+            ↳⚡ undefined_behavior
+            (*_54) = move _34
+            storage_dead(_34)
+            storage_dead(_42)
+            storage_dead(_36)
+            storage_dead(_31)
+            storage_dead(_30)
+            _0 = Result::Ok { _0: const 0u32 }
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        }
+    }
+    storage_live(_8)
+    storage_live(_9)
+    storage_live(_10)
+    storage_live(_11)
+    storage_live(_12)
+    _12 = copy parse
+    _11 = (move _12)(const 0usize)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_12)
+    _10 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _11)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_11)
+    match _10 {
+        ControlFlow::Continue => {
+        },
+        ControlFlow::Break => {
+            storage_live(residual_13)
+            residual_13 = copy (_10 as variant ControlFlow::Break)._0
+            storage_live(_14)
+            _14 = copy residual_13
+            _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _14)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_14)
+            storage_dead(residual_13)
+            storage_dead(_9)
+            storage_dead(_8)
+            storage_dead(_10)
+            storage_dead(_5)
+            storage_dead(_4)
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        },
+    }
+    storage_live(val_15)
+    val_15 = copy (_10 as variant ControlFlow::Continue)._0
+    _9 = copy val_15
+    storage_dead(val_15)
+    _8 = Option::Some { _0: move _9 }
+    storage_dead(_9)
+    storage_live(_16)
+    _16 = const 0usize
+    fake_read((*state))
+    storage_live(_65)
+    _65 = &mut (*state)
+    storage_live(_66)
+    _66 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _65, copy _16)
+    ↳⚡ undefined_behavior
+    (*_66) = move _8
+    storage_dead(_8)
+    storage_dead(_16)
+    storage_dead(_10)
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_live(_17)
+    _17 = copy first
+    if move _17 {
+    } else {
+        storage_live(_18)
+        storage_live(_19)
+        storage_live(_20)
+        _20 = const 1usize
+        fake_read((*state))
+        storage_live(_61)
+        _61 = &(*state)
+        storage_live(_62)
+        _62 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _61, copy _20)
+        ↳⚡ undefined_behavior
+        _19 = &(*_62)
+        _18 = is_none<'5, u32>[{built_in impl Sized for u32}](move _19)
+        ↳⚡ storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            unwind_continue
+        if move _18 {
+            storage_dead(_20)
+            storage_dead(_19)
+        } else {
+            storage_dead(_20)
+            storage_dead(_19)
+            storage_dead(_18)
+            storage_dead(_17)
+            storage_live(_30)
+            _30 = copy first
+            if move _30 {
+            } else {
+                storage_live(_31)
+                storage_live(_32)
+                storage_live(_33)
+                _33 = const 2usize
+                fake_read((*state))
+                storage_live(_57)
+                _57 = &(*state)
+                storage_live(_58)
+                _58 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _57, copy _33)
+                ↳⚡ undefined_behavior
+                _32 = &(*_58)
+                _31 = is_none<'6, u32>[{built_in impl Sized for u32}](move _32)
+                ↳⚡ storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    unwind_continue
+                if move _31 {
+                    storage_dead(_33)
+                    storage_dead(_32)
+                } else {
+                    storage_dead(_33)
+                    storage_dead(_32)
+                    storage_dead(_31)
+                    storage_dead(_30)
+                    _0 = Result::Ok { _0: const 0u32 }
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                }
+            }
+            storage_live(_34)
+            storage_live(_35)
+            storage_live(_36)
+            storage_live(_37)
+            storage_live(_38)
+            _38 = copy parse
+            _37 = (move _38)(const 2usize)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_38)
+            _36 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _37)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_37)
+            match _36 {
+                ControlFlow::Continue => {
+                },
+                ControlFlow::Break => {
+                    storage_live(residual_39)
+                    residual_39 = copy (_36 as variant ControlFlow::Break)._0
+                    storage_live(_40)
+                    _40 = copy residual_39
+                    _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _40)
+                    ↳⚡ storage_dead(parse)
+                        storage_dead(state)
+                        storage_dead(first)
+                        storage_dead(_70)
+                        storage_dead(_69)
+                        storage_dead(_68)
+                        storage_dead(_67)
+                        storage_dead(_66)
+                        storage_dead(_65)
+                        storage_dead(_64)
+                        storage_dead(_63)
+                        storage_dead(_62)
+                        storage_dead(_61)
+                        storage_dead(_60)
+                        storage_dead(_59)
+                        storage_dead(_58)
+                        storage_dead(_57)
+                        storage_dead(_56)
+                        storage_dead(_55)
+                        storage_dead(_54)
+                        storage_dead(_53)
+                        storage_dead(_52)
+                        storage_dead(_51)
+                        storage_dead(_50)
+                        storage_dead(_49)
+                        storage_dead(_48)
+                        storage_dead(_47)
+                        storage_dead(_46)
+                        storage_dead(_45)
+                        storage_dead(_44)
+                        storage_dead(_43)
+                        unwind_continue
+                    storage_dead(_40)
+                    storage_dead(residual_39)
+                    storage_dead(_35)
+                    storage_dead(_34)
+                    storage_dead(_36)
+                    storage_dead(_31)
+                    storage_dead(_30)
+                    storage_dead(parse)
+                    storage_dead(state)
+                    storage_dead(first)
+                    storage_dead(_70)
+                    storage_dead(_69)
+                    storage_dead(_68)
+                    storage_dead(_67)
+                    storage_dead(_66)
+                    storage_dead(_65)
+                    storage_dead(_64)
+                    storage_dead(_63)
+                    storage_dead(_62)
+                    storage_dead(_61)
+                    storage_dead(_60)
+                    storage_dead(_59)
+                    storage_dead(_58)
+                    storage_dead(_57)
+                    storage_dead(_56)
+                    storage_dead(_55)
+                    storage_dead(_54)
+                    storage_dead(_53)
+                    storage_dead(_52)
+                    storage_dead(_51)
+                    storage_dead(_50)
+                    storage_dead(_49)
+                    storage_dead(_48)
+                    storage_dead(_47)
+                    storage_dead(_46)
+                    storage_dead(_45)
+                    storage_dead(_44)
+                    storage_dead(_43)
+                    return
+                },
+            }
+            storage_live(val_41)
+            val_41 = copy (_36 as variant ControlFlow::Continue)._0
+            _35 = copy val_41
+            storage_dead(val_41)
+            _34 = Option::Some { _0: move _35 }
+            storage_dead(_35)
+            storage_live(_42)
+            _42 = const 2usize
+            fake_read((*state))
+            storage_live(_59)
+            _59 = &mut (*state)
+            storage_live(_60)
+            _60 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _59, copy _42)
+            ↳⚡ undefined_behavior
+            (*_60) = move _34
+            storage_dead(_34)
+            storage_dead(_42)
+            storage_dead(_36)
+            storage_dead(_31)
+            storage_dead(_30)
+            _0 = Result::Ok { _0: const 0u32 }
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        }
+    }
+    storage_live(_21)
+    storage_live(_22)
+    storage_live(_23)
+    storage_live(_24)
+    storage_live(_25)
+    _25 = copy parse
+    _24 = (move _25)(const 1usize)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_25)
+    _23 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _24)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_24)
+    match _23 {
+        ControlFlow::Continue => {
+        },
+        ControlFlow::Break => {
+            storage_live(residual_26)
+            residual_26 = copy (_23 as variant ControlFlow::Break)._0
+            storage_live(_27)
+            _27 = copy residual_26
+            _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _27)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_27)
+            storage_dead(residual_26)
+            storage_dead(_22)
+            storage_dead(_21)
+            storage_dead(_23)
+            storage_dead(_18)
+            storage_dead(_17)
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        },
+    }
+    storage_live(val_28)
+    val_28 = copy (_23 as variant ControlFlow::Continue)._0
+    _22 = copy val_28
+    storage_dead(val_28)
+    _21 = Option::Some { _0: move _22 }
+    storage_dead(_22)
+    storage_live(_29)
+    _29 = const 1usize
+    fake_read((*state))
+    storage_live(_67)
+    _67 = &mut (*state)
+    storage_live(_68)
+    _68 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _67, copy _29)
+    ↳⚡ undefined_behavior
+    (*_68) = move _21
+    storage_dead(_21)
+    storage_dead(_29)
+    storage_dead(_23)
+    storage_dead(_18)
+    storage_dead(_17)
+    storage_live(_30)
+    _30 = copy first
+    if move _30 {
+    } else {
+        storage_live(_31)
+        storage_live(_32)
+        storage_live(_33)
+        _33 = const 2usize
+        fake_read((*state))
+        storage_live(_63)
+        _63 = &(*state)
+        storage_live(_64)
+        _64 = impl_Index_for_array::index<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_Index_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _63, copy _33)
+        ↳⚡ undefined_behavior
+        _32 = &(*_64)
+        _31 = is_none<'6, u32>[{built_in impl Sized for u32}](move _32)
+        ↳⚡ storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            unwind_continue
+        if move _31 {
+            storage_dead(_33)
+            storage_dead(_32)
+        } else {
+            storage_dead(_33)
+            storage_dead(_32)
+            storage_dead(_31)
+            storage_dead(_30)
+            _0 = Result::Ok { _0: const 0u32 }
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        }
+    }
+    storage_live(_34)
+    storage_live(_35)
+    storage_live(_36)
+    storage_live(_37)
+    storage_live(_38)
+    _38 = copy parse
+    _37 = (move _38)(const 2usize)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_38)
+    _36 = branch<u32, ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}](move _37)
+    ↳⚡ storage_dead(parse)
+        storage_dead(state)
+        storage_dead(first)
+        storage_dead(_70)
+        storage_dead(_69)
+        storage_dead(_68)
+        storage_dead(_67)
+        storage_dead(_66)
+        storage_dead(_65)
+        storage_dead(_64)
+        storage_dead(_63)
+        storage_dead(_62)
+        storage_dead(_61)
+        storage_dead(_60)
+        storage_dead(_59)
+        storage_dead(_58)
+        storage_dead(_57)
+        storage_dead(_56)
+        storage_dead(_55)
+        storage_dead(_54)
+        storage_dead(_53)
+        storage_dead(_52)
+        storage_dead(_51)
+        storage_dead(_50)
+        storage_dead(_49)
+        storage_dead(_48)
+        storage_dead(_47)
+        storage_dead(_46)
+        storage_dead(_45)
+        storage_dead(_44)
+        storage_dead(_43)
+        unwind_continue
+    storage_dead(_37)
+    match _36 {
+        ControlFlow::Continue => {
+        },
+        ControlFlow::Break => {
+            storage_live(residual_39)
+            residual_39 = copy (_36 as variant ControlFlow::Break)._0
+            storage_live(_40)
+            _40 = copy residual_39
+            _0 = from_residual<u32, (), ()>[{built_in impl Sized for u32}, {built_in impl Sized for ()}, {built_in impl Sized for ()}, impl_From_for_T<()>[{built_in impl Sized for ()}]](move _40)
+            ↳⚡ storage_dead(parse)
+                storage_dead(state)
+                storage_dead(first)
+                storage_dead(_70)
+                storage_dead(_69)
+                storage_dead(_68)
+                storage_dead(_67)
+                storage_dead(_66)
+                storage_dead(_65)
+                storage_dead(_64)
+                storage_dead(_63)
+                storage_dead(_62)
+                storage_dead(_61)
+                storage_dead(_60)
+                storage_dead(_59)
+                storage_dead(_58)
+                storage_dead(_57)
+                storage_dead(_56)
+                storage_dead(_55)
+                storage_dead(_54)
+                storage_dead(_53)
+                storage_dead(_52)
+                storage_dead(_51)
+                storage_dead(_50)
+                storage_dead(_49)
+                storage_dead(_48)
+                storage_dead(_47)
+                storage_dead(_46)
+                storage_dead(_45)
+                storage_dead(_44)
+                storage_dead(_43)
+                unwind_continue
+            storage_dead(_40)
+            storage_dead(residual_39)
+            storage_dead(_35)
+            storage_dead(_34)
+            storage_dead(_36)
+            storage_dead(_31)
+            storage_dead(_30)
+            storage_dead(parse)
+            storage_dead(state)
+            storage_dead(first)
+            storage_dead(_70)
+            storage_dead(_69)
+            storage_dead(_68)
+            storage_dead(_67)
+            storage_dead(_66)
+            storage_dead(_65)
+            storage_dead(_64)
+            storage_dead(_63)
+            storage_dead(_62)
+            storage_dead(_61)
+            storage_dead(_60)
+            storage_dead(_59)
+            storage_dead(_58)
+            storage_dead(_57)
+            storage_dead(_56)
+            storage_dead(_55)
+            storage_dead(_54)
+            storage_dead(_53)
+            storage_dead(_52)
+            storage_dead(_51)
+            storage_dead(_50)
+            storage_dead(_49)
+            storage_dead(_48)
+            storage_dead(_47)
+            storage_dead(_46)
+            storage_dead(_45)
+            storage_dead(_44)
+            storage_dead(_43)
+            return
+        },
+    }
+    storage_live(val_41)
+    val_41 = copy (_36 as variant ControlFlow::Continue)._0
+    _35 = copy val_41
+    storage_dead(val_41)
+    _34 = Option::Some { _0: move _35 }
+    storage_dead(_35)
+    storage_live(_42)
+    _42 = const 2usize
+    fake_read((*state))
+    storage_live(_69)
+    _69 = &mut (*state)
+    storage_live(_70)
+    _70 = impl_IndexMut_for_array::index_mut<'_, Option<u32>[{built_in impl Sized for u32}], usize, 3usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_IndexMut_for_slice<Option<u32>[{built_in impl Sized for u32}], usize>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}, {built_in impl Sized for usize}, impl_SliceIndex_slice_for_usize<Option<u32>[{built_in impl Sized for u32}]>[{built_in impl Sized for Option<u32>[{built_in impl Sized for u32}]}]]](move _69, copy _42)
+    ↳⚡ undefined_behavior
+    (*_70) = move _34
+    storage_dead(_34)
+    storage_dead(_42)
+    storage_dead(_36)
+    storage_dead(_31)
+    storage_dead(_30)
+    _0 = Result::Ok { _0: const 0u32 }
+    storage_dead(parse)
+    storage_dead(state)
+    storage_dead(first)
+    storage_dead(_70)
+    storage_dead(_69)
+    storage_dead(_68)
+    storage_dead(_67)
+    storage_dead(_66)
+    storage_dead(_65)
+    storage_dead(_64)
+    storage_dead(_63)
+    storage_dead(_62)
+    storage_dead(_61)
+    storage_dead(_60)
+    storage_dead(_59)
+    storage_dead(_58)
+    storage_dead(_57)
+    storage_dead(_56)
+    storage_dead(_55)
+    storage_dead(_54)
+    storage_dead(_53)
+    storage_dead(_52)
+    storage_dead(_51)
+    storage_dead(_50)
+    storage_dead(_49)
+    storage_dead(_48)
+    storage_dead(_47)
+    storage_dead(_46)
+    storage_dead(_45)
+    storage_dead(_44)
+    storage_dead(_43)
+    return
+}
+
+
+
