@@ -4,7 +4,7 @@ use crate::toolchain::CHARON_SYSROOT_VAR;
 use crate::translate::translate_crate;
 use charon_lib::errors::{DeferredOutput, ErrorCtx};
 use charon_lib::options::{self, CliOpts, MirLevel, selected_crate_var};
-use charon_lib::transform::TransformCtx;
+use charon_lib::transform::{TransformCtx, run_transformation_passes};
 use charon_lib::utils::arg_value;
 use itertools::Itertools;
 use rustc_data_structures::sync::IntoDynSyncSend;
@@ -19,7 +19,8 @@ use std::num::NonZero;
 use std::panic;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::{env, fmt};
+use std::thread::JoinHandle;
+use std::{env, fmt, thread};
 
 /// Helper that runs the compiler and catches its fatal errors.
 fn run_compiler_with_callbacks(
@@ -268,13 +269,18 @@ pub fn run_rustc_driver() -> Result<Option<(TransformCtx, CliOpts)>, CharonFailu
             emit_artifacts,
             codegen,
             error_ctx: Some(error_ctx),
-            transform_ctx: None,
+            transform: None,
         };
         charon_lib::timing::time("rustc-driver", || {
             run_compiler_with_callbacks(compiler_args, &mut callback)
         })?;
-        // If `transform_ctx` is not set here, there was a fatal error.
-        let ctx = callback.transform_ctx.ok_or(CharonFailure::RustcError)?;
+        // If `transform` is not set here, there was a fatal error. On failure we exit without
+        // waiting for the transformation passes; their output stays held back.
+        let (transform, transform_output) = callback.transform.ok_or(CharonFailure::RustcError)?;
+        transform_output.lock().unwrap().release();
+        let ctx = transform
+            .join()
+            .unwrap_or_else(|payload| panic::resume_unwind(payload));
         Some((ctx, options))
     };
     Ok(output)
@@ -290,9 +296,9 @@ pub struct CharonCallbacks<'a> {
     codegen: bool,
     /// Context for errors; `take()`n by translation.
     error_ctx: Option<ErrorCtx>,
-    /// This is to be filled during the extraction; it contains the translated crate. `None` at the
-    /// start or if we couldn't translate anything.
-    transform_ctx: Option<TransformCtx>,
+    /// The thread that runs the transformation passes on the translated crate, and their held-back
+    /// output. `None` at the start or if we couldn't translate anything.
+    transform: Option<(JoinHandle<TransformCtx>, Arc<Mutex<DeferredOutput>>)>,
 }
 impl<'a> Callbacks for CharonCallbacks<'a> {
     fn config(&mut self, config: &mut Config) {
@@ -345,22 +351,45 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         // translate on this one (the first closure of a join runs on the current thread). This
         // relies on `wait_for_rustc_checks`, which doesn't cover built MIR: borrowck (e.g. for
         // opaque types) steals the built MIR of plain functions.
-        if rustc_data_structures::sync::is_dyn_thread_safe()
+        let translated = if rustc_data_structures::sync::is_dyn_thread_safe()
             && options.mir_level() != MirLevel::Built
         {
             let (translated, checks) = rustc_data_structures::sync::par_join(
                 move || IntoDynSyncSend(panic::catch_unwind(panic::AssertUnwindSafe(translate))),
                 rustc_checks,
             );
-            if checks.is_ok() {
-                match translated.0 {
-                    Ok(translated) => self.transform_ctx = translated.ok(),
-                    Err(panic) => panic::resume_unwind(panic),
-                }
+            if checks.is_err() {
+                return Compilation::Continue;
             }
+            translated
+                .0
+                .unwrap_or_else(|panic| panic::resume_unwind(panic))
         } else if rustc_checks().is_ok() {
-            self.transform_ctx = translate().ok();
-        }
+            translate()
+        } else {
+            return Compilation::Continue;
+        };
+        let Ok(mut ctx) = translated else {
+            return Compilation::Continue;
+        };
+
+        // The rest of the compilation can't affect the translated crate, so we run the
+        // transformation passes alongside it. Their errors are held back until rustc is done, so
+        // that they come after rustc's own as if we ran them sequentially.
+        let transform_output = Arc::new(Mutex::new(DeferredOutput::default()));
+        ctx.errors.get_mut().deferred_output = Some(transform_output.clone());
+        let options = options.clone();
+        let transform = thread::Builder::new()
+            .name("charon".to_owned())
+            .stack_size(rustc_interface::util::DEFAULT_STACK_SIZE)
+            .spawn(move || {
+                charon_lib::timing::time("transformation-passes", || {
+                    run_transformation_passes(&options, &mut ctx)
+                });
+                ctx
+            })
+            .unwrap();
+        self.transform = Some((transform, transform_output));
 
         Compilation::Continue
     }

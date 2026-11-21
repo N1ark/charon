@@ -53,7 +53,7 @@ pub mod hax;
 mod toolchain;
 mod translate;
 
-use charon_lib::{export, logger, transform::run_transformation_passes};
+use charon_lib::{export, logger};
 use std::{fmt, panic};
 
 pub enum CharonFailure {
@@ -91,17 +91,12 @@ impl fmt::Display for CharonFailure {
 
 /// Run charon. Returns the number of warnings generated.
 fn run_charon() -> Result<usize, CharonFailure> {
-    // Run the driver machinery.
-    let Some((mut ctx, options)) = driver::run_rustc_driver()? else {
+    // Run the driver machinery. This translates the crate and runs the transformation passes, which
+    // simplify the items and cleanup the bodies.
+    let Some((ctx, options)) = driver::run_rustc_driver()? else {
         // We didn't run charon.
         return Ok(0);
     };
-
-    // The bulk of the translation is done, we no longer need to interact with rustc internals. We
-    // run several passes that simplify the items and cleanup the bodies.
-    charon_lib::timing::time("transformation-passes", || {
-        run_transformation_passes(&options, &mut ctx)
-    });
 
     let error_count = ctx.errors.borrow().error_count;
 
