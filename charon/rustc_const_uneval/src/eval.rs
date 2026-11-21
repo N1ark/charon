@@ -193,7 +193,7 @@ impl<'tcx> ConstReader<'tcx> {
                     .type_of(def_id)
                     .instantiate_identity()
                     .skip_normalization();
-                let val = tcx.const_eval_resolve(self.typing_env, uv, span).ok();
+                let val = tcx.const_eval_resolve(self.eval_typing_env(args), uv, span).ok();
                 let evaluated = val.map(|val| (val, ty));
                 // Otherwise, we can still read the value of "trivial" consts, which rustc
                 // stores directly. This works even for generic consts.
@@ -213,7 +213,7 @@ impl<'tcx> ConstReader<'tcx> {
                     promoted: Some(promoted),
                 };
                 let val = tcx
-                    .const_eval_resolve(self.typing_env, uv, span)
+                    .const_eval_resolve(self.eval_typing_env(args), uv, span)
                     .map_err(|_| ReadError::NotEvaluable)?;
                 // Promoteds aren't items so `type_of` doesn't work for them; instead we read
                 // their type off the return place of their MIR body.
@@ -278,7 +278,7 @@ impl<'tcx> ConstReader<'tcx> {
         let def = uv.kind.opt_def_id()?;
         let erased_uv = tcx.erase_and_anonymize_regions(uv);
         let valtree = tcx
-            .const_eval_resolve_for_typeck(self.typing_env, erased_uv, span)
+            .const_eval_resolve_for_typeck(self.eval_typing_env(erased_uv), erased_uv, span)
             .ok()?
             .ok()?;
         let ty = tcx
@@ -289,6 +289,27 @@ impl<'tcx> ConstReader<'tcx> {
             ty: self.normalize(ty),
             valtree,
         })
+    }
+
+    /// The typing environment in which to evaluate a constant with arguments `args`: the empty one
+    /// if the current one can't matter, i.e. `args` mention no parameters and every clause of the
+    /// current environment mentions a type or const parameter.
+    fn eval_typing_env(&self, args: impl TypeVisitableExt<TyCtxt<'tcx>>) -> ty::TypingEnv<'tcx> {
+        // rustc caches evaluations per typing environment: this evaluates a constant used by many
+        // items only once. A clause without type or const parameters (e.g. `where Foo: Trait` with
+        // `trivial_bounds`, or a clause that only mentions lifetimes, which are erased) may apply
+        // to `args`.
+        let env_independent = !args.has_param()
+            && self
+                .typing_env
+                .param_env
+                .caller_bounds()
+                .all(|clause| clause.has_non_region_param());
+        if env_independent {
+            ty::TypingEnv::fully_monomorphized()
+        } else {
+            self.typing_env
+        }
     }
 
     /// The type at which we read a global.

@@ -1,0 +1,67 @@
+# Final LLBC before serialization:
+
+// Full name: test_crate::{impl HasLen for [u8; 4usize]}::LEN::<u8, 4usize>
+const LEN::<u8, 4usize>: usize = 4usize
+
+// Full name: test_crate::generic::<u8>
+fn generic::<u8>(_x: u8) -> usize
+{
+    let mut _0: usize; // return
+    let _x: u8; // arg #1
+
+    storage_live(_0)
+    _0 = read LEN::<u8, 4usize>
+    storage_dead(_x)
+    return
+}
+
+// Full name: test_crate::generic::<u32>
+fn generic::<u32>(_x: u32) -> usize
+{
+    let mut _0: usize; // return
+    let _x: u32; // arg #1
+
+    storage_live(_0)
+    _0 = read LEN::<u8, 4usize>
+    storage_dead(_x)
+    return
+}
+
+// Full name: test_crate::use_generic
+pub fn use_generic() -> usize
+{
+    let mut _0: usize; // return
+    let mut _1: usize; // anonymous local
+    let mut _2: usize; // anonymous local
+    let mut _3: usize; // anonymous local
+    let mut _4: usize; // anonymous local
+    let mut _5: usize; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_5)
+    storage_live(_1)
+    storage_live(_2)
+    _2 = generic::<u8>(const 0u8)
+    ↳⚡ storage_dead(_5)
+        storage_dead(_4)
+        unwind_continue
+    storage_live(_3)
+    _3 = generic::<u32>(const 0u32)
+    ↳⚡ storage_dead(_5)
+        storage_dead(_4)
+        unwind_continue
+    _4 = copy _2 panic.+ copy _3
+    _1 = move _4
+    storage_dead(_3)
+    storage_dead(_2)
+    _5 = copy _1 panic.+ read LEN::<u8, 4usize>
+    _0 = move _5
+    storage_dead(_1)
+    storage_dead(_5)
+    storage_dead(_4)
+    return
+}
+
+
+
