@@ -369,22 +369,22 @@ impl TransformCtx {
             return;
         }
         let fun_name = self.translated.item_name(fun_id).clone();
+        let promoted_count = self
+            .translated
+            .item_names
+            .values()
+            .filter_map(|n| n.name.split_last())
+            .filter(|(last, prefix)| {
+                matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
+                    && *prefix == fun_name.name.as_slice()
+            })
+            .count();
         let mut new_ids = Vec::with_capacity(globals.len());
-        for mut global in globals {
-            let promoted_count = self
-                .translated
-                .item_names
-                .values()
-                .filter_map(|n| n.name.split_last())
-                .filter(|(last, prefix)| {
-                    matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
-                        && *prefix == fun_name.name.as_slice()
-                })
-                .count();
+        for (i, mut global) in globals.into_iter().enumerate() {
             let mut name = fun_name.clone();
             name.name.push(PathElem::Builtin(
                 BuiltinPathElem::PromotedConst,
-                Disambiguator::new(promoted_count),
+                Disambiguator::new(promoted_count + i),
             ));
             global.item_meta.name = name.clone();
             let id = self.translated.global_decls.push_with(|id| {
