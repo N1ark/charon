@@ -402,21 +402,31 @@ impl ErrorCtx {
         eprintln_at_once(&msg);
     }
 
-    /// Report an error without registering anything.
+    /// Report an error without registering anything. `rendered` is the error rendered at `level`,
+    /// if already known.
     pub fn display_error(
         &self,
         krate: &TranslatedCrate,
         span: Span,
         level: Level,
         msg: String,
+        rendered: Option<String>,
     ) -> Error {
         let error = Error { span, msg };
-        self.emit(format!("{}\n", error.render(krate, level)));
+        let rendered = rendered.unwrap_or_else(|| error.render(krate, level));
+        self.emit(format!("{rendered}\n"));
         if BACKTRACE_ON_ERR {
             let backtrace = std::backtrace::Backtrace::force_capture();
             eprintln!("{backtrace}\n");
         }
         error
+    }
+
+    /// What identifies a diagnostic: we display each one once.
+    pub(crate) fn display_key(span: Span, msg: &str, level: &Level) -> u64 {
+        let mut hasher = std::hash::DefaultHasher::new();
+        (span, msg, format!("{level:?}")).hash(&mut hasher);
+        hasher.finish()
     }
 
     /// Report and register an error.
@@ -427,18 +437,30 @@ impl ErrorCtx {
         msg: &str,
         level: Level,
     ) -> Error {
-        let level = if level == Level::WARNING && self.error_on_warnings {
-            Level::ERROR
+        self.span_err_rendered(krate, span, msg, level, None)
+    }
+
+    /// Like `span_err`, given the `display_key` and the rendering of the error at `level` if
+    /// they're already known.
+    pub(crate) fn span_err_rendered(
+        &mut self,
+        krate: &TranslatedCrate,
+        span: Span,
+        msg: &str,
+        level: Level,
+        rendered: Option<(u64, String)>,
+    ) -> Error {
+        let (level, rendered) = if level == Level::WARNING && self.error_on_warnings {
+            (Level::ERROR, None)
         } else {
-            level
+            (level, rendered)
         };
-        let key = {
-            let mut hasher = std::hash::DefaultHasher::new();
-            (span, msg, format!("{level:?}")).hash(&mut hasher);
-            hasher.finish()
+        let (key, rendered) = match rendered {
+            Some((key, rendered)) => (key, Some(rendered)),
+            None => (Self::display_key(span, msg, &level), None),
         };
         let err = if self.displayed.insert(key) {
-            self.display_error(krate, span, level, msg.to_string())
+            self.display_error(krate, span, level, msg.to_string(), rendered)
         } else {
             Error::new(span, msg.to_string())
         };

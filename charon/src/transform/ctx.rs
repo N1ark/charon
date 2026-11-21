@@ -11,6 +11,7 @@ use crate::transform::CowBox;
 use crate::ullbc_ast;
 use itertools::Itertools;
 use rayon::prelude::*;
+use rustc_hash::FxHashSet as HashSet;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -28,10 +29,17 @@ pub struct TransformCtx {
 }
 
 /// An error raised while transforming items in parallel.
-struct DeferredError {
-    span: Span,
-    msg: String,
-    level: Level<'static>,
+enum DeferredError {
+    New {
+        span: Span,
+        msg: String,
+        level: Level<'static>,
+        /// The `display_key` and the rendering of the error: rendering can be costly, so we do it
+        /// in parallel.
+        rendered: (u64, String),
+    },
+    /// An error that the item already raised: we display each error once, so it only counts.
+    Repeated,
 }
 
 /// What transforming an item in a parallel loop did besides changing the item itself. This is
@@ -39,6 +47,8 @@ struct DeferredError {
 #[derive(Default)]
 struct ItemEffects {
     errors: Vec<DeferredError>,
+    /// The `display_key`s of the errors.
+    error_keys: HashSet<u64>,
     /// Globals created while transforming this item. Until the loop is done they have temporary
     /// ids, starting at the first unused global id, and are only known to this item.
     new_globals: Vec<GlobalDecl>,
@@ -263,13 +273,20 @@ impl TransformCtx {
     pub(crate) fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
         let deferred = ITEM_EFFECTS.with_borrow_mut(|effects| {
             let effects = effects.as_mut()?;
-            let msg = msg.to_owned();
-            effects.errors.push(DeferredError {
-                span,
-                msg: msg.clone(),
-                level: level.clone(),
-            });
-            Some(Error::new(span, msg))
+            let key = ErrorCtx::display_key(span, msg, &level);
+            let error = Error::new(span, msg.to_owned());
+            if effects.error_keys.insert(key) {
+                let rendered = error.render(&self.translated, level.clone());
+                effects.errors.push(DeferredError::New {
+                    span,
+                    msg: msg.to_owned(),
+                    level: level.clone(),
+                    rendered: (key, rendered),
+                });
+            } else {
+                effects.errors.push(DeferredError::Repeated);
+            }
+            Some(error)
         });
         deferred.unwrap_or_else(|| {
             self.error_ctx()
@@ -367,7 +384,23 @@ impl TransformCtx {
                     let current_def_id_is_local =
                         mem::replace(&mut errors.def_id_is_local, def_id_is_local);
                     for err in effects.errors {
-                        errors.span_err(&self.translated, err.span, &err.msg, err.level);
+                        match err {
+                            DeferredError::New {
+                                span,
+                                msg,
+                                level,
+                                rendered,
+                            } => {
+                                errors.span_err_rendered(
+                                    &self.translated,
+                                    span,
+                                    &msg,
+                                    level,
+                                    Some(rendered),
+                                );
+                            }
+                            DeferredError::Repeated => errors.error_count += 1,
+                        }
                     }
                     if panicked {
                         if let Some(msg) = effects.panic_message {
