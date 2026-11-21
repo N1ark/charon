@@ -848,7 +848,7 @@ impl<'a> ComputeItemModifications<'a> {
                     TraitRefKind::SelfId,
                     TraitDeclRef {
                         id: tr.def_id,
-                        generics: Box::new(tr.generics.identity_args()),
+                        generics: BoxedArgs::new(tr.generics.identity_args()),
                     },
                 );
                 // Inherit known constraints from implied clauses.
@@ -1149,14 +1149,17 @@ impl UpdateItemBody<'_> {
 
     fn update_generics(
         &mut self,
-        args: &mut GenericArgs,
+        args: &mut BoxedArgs,
         target: GenericsSource,
         self_path: Option<TraitRef>,
     ) {
         let Some(modifications) = self.item_modifications.get(&target) else {
             return;
         };
-        for path in modifications.required_extra_params() {
+        if modifications.required_extra_params().next().is_none() {
+            return;
+        }
+        args.with_mut(|args| for path in modifications.required_extra_params() {
             let mut path = path.clone();
             let base_tref = match path.tref.base {
                 BaseClause::SelfClause => self_path.as_ref().unwrap().clone(),
@@ -1221,9 +1224,9 @@ impl UpdateItemBody<'_> {
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
             };
             args.types.push(ty);
-        }
+        })
     }
-    fn update_item_generics(&mut self, id: impl Into<ItemId>, args: &mut GenericArgs) {
+    fn update_item_generics(&mut self, id: impl Into<ItemId>, args: &mut BoxedArgs) {
         self.update_generics(args, GenericsSource::item(id), None);
     }
 
@@ -1366,7 +1369,7 @@ impl VisitAstMut for UpdateItemBody<'_> {
             TraitRefKind::SelfId,
             TraitDeclRef {
                 id: tdecl.def_id,
-                generics: Box::new(tdecl.generics.identity_args()),
+                generics: BoxedArgs::new(tdecl.generics.identity_args()),
             },
         );
         for (clause_id, clause) in tdecl.implied_clauses.iter_mut_enumerated() {
@@ -1579,7 +1582,7 @@ impl TransformPass for Transform {
                     TraitRefKind::SelfId,
                     TraitDeclRef {
                         id: tr.def_id,
-                        generics: Box::new(tr.generics.identity_args()),
+                        generics: BoxedArgs::new(tr.generics.identity_args()),
                     },
                 );
                 let trait_def_id = tr.def_id;

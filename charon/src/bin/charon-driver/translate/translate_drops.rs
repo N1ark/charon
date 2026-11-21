@@ -89,7 +89,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             );
             let impl_ref = TraitImplRef {
                 id: destruct_impl_id,
-                generics: Box::new(impl_generics),
+                generics: BoxedArgs::new(impl_generics),
             };
             FunSource::TraitImpl {
                 impl_ref,
@@ -200,7 +200,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 method_params,
                 FunDeclRef {
                     id: fun_id,
-                    generics: Box::new(generics),
+                    generics: BoxedArgs::new(generics),
                 },
             )
         };

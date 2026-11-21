@@ -39,7 +39,7 @@ impl VisitAstMut for RemoveLastParamVisitor {
     fn enter_type_decl_ref(&mut self, x: &mut TypeDeclRef) {
         if self.types.contains(&x.id) {
             // Remove the last param.
-            x.generics.types.pop();
+            x.generics.with_mut(|args| args.types.pop());
         }
     }
 }

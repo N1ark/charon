@@ -61,7 +61,7 @@ fn new_promoted_global(
     krate.item_names.insert(id.into(), name);
     GlobalDeclRef {
         id,
-        generics: Box::new(GenericArgs::empty()),
+        generics: BoxedArgs::new(GenericArgs::empty()),
     }
 }
 

@@ -66,7 +66,76 @@ pub struct TraitTypeConstraint {
     pub ty: Ty,
 }
 
-pub type BoxedArgs = Box<GenericArgs>;
+/// Hash-consed generic arguments.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Drive, DriveMut, DriveTwo)]
+pub struct BoxedArgs(pub HashConsed<WithCachedTypeInfo<GenericArgs>>);
+
+impl BoxedArgs {
+    pub fn new(args: GenericArgs) -> Self {
+        BoxedArgs(HashConsed::new(WithCachedTypeInfo::new(args)))
+    }
+
+    /// Get mutable access to the arguments. This clones them if they're shared and re-interns the
+    /// modified value at the end.
+    pub fn with_mut<R>(&mut self, f: impl FnOnce(&mut GenericArgs) -> R) -> R {
+        self.0.with_inner_mut(|args| args.with_value_mut(f))
+    }
+}
+
+impl AsRef<GenericArgs> for BoxedArgs {
+    fn as_ref(&self) -> &GenericArgs {
+        self
+    }
+}
+
+impl From<GenericArgs> for BoxedArgs {
+    fn from(args: GenericArgs) -> Self {
+        BoxedArgs::new(args)
+    }
+}
+
+impl std::ops::Deref for BoxedArgs {
+    type Target = GenericArgs;
+    fn deref(&self) -> &Self::Target {
+        self.0.inner()
+    }
+}
+
+/// Dummy impls, see the one on `Ty`.
+unsafe impl Send for BoxedArgs {}
+unsafe impl Sync for BoxedArgs {}
+
+impl std::fmt::Debug for BoxedArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
+/// Serialized as the plain arguments.
+impl<State: ?Sized> SerializeState<State> for BoxedArgs
+where
+    GenericArgs: SerializeState<State>,
+{
+    fn serialize_state<S: serde::Serializer>(
+        &self,
+        state: &State,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        (**self).serialize_state(state, serializer)
+    }
+}
+impl<'de, State: ?Sized> DeserializeState<'de, State> for BoxedArgs
+where
+    GenericArgs: DeserializeState<'de, State>,
+{
+    fn deserialize_state<D: serde::Deserializer<'de>>(
+        state: &State,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        GenericArgs::deserialize_state(state, deserializer).map(BoxedArgs::new)
+    }
+}
 
 /// Generic parameters for a declaration, including predicates.
 #[derive(Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

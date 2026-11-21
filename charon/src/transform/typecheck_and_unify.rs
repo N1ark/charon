@@ -700,7 +700,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
 
         let impl_tref_kind = TraitRefKind::TraitImpl(TraitImplRef {
             id: timpl.def_id,
-            generics: Box::new(timpl.generics.identity_args()),
+            generics: BoxedArgs::new(timpl.generics.identity_args()),
         });
         let implied_clauses = Substituted::new_for_trait(
             &tdecl.implied_clauses,

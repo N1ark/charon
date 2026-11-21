@@ -34,7 +34,8 @@ impl Transform {
             kind: BinderKind::Other,
         }
         .flatten();
-        let mut fun_decl = original_method.substitute_params(subst.map(|x| *x.generics));
+        let mut fun_decl =
+            original_method.substitute_params(subst.map(|x| GenericArgs::clone(&x.generics)));
 
         let FunSource::TraitDefault { trait_ref, .. } = fun_decl.src else {
             unreachable!()
@@ -56,7 +57,7 @@ impl Transform {
         fun_decl.src = FunSource::TraitImpl {
             impl_ref: TraitImplRef {
                 id: trait_impl.def_id,
-                generics: Box::new(trait_impl.generics.identity_args()),
+                generics: BoxedArgs::new(trait_impl.generics.identity_args()),
             },
             trait_ref,
             item_id,
@@ -112,7 +113,7 @@ impl TransformPass for Transform {
 
                 let method = generics.map(|generics| FunDeclRef {
                     id: new_id,
-                    generics: Box::new(generics),
+                    generics: BoxedArgs::new(generics),
                 });
                 methods_to_insert.push((method_id, method));
             }

@@ -155,7 +155,7 @@ impl TypeDeclRef {
     pub fn new(id: TypeDeclId, generics: GenericArgs, builtin: Option<BuiltinAdt>) -> Self {
         Self {
             id,
-            generics: Box::new(generics),
+            generics: BoxedArgs::new(generics),
             builtin,
         }
     }

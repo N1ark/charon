@@ -188,16 +188,17 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         self.translate_region_binder(span, callable.sig(), |ctx, _| {
             let mut dref = dref.move_under_binder();
             // The regions for these item kinds have the fn late bound regions at the end.
-            for (a, b) in dref.generics.regions.iter_mut().rev().zip(
-                ctx.innermost_binder()
-                    .params
-                    .identity_args()
+            let late_bound = ctx.innermost_binder().params.identity_args().regions;
+            dref.generics.with_mut(|generics| {
+                for (a, b) in generics
                     .regions
-                    .into_iter()
-                    .rev(),
-            ) {
-                *a = b;
-            }
+                    .iter_mut()
+                    .rev()
+                    .zip(late_bound.into_iter().rev())
+                {
+                    *a = b;
+                }
+            });
             Ok(dref)
         })
     }
@@ -232,8 +233,10 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             ClosureKind::FnMut | ClosureKind::Fn => {
                 let rid =
                     regions.push_with(|index| RegionParam::new(index, None, Variance::Covariant));
-                *dref.generics.regions.iter_mut().last().unwrap() =
-                    Region::Var(DeBruijnVar::new_at_zero(rid));
+                dref.generics.with_mut(|generics| {
+                    *generics.regions.iter_mut().last().unwrap() =
+                        Region::Var(DeBruijnVar::new_at_zero(rid))
+                });
             }
         }
         Ok(RegionBinder {
@@ -587,7 +590,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 // TODO: can we ask hax for the trait ref?
                 let fn_op = FnOperand::Regular(FnPtr::new(
                     fun_id.into(),
-                    impl_ref.generics.concat(&GenericArgs {
+                    GenericArgs::clone(&impl_ref.generics).concat(&GenericArgs {
                         regions: vec![self.translate_erased_region()].into(),
                         ..GenericArgs::empty()
                     }),

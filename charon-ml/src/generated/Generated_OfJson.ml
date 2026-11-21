@@ -372,6 +372,13 @@ and borrowck_statement_of_json (ctx : of_json_ctx) (js : json) :
         Ok (SetOutlives _0)
     | _ -> Error "")
 
+and boxed_args_of_json (ctx : of_json_ctx) (js : json) :
+    (boxed_args, string) result =
+  combine_error_msgs js __FUNCTION__
+    (match js with
+    | json -> generic_args_of_json ctx json
+    | _ -> Error "")
+
 and branch_id_of_json (ctx : of_json_ctx) (js : json) :
     (branch_id, string) result =
   combine_error_msgs js __FUNCTION__
@@ -809,7 +816,7 @@ and fn_ptr_of_json (ctx : of_json_ctx) (js : json) : (fn_ptr, string) result =
     (match js with
     | `Assoc [ ("kind", kind); ("generics", generics) ] ->
         let* kind = box_of_json fn_ptr_kind_of_json ctx kind in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         Ok ({ kind; generics } : fn_ptr)
     | _ -> Error "")
 
@@ -839,7 +846,7 @@ and fun_decl_ref_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("id", id); ("generics", generics) ] ->
         let* id = fun_decl_id_of_json ctx id in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         Ok ({ id; generics } : fun_decl_ref)
     | _ -> Error "")
 
@@ -952,7 +959,7 @@ and global_decl_ref_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("id", id); ("generics", generics) ] ->
         let* id = global_decl_id_of_json ctx id in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         Ok ({ id; generics } : global_decl_ref)
     | _ -> Error "")
 
@@ -1519,7 +1526,7 @@ and trait_decl_ref_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("id", id); ("generics", generics) ] ->
         let* id = trait_decl_id_of_json ctx id in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         Ok ({ id; generics } : trait_decl_ref)
     | _ -> Error "")
 
@@ -1536,7 +1543,7 @@ and trait_impl_ref_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("id", id); ("generics", generics) ] ->
         let* id = trait_impl_id_of_json ctx id in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         Ok ({ id; generics } : trait_impl_ref)
     | _ -> Error "")
 
@@ -1743,7 +1750,7 @@ and type_decl_ref_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("id", id); ("generics", generics); ("builtin", builtin) ] ->
         let* id = type_decl_id_of_json ctx id in
-        let* generics = box_of_json generic_args_of_json ctx generics in
+        let* generics = boxed_args_of_json ctx generics in
         let* builtin = option_of_json builtin_adt_of_json ctx builtin in
         Ok ({ id; generics; builtin } : type_decl_ref)
     | _ -> Error "")

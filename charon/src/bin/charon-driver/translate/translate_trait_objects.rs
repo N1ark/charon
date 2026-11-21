@@ -281,8 +281,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         // Remove the `Self` type variable from the generic parameters.
         vtable_ref
             .generics
-            .types
-            .remove_and_shift_ids(TypeVarId::ZERO);
+            .with_mut(|generics| generics.types.remove_and_shift_ids(TypeVarId::ZERO));
 
         if !self.monomorphize() {
             // The vtable type also takes associated types as parameters.
@@ -291,7 +290,9 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 .iter()
                 .map(|ty| self.translate_ty(span, ty))
                 .try_collect()?;
-            vtable_ref.generics.types.extend(assoc_tys);
+            vtable_ref
+                .generics
+                .with_mut(|generics| generics.types.extend(assoc_tys));
         }
 
         Ok(Some(vtable_ref))
@@ -835,7 +836,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             );
             let vtable_ref = GlobalDeclRef {
                 id: global_id,
-                generics: Box::new(self.outermost_generics().identity_args()),
+                generics: BoxedArgs::new(self.outermost_generics().identity_args()),
             };
             if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
                 && timpl.vtable.is_lazy()

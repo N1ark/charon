@@ -209,6 +209,9 @@ and binder_kind =
   | BKDyn  (** Binder used for [dyn Trait] existential predicates. *)
   | BKOther  (** Some other use of a binder outside the main Charon ast. *)
 
+(** Hash-consed generic arguments. *)
+and boxed_args = generic_args
+
 (** Builtin ADT identifiers. *)
 and builtin_adt =
   | TTuple  (** A tuple [(A, B, ...)], including [unit]. *)
@@ -468,7 +471,7 @@ and dyn_predicate = {
 and field_id = (FieldId.id[@visitors.opaque])
 
 (** Reference to a function, possibly indirected via a trait. *)
-and fn_ptr = { kind : fn_ptr_kind; generics : generic_args }
+and fn_ptr = { kind : fn_ptr_kind; generics : boxed_args }
 
 and fn_ptr_kind =
   | Fun of fun_decl_id
@@ -479,7 +482,7 @@ and fn_ptr_kind =
 (** Reference to a function declaration. *)
 and fun_decl_ref = {
   id : fun_decl_id;
-  generics : generic_args;  (** Generic arguments passed to the function. *)
+  generics : boxed_args;  (** Generic arguments passed to the function. *)
 }
 
 (** A function signature. *)
@@ -514,7 +517,7 @@ and generic_params = {
 }
 
 (** Reference to a global declaration. *)
-and global_decl_ref = { id : global_decl_id; generics : generic_args }
+and global_decl_ref = { id : global_decl_id; generics : boxed_args }
 
 (** The place a [Ref]/[Ptr] constant points to, e.g. [GLOBAL.0[1]]. This is a
     constant version of [[Place]]. *)
@@ -644,10 +647,10 @@ and trait_assoc_ty_impl = {
     ]}
 
     The substitution is: [[String, bool]]. *)
-and trait_decl_ref = { id : trait_decl_id; generics : generic_args }
+and trait_decl_ref = { id : trait_decl_id; generics : boxed_args }
 
 (** A reference to a tait impl, using the provided arguments. *)
-and trait_impl_ref = { id : trait_impl_id; generics : generic_args }
+and trait_impl_ref = { id : trait_impl_id; generics : boxed_args }
 
 (** A trait predicate in a signature, of the form [Type: Trait<Args>]. This
     functions like a variable binder, to which variables of the form
@@ -869,7 +872,7 @@ and ty_kind =
     boxes, and [str], which we translate as [struct str([u8])]. *)
 and type_decl_ref = {
   id : type_decl_id;
-  generics : generic_args;
+  generics : boxed_args;
   builtin : builtin_adt option;
       (** If this points to a builtin ADT, it is recorded here for easier
           identification. *)

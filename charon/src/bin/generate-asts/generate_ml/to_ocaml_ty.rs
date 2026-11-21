@@ -10,6 +10,7 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
     ("FileId", "file"),
     // Keep the public OCaml representation independent from Rust's hash-consing wrapper.
     ("ConstantExpr", "{ kind : constant_expr_kind; ty : ty }"),
+    ("BoxedArgs", "generic_args"),
     (
         "HashConsed",
         "'a0 (* Not actually hash-consed on the OCaml side *)",

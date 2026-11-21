@@ -415,8 +415,10 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                             impl_ref.generics.trait_refs.is_empty(),
                             "found trait alias with non-empty required predicates"
                         );
-                        impl_ref.generics.trait_refs =
-                            self.translate_trait_proofs(span, trait_proofs)?;
+                        let trait_refs = self.translate_trait_proofs(span, trait_proofs)?;
+                        impl_ref
+                            .generics
+                            .with_mut(|generics| generics.trait_refs = trait_refs);
                         TraitRefKind::TraitImpl(impl_ref)
                     }
                     hax::BuiltinTraitData::Destruct(DestructData::Glue { ty, .. }) => {

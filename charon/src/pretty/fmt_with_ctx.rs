@@ -1251,8 +1251,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for ImplElem {
                         let mut impl_trait = timpl.impl_trait.clone();
                         match impl_trait
                             .generics
-                            .types
-                            .remove_and_shift_ids(TypeVarId::ZERO)
+                            .with_mut(|args| args.types.remove_and_shift_ids(TypeVarId::ZERO))
                         {
                             Some(self_ty) => {
                                 let self_ty = self_ty.with_ctx(ctx);
@@ -3018,7 +3017,9 @@ impl TraitDeclRef {
     /// `Self` is `None` for monomorphized traits.
     pub fn split_self(&self) -> (Option<Ty>, Self) {
         let mut pred = self.clone();
-        let self_ty = pred.generics.types.remove_and_shift_ids(TypeVarId::ZERO);
+        let self_ty = pred
+            .generics
+            .with_mut(|args| args.types.remove_and_shift_ids(TypeVarId::ZERO));
         (self_ty, pred)
     }
 

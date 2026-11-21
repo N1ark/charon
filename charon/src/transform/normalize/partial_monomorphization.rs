@@ -189,7 +189,7 @@ impl<'pm, 'ctx> VisitAstMut for MutabilityShapeBuilder<'pm, 'ctx> {
                 return;
             };
             let Some(shifted_generics) =
-                generics.clone().move_from_under_binders(self.binder_depth)
+                GenericArgs::clone(generics).move_from_under_binders(self.binder_depth)
             else {
                 // Give up on this value.
                 return;
@@ -209,11 +209,13 @@ impl<'pm, 'ctx> VisitAstMut for MutabilityShapeBuilder<'pm, 'ctx> {
                 .extend(shifted_generics.trait_refs);
 
             // Replace each trait ref with a clause var.
-            for (target_clause_id, tref) in generics.trait_refs.iter_mut_enumerated() {
-                let clause_id = target_clause_id + num_clauses_before_merge;
-                *tref =
-                    self.params.trait_clauses[clause_id].identity_tref_at_depth(self.binder_depth);
-            }
+            generics.with_mut(|generics| {
+                for (target_clause_id, tref) in generics.trait_refs.iter_mut_enumerated() {
+                    let clause_id = target_clause_id + num_clauses_before_merge;
+                    *tref = self.params.trait_clauses[clause_id]
+                        .identity_tref_at_depth(self.binder_depth);
+                }
+            });
         }
     }
     fn enter_region(&mut self, r: &mut Region) {
@@ -408,7 +410,7 @@ impl<'a> PartialMonomorphizer<'a> {
         );
         Some(DeclRef {
             id: new_id,
-            generics: Box::new(shape_args),
+            generics: BoxedArgs::new(shape_args),
             trait_ref: None,
         })
     }

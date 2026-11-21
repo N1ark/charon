@@ -203,6 +203,7 @@ use derive_generic_visitor::*;
         for<Id: AstVisitable> DeclRef<Id>,
         for<T: AstVisitable> WithCachedTypeInfo<T>,
         HashConsed<InhabitedPredicateKind>,
+        BoxedArgs,
         for<T: AstVisitable> Box<T>,
         for<T: AstVisitable> Option<T>,
         for<T: AstVisitable> Vec<T>,
@@ -427,6 +428,7 @@ impl<K: BodyVisitable + Hash + Eq, T: BodyVisitable + MergeValue> BodyVisitable
         FunDeclId,
         FunDeclRef,
         GenericArgs,
+        BoxedArgs,
         GlobalDeclRef,
         IntTy,
         IntegerTy,
@@ -1012,25 +1014,30 @@ mod wrappers {
             x.drive_mut(self.inner())
         }
         fn visit_type_decl_ref(&mut self, x: &mut TypeDeclRef) -> ControlFlow<Self::Break> {
-            self.0.visit_item_ref(ItemId::Type(x.id), &mut x.generics)
+            x.generics
+                .with_mut(|args| self.0.visit_item_ref(ItemId::Type(x.id), args))
         }
         fn visit_fun_decl_ref(&mut self, x: &mut FunDeclRef) -> ControlFlow<Self::Break> {
-            self.0.visit_item_ref(ItemId::Fun(x.id), &mut x.generics)
+            x.generics
+                .with_mut(|args| self.0.visit_item_ref(ItemId::Fun(x.id), args))
         }
         fn visit_global_decl_ref(&mut self, x: &mut GlobalDeclRef) -> ControlFlow<Self::Break> {
-            self.0.visit_item_ref(ItemId::Global(x.id), &mut x.generics)
+            x.generics
+                .with_mut(|args| self.0.visit_item_ref(ItemId::Global(x.id), args))
         }
         fn visit_trait_decl_ref(&mut self, x: &mut TraitDeclRef) -> ControlFlow<Self::Break> {
-            self.0
-                .visit_item_ref(ItemId::TraitDecl(x.id), &mut x.generics)
+            x.generics
+                .with_mut(|args| self.0.visit_item_ref(ItemId::TraitDecl(x.id), args))
         }
         fn visit_trait_impl_ref(&mut self, x: &mut TraitImplRef) -> ControlFlow<Self::Break> {
-            self.0
-                .visit_item_ref(ItemId::TraitImpl(x.id), &mut x.generics)
+            x.generics
+                .with_mut(|args| self.0.visit_item_ref(ItemId::TraitImpl(x.id), args))
         }
         fn visit_fn_ptr(&mut self, x: &mut FnPtr) -> ControlFlow<Self::Break> {
             match x.kind.as_ref() {
-                FnPtrKind::Fun(id) => self.0.visit_item_ref(ItemId::Fun(*id), &mut x.generics),
+                FnPtrKind::Fun(id) => x
+                    .generics
+                    .with_mut(|args| self.0.visit_item_ref(ItemId::Fun(*id), args)),
                 FnPtrKind::Trait(..) => self.visit_inner(x),
             }
         }

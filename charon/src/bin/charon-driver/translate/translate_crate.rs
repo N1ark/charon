@@ -1043,7 +1043,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
 
         let item = DeclRef {
             id,
-            generics: Box::new(generics),
+            generics: BoxedArgs::new(generics),
             trait_ref,
         };
         Ok(item.try_into().ok().unwrap())
@@ -1090,7 +1090,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             let generics = self.translate_generic_args_without_trait_refs(span, item)?;
             return Ok(TypeDeclRef {
                 id: TypeDeclId::UNIT,
-                generics: Box::new(generics),
+                generics: BoxedArgs::new(generics),
                 builtin,
             });
         }
@@ -1161,7 +1161,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 FnPtrKind::Trait(trait_ref, method_id)
             }
         };
-        let mut generics = fun_item.generics;
+        let mut generics = GenericArgs::clone(&fun_item.generics);
         // The last n regions are the late-bound ones and were provided as erased regions by
         // `translate_item`.
         for (a, b) in generics.regions.iter_mut().rev().zip(
@@ -1503,7 +1503,7 @@ pub fn translate<'tcx>(
     for (tref, layout) in std::mem::take(&mut ctx.monomorphic_layouts) {
         if let Some(decl) = ctx.translated.type_decls.get_mut(tref.id) {
             decl.monomorphic_layouts
-                .entry(*tref.generics)
+                .entry(GenericArgs::clone(&tref.generics))
                 .or_default()
                 .insert(target.clone(), layout);
         }

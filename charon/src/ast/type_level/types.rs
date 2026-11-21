@@ -254,7 +254,7 @@ impl Ty {
     pub fn mk_unit() -> Ty {
         static_type!(TyKind::Adt(TypeDeclRef {
             id: TypeDeclId::UNIT,
-            generics: Box::new(GenericArgs::empty()),
+            generics: BoxedArgs::new(GenericArgs::empty()),
             builtin: Some(BuiltinAdt::Tuple),
         }))
     }
@@ -422,13 +422,6 @@ impl TyKind {
         }
     }
 
-    pub fn as_box_mut(&mut self) -> Option<&mut Ty> {
-        match self {
-            TyKind::Adt(ty_ref) if ty_ref.is_box() => Some(&mut ty_ref.generics.types[0]),
-            _ => None,
-        }
-    }
-
     pub fn builtin_deref<'a>(&'a self, krate: &'a TranslatedCrate) -> Option<&'a Ty> {
         match self {
             TyKind::Ref(_, ty, _) | TyKind::RawPtr(ty, _) => Some(ty),
@@ -438,14 +431,6 @@ impl TyKind {
                 .first()
                 .or_else(|| krate.item_name(tref.id).mono_args()?.types.first()),
 
-            _ => None,
-        }
-    }
-
-    pub fn builtin_deref_mut(&mut self) -> Option<&mut Ty> {
-        match self {
-            TyKind::Ref(_, ty, _) | TyKind::RawPtr(ty, _) => Some(ty),
-            TyKind::Adt(ty_ref) if ty_ref.is_box() => Some(&mut ty_ref.generics.types[0]),
             _ => None,
         }
     }

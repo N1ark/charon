@@ -510,7 +510,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let global_id = self.register_item(span, def.this(), TransItemSourceKind::Global);
             FunSource::GlobalInitializer(GlobalDeclRef {
                 id: global_id,
-                generics: Box::new(self.outermost_generics().identity_args()),
+                generics: BoxedArgs::new(self.outermost_generics().identity_args()),
             })
         } else if matches!(def.kind(), hax::FullDefKind::Ctor(_)) {
             FunSource::AdtConstructor
@@ -1032,7 +1032,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                                     );
                                 FunDeclRef {
                                     id,
-                                    generics: Box::new(fun_generics),
+                                    generics: BoxedArgs::new(fun_generics),
                                 }
                             });
                             // `skip_binder` is allowed because `translate_binder_for_def` puts the
@@ -1119,7 +1119,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                                     );
                                 GlobalDeclRef {
                                     id,
-                                    generics: Box::new(generics),
+                                    generics: BoxedArgs::new(generics),
                                 }
                             });
                             let ty = ctx.translate_ty(item_span, c.ty())?;
@@ -1239,7 +1239,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         let self_predicate = TraitRef::new(
             TraitRefKind::TraitImpl(TraitImplRef {
                 id: def_id,
-                generics: Box::new(self.the_only_binder().params.identity_args()),
+                generics: BoxedArgs::new(self.the_only_binder().params.identity_args()),
             }),
             implemented_trait.clone(),
         );
@@ -1410,7 +1410,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                     };
                     let gref = GlobalDeclRef {
                         id,
-                        generics: Box::new(generics),
+                        generics: BoxedArgs::new(generics),
                     };
                     consts.set_slot_extend(assoc_const_id, gref);
                 }

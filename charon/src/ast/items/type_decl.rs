@@ -232,7 +232,7 @@ impl TypeDecl {
     pub fn self_ref(&self) -> TypeDeclRef {
         TypeDeclRef {
             id: self.def_id,
-            generics: Box::new(self.generics.identity_args()),
+            generics: BoxedArgs::new(self.generics.identity_args()),
             builtin: self.src.as_builtin().cloned(),
         }
     }

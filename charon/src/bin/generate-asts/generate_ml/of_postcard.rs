@@ -55,6 +55,8 @@ const MANUAL_IMPLS: &[(&str, &str)] = &[
         "HashConsed",
         r#"Error "use `dedup_val_of_postcard` instead""#,
     ),
+    // Hash-consed on the Rust side but serialized as plain generic arguments.
+    ("BoxedArgs", "generic_args_of_postcard ctx st"),
     (
         "Ty",
         "dedup_val_of_postcard ctx.ty_dedup_tbl ty_kind_of_postcard ctx st",

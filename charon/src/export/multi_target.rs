@@ -347,7 +347,7 @@ impl TargetGroup {
             .map(|(target, &id)| {
                 let fun_decl_ref = FunDeclRef {
                     id: *id.as_fun().unwrap(),
-                    generics: Box::new(canonical.generics.identity_args()),
+                    generics: BoxedArgs::new(canonical.generics.identity_args()),
                 };
                 (target.clone(), fun_decl_ref)
             })
@@ -438,7 +438,7 @@ impl<'a> ItemDeduplicator<'a> {
                             fun_decl.src = FunSource::TargetDependent {
                                 dispatcher: FunDeclRef {
                                     id: facade_id,
-                                    generics: Box::new(fun_decl.generics.identity_args()),
+                                    generics: BoxedArgs::new(fun_decl.generics.identity_args()),
                                 },
                             };
                         }
