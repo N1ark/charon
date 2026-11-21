@@ -48,6 +48,12 @@ struct TypeCheckVisitor<'a> {
     pending_unifications: Option<Vec<(RegionId, RegionId)>>,
     /// Set when matching a value hits something that requires substituting it first.
     needs_substitution: bool,
+    /// Set while we check a value without substituting it first, see `assert_matches_trait_item`.
+    /// Records whether that check ran into anything, in which case we redo it normally.
+    dry_run: Option<Cell<bool>>,
+    /// Whether substituting a given value with arguments of the given lengths succeeds, see
+    /// `substitution_succeeds`.
+    substitution_cache: &'a mut HashMap<(SubstitutedValue, [usize; 4]), bool>,
     /// Defaulted methods may have contradictory premises like `Self::Item = bool` and
     /// `Self::Item = u32` which may equate entirely different types. We don't try to reason about
     /// this and instead accept this fact. It's fine because the original methods will be
@@ -80,20 +86,46 @@ impl VisitorWithBinderStack for TypeCheckVisitor<'_> {
 
 struct TypeError;
 
-/// How to read the variables of a value we match: `args`, if set, are the arguments for the
-/// variables bound at `depth`, which haven't been substituted. The other variables don't matter
-/// since matching ignores them.
+/// A value of the crate that we substitute: an item of a trait or impl, or a clause of a trait.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum SubstitutedValue {
+    Method(TraitDeclId, TraitMethodId),
+    AssocTy(TraitDeclId, AssocTypeId),
+    ParentClause(TraitDeclId, TraitClauseId),
+    ImplTrait(TraitImplId),
+}
+
+fn arg_counts(args: &GenericArgs) -> [usize; 4] {
+    [
+        args.regions.len(),
+        args.types.len(),
+        args.const_generics.len(),
+        args.trait_refs.len(),
+    ]
+}
+
+/// How to read the variables of a value we match: `args` and `outer`, if set, are the arguments for
+/// the variables bound at `depth` and `depth + 1` respectively, which haven't been substituted. The
+/// other variables don't matter since matching ignores them.
 #[derive(Clone, Copy)]
 struct Env<'a> {
     args: Option<&'a GenericArgs>,
+    outer: Option<&'a GenericArgs>,
     depth: DeBruijnId,
 }
 
 impl<'a> Env<'a> {
     const NONE: Self = Env {
         args: None,
+        outer: None,
         depth: DeBruijnId::ZERO,
     };
+    fn new(args: &'a GenericArgs) -> Self {
+        Env {
+            args: Some(args),
+            ..Self::NONE
+        }
+    }
     fn under_binder(self) -> Self {
         Env {
             depth: self.depth.incr(),
@@ -104,6 +136,10 @@ impl<'a> Env<'a> {
 
 impl TypeCheckVisitor<'_> {
     fn error(&self, message: impl Display) {
+        if let Some(failed) = &self.dry_run {
+            failed.set(true);
+            return;
+        }
         let msg = format!(
             "Type error {}:\n{message}\n\
             Visitor stack:\n  {}\n\
@@ -174,10 +210,17 @@ impl TypeCheckVisitor<'_> {
         env: Env<'e>,
         args: impl FnOnce(&'e GenericArgs) -> &'e IndexVec<Id, T>,
     ) -> Result<Option<&'e T>, TypeError> {
-        if let Some(all_args) = env.args
-            && let DeBruijnVar::Bound(dbid, id) = var
-            && dbid == env.depth
-        {
+        let DeBruijnVar::Bound(dbid, id) = var else {
+            return Ok(None);
+        };
+        let all_args = if dbid == env.depth {
+            env.args
+        } else if dbid == env.depth.incr() {
+            env.outer
+        } else {
+            None
+        };
+        if let Some(all_args) = all_args {
             match args(all_args).get(id) {
                 Some(arg) => Ok(Some(arg)),
                 None => {
@@ -211,15 +254,45 @@ impl TypeCheckVisitor<'_> {
         if let (Region::Lub(a), Region::Lub(b)) = (a, b) {
             return self.match_tys(a, ea, b, eb);
         }
-        if let (Region::Body(a), Region::Body(b)) = (a, b)
-            && let Some(unifier) = &mut self.body_lt_unifier
-        {
-            match &mut self.pending_unifications {
-                Some(pending) => pending.push((*a, *b)),
-                None => self.did_unify_lifetimes |= unifier.union(*a, *b),
-            }
+        if let (Region::Body(a), Region::Body(b)) = (a, b) {
+            self.unify_regions(*a, *b);
         }
         Ok(())
+    }
+
+    fn unify_regions(&mut self, a: RegionId, b: RegionId) {
+        if let Some(unifier) = &mut self.body_lt_unifier {
+            match &mut self.pending_unifications {
+                Some(pending) => pending.push((a, b)),
+                None => self.did_unify_lifetimes |= unifier.union(a, b),
+            }
+        }
+    }
+
+    /// Run `f`, holding back the lifetime unifications it does. Returns them.
+    fn with_pending_unifications<R>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> (R, Vec<(RegionId, RegionId)>) {
+        let outer = self.pending_unifications.replace(Vec::new());
+        let result = f(self);
+        let pending = mem::replace(&mut self.pending_unifications, outer).unwrap();
+        (result, pending)
+    }
+
+    /// Whether substituting `value` with arguments of these lengths succeeds. This only depends on
+    /// the lengths: substitution fails on variables with no corresponding argument, or on size
+    /// metadata.
+    fn substitution_succeeds(
+        &mut self,
+        value: SubstitutedValue,
+        args: &GenericArgs,
+        substitute: impl FnOnce() -> bool,
+    ) -> bool {
+        *self
+            .substitution_cache
+            .entry((value, arg_counts(args)))
+            .or_insert_with(substitute)
     }
 
     /// Compare two types for equality. Because we can't use the full power of rustc's type
@@ -362,12 +435,26 @@ impl TypeCheckVisitor<'_> {
                 if let Some(tdecl) = self.ctx.translated.trait_decls.get(parent.trait_id())
                     && let Some(clause) = tdecl.implied_clauses.get(*clause_id) =>
             {
-                let pred = clause
-                    .trait_
-                    .clone()
-                    .try_substitute_with_tref(parent)
-                    .map_err(|_| TypeError)?;
-                Self::apply_poly_predicate(pred, args)?
+                let parent_args = &parent.trait_decl_ref.generics;
+                let substituted = || {
+                    let pred = clause.trait_.clone().try_substitute_with_tref(parent);
+                    Self::apply_poly_predicate(pred.map_err(|_| TypeError)?, args)
+                };
+                // Like `apply_poly_predicate`, we only need to apply the region arguments if they
+                // have body regions or lubs.
+                let value = SubstitutedValue::ParentClause(parent.trait_id(), *clause_id);
+                if clause.trait_.regions.len() == args.regions.len()
+                    && !args
+                        .regions
+                        .iter()
+                        .any(|r| matches!(r, Region::Body(_) | Region::Lub(_)))
+                    && self.substitution_succeeds(value, parent_args, || substituted().is_ok())
+                {
+                    let env = Env::new(parent_args).under_binder();
+                    let clause_tref = &clause.trait_.skip_binder;
+                    return self.match_in_env(&tref.trait_decl_ref, clause_tref, env, substituted);
+                }
+                substituted()?
             }
             TraitRefKind::ItemClause {
                 trait_ref,
@@ -401,15 +488,46 @@ impl TypeCheckVisitor<'_> {
             TraitRefKind::TraitImpl(trait_impl_ref)
                 if let Some(timpl) = self.ctx.translated.trait_impls.get(trait_impl_ref.id) =>
             {
-                timpl
-                    .impl_trait
-                    .clone()
-                    .try_substitute(&trait_impl_ref.generics)
-                    .map_err(|_| TypeError)?
+                let impl_args = &trait_impl_ref.generics;
+                let substituted = || {
+                    let impl_trait = timpl.impl_trait.clone().try_substitute(impl_args);
+                    impl_trait.map_err(|_| TypeError)
+                };
+                let value = SubstitutedValue::ImplTrait(trait_impl_ref.id);
+                if self.substitution_succeeds(value, impl_args, || substituted().is_ok()) {
+                    let env = Env::new(impl_args);
+                    return self.match_in_env(
+                        &tref.trait_decl_ref,
+                        &timpl.impl_trait,
+                        env,
+                        substituted,
+                    );
+                }
+                substituted()?
             }
             _ => return Ok(()),
         };
         self.match_trait_decl_refs(&tref.trait_decl_ref, Env::NONE, &target_pred, Env::NONE)
+    }
+
+    /// Match `a` against `b` read in `env`, without substituting it. If that turns out to require
+    /// the substituted `b`, we get it from `substituted` instead.
+    fn match_in_env(
+        &mut self,
+        a: &TraitDeclRef,
+        b: &TraitDeclRef,
+        env: Env<'_>,
+        substituted: impl FnOnce() -> Result<TraitDeclRef, TypeError>,
+    ) -> Result<(), TypeError> {
+        let (result, unifications) =
+            self.with_pending_unifications(|this| this.match_trait_decl_refs(a, Env::NONE, b, env));
+        if !mem::take(&mut self.needs_substitution) {
+            for (x, y) in unifications {
+                self.unify_regions(x, y);
+            }
+            return result;
+        }
+        self.match_trait_decl_refs(a, Env::NONE, &substituted()?, Env::NONE)
     }
 
     fn match_poly_trait_ref_against_itself(
@@ -537,6 +655,9 @@ impl TypeCheckVisitor<'_> {
                 .zip(b.iter())
                 .for_each(|(x, y)| check_inner(self, x, y));
             ControlFlow::Continue(())
+        } else if let Some(failed) = &self.dry_run {
+            failed.set(true);
+            ControlFlow::Break(())
         } else {
             let a_fmt = &self.binders_fmt_ctx(a_binders);
             let b_fmt = &self.val_fmt_ctx();
@@ -553,7 +674,14 @@ impl TypeCheckVisitor<'_> {
         }
     }
 
-    fn assert_clause_matches(&mut self, tclause: Substituted<'_, TraitParam>, tref: &PolyTraitRef) {
+    /// Check that `tref` proves `tclause`. If set, `outer` are the arguments for the binder outside
+    /// the one of `tclause`, which haven't been substituted yet; in that case we're in a dry run.
+    fn assert_clause_matches(
+        &mut self,
+        tclause: Substituted<'_, TraitParam>,
+        outer: Option<&GenericArgs>,
+        tref: &PolyTraitRef,
+    ) {
         let expected_regions = tclause.val.trait_.regions.len();
         let actual_regions = tref.0.regions.len();
         if expected_regions != actual_regions {
@@ -572,16 +700,21 @@ impl TypeCheckVisitor<'_> {
         let mut matched = None;
         if !tclause.val.type_info().uses_size_metadata() {
             let env = Env {
-                args: Some(tclause.generics),
-                depth: DeBruijnId::ZERO,
+                outer,
+                ..Env::new(tclause.generics)
             };
-            self.pending_unifications = Some(Vec::new());
-            let result =
-                self.match_poly_trait_decl_refs(&tclause.val.trait_, env, &tref_pred, Env::NONE);
-            let unifications = self.pending_unifications.take().unwrap();
+            let (result, unifications) = self.with_pending_unifications(|this| {
+                this.match_poly_trait_decl_refs(&tclause.val.trait_, env, &tref_pred, Env::NONE)
+            });
             if !mem::take(&mut self.needs_substitution) {
                 matched = Some((result.is_ok(), unifications));
             }
+        }
+        if outer.is_some() && !matches!(matched, Some((true, _))) {
+            // We can't substitute the clause without its outer arguments: let the caller redo the
+            // check normally.
+            self.dry_run.as_ref().unwrap().set(true);
+            return;
         }
         let (clause_matches, unifications) = match matched {
             Some(matched) => matched,
@@ -607,10 +740,8 @@ impl TypeCheckVisitor<'_> {
             };
             Some(clause)
         };
-        if let Some(unifier) = &mut self.body_lt_unifier {
-            for (a, b) in unifications {
-                self.did_unify_lifetimes |= unifier.union(a, b);
-            }
+        for (a, b) in unifications {
+            self.unify_regions(a, b);
         }
         if let Some(clause) = mismatched_clause {
             let args_fmt = &self.val_fmt_ctx();
@@ -637,6 +768,7 @@ impl TypeCheckVisitor<'_> {
         &mut self,
         params_binders: &[&GenericParams],
         clauses: Substituted<'_, IndexVec<TraitClauseId, TraitParam>>,
+        outer: Option<&GenericArgs>,
         trefs: &IndexVec<TraitClauseId, PolyTraitRef>,
         kind: &str,
         target: &GenericsSource,
@@ -647,14 +779,17 @@ impl TypeCheckVisitor<'_> {
             params_binders,
             kind,
             target,
-            |this, tclause, tref| this.assert_clause_matches(clauses.rebind(tclause), tref),
+            |this, tclause, tref| this.assert_clause_matches(clauses.rebind(tclause), outer, tref),
         );
     }
 
+    /// Check `args` against `params`. If set, `outer` are the arguments for the binder outside
+    /// `params`, which haven't been substituted yet; in that case we're in a dry run.
     fn assert_matches(
         &mut self,
         params_binders: &[&GenericParams],
         params: &GenericParams,
+        outer: Option<&GenericArgs>,
         args: &GenericArgs,
         target: &GenericsSource,
     ) -> ControlFlow<()> {
@@ -685,6 +820,7 @@ impl TypeCheckVisitor<'_> {
         self.assert_clauses_match(
             params_binders,
             Substituted::new(&params.trait_clauses, args),
+            outer,
             &args.trait_refs,
             "trait clauses",
             target,
@@ -698,7 +834,7 @@ impl TypeCheckVisitor<'_> {
             return;
         };
         let params = item.generic_params();
-        let _ = self.assert_matches(&[params], params, args, &GenericsSource::item(id));
+        let _ = self.assert_matches(&[params], params, None, args, &GenericsSource::item(id));
     }
 
     fn assert_matches_method(
@@ -715,10 +851,8 @@ impl TypeCheckVisitor<'_> {
         let Some(bound_fn) = trait_decl.methods.get(method_id) else {
             return;
         };
-        if let Ok(bound_fn) = Substituted::new_for_trait_ref(bound_fn, trait_ref).try_substitute() {
-            let binders = [&trait_decl.generics, &bound_fn.params];
-            let _ = self.assert_matches(&binders, &bound_fn.params, args, target);
-        }
+        let value = SubstitutedValue::Method(trait_id, method_id);
+        self.assert_matches_trait_item(trait_ref, trait_decl, bound_fn, value, args, target);
     }
 
     fn assert_matches_trait_type(
@@ -735,10 +869,47 @@ impl TypeCheckVisitor<'_> {
         let Some(bound_ty) = trait_decl.types.get(type_id) else {
             return;
         };
-        if let Ok(bound_ty) = Substituted::new_for_trait_ref(bound_ty, trait_ref).try_substitute() {
-            let binders = [&trait_decl.generics, &bound_ty.params];
-            let _ = self.assert_matches(&binders, &bound_ty.params, args, target);
+        let value = SubstitutedValue::AssocTy(trait_id, type_id);
+        self.assert_matches_trait_item(trait_ref, trait_decl, bound_ty, value, args, target);
+    }
+
+    /// Check `args` against the params of `bound`, an item of the trait `trait_ref` refers to.
+    fn assert_matches_trait_item<T>(
+        &mut self,
+        trait_ref: &TraitRef,
+        trait_decl: &TraitDecl,
+        bound: &Binder<T>,
+        value: SubstitutedValue,
+        args: &GenericArgs,
+        target: &GenericsSource,
+    ) where
+        Binder<T>: TyVisitable + Clone,
+    {
+        let trait_args = &trait_ref.trait_decl_ref.generics;
+        let substituted = || Substituted::new_for_trait_ref(bound, trait_ref).try_substitute();
+        // If the substitution fails there's nothing to check.
+        if !self.substitution_succeeds(value, trait_args, || substituted().is_ok()) {
+            return;
         }
+        // Substituting the trait arguments into the item is costly, so we first check its params
+        // with them on the side. If that runs into anything, we redo the check normally, which
+        // reports the errors.
+        if self.dry_run.is_none() {
+            self.dry_run = Some(Cell::new(false));
+            let (_, unifications) = self.with_pending_unifications(|this| {
+                this.assert_matches(&[], &bound.params, Some(trait_args), args, target)
+            });
+            let failed = self.dry_run.take().unwrap().into_inner();
+            if !failed {
+                for (a, b) in unifications {
+                    self.unify_regions(a, b);
+                }
+                return;
+            }
+        }
+        let bound = substituted().unwrap();
+        let binders = [&trait_decl.generics, &bound.params];
+        let _ = self.assert_matches(&binders, &bound.params, None, args, target);
     }
 }
 
@@ -892,6 +1063,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
                 self.assert_clauses_match(
                     &[],
                     substituted_clauses,
+                    None,
                     parent_trait_refs,
                     "builtin trait parent clauses",
                     &target,
@@ -971,6 +1143,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
         self.assert_clauses_match(
             &[&tdecl.generics],
             implied_clauses,
+            None,
             &timpl.implied_trait_refs,
             "trait parent clauses",
             &GenericsSource::item(timpl.impl_trait.id),
@@ -996,6 +1169,7 @@ impl VisitAst for TypeCheckVisitor<'_> {
             self.assert_clauses_match(
                 &[&tdecl.generics, &decl_ty.params],
                 clauses,
+                None,
                 &impl_ty.skip_binder.implied_trait_refs,
                 "associated type clauses",
                 &GenericsSource::TraitType(tdecl.def_id, type_id),
@@ -1055,6 +1229,7 @@ impl TransformPass for Check {
         !options.no_typecheck
     }
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
+        let mut substitution_cache = HashMap::default();
         ctx.for_each_item_mut(|ctx, item| {
             if item.as_ref().item_meta().has_errors {
                 return;
@@ -1093,6 +1268,8 @@ impl TransformPass for Check {
                 did_unify_lifetimes: false,
                 pending_unifications: None,
                 needs_substitution: false,
+                dry_run: None,
+                substitution_cache: &mut substitution_cache,
                 accept_type_errors,
                 binder_ctx: vec![0],
                 empty_binder_ctx: HashMap::default(),
