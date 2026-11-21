@@ -1767,7 +1767,7 @@ module Llbc = struct
        match __tag with
        | 0 ->
            let* _0 = place_of_postcard ctx st in
-           let* _1 = rvalue_of_postcard ctx st in
+           let* _1 = box_of_postcard rvalue_of_postcard ctx st in
            Ok (Assign (_0, _1))
        | 1 ->
            let* _0 = place_of_postcard ctx st in
@@ -1783,10 +1783,10 @@ module Llbc = struct
            let* _0 = place_of_postcard ctx st in
            Ok (PlaceMention _0)
        | 5 ->
-           let* _0 = borrowck_statement_of_postcard ctx st in
+           let* _0 = box_of_postcard borrowck_statement_of_postcard ctx st in
            Ok (Borrowck _0)
        | 6 ->
-           let* place = place_of_postcard ctx st in
+           let* place = box_of_postcard place_of_postcard ctx st in
            let* fn_ptr = fn_ptr_of_postcard ctx st in
            let* kind = drop_kind_of_postcard ctx st in
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
@@ -1796,33 +1796,36 @@ module Llbc = struct
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (DropEmptyBox (place, on_unwind))
        | 8 ->
-           let* assert_ = assertion_of_postcard ctx st in
+           let* assert_ = box_of_postcard assertion_of_postcard ctx st in
            let* on_failure = abort_kind_of_postcard ctx st in
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Assert (assert_, on_failure, on_unwind))
        | 9 ->
            let* asm = box_of_postcard inline_asm_of_postcard ctx st in
-           let* fallthrough = option_of_postcard block_of_postcard ctx st in
+           let* fallthrough =
+             option_of_postcard (box_of_postcard block_of_postcard) ctx st
+           in
            let* labels =
-             index_vec_of_postcard branch_id_of_postcard block_of_postcard ctx
-               st
+             box_of_postcard
+               (index_vec_of_postcard branch_id_of_postcard block_of_postcard)
+               ctx st
            in
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (InlineAsm (asm, fallthrough, labels, on_unwind))
        | 10 ->
-           let* call = call_of_postcard ctx st in
-           let* dest = place_of_postcard ctx st in
+           let* call = box_of_postcard call_of_postcard ctx st in
+           let* dest = box_of_postcard place_of_postcard ctx st in
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Call (call, dest, on_unwind))
        | 11 ->
-           let* data = switch_data_of_postcard ctx st in
+           let* data = box_of_postcard switch_data_of_postcard ctx st in
            let* branches =
              index_vec_of_postcard branch_id_of_postcard block_of_postcard ctx
                st
            in
            Ok (Switch (data, branches))
        | 12 ->
-           let* _0 = block_of_postcard ctx st in
+           let* _0 = box_of_postcard block_of_postcard ctx st in
            Ok (Loop _0)
        | 13 ->
            let* _0 = usize_of_postcard ctx st in
@@ -1831,7 +1834,7 @@ module Llbc = struct
            let* _0 = usize_of_postcard ctx st in
            Ok (Continue _0)
        | 15 ->
-           let* call = call_of_postcard ctx st in
+           let* call = box_of_postcard call_of_postcard ctx st in
            let* on_unwind = box_of_postcard block_of_postcard ctx st in
            Ok (Panic (call, on_unwind))
        | 16 ->

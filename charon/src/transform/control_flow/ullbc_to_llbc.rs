@@ -991,21 +991,25 @@ impl<'a> ReconstructCtx<'a> {
     fn translate_statement(&self, st: &src::Statement) -> tgt::Statement {
         let span = st.span;
         let kind = match st.kind.clone() {
-            src::StatementKind::Assign(place, rvalue) => tgt::StatementKind::Assign(place, rvalue),
+            src::StatementKind::Assign(place, rvalue) => {
+                tgt::StatementKind::Assign(place, Box::new(rvalue))
+            }
             src::StatementKind::SetDiscriminant(place, variant_id) => {
                 tgt::StatementKind::SetDiscriminant(place, variant_id)
             }
             src::StatementKind::StorageLive(var_id) => tgt::StatementKind::StorageLive(var_id),
             src::StatementKind::StorageDead(var_id) => tgt::StatementKind::StorageDead(var_id),
             src::StatementKind::Assert { assert, on_failure } => tgt::StatementKind::Assert {
-                assert,
+                assert: Box::new(assert),
                 on_failure: on_failure.clone(),
                 on_unwind: Box::new(
                     tgt::Statement::new(span, tgt::StatementKind::UnwindResume).into_block(),
                 ),
             },
             src::StatementKind::PlaceMention(place) => tgt::StatementKind::PlaceMention(place),
-            src::StatementKind::Borrowck(statement) => tgt::StatementKind::Borrowck(statement),
+            src::StatementKind::Borrowck(statement) => {
+                tgt::StatementKind::Borrowck(Box::new(statement))
+            }
             src::StatementKind::Nop => tgt::StatementKind::Nop,
         };
         let mut translated = tgt::Statement::new(span, kind);
@@ -1060,7 +1064,7 @@ impl<'a> ReconstructCtx<'a> {
                 tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Panic {
-                        call: call.clone(),
+                        call: Box::new(call.clone()),
                         on_unwind,
                     },
                 )
@@ -1090,8 +1094,8 @@ impl<'a> ReconstructCtx<'a> {
                 let st = tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Call {
-                        call: call.clone(),
-                        dest: dest.clone(),
+                        call: Box::new(call.clone()),
+                        dest: Box::new(dest.clone()),
                         on_unwind,
                     },
                 );
@@ -1110,7 +1114,7 @@ impl<'a> ReconstructCtx<'a> {
                 let st = tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Drop {
-                        place: place.clone(),
+                        place: Box::new(place.clone()),
                         fn_ptr: fn_ptr.clone(),
                         kind: *kind,
                         on_unwind,
@@ -1144,7 +1148,7 @@ impl<'a> ReconstructCtx<'a> {
             } => {
                 let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::StatementKind::Assert {
-                    assert: assert.clone(),
+                    assert: Box::new(assert.clone()),
                     on_failure: AbortKind::Panic,
                     on_unwind,
                 };
@@ -1157,9 +1161,11 @@ impl<'a> ReconstructCtx<'a> {
                 labels,
                 on_unwind,
             } => {
-                let fallthrough =
-                    fallthrough.map(|target| self.translate_jump(terminator.span, target));
-                let labels = labels.map_ref(|target| self.translate_jump(terminator.span, *target));
+                let fallthrough = fallthrough
+                    .map(|target| Box::new(self.translate_jump(terminator.span, target)));
+                let labels = Box::new(
+                    labels.map_ref(|target| self.translate_jump(terminator.span, *target)),
+                );
                 let on_unwind = Box::new(self.translate_block(*on_unwind));
                 let st = tgt::StatementKind::InlineAsm {
                     asm: asm.clone(),
@@ -1178,7 +1184,7 @@ impl<'a> ReconstructCtx<'a> {
                 let span = combine_span_iter(branches.iter().map(|branch| &branch.span));
                 let span = combine_span(&src_span, &span);
                 let st = tgt::StatementKind::Switch {
-                    data: data.clone(),
+                    data: Box::new(data.clone()),
                     branches,
                 };
                 tgt::Statement::new(span, st).into_block()
@@ -1281,7 +1287,7 @@ impl<'a> ReconstructCtx<'a> {
                             .statements
                             .push(new_statement(tgt::StatementKind::Continue(0)));
                     }
-                    block = new_statement(tgt::StatementKind::Loop(block)).into_block();
+                    block = new_statement(tgt::StatementKind::Loop(Box::new(block))).into_block();
                 }
                 SpecialJumpKind::ForwardBreak(_) => {
                     self.break_context_depth -= 1;
@@ -1295,7 +1301,7 @@ impl<'a> ReconstructCtx<'a> {
                     block
                         .statements
                         .push(new_statement(tgt::StatementKind::Break(0)));
-                    block = new_statement(tgt::StatementKind::Loop(block)).into_block();
+                    block = new_statement(tgt::StatementKind::Loop(Box::new(block))).into_block();
                     // We must translate the merge nodes after the block used for forward jumps to
                     // them.
                     let next_block = self.translate_jump(span, special_jump.target_block);
