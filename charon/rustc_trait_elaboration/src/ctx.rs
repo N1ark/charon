@@ -101,7 +101,7 @@ struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
     predicate_searchers: Lock<PredicateSearchers<'tcx, Id>>,
-    empty_env_searcher: Lock<Option<PredicateSearcher<'tcx, Id>>>,
+    empty_env_searchers: SearcherPool<'tcx, Id>,
     concrete_item_refs: Lock<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
     concrete_trait_proofs: Lock<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
     /// The trait clauses of each environment, normalized and erased like the trait refs we resolve.
@@ -119,7 +119,7 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             bounds_options: Default::default(),
             trait_proofs: Default::default(),
             predicate_searchers: Default::default(),
-            empty_env_searcher: Default::default(),
+            empty_env_searchers: SearcherPool::new(None),
             concrete_item_refs: Default::default(),
             concrete_trait_proofs: Default::default(),
             caller_bound_trefs: Default::default(),
@@ -134,11 +134,11 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
 /// The predicate searchers of the items we've seen. Items with the same `SearcherKey` share a
 /// searcher, and thus the resolutions it caches.
 struct PredicateSearchers<'tcx, Id: ItemId> {
-    of_item: FxHashMap<Id, &'tcx Lock<PredicateSearcher<'tcx, Id>>>,
-    of_key: FxHashMap<SearcherKey<'tcx, Id>, &'tcx Lock<PredicateSearcher<'tcx, Id>>>,
-    /// The searchers, boxed so that the references above stay valid.
+    of_item: FxHashMap<Id, &'tcx SearcherPool<'tcx, Id>>,
+    of_key: FxHashMap<SearcherKey<'tcx, Id>, &'tcx SearcherPool<'tcx, Id>>,
+    /// The pools, boxed so that the references above stay valid.
     #[allow(clippy::vec_box)]
-    searchers: Vec<Box<Lock<PredicateSearcher<'tcx, Id>>>>,
+    pools: Vec<Box<SearcherPool<'tcx, Id>>>,
 }
 
 impl<'tcx, Id: ItemId> Default for PredicateSearchers<'tcx, Id> {
@@ -146,8 +146,51 @@ impl<'tcx, Id: ItemId> Default for PredicateSearchers<'tcx, Id> {
         Self {
             of_item: Default::default(),
             of_key: Default::default(),
+            pools: Default::default(),
+        }
+    }
+}
+
+/// The predicate searchers for a key (`None` for the empty environment), one for each thread that
+/// used them at the same time. A thread doesn't wait for another's searcher: resolving runs rustc
+/// queries, and a thread that waits for a query gives up its rustc thread slot and must get one
+/// back afterwards, which can't happen if the threads waiting for this searcher keep theirs.
+struct SearcherPool<'tcx, Id: ItemId> {
+    key: Option<SearcherKey<'tcx, Id>>,
+    /// Boxed so that we can lend them for `'tcx`.
+    #[allow(clippy::vec_box)]
+    searchers: Lock<Vec<Box<Lock<PredicateSearcher<'tcx, Id>>>>>,
+}
+
+impl<'tcx, Id: ItemId> SearcherPool<'tcx, Id> {
+    fn new(key: Option<SearcherKey<'tcx, Id>>) -> Self {
+        Self {
+            key,
             searchers: Default::default(),
         }
+    }
+
+    /// A searcher of the pool that no other thread is using; we make one if there is none.
+    fn take(
+        &'tcx self,
+        ctx: ElaborationCtx<'tcx, Id>,
+        state: &Id::State<'tcx>,
+    ) -> LockGuard<'tcx, PredicateSearcher<'tcx, Id>> {
+        // SAFETY: the boxes live as long as the pool, which lives for `'tcx`.
+        let lend = |searcher: &Lock<_>| -> &'tcx Lock<_> { unsafe { &*(searcher as *const _) } };
+        for searcher in self.searchers.lock().iter() {
+            if let Some(guard) = lend(searcher).try_lock() {
+                return guard;
+            }
+        }
+        // Making a searcher may take a while, so we don't hold the lock meanwhile.
+        let searcher = Box::new(Lock::new(match &self.key {
+            Some(key) => PredicateSearcher::new(ctx, state, key),
+            None => PredicateSearcher::new_empty(ctx),
+        }));
+        let guard = lend(&searcher).lock();
+        self.searchers.lock().push(searcher);
+        guard
     }
 }
 
@@ -185,34 +228,6 @@ impl<'tcx, Id: ItemId> ElaborationData<'tcx, Id> {
     ) -> TraitProof<'tcx, Id> {
         let interned = self.trait_proofs.intern(contents);
         TraitProof { contents: interned }
-    }
-}
-
-/// A predicate searcher for our use: the shared searcher of an item, or a private one if another
-/// thread is using the shared one. We don't wait for it: resolving runs rustc queries, and a thread
-/// that waits for a query gives up its rustc thread slot and must get one back afterwards, which
-/// can't happen if the threads waiting for this searcher keep theirs.
-pub enum SearcherGuard<'tcx, Id: ItemId> {
-    Shared(LockGuard<'tcx, PredicateSearcher<'tcx, Id>>),
-    Private(Box<PredicateSearcher<'tcx, Id>>),
-}
-
-impl<'tcx, Id: ItemId> std::ops::Deref for SearcherGuard<'tcx, Id> {
-    type Target = PredicateSearcher<'tcx, Id>;
-    fn deref(&self) -> &Self::Target {
-        match self {
-            SearcherGuard::Shared(searcher) => searcher,
-            SearcherGuard::Private(searcher) => searcher,
-        }
-    }
-}
-
-impl<'tcx, Id: ItemId> std::ops::DerefMut for SearcherGuard<'tcx, Id> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        match self {
-            SearcherGuard::Shared(searcher) => searcher,
-            SearcherGuard::Private(searcher) => searcher,
-        }
     }
 }
 
@@ -315,43 +330,31 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> SearcherGuard<'tcx, Id> {
+    ) -> LockGuard<'tcx, PredicateSearcher<'tcx, Id>> {
         let searchers = &self.data.predicate_searchers;
         let found = searchers.lock().of_item.get(&def_id).copied();
-        let searcher = match found {
-            Some(searcher) => searcher,
+        let pool = match found {
+            Some(pool) => pool,
             None => {
-                // We build searchers without holding the lock: this may take a while.
+                // Computing the key may take a while, so we don't hold the lock meanwhile.
                 let key = SearcherKey::for_owner(*self, state, &def_id);
-                let found = searchers.lock().of_key.get(&key).copied();
-                let searcher = match found {
-                    Some(searcher) => searcher,
+                let mut searchers = searchers.lock();
+                let pool = match searchers.of_key.get(&key) {
+                    Some(pool) => *pool,
                     None => {
-                        let new = Box::new(Lock::new(PredicateSearcher::new(*self, state, &key)));
-                        let mut searchers = searchers.lock();
-                        match searchers.of_key.get(&key) {
-                            Some(searcher) => *searcher,
-                            None => {
-                                // SAFETY: the box lives as long as `self.data`.
-                                let searcher: &'tcx Lock<_> = unsafe { &*(&*new as *const _) };
-                                searchers.searchers.push(new);
-                                searchers.of_key.insert(key, searcher);
-                                searcher
-                            }
-                        }
+                        let new = Box::new(SearcherPool::new(Some(key.clone())));
+                        // SAFETY: the box lives as long as `self.data`.
+                        let pool: &'tcx SearcherPool<'tcx, Id> = unsafe { &*(&*new as *const _) };
+                        searchers.pools.push(new);
+                        searchers.of_key.insert(key, pool);
+                        pool
                     }
                 };
-                searchers.lock().of_item.insert(def_id.clone(), searcher);
-                searcher
+                searchers.of_item.insert(def_id.clone(), pool);
+                pool
             }
         };
-        match searcher.try_lock() {
-            Some(searcher) => SearcherGuard::Shared(searcher),
-            None => {
-                let key = SearcherKey::for_owner(*self, state, &def_id);
-                SearcherGuard::Private(Box::new(PredicateSearcher::new(*self, state, &key)))
-            }
-        }
+        pool.take(*self, state)
     }
 
     /// Resolve the trait proofs of an item reference that left them unresolved. Since they don't
@@ -373,17 +376,10 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         def_id: &Id,
         generics: ty::GenericArgsRef<'tcx>,
     ) -> Vec<TraitProof<'tcx, Id>> {
-        // See `SearcherGuard` for why we don't wait for the shared searcher.
-        match self.data.empty_env_searcher.try_lock() {
-            Some(mut searcher) => searcher
-                .get_or_insert_with(|| PredicateSearcher::new_empty(*self))
-                .resolve_item_required_predicates(state, def_id.clone(), generics),
-            None => PredicateSearcher::new_empty(*self).resolve_item_required_predicates(
-                state,
-                def_id.clone(),
-                generics,
-            ),
-        }
+        self.data
+            .empty_env_searchers
+            .take(*self, state)
+            .resolve_item_required_predicates(state, def_id.clone(), generics)
     }
 
     pub(crate) fn cached_required_predicates(
