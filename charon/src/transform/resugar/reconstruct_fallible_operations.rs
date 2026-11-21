@@ -761,7 +761,7 @@ impl UllbcPass for Transform {
         options.reconstruct_fallible_operations
     }
 
-    fn transform_body(&self, ctx: &mut TransformCtx, b: &mut ExprBody) {
+    fn transform_body(&self, ctx: &TransformCtx, b: &mut ExprBody) {
         reconstruct_overflow_calls(ctx, b);
         let local_uses: LocalUses = compute_uses(b);
         let mut pending_shift_checks = Vec::new();

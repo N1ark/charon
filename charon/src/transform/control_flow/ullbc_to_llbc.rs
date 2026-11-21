@@ -1419,7 +1419,7 @@ fn remove_useless_jump_blocks(body: &mut tgt::ExprBody) {
     body.body.drive_body_mut(&mut v);
 }
 
-fn translate_body(ctx: &mut TransformCtx, body: &mut Body) {
+fn translate_body(ctx: &TransformCtx, body: &mut Body) {
     use Body::{Structured, Unstructured};
     let Unstructured(src_body) = body else {
         return;
@@ -1464,7 +1464,15 @@ fn translate_body(ctx: &mut TransformCtx, body: &mut Body) {
 
 pub struct Transform;
 impl LlbcPass for Transform {
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
+        // Code duplication can make the translation of a large body use a lot of memory, so we
+        // translate the large ones one at a time.
+        static LARGE_BODY: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = decl
+            .body
+            .as_unstructured()
+            .is_some_and(|body| body.body.len() > 256)
+            .then(|| LARGE_BODY.lock().unwrap_or_else(|err| err.into_inner()));
         translate_body(ctx, &mut decl.body);
     }
 }

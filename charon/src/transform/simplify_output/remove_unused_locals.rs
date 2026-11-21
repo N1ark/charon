@@ -114,13 +114,13 @@ fn remove_unused_locals<Body: BodyVisitable>(body: &mut GExprBody<Body>) {
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ullbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ullbc_ast::ExprBody) {
         remove_unused_locals(body)
     }
 }
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        ctx.for_each_fun_decl(|_ctx, fun| match &mut fun.body {
+        ctx.par_for_each_fun_decl_mut(|fun| match &mut fun.body {
             Body::Unstructured(body) => remove_unused_locals(body),
             Body::Structured(body) => remove_unused_locals(body),
             _ => {}

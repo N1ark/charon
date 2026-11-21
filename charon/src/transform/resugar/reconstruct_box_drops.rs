@@ -23,7 +23,7 @@ impl UllbcPass for Transform {
         options.treat_box_as_builtin && !options.desugar_drops
     }
 
-    fn transform_body(&self, ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, ctx: &TransformCtx, body: &mut ExprBody) {
         let krate: &TranslatedCrate = &ctx.translated;
         for block in &mut body.body {
             if let TerminatorKind::Call {

@@ -67,7 +67,7 @@ impl UllbcPass for Transform {
         options.index_to_function_calls
     }
 
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         decl.transform_ullbc_statements(ctx, |ctx, st: &mut Statement| {
             // Introduce an intermediate statement if both the rhs and the lhs contain an
             // "index" projection element (to avoid introducing too many intermediate

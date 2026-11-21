@@ -1,6 +1,5 @@
 //! Generic logic for merging several [`CrateData`]s into one.
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::cell::RefCell;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem;
@@ -111,7 +110,7 @@ pub(super) fn merge<S: MergeStrategy>(
     let mut ctx = TransformCtx {
         options: tr_options,
         translated: merged.translated,
-        errors: RefCell::new(error_ctx),
+        errors: std::sync::Mutex::new(error_ctx),
     };
     cleanup_post_merge(&mut ctx);
     merged.translated = ctx.translated;

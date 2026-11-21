@@ -88,7 +88,7 @@ impl UllbcPass for Transform {
             }
         }
     }
-    fn transform_body(&self, _ctx: &mut TransformCtx, outer_body: &mut ullbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, outer_body: &mut ullbc_ast::ExprBody) {
         for block_id in outer_body.body.indices() {
             let Some(block) = outer_body.body.get_mut(block_id) else {
                 continue;

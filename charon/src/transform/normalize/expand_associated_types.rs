@@ -1018,7 +1018,7 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
         None
     }
     fn may_record(&self) -> bool {
-        self.ctx.errors.borrow().error_count == self.initial_error_count
+        self.ctx.errors.lock().unwrap().error_count == self.initial_error_count
     }
 }
 
@@ -1636,7 +1636,7 @@ impl TransformPass for Transform {
                 type_replacements: BindingStack::new(type_replacements),
                 memo: &mut memo,
                 caches: &caches,
-                initial_error_count: ctx.errors.borrow().error_count,
+                initial_error_count: ctx.errors.lock().unwrap().error_count,
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");

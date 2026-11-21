@@ -149,13 +149,11 @@ pub struct SerializedSpan {
 ///
 /// This table is global and never shrinks. In practice this is fine; for instance, syn 2.0.104
 /// only had 3094 distinct spans here compared to a total of 8.5M spans.
-static WIDE_SPANS: LazyLock<Mutex<WideSpans>> = LazyLock::new(Default::default);
-
-#[derive(Default)]
-struct WideSpans {
-    spans: Vec<SerializedSpan>,
-    indices: HashMap<SerializedSpan, u64>,
-}
+/// Reading it doesn't take a lock, as spans are read a lot, from several threads.
+static WIDE_SPANS: LazyLock<boxcar::Vec<SerializedSpan>> = LazyLock::new(Default::default);
+/// The index of each span in `WIDE_SPANS`. Pushing to `WIDE_SPANS` requires holding this lock.
+static WIDE_SPAN_INDICES: LazyLock<Mutex<HashMap<SerializedSpan, u64>>> =
+    LazyLock::new(Default::default);
 
 impl Span {
     #[inline]
@@ -204,7 +202,7 @@ impl Span {
     pub fn unpack(self) -> SerializedSpan {
         use pack::*;
         if self.0 & WIDE_FLAG != 0 {
-            return WIDE_SPANS.lock().unwrap().spans[(self.0 ^ WIDE_FLAG) as usize];
+            return WIDE_SPANS[(self.0 ^ WIDE_FLAG) as usize];
         }
         let beg_line = get(self.0, BEG_LINE_SHIFT, LINE_BITS);
         let data = SpanData {
@@ -226,14 +224,13 @@ impl Span {
 
     #[cold]
     fn store_wide(span: SerializedSpan) -> Self {
-        let mut wide_spans = WIDE_SPANS.lock().unwrap();
-        let index = match wide_spans.indices.get(&span) {
+        let mut indices = WIDE_SPAN_INDICES.lock().unwrap();
+        let index = match indices.get(&span) {
             Some(index) => *index,
             None => {
-                let index = wide_spans.spans.len() as u64;
+                let index = WIDE_SPANS.push(span) as u64;
                 assert!(index & pack::WIDE_FLAG == 0, "too many wide spans");
-                wide_spans.spans.push(span);
-                wide_spans.indices.insert(span, index);
+                indices.insert(span, index);
                 index
             }
         };

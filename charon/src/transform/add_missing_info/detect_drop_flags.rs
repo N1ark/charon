@@ -407,7 +407,7 @@ impl UllbcPass for Transform {
         options.detect_drop_flags || options.resugar_drops
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         if !body.body.iter().any(|block| {
             matches!(
                 block.terminator.kind,

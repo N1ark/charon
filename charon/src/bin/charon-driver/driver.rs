@@ -385,7 +385,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
         // transformation passes alongside it. Their errors are held back until rustc is done, so
         // that they come after rustc's own as if we ran them sequentially.
         let transform_output = Arc::new(Mutex::new(DeferredOutput::default()));
-        ctx.errors.get_mut().deferred_output = Some(transform_output.clone());
+        ctx.errors.get_mut().unwrap().deferred_output = Some(transform_output.clone());
         let options = options.clone();
         let transform = thread::Builder::new()
             .name("charon".to_owned())

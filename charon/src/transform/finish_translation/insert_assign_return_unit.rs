@@ -8,7 +8,7 @@ use crate::ullbc_ast::*;
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_function(&self, _ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, _ctx: &TransformCtx, decl: &mut FunDecl) {
         if decl.signature.output.is_unit()
             && let Some(body) = decl.body.as_unstructured_mut()
         {

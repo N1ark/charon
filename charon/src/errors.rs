@@ -318,7 +318,8 @@ impl ErrorCtx {
         self.items_with_errors.contains(&id.into())
     }
 
-    fn emit(&self, msg: String) {
+    /// Print a message, or hold it back if requested.
+    pub(crate) fn emit(&self, msg: String) {
         if let Some(deferred) = &self.deferred_output {
             let mut deferred = deferred.lock().unwrap();
             if !deferred.released {

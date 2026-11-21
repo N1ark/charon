@@ -40,7 +40,7 @@ impl Transform {
         }
     }
 
-    fn reconstruct_match(&self, ctx: &mut TransformCtx, block: &mut BlockData) {
+    fn reconstruct_match(&self, ctx: &TransformCtx, block: &mut BlockData) {
         let span = block.terminator.span;
         let TerminatorKind::Switch { data, branches } = &mut block.terminator.kind else {
             return;
@@ -159,7 +159,7 @@ impl UllbcPass for Transform {
         options.reconstruct_matches
     }
 
-    fn transform_body(&self, ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, ctx: &TransformCtx, body: &mut ExprBody) {
         for block in &mut body.body {
             self.reconstruct_match(ctx, block);
             self.replace_mem_discriminant_call(block);

@@ -3,12 +3,17 @@ use crate::ast::*;
 use crate::errors::{ErrorCtx, Level};
 use crate::formatter::{FmtCtx, IntoFormatter};
 use crate::llbc_ast;
+use crate::llbc_ast::FreshIds;
 use crate::options::TranslateOptions;
 use crate::pretty::FmtWithCtx;
 use crate::register_error;
 use crate::transform::CowBox;
 use crate::ullbc_ast;
+use itertools::Itertools;
+use rayon::prelude::*;
 use std::cell::RefCell;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::{fmt, mem};
 
 /// Simpler context used for rustc-independent code transformation. This only depends on rustc for
@@ -19,7 +24,110 @@ pub struct TransformCtx {
     /// The translated data.
     pub translated: TranslatedCrate,
     /// Context for tracking and reporting errors.
-    pub errors: RefCell<ErrorCtx>,
+    pub errors: Mutex<ErrorCtx>,
+}
+
+/// An error raised while transforming items in parallel.
+struct DeferredError {
+    span: Span,
+    msg: String,
+    level: Level<'static>,
+}
+
+/// What transforming an item in a parallel loop did besides changing the item itself. This is
+/// applied in item order once the loop is done, so that the output doesn't depend on scheduling.
+#[derive(Default)]
+struct ItemEffects {
+    errors: Vec<DeferredError>,
+    /// Globals created while transforming this item. Until the loop is done they have temporary
+    /// ids, starting at the first unused global id, and are only known to this item.
+    new_globals: Vec<GlobalDecl>,
+    /// The message of the panic that interrupted the transformation of this item, if any.
+    panic_message: Option<String>,
+}
+
+/// Whether the note about `RUST_BACKTRACE` that comes with the first panic message was printed.
+static PANIC_NOTE_SHOWN: AtomicBool = AtomicBool::new(false);
+/// Whether we printed that note ourselves, in which case the default panic hook would print it a
+/// second time.
+static PANIC_NOTE_SHOWN_BY_US: AtomicBool = AtomicBool::new(false);
+
+/// Make the panics of items transformed in parallel record their message in the item's effects,
+/// instead of printing it right away, so that we print it in order with the item's errors. Call
+/// this early, so that it sees all the panics.
+pub fn install_panic_hook() {
+    static HOOK: std::sync::Once = std::sync::Once::new();
+    HOOK.call_once(|| {
+        // With a backtrace requested, keep the standard output.
+        let capture = std::env::var_os("RUST_BACKTRACE").is_none_or(|v| v == "0");
+        let default_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            // The same format as the default hook, except for the thread id.
+            let message = || {
+                let name = std::thread::current()
+                    .name()
+                    .unwrap_or("<unnamed>")
+                    .to_owned();
+                let location = info.location().unwrap();
+                let msg = info.payload_as_str().unwrap_or("Box<dyn Any>");
+                format!("\nthread '{name}' panicked at {location}:\n{msg}")
+            };
+            let captured = capture
+                && ITEM_EFFECTS.with_borrow_mut(|effects| {
+                    let Some(effects) = effects else {
+                        return false;
+                    };
+                    effects.panic_message = Some(message());
+                    true
+                });
+            if captured {
+            } else if PANIC_NOTE_SHOWN_BY_US.load(Ordering::Relaxed) {
+                eprintln!("{}", message());
+            } else {
+                PANIC_NOTE_SHOWN.store(true, Ordering::Relaxed);
+                default_hook(info)
+            }
+        }));
+    });
+}
+
+/// The message of a panic captured by our hook, ready to print.
+fn captured_panic_message(mut msg: String) -> String {
+    if !PANIC_NOTE_SHOWN.swap(true, Ordering::Relaxed) {
+        PANIC_NOTE_SHOWN_BY_US.store(true, Ordering::Relaxed);
+        msg += "\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace";
+    }
+    msg
+}
+
+/// What remains to do for an item after a parallel loop.
+struct ParItemOutcome {
+    has_errors: bool,
+    /// See [`ItemEffects::new_globals`].
+    new_globals: Vec<GlobalDecl>,
+    /// The fresh block and statement ids created for this item were numbered locally; they must
+    /// be renumbered from these.
+    first_fresh_ids: Option<FreshIds>,
+}
+
+thread_local! {
+    /// The effects of the item currently being transformed on this thread, if we're inside a
+    /// parallel loop.
+    static ITEM_EFFECTS: RefCell<Option<ItemEffects>> = const { RefCell::new(None) };
+}
+
+/// The pointer metadata of the given global, which may be one of the globals the current item
+/// created.
+pub(crate) fn global_ptr_metadata(
+    krate: &TranslatedCrate,
+    id: GlobalDeclId,
+) -> Option<ConstantExpr> {
+    if let Some(global) = krate.global_decls.get(id) {
+        return Some(global.ptr_metadata.clone());
+    }
+    let idx = id.index().checked_sub(krate.global_decls.slot_count())?;
+    ITEM_EFFECTS
+        .with_borrow(|effects| Some(effects.as_ref()?.new_globals.get(idx)?.ptr_metadata.clone()))
 }
 
 /// A pass that modifies ullbc bodies and can be fused with previous passes so that we run all of
@@ -31,17 +139,17 @@ pub trait UllbcPass: Sync {
     }
 
     /// Transform a body.
-    fn transform_body(&self, _ctx: &mut TransformCtx, _body: &mut ullbc_ast::ExprBody) {}
+    fn transform_body(&self, _ctx: &TransformCtx, _body: &mut ullbc_ast::ExprBody) {}
 
     /// Transform a function declaration. This forwards to `transform_body` by default.
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         if let Some(body) = decl.body.as_unstructured_mut() {
             self.transform_body(ctx, body)
         }
     }
 
     /// Transform an item. This forwards to `transform_function` by default.
-    fn transform_item(&self, ctx: &mut TransformCtx, item: ItemRefMut<'_>) {
+    fn transform_item(&self, ctx: &TransformCtx, item: ItemRefMut<'_>) {
         if let ItemRefMut::Fun(decl) = item {
             self.transform_function(ctx, decl);
         }
@@ -75,10 +183,10 @@ pub trait LlbcPass: Sync {
     }
 
     /// Transform a body.
-    fn transform_body(&self, _ctx: &mut TransformCtx, _body: &mut llbc_ast::ExprBody) {}
+    fn transform_body(&self, _ctx: &TransformCtx, _body: &mut llbc_ast::ExprBody) {}
 
     /// Transform a function declaration. This forwards to `transform_body` by default.
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         if let Some(body) = decl.body.as_structured_mut() {
             self.transform_body(ctx, body)
         }
@@ -108,15 +216,53 @@ pub trait TransformPass: Sync {
 }
 
 impl TransformCtx {
+    /// The error context. A panic while it is in use (caught for the current item) leaves it
+    /// usable.
+    pub fn error_ctx(&self) -> MutexGuard<'_, ErrorCtx> {
+        self.errors.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     pub(crate) fn has_errors(&self) -> bool {
-        self.errors.borrow().has_errors()
+        self.error_ctx().has_errors()
     }
 
     /// Span an error and register the error.
-    pub(crate) fn span_err(&self, span: Span, msg: &str, level: Level) -> Error {
-        self.errors
-            .borrow_mut()
-            .span_err(&self.translated, span, msg, level)
+    pub(crate) fn span_err(&self, span: Span, msg: &str, level: Level<'static>) -> Error {
+        let deferred = ITEM_EFFECTS.with_borrow_mut(|effects| {
+            let effects = effects.as_mut()?;
+            let msg = msg.to_owned();
+            effects.errors.push(DeferredError {
+                span,
+                msg: msg.clone(),
+                level: level.clone(),
+            });
+            Some(Error::new(span, msg))
+        });
+        deferred.unwrap_or_else(|| {
+            self.error_ctx()
+                .span_err(&self.translated, span, msg, level)
+        })
+    }
+
+    /// Create a global holding a promoted constant of the function currently being transformed in
+    /// a parallel loop. Until the end of the loop the global has a temporary id and is only known
+    /// to this function; it is then added to the crate and named `{promoted_const#N}` under the
+    /// function's name.
+    pub(crate) fn add_promoted_global(
+        &self,
+        f: impl FnOnce(GlobalDeclId) -> GlobalDecl,
+    ) -> GlobalDeclId {
+        ITEM_EFFECTS.with_borrow_mut(|effects| {
+            let new_globals = &mut effects
+                .as_mut()
+                .expect("globals can only be added while transforming items in parallel")
+                .new_globals;
+            let id = GlobalDeclId::from_usize(
+                self.translated.global_decls.slot_count() + new_globals.len(),
+            );
+            new_globals.push(f(id));
+            id
+        })
     }
 
     pub(crate) fn opacity_for_name(&self, name: &Name) -> ItemOpacity {
@@ -132,10 +278,10 @@ impl TransformCtx {
         f: impl FnOnce(&mut Self),
     ) {
         let def_id = def_id.into();
-        let mut errors = self.errors.borrow_mut();
+        let mut errors = self.error_ctx();
         let current_def_id = errors.def_id.replace(def_id);
         let current_def_id_is_local = mem::replace(&mut errors.def_id_is_local, def_id_is_local);
-        drop(errors); // important: release the refcell "lock"
+        drop(errors); // important: release the lock
         if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self))).is_err() {
             register_error!(
                 self,
@@ -143,25 +289,211 @@ impl TransformCtx {
                 "Thread panicked while transforming item `{def_id:?}`."
             );
         }
-        let mut errors = self.errors.borrow_mut();
+        let mut errors = self.error_ctx();
         errors.def_id = current_def_id;
         errors.def_id_is_local = current_def_id_is_local;
     }
 
-    /// Mutably iterate over the function declarations.
-    /// Warning: each inspected function declaration becomes inaccessible from `ctx` during the
-    /// course of this function.
-    pub(crate) fn for_each_fun_decl(&mut self, mut f: impl FnMut(&mut Self, &mut FunDecl)) {
-        let fn_ids = self.translated.fun_decls.all_indices();
-        for id in fn_ids {
-            if let Some(mut decl) = self.translated.fun_decls.remove(id) {
-                let fun_decl_id = decl.def_id;
-                let is_local = decl.item_meta.is_local;
-                let span = decl.item_meta.span;
-                self.with_def_id(fun_decl_id, is_local, span, |ctx| f(ctx, &mut decl));
-                decl.item_meta.has_errors |= self.errors.borrow().item_has_errors(fun_decl_id);
-                self.translated.fun_decls.set_slot(id, decl);
+    /// Run `f` on each of `items` in parallel. Each call behaves as if run inside `with_def_id`
+    /// for the item described by `meta`: errors are attributed to it and panics are caught. The
+    /// errors are reported in order once all the items are done. The caller must then apply the
+    /// returned effects of each item, in order.
+    ///
+    /// The effects of an item are tracked per thread, so `f` must not itself run work in
+    /// parallel.
+    fn par_with_def_ids<T: Send>(
+        &self,
+        items: &mut [T],
+        meta: impl Fn(&T) -> (ItemId, bool, Span) + Sync,
+        f: impl Fn(&Self, &mut T) + Sync,
+    ) -> Vec<ParItemOutcome> {
+        install_panic_hook();
+        let outcomes: Vec<(ItemEffects, bool, FreshIds)> = items
+            .par_iter_mut()
+            .map(|item| {
+                // Save the current effects in case rayon runs this inside another item's job.
+                let outer = ITEM_EFFECTS.replace(Some(ItemEffects::default()));
+                let (panicked, fresh_ids) = FreshIds::number_locally(|| {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(self, item)))
+                        .is_err()
+                });
+                let effects = ITEM_EFFECTS.replace(outer).unwrap();
+                (effects, panicked, fresh_ids)
+            })
+            .collect();
+        let fresh_ids = FreshIds::reserve(&outcomes.iter().map(|(_, _, ids)| *ids).collect_vec());
+        let mut errors = self.error_ctx();
+        items
+            .iter()
+            .zip(outcomes)
+            .zip(fresh_ids)
+            .map(|((item, (effects, panicked, _)), first_fresh_ids)| {
+                let (def_id, def_id_is_local, span) = meta(item);
+                if !effects.errors.is_empty() || panicked {
+                    let current_def_id = errors.def_id.replace(def_id);
+                    let current_def_id_is_local =
+                        mem::replace(&mut errors.def_id_is_local, def_id_is_local);
+                    for err in effects.errors {
+                        errors.span_err(&self.translated, err.span, &err.msg, err.level);
+                    }
+                    if panicked {
+                        if let Some(msg) = effects.panic_message {
+                            errors.emit(captured_panic_message(msg));
+                        }
+                        let msg = format!("Thread panicked while transforming item `{def_id:?}`.");
+                        errors.span_err(&self.translated, span, &msg, Level::WARNING);
+                    }
+                    errors.def_id = current_def_id;
+                    errors.def_id_is_local = current_def_id_is_local;
+                }
+                ParItemOutcome {
+                    has_errors: errors.item_has_errors(def_id),
+                    new_globals: effects.new_globals,
+                    first_fresh_ids,
+                }
+            })
+            .collect()
+    }
+
+    /// Add the globals created while transforming function `fun_id` in a parallel loop to the
+    /// crate, and update their ids in `decl`. `temp_ids` is the first temporary id, i.e. the
+    /// number of global slots during the loop.
+    fn add_promoted_globals(
+        &mut self,
+        temp_ids: usize,
+        fun_id: FunDeclId,
+        decl: &mut impl AstVisitable,
+        globals: Vec<GlobalDecl>,
+    ) {
+        if globals.is_empty() {
+            return;
+        }
+        let fun_name = self.translated.item_name(fun_id).clone();
+        let mut new_ids = Vec::with_capacity(globals.len());
+        for mut global in globals {
+            let promoted_count = self
+                .translated
+                .item_names
+                .values()
+                .filter_map(|n| n.name.split_last())
+                .filter(|(last, prefix)| {
+                    matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
+                        && *prefix == fun_name.name.as_slice()
+                })
+                .count();
+            let mut name = fun_name.clone();
+            name.name.push(PathElem::Builtin(
+                BuiltinPathElem::PromotedConst,
+                Disambiguator::new(promoted_count),
+            ));
+            global.item_meta.name = name.clone();
+            let id = self.translated.global_decls.push_with(|id| {
+                global.def_id = id;
+                global
+            });
+            self.translated.item_names.insert(id.into(), name);
+            new_ids.push(id);
+        }
+        decl.dyn_visit_mut(|id: &mut GlobalDeclId| {
+            if let Some(idx) = id.index().checked_sub(temp_ids) {
+                *id = new_ids[idx];
             }
+        });
+    }
+
+    /// Mutably iterate over the bodies in parallel. Each body is moved out of the crate while
+    /// the bodies are being transformed, hence all the bodies look `Opaque` to `f`.
+    pub(crate) fn par_for_each_body(&mut self, f: impl Fn(&Self, &mut Body) + Sync) {
+        let mut bodies: Vec<(FunDeclId, bool, Span, Body)> = self
+            .translated
+            .fun_decls
+            .iter_mut()
+            .filter(|decl| decl.body.has_contents())
+            .map(|decl| {
+                let body = mem::replace(&mut decl.body, Body::Opaque);
+                (
+                    decl.def_id,
+                    decl.item_meta.is_local,
+                    decl.item_meta.span,
+                    body,
+                )
+            })
+            .collect();
+        let temp_ids = self.translated.global_decls.slot_count();
+        let outcomes = self.par_with_def_ids(
+            &mut bodies,
+            |(id, is_local, span, _)| ((*id).into(), *is_local, *span),
+            |ctx, (_, _, _, body)| f(ctx, body),
+        );
+        for ((id, _, _, mut body), outcome) in bodies.into_iter().zip(outcomes) {
+            body.globalize_fresh_ids(outcome.first_fresh_ids);
+            self.add_promoted_globals(temp_ids, id, &mut body, outcome.new_globals);
+            let decl = &mut self.translated.fun_decls[id];
+            decl.body = body;
+            decl.item_meta.has_errors |= outcome.has_errors;
+        }
+    }
+
+    /// Mutably iterate over the function declarations in parallel, without access to the rest of
+    /// the crate.
+    pub(crate) fn par_for_each_fun_decl_mut(&mut self, f: impl Fn(&mut FunDecl) + Sync) {
+        let mut fun_decls = mem::take(&mut self.translated.fun_decls);
+        let mut decls: Vec<&mut FunDecl> = fun_decls.iter_mut().collect();
+        let outcomes = self.par_with_def_ids(
+            &mut decls,
+            |decl| {
+                (
+                    decl.def_id.into(),
+                    decl.item_meta.is_local,
+                    decl.item_meta.span,
+                )
+            },
+            |_, decl| f(decl),
+        );
+        for (decl, outcome) in decls.into_iter().zip(outcomes) {
+            decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
+            decl.item_meta.has_errors |= outcome.has_errors;
+            assert!(outcome.new_globals.is_empty());
+        }
+        self.translated.fun_decls = fun_decls;
+    }
+
+    /// Mutably iterate over the function declarations in parallel. `f` works on a copy of each
+    /// declaration; while it runs the crate contains each declaration with an `Opaque` body.
+    pub(crate) fn par_for_each_fun_decl(&mut self, f: impl Fn(&Self, &mut FunDecl) + Sync) {
+        let mut decls: Vec<FunDecl> = self
+            .translated
+            .fun_decls
+            .iter_mut()
+            .map(|decl| {
+                let body = mem::replace(&mut decl.body, Body::Opaque);
+                let mut copy = decl.clone();
+                if !body.has_contents() {
+                    // Keep showing the bodies that aren't moved (e.g. `Body::Intrinsic`).
+                    decl.body = body.clone();
+                }
+                copy.body = body;
+                copy
+            })
+            .collect();
+        let temp_ids = self.translated.global_decls.slot_count();
+        let outcomes = self.par_with_def_ids(
+            &mut decls,
+            |decl| {
+                (
+                    decl.def_id.into(),
+                    decl.item_meta.is_local,
+                    decl.item_meta.span,
+                )
+            },
+            |ctx, decl| f(ctx, decl),
+        );
+        for (mut decl, outcome) in decls.into_iter().zip(outcomes) {
+            decl.body.globalize_fresh_ids(outcome.first_fresh_ids);
+            self.add_promoted_globals(temp_ids, decl.def_id, &mut decl, outcome.new_globals);
+            decl.item_meta.has_errors |= outcome.has_errors;
+            let id = decl.def_id;
+            self.translated.fun_decls[id] = decl;
         }
     }
 
@@ -176,7 +508,7 @@ impl TransformCtx {
                 let is_local = decl.item_meta.is_local;
                 let span = decl.item_meta.span;
                 self.with_def_id(type_decl_id, is_local, span, |ctx| f(ctx, &mut decl));
-                decl.item_meta.has_errors |= self.errors.borrow().item_has_errors(type_decl_id);
+                decl.item_meta.has_errors |= self.error_ctx().item_has_errors(type_decl_id);
                 self.translated.type_decls.set_slot(id, decl);
             }
         }
@@ -190,7 +522,7 @@ impl TransformCtx {
                 let is_local = decl.as_ref().item_meta().is_local;
                 let span = decl.as_ref().item_meta().span;
                 self.with_def_id(id, is_local, span, |ctx| f(ctx, decl.as_mut()));
-                decl.as_mut().item_meta().has_errors |= self.errors.borrow().item_has_errors(id);
+                decl.as_mut().item_meta().has_errors |= self.error_ctx().item_has_errors(id);
                 self.translated.put_item_back(id, decl);
             }
         }
@@ -330,8 +662,7 @@ pub trait BodyTransformCtx: Sized {
             let (subplace, proj) = match &place.kind {
                 PlaceKind::Local(_) => return None,
                 PlaceKind::Global(gref) => {
-                    let global = ctx.get_crate().global_decls.get(gref.id)?;
-                    return Some(Operand::Const(global.ptr_metadata.clone()));
+                    return global_ptr_metadata(ctx.get_crate(), gref.id).map(Operand::Const);
                 }
                 PlaceKind::Projection(proj) => (&proj.0, &proj.1),
             };
@@ -464,7 +795,7 @@ pub trait BodyTransformCtx: Sized {
 }
 
 pub struct UllbcStatementTransformCtx<'a> {
-    pub ctx: &'a mut TransformCtx,
+    pub ctx: &'a TransformCtx,
     pub params: &'a GenericParams,
     pub def_id: &'a FunDeclId,
     pub locals: &'a mut Locals,
@@ -511,7 +842,7 @@ impl BodyTransformCtx for UllbcStatementTransformCtx<'_> {
 }
 
 pub struct LlbcStatementTransformCtx<'a> {
-    pub ctx: &'a mut TransformCtx,
+    pub ctx: &'a TransformCtx,
     pub params: &'a GenericParams,
     pub locals: &'a mut Locals,
     /// Span of the statement being explored
@@ -559,7 +890,7 @@ impl BodyTransformCtx for LlbcStatementTransformCtx<'_> {
 impl FunDecl {
     pub fn transform_ullbc_statements(
         &mut self,
-        ctx: &mut TransformCtx,
+        ctx: &TransformCtx,
         mut f: impl FnMut(&mut UllbcStatementTransformCtx, &mut ullbc_ast::Statement),
     ) {
         if let Some(body) = self.body.as_unstructured_mut() {
@@ -587,7 +918,7 @@ impl FunDecl {
 
     pub fn transform_ullbc_terminators(
         &mut self,
-        ctx: &mut TransformCtx,
+        ctx: &TransformCtx,
         mut f: impl FnMut(&mut UllbcStatementTransformCtx, &mut ullbc_ast::Terminator),
     ) {
         if let Some(body) = self.body.as_unstructured_mut() {
@@ -610,7 +941,7 @@ impl FunDecl {
 
     pub fn transform_ullbc_operands(
         &mut self,
-        ctx: &mut TransformCtx,
+        ctx: &TransformCtx,
         mut f: impl FnMut(&mut UllbcStatementTransformCtx, &mut Operand),
     ) {
         self.transform_ullbc_statements(ctx, |ctx, st| {
@@ -623,7 +954,7 @@ impl FunDecl {
 
     pub fn transform_llbc_statements(
         &mut self,
-        ctx: &mut TransformCtx,
+        ctx: &TransformCtx,
         mut f: impl FnMut(&mut LlbcStatementTransformCtx, &mut llbc_ast::Statement),
     ) {
         if let Some(body) = self.body.as_structured_mut() {

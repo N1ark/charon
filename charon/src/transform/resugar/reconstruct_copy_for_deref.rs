@@ -88,7 +88,7 @@ impl VisitBody for UseCollector<'_> {
 pub struct Transform;
 
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         let mut copies: IndexVec<LocalId, CopyInfo> =
             body.locals.locals.map_ref(|_| CopyInfo::default());
 

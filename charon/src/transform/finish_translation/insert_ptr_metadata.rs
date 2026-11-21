@@ -13,7 +13,7 @@ use crate::ullbc_ast::*;
 pub struct Transform;
 
 impl UllbcPass for Transform {
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         decl.transform_ullbc_statements(ctx, |ctx, st: &mut Statement| {
             st.dyn_visit_in_body_mut(|x: &mut Rvalue| {
                 if let Rvalue::Ref {

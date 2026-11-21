@@ -289,7 +289,7 @@ impl UllbcPass for Transform {
             && self.box_write.is_some()
     }
 
-    fn transform_body(&self, ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, ctx: &TransformCtx, body: &mut ExprBody) {
         // Checked in `should_run`
         let box_new = self.box_new.unwrap();
         let box_write = self.box_write.unwrap();

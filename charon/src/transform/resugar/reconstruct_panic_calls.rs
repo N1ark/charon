@@ -43,7 +43,7 @@ impl UllbcPass for Transform {
         options.reconstruct_panic_calls
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         for block in &mut body.body {
             if let TerminatorKind::Call {
                 call, on_unwind, ..

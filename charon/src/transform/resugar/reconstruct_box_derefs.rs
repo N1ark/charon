@@ -146,7 +146,7 @@ impl UllbcPass for Transform {
         options.treat_box_as_builtin
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         let local_status = collect_local_status(body);
 
         body.body.dyn_visit_in_body_mut(|place: &mut Place| {

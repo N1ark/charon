@@ -9,7 +9,7 @@
 use rustc_hash::FxHashMap as HashMap;
 use std::cell::RefCell;
 use std::io::Write;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 /// Whether timing is enabled at all.
@@ -26,13 +26,21 @@ pub struct Measure {
     pub count: u64,
 }
 
-/// Measurements are aggregated globally (translation is single-threaded but rustc may call us from
-/// several threads, hence the mutex).
-static MEASURES: LazyLock<Mutex<HashMap<String, Measure>>> = LazyLock::new(Default::default);
+type Measures = HashMap<String, Measure>;
+
+/// The measurements of each thread, aggregated when reporting. Each thread only locks its own
+/// table while running, so that timing parallel code doesn't cause contention.
+static ALL_MEASURES: LazyLock<Mutex<Vec<Arc<Mutex<Measures>>>>> = LazyLock::new(Default::default);
 
 thread_local! {
     /// Time spent in nested scopes, for the currently-running scope.
     static NESTED: RefCell<Vec<Duration>> = const { RefCell::new(Vec::new()) };
+    /// The measurements of this thread, also registered in `ALL_MEASURES`.
+    static MEASURES: Arc<Mutex<Measures>> = {
+        let measures = Arc::default();
+        ALL_MEASURES.lock().unwrap().push(Arc::clone(&measures));
+        measures
+    };
 }
 
 /// A running measurement; the timing is recorded when this is dropped.
@@ -76,15 +84,17 @@ impl Drop for Guard {
             .as_ref()
             .map(|suffix| format!("{}/{suffix}", self.name));
         let key: &str = long_key.as_deref().unwrap_or(self.name);
-        let mut measures = MEASURES.lock().unwrap();
-        // Avoid allocating a fresh `String` on each call.
-        if !measures.contains_key(key) {
-            measures.insert(key.to_owned(), Measure::default());
-        }
-        let entry = measures.get_mut(key).unwrap();
-        entry.total += elapsed;
-        entry.own += elapsed.saturating_sub(nested);
-        entry.count += 1;
+        MEASURES.with(|measures| {
+            let mut measures = measures.lock().unwrap();
+            // Avoid allocating a fresh `String` on each call.
+            if !measures.contains_key(key) {
+                measures.insert(key.to_owned(), Measure::default());
+            }
+            let entry = measures.get_mut(key).unwrap();
+            entry.total += elapsed;
+            entry.own += elapsed.saturating_sub(nested);
+            entry.count += 1;
+        });
     }
 }
 
@@ -108,7 +118,15 @@ pub fn report(crate_name: &str) {
     let Some(setting) = SETTING.as_ref() else {
         return;
     };
-    let measures = MEASURES.lock().unwrap();
+    let mut measures = Measures::default();
+    for thread_measures in ALL_MEASURES.lock().unwrap().iter() {
+        for (name, m) in thread_measures.lock().unwrap().iter() {
+            let entry = measures.entry(name.clone()).or_default();
+            entry.total += m.total;
+            entry.own += m.own;
+            entry.count += m.count;
+        }
+    }
     let mut entries: Vec<(&String, &Measure)> = measures.iter().collect();
     entries.sort_by_key(|(name, m)| (std::cmp::Reverse(m.own), (*name).clone()));
 

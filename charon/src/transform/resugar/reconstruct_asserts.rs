@@ -34,7 +34,7 @@ impl UllbcPass for Transform {
         options.reconstruct_asserts
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, b: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, b: &mut ExprBody) {
         let Some(unreachable) = &self.unreachable else {
             return;
         };

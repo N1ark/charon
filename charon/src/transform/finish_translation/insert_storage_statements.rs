@@ -190,7 +190,7 @@ impl Transform {
 }
 
 impl UllbcPass for Transform {
-    fn transform_function(&self, ctx: &mut TransformCtx, fun: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, fun: &mut FunDecl) {
         self.transform_function(fun, ctx.options.deallocate_all_locals)
     }
 }
@@ -198,6 +198,6 @@ impl UllbcPass for Transform {
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
         let deallocate_all_locals = ctx.options.deallocate_all_locals;
-        ctx.for_each_fun_decl(|_ctx, fun| self.transform_function(fun, deallocate_all_locals));
+        ctx.par_for_each_fun_decl_mut(|fun| self.transform_function(fun, deallocate_all_locals));
     }
 }

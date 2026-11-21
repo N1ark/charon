@@ -518,7 +518,10 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
                     .is_some_and(|clause| clause.skip_binder().trait_ref.def_id == destruct_trait)
             })
         {
-            Ok(ImplSource::Builtin(BuiltinImplSource::Misc, Default::default()))
+            Ok(ImplSource::Builtin(
+                BuiltinImplSource::Misc,
+                Default::default(),
+            ))
         } else {
             shallow_resolve_trait_ref(tcx, self.typing_env.param_env, erased_tref)
         };

@@ -19,7 +19,7 @@ struct StaticInfo {
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, ctx: &TransformCtx, body: &mut ExprBody) {
         // Find the locals assigned the address of a static, and where they're assigned.
         let mut statics: HashMap<LocalId, StaticInfo> = body
             .body

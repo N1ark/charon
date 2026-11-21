@@ -132,8 +132,9 @@ where
         // drop the enum tags: `Deduplicated(id)` becomes `id` and `Value(id, repr)` becomes
         // `[id, repr]`.
         match repr {
-            SerDedup::Value(id, repr) => (id, serde_state::WithState::new(repr, state))
-                .serialize(serializer),
+            SerDedup::Value(id, repr) => {
+                (id, serde_state::WithState::new(repr, state)).serialize(serializer)
+            }
             SerDedup::Deduplicated(id) => id.serialize(serializer),
             SerDedup::Untagged(_) => repr.serialize_state(state, serializer),
         }
@@ -161,24 +162,22 @@ where
     } else {
         SerDedup::<R>::deserialize_state(state, deserializer)?
     };
-    Ok(
-        match repr {
-            SerDedup::Value(id, repr) => {
-                let value = build(repr);
-                state.record_deserialized(id, value.clone());
-                value
-            }
-            SerDedup::Deduplicated(id) => state.get_deserialized(id).ok_or_else(|| {
-                let msg = format!(
-                    "can't deserialize deduplicated value of type {}; \
+    Ok(match repr {
+        SerDedup::Value(id, repr) => {
+            let value = build(repr);
+            state.record_deserialized(id, value.clone());
+            value
+        }
+        SerDedup::Deduplicated(id) => state.get_deserialized(id).ok_or_else(|| {
+            let msg = format!(
+                "can't deserialize deduplicated value of type {}; \
                 were you careful with managing the deduplication state?",
-                    type_name::<T>()
-                );
-                D::Error::custom(msg)
-            })?,
-            SerDedup::Untagged(repr) => build(repr),
-        },
-    )
+                type_name::<T>()
+            );
+            D::Error::custom(msg)
+        })?,
+        SerDedup::Untagged(repr) => build(repr),
+    })
 }
 
 /// Deserializes the human-readable representation emitted by [`serialize_dedup`].

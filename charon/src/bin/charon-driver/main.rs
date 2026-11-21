@@ -100,7 +100,7 @@ fn run_charon() -> Result<usize, CharonFailure> {
         return Ok(0);
     };
 
-    let error_count = ctx.errors.borrow().error_count;
+    let error_count = ctx.error_ctx().error_count;
 
     // # Final step: generate the files.
     let targets = options.targets(&ctx.translated.crate_name);
@@ -152,6 +152,15 @@ fn run_charon() -> Result<usize, CharonFailure> {
 fn main() {
     // Initialize the logger
     logger::initialize_logger();
+    charon_lib::transform::ctx::install_panic_hook();
+
+    // The transformation passes run on rayon's threads; set them up like the thread that runs
+    // the passes, as visitors recurse on deep types.
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|_| "charon".to_owned())
+        .stack_size(rustc_interface::util::DEFAULT_STACK_SIZE)
+        .build_global()
+        .unwrap();
 
     // Catch any and all panics coming from charon to display a clear error.
     let res = panic::catch_unwind(run_charon)

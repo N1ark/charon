@@ -24,7 +24,7 @@ impl UllbcPass for Transform {
         options.resugar_drops
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         let mut predecessor_counts = body.body.map_ref(|_| 0usize);
         for block in &body.body {
             for target in block.terminator.targets() {

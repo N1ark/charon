@@ -62,7 +62,7 @@ impl CommentsCtx {
 pub struct Transform;
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        ctx.for_each_fun_decl(|_ctx, fun| {
+        ctx.par_for_each_fun_decl_mut(|fun| {
             let body = &mut fun.body;
             if !body.has_contents() {
                 return;

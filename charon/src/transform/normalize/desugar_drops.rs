@@ -63,7 +63,7 @@ impl UllbcPass for Transform {
     fn should_run(&self, options: &crate::options::TranslateOptions) -> bool {
         options.desugar_drops
     }
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         decl.transform_ullbc_terminators(ctx, |ctx, term| {
             ctx.transform_drop_to_call(term);
         });

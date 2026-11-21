@@ -32,7 +32,7 @@ impl Antecedents {
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ExprBody) {
         // Compute for each block the set of blocks that points to it.
         let mut antecedents: IndexVec<BlockId, Antecedents> =
             body.body.map_ref(|_| Antecedents::Zero);

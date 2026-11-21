@@ -81,6 +81,7 @@ pub mod control_flow {
 pub use ctx::TransformCtx;
 use ctx::{LlbcPass, TransformPass, UllbcPass};
 
+use crate::ast::ItemRefMut;
 use crate::formatter::IntoFormatter;
 use crate::options::CliOpts;
 use crate::pretty::FmtWithCtx;
@@ -363,7 +364,7 @@ impl TransformCtx {
                         pass.apply_preceding_passes(self, first_passes);
                     }
                 }
-                self.for_each_item_mut(|ctx, mut item| {
+                let run = |ctx: &TransformCtx, mut item: ItemRefMut<'_>| {
                     for pass in passes.iter() {
                         if pass.should_run(&ctx.options) {
                             trace!("# Starting pass {}", pass.name());
@@ -373,7 +374,15 @@ impl TransformCtx {
                             pass.transform_item(ctx, item.reborrow());
                         }
                     }
+                };
+                // Functions come last; the other items are few and may depend on each other's
+                // transformation so we keep them sequential.
+                self.for_each_item_mut(|ctx, item| {
+                    if !matches!(item, ItemRefMut::Fun(_)) {
+                        run(ctx, item)
+                    }
                 });
+                self.par_for_each_fun_decl(|ctx, decl| run(ctx, ItemRefMut::Fun(decl)));
                 for pass in passes.iter() {
                     if pass.should_run(&self.options) {
                         pass.finalize(self);
@@ -381,7 +390,7 @@ impl TransformCtx {
                 }
             }
             Pass::FusedStructuredBody(passes) => {
-                self.for_each_fun_decl(|ctx, decl| {
+                self.par_for_each_fun_decl(|ctx, decl| {
                     for pass in passes.iter() {
                         if pass.should_run(&ctx.options) {
                             trace!("# Starting pass {}", pass.name());

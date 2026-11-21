@@ -18,7 +18,7 @@ impl UllbcPass for Transform {
         options.reconstruct_fallible_operations
     }
 
-    fn transform_body(&self, _ctx: &mut TransformCtx, b: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, b: &mut ExprBody) {
         // Start by computing the set of blocks which are actually panics.
         // Remark: doing this in two steps because reading the blocks at random
         // while doing in-place updates is not natural to do in Rust.

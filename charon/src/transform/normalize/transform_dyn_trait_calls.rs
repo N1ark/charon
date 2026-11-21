@@ -275,7 +275,7 @@ fn transform_dyn_trait_call(
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         decl.transform_ullbc_terminators(ctx, |ctx, term| {
             if let TerminatorKind::Call { call, dest, .. } = &mut term.kind {
                 let _ = transform_dyn_trait_call(ctx, call, dest);

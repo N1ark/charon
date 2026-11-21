@@ -5,6 +5,7 @@
 use derive_generic_visitor::*;
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
+use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thin_vec::ThinVec;
 
@@ -306,10 +307,89 @@ impl Block {
     }
 }
 
+static NEXT_BLOCK_ID: AtomicUsize = AtomicUsize::new(0);
+static NEXT_STATEMENT_ID: AtomicUsize = AtomicUsize::new(0);
+
+/// Locally-numbered ids start here, to tell them apart from the others.
+const LOCAL_ID_BASE: usize = 1 << 31;
+
+thread_local! {
+    /// When set, `fresh` numbers ids locally using these counters.
+    static LOCAL_ID_COUNTERS: Cell<Option<FreshIds>> = const { Cell::new(None) };
+}
+
+/// A number of block and statement ids, or the first ones of a range.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FreshIds {
+    blocks: usize,
+    statements: usize,
+}
+
+impl FreshIds {
+    /// Run `f`, numbering locally the fresh block and statement ids it creates: they are only
+    /// unique within this run. Returns how many it created; see [`FreshIds::reserve`] to make them
+    /// unique.
+    pub fn number_locally<R>(f: impl FnOnce() -> R) -> (R, FreshIds) {
+        let outer = LOCAL_ID_COUNTERS.replace(Some(FreshIds::default()));
+        let _restore = std::mem::DropGuard::new((), |()| {
+            LOCAL_ID_COUNTERS.set(outer);
+        });
+        let ret = f();
+        (ret, LOCAL_ID_COUNTERS.get().unwrap())
+    }
+
+    /// Reserve unique ids for consecutive local numberings, with the counts returned by
+    /// `number_locally`. Returns the first id of each, to give to [`Body::globalize_fresh_ids`],
+    /// or `None` if it created no ids. The ids are the same as if the local numberings had used
+    /// the global counters one after the other.
+    pub fn reserve(counts: &[FreshIds]) -> Vec<Option<FreshIds>> {
+        let total_blocks = counts.iter().map(|c| c.blocks).sum();
+        let total_statements = counts.iter().map(|c| c.statements).sum();
+        let mut next = FreshIds {
+            blocks: NEXT_BLOCK_ID.fetch_add(total_blocks, Ordering::Relaxed),
+            statements: NEXT_STATEMENT_ID.fetch_add(total_statements, Ordering::Relaxed),
+        };
+        counts
+            .iter()
+            .map(|count| {
+                let first = next;
+                next.blocks += count.blocks;
+                next.statements += count.statements;
+                (count.blocks != 0 || count.statements != 0).then_some(first)
+            })
+            .collect()
+    }
+}
+
+impl Body {
+    /// Replace the locally-numbered fresh ids in this body with the range starting at `first`.
+    pub fn globalize_fresh_ids(&mut self, first: Option<FreshIds>) {
+        let (Some(first), Some(body)) = (first, self.as_structured_mut()) else {
+            return;
+        };
+        body.body.visit_blocks_bwd(|block: &mut Block| {
+            if let Some(n) = block.id.index().checked_sub(LOCAL_ID_BASE) {
+                block.id = BlockId::new(first.blocks + n);
+            }
+            for st in &mut block.statements {
+                if let Some(n) = st.id.index().checked_sub(LOCAL_ID_BASE) {
+                    st.id = StatementId::new(first.statements + n);
+                }
+            }
+        });
+    }
+}
+
 impl BlockId {
     pub fn fresh() -> BlockId {
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let id = match LOCAL_ID_COUNTERS.get() {
+            Some(mut local) => {
+                local.blocks += 1;
+                LOCAL_ID_COUNTERS.set(Some(local));
+                LOCAL_ID_BASE + local.blocks - 1
+            }
+            None => NEXT_BLOCK_ID.fetch_add(1, Ordering::Relaxed),
+        };
         BlockId::new(id)
     }
 }
@@ -335,8 +415,14 @@ impl Statement {
 
 impl StatementId {
     pub fn fresh() -> StatementId {
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let id = match LOCAL_ID_COUNTERS.get() {
+            Some(mut local) => {
+                local.statements += 1;
+                LOCAL_ID_COUNTERS.set(Some(local));
+                LOCAL_ID_BASE + local.statements - 1
+            }
+            None => NEXT_STATEMENT_ID.fetch_add(1, Ordering::Relaxed),
+        };
         StatementId::new(id)
     }
 }

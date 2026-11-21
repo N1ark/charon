@@ -53,7 +53,7 @@ impl UllbcPass for Transform {
     fn should_run(&self, options: &crate::options::TranslateOptions) -> bool {
         options.inline_anon_consts && !self.anon_consts.is_empty()
     }
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ullbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ullbc_ast::ExprBody) {
         for block_id in body.body.indices() {
             let Some(block) = body.body.get_mut(block_id) else {
                 continue;

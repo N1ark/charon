@@ -6,7 +6,7 @@ use crate::transform::ctx::{LlbcPass, TransformPass, UllbcPass};
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ullbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ullbc_ast::ExprBody) {
         for blk in &mut body.body {
             blk.statements
                 .retain(|st| !(st.kind.is_nop() && st.comments_before.is_empty()))
@@ -14,7 +14,7 @@ impl UllbcPass for Transform {
     }
 }
 impl LlbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut llbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut llbc_ast::ExprBody) {
         body.body.visit_blocks_bwd(|blk: &mut llbc_ast::Block| {
             blk.statements
                 .retain(|st| !(st.kind.is_nop() && st.comments_before.is_empty()))
@@ -24,7 +24,7 @@ impl LlbcPass for Transform {
 
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        ctx.for_each_fun_decl(|ctx, fun| match &mut fun.body {
+        ctx.par_for_each_body(|ctx, body| match body {
             Body::Unstructured(body) => {
                 <Self as UllbcPass>::transform_body(self, ctx, body);
             }

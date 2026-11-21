@@ -9,7 +9,7 @@ use crate::transform::ctx::UllbcPass;
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, b: &mut ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, b: &mut ExprBody) {
         // Compute the reachable blocks in DFS postorder, exploring the distinct targets of each
         // block in order.
         let mut discovered: IndexVec<BlockId, bool> = b.body.map_ref(|_| false);

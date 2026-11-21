@@ -4,7 +4,7 @@ use crate::ullbc_ast::*;
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         decl.transform_ullbc_terminators(ctx, |ctx, term| {
             let TerminatorKind::Call {
                 call, dest, target, ..

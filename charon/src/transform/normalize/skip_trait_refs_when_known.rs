@@ -117,7 +117,7 @@ fn normalize_method_call(ctx: &TransformCtx, fn_ptr: &FnPtr) -> Option<FnPtr> {
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_item(&self, ctx: &mut TransformCtx, mut item: ItemRefMut<'_>) {
+    fn transform_item(&self, ctx: &TransformCtx, mut item: ItemRefMut<'_>) {
         let _ = item.drive_mut(&mut NormalizeFnPtr {
             ctx,
             visited_tys: Default::default(),

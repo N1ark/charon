@@ -1556,6 +1556,6 @@ pub fn translate<'tcx>(
     Ok(TransformCtx {
         options: ctx.options,
         translated: ctx.translated,
-        errors: ctx.errors,
+        errors: std::sync::Mutex::new(ctx.errors.into_inner()),
     })
 }

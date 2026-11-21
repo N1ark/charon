@@ -25,7 +25,7 @@ fn is_trivial_drop(stmt: &Terminator) -> bool {
 
 pub struct Transform;
 impl UllbcPass for Transform {
-    fn transform_body(&self, _ctx: &mut TransformCtx, body: &mut ullbc_ast::ExprBody) {
+    fn transform_body(&self, _ctx: &TransformCtx, body: &mut ullbc_ast::ExprBody) {
         for block in &mut body.body {
             if is_trivial_drop(&block.terminator)
                 && let TerminatorKind::Drop { target, .. } = &block.terminator.kind

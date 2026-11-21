@@ -678,7 +678,7 @@ impl LlbcPass for Transform {
         options.ops_to_function_calls || options.index_to_function_calls
     }
 
-    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+    fn transform_function(&self, ctx: &TransformCtx, decl: &mut FunDecl) {
         if self.item_set.contains(&ItemId::Fun(decl.def_id)) {
             return;
         }
