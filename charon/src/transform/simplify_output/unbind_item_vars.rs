@@ -5,7 +5,11 @@ use index_vec::Idx;
 
 use crate::ast::*;
 
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
+use rayon::prelude::*;
 
 /// Replace variables bound at the top-level with `Free` vars.
 #[derive(Default, Visitor)]
@@ -70,9 +74,12 @@ impl TransformPass for Check {
     }
 
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        let mut visitor = UnbindVarVisitor::default();
-        for mut item in ctx.translated.all_items_mut() {
-            let _ = item.drive_mut(&mut visitor);
-        }
+        let visitors = PerThread::<UnbindVarVisitor>::new();
+        ctx.translated
+            .all_items_mut()
+            .par_bridge()
+            .for_each(|mut item| {
+                let _ = item.drive_mut(&mut *visitors.get());
+            });
     }
 }

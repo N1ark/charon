@@ -525,6 +525,57 @@ impl TransformCtx {
             .for_each(|(slot, decl)| *slot = decl);
     }
 
+    /// Mutably iterate in parallel over the items for which `select` returns true, like
+    /// `for_each_item_mut`. All of these items are missing from the crate while `f` runs, so `f`
+    /// must not look at them through `ctx`.
+    pub(crate) fn par_for_each_item_mut_where(
+        &mut self,
+        select: impl Fn(ItemId) -> bool,
+        f: impl Fn(&Self, ItemRefMut<'_>) + Sync,
+    ) {
+        let mut items: Vec<(ItemId, ItemByVal)> = self
+            .translated
+            .all_ids()
+            .filter(|&id| select(id))
+            .filter_map(|id| Some((id, self.translated.remove_item_temporarily(id)?)))
+            .collect();
+        let outcomes = self.par_with_def_ids(
+            &mut items,
+            |(id, item)| {
+                let meta = item.as_ref().item_meta();
+                (*id, meta.is_local, meta.span)
+            },
+            |ctx, (_, item)| f(ctx, item.as_mut()),
+        );
+        for ((id, mut item), outcome) in items.into_iter().zip(outcomes) {
+            assert!(outcome.new_globals.is_empty() && outcome.first_fresh_ids.is_none());
+            item.as_mut().item_meta().has_errors |= outcome.has_errors;
+            self.translated.put_item_back(id, item);
+        }
+    }
+
+    /// Same as `for_each_item_mut`, for an `f` that only looks at the trait declarations of the
+    /// crate. We transform the type declarations in parallel, then the trait declarations one by
+    /// one, then the other items in parallel; the order of the iteration is the same as with
+    /// `for_each_item_mut` hence so is what `f` sees.
+    pub(crate) fn par_for_each_item_mut_reading_traits(
+        &mut self,
+        f: impl Fn(&Self, ItemRefMut<'_>) + Sync,
+    ) {
+        self.par_for_each_item_mut_where(|id| id.is_type(), &f);
+        for id in self.translated.trait_decls.all_indices() {
+            if let Some(mut decl) = self.translated.remove_item_temporarily(id.into()) {
+                let span = decl.as_ref().item_meta().span;
+                let is_local = decl.as_ref().item_meta().is_local;
+                self.with_def_id(id, is_local, span, |ctx| f(ctx, decl.as_mut()));
+                decl.as_mut().item_meta().has_errors |=
+                    self.errors.lock().unwrap().item_has_errors(id);
+                self.translated.put_item_back(id.into(), decl);
+            }
+        }
+        self.par_for_each_item_mut_where(|id| !id.is_type() && !id.is_trait_decl(), &f);
+    }
+
     /// Run `f` on each item in parallel, with shared access to the whole crate, and return its
     /// results in item order. Errors are reported as with `for_each_item_mut`.
     pub(crate) fn par_for_each_item<R: Send>(

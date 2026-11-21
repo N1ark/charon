@@ -10,7 +10,10 @@ use rustc_hash::FxHashSet as HashSet;
 
 use crate::ast::*;
 use crate::ids::{IndexMap, IndexVec};
-use crate::transform::{TransformCtx, ctx::TransformPass};
+use crate::transform::{
+    TransformCtx,
+    ctx::{PerThread, TransformPass},
+};
 use crate::utils::CycleDetector;
 
 /// Compute whether a trait has associated types, even through supertraits.
@@ -196,7 +199,7 @@ impl TransformPass for Transform {
             return;
         }
         let untouchable = untouchable_adts(&ctx.translated);
-        let mut memo = HashConsMemo::default();
+        let memos = PerThread::<HashConsMemo<()>>::new();
         // The ADTs whose references may have trait refs to remove. We include ADTs without a
         // declaration (e.g. because of errors) since we don't know their clauses.
         let cleared_adts_bloom = ctx
@@ -214,14 +217,14 @@ impl TransformPass for Transform {
             })
             .map(|&id| ItemBloom::of(id))
             .collect();
-        ctx.for_each_item_mut(|ctx, mut item| {
+        ctx.par_for_each_item_mut_reading_traits(|ctx, mut item| {
             let _ = item.drive_mut(&mut RemoveAdtClausesVisitor {
                 translated: &ctx.translated,
                 untouchable_adts: &untouchable,
                 cleared_adts_bloom,
                 in_cleared_decl: false,
                 binder_stack: BindingStack::empty(),
-                memo: &mut memo,
+                memo: &mut memos.get(),
             });
         });
     }

@@ -133,7 +133,7 @@ impl TransformPass for Transform {
         !options.no_typecheck
     }
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        ctx.for_each_item_mut(|ctx, mut item| {
+        ctx.par_for_each_item_mut_reading_traits(|ctx, mut item| {
             item.drive_mut(&mut Infer {
                 traits: &ctx.translated.trait_decls,
                 binders: BindingStack::default(),

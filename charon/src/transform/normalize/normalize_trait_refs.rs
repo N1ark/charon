@@ -76,11 +76,15 @@ impl TransformPass for Transform {
             .translated
             .trait_impls
             .map_ref(|timpl| timpl.implied_trait_refs.clone());
-        ctx.for_each_item_mut(|_, mut item| {
-            let _ = item.drive_mut(&mut NormalizeTraitRefs {
-                impl_parent_refs: &impl_parent_refs,
-                steps: 0,
-            });
-        });
+        // The visitor doesn't look at the crate, so we can transform all the items at once.
+        ctx.par_for_each_item_mut_where(
+            |_| true,
+            |_, mut item| {
+                let _ = item.drive_mut(&mut NormalizeTraitRefs {
+                    impl_parent_refs: &impl_parent_refs,
+                    steps: 0,
+                });
+            },
+        );
     }
 }
