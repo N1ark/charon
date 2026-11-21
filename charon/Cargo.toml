@@ -171,6 +171,12 @@ split-debuginfo = "unpacked"
 [profile.dev.package.minirust-rs]
 opt-level = 3
 
+# For packaging charon: runs ~2-3% fewer instructions than `release`, but takes ~8 minutes to build.
+[profile.dist]
+inherits = "release"
+codegen-units = 1
+lto = "fat"
+
 [patch.crates-io]
 # Fix a toolchain mismatch
 libspecr = { git = "https://github.com/Nadrieril/specr", branch = "bump-toolchain" }
