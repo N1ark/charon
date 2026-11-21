@@ -162,6 +162,8 @@ pub struct TranslateCtx<'tcx> {
     pub mono_type_cache: HashMap<hax::Ty<'tcx>, (Ty, Vec<(ItemId, bool)>)>,
     /// The persistent cache of translated items, if enabled.
     pub(crate) cache: Option<super::translate_cache::TranslationCache<'tcx>>,
+    /// The `DefId`s of the intrinsics we resolved by name.
+    pub intrinsic_def_ids: HashMap<rustc_span::Symbol, rustc_span::def_id::DefId>,
 }
 
 /// The functions exported under a given symbol.

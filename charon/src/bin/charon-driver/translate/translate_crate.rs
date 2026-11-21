@@ -1376,6 +1376,7 @@ pub fn translate<'tcx>(
         monomorphic_layouts: Default::default(),
         mono_type_cache: Default::default(),
         cache: super::translate_cache::TranslationCache::new(tcx, cli_options),
+        intrinsic_def_ids: Default::default(),
     };
     ctx.register_target_info();
     ctx.reserve_unit_decl();

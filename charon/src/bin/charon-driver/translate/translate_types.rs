@@ -162,10 +162,15 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         } else {
             // We refresh the regions of the result below, so we don't need its body regions.
             let ty = self.with_local_body_regions(|this| this.translate_ty_uncached(span, hax_ty));
-            self.innermost_binder_mut().type_trans_cache.insert(
-                hax_ty.clone(),
-                ty.clone().replace_erased_regions(|| Region::Erased),
-            );
+            // Without a freshener, the regions are already erased.
+            let cached = if self.lifetime_freshener.is_some() {
+                ty.clone().replace_erased_regions(|| Region::Erased)
+            } else {
+                ty.clone()
+            };
+            self.innermost_binder_mut()
+                .type_trans_cache
+                .insert(hax_ty.clone(), cached);
             ty
         };
         if let Some(v) = &mut self.lifetime_freshener {
@@ -228,10 +233,10 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 ty.dyn_visit(|&id: &TraitDeclId| push(id.into()));
                 ty.dyn_visit(|&id: &TraitImplId| push(id.into()));
                 ty.dyn_visit(|&id: &FunDeclId| push(id.into()));
-                let cached = ty.clone().replace_erased_regions(|| Region::Erased);
+                // The regions are already erased, as there is no freshener.
                 self.t_ctx
                     .mono_type_cache
-                    .insert(hax_ty.clone(), (cached, deps));
+                    .insert(hax_ty.clone(), (ty.clone(), deps));
             }
         }
         ty

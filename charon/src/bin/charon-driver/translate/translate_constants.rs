@@ -118,6 +118,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         span: Span,
         v: &hax::ConstantExpr<'tcx>,
     ) -> Result<ConstantExpr, Error> {
+        let ty_was_cached = self.innermost_binder().type_trans_cache.contains_key(&v.ty);
         let ty = self.translate_ty(span, &v.ty)?;
         let kind = match v.kind.as_ref() {
             hax::ConstantExprKind::Literal(lit) => {
@@ -265,7 +266,19 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
                 }
             }
             hax::ConstantExprKind::FnDef(item) => {
-                let fn_ptr = self.translate_fn_ptr(span, item, TransItemSourceKind::Fun)?;
+                // The type of a function item determines it. If we just translated that type, we
+                // reuse its function pointer; translating it again would give the same result,
+                // with the same side effects (unless body regions are fresh).
+                let fn_ptr = if !ty_was_cached
+                    && self.lifetime_freshener.is_none()
+                    && let hax::TyKind::FnDef(fn_def) = v.ty.kind()
+                    && &fn_def.item == item
+                    && let TyKind::FnDef(fn_ptr) = ty.kind()
+                {
+                    self.erase_region_binder(fn_ptr.clone())
+                } else {
+                    self.translate_fn_ptr(span, item, TransItemSourceKind::Fun)?
+                };
                 ConstantExprKind::FnDef(fn_ptr)
             }
             hax::ConstantExprKind::FnPtr(target) => {

@@ -339,11 +339,24 @@ impl<'tcx> ConstReader<'tcx> {
         ty: Ty<'tcx>,
         mode: ReadMode,
     ) -> Result<Const<'tcx>, ReadError<'tcx>> {
-        // Fast path: there are lots of `FnDef` constants (one per function call)
+        // Fast paths: there are lots of `FnDef` constants (one per function call) and scalar
+        // literals, which `read_op` would read back as is.
         if mode == ReadMode::Structured && matches!(ty.kind(), ty::FnDef(..)) {
             return Ok(Const {
                 ty,
                 kind: ConstKind::fn_def(self.tcx, ty),
+            });
+        }
+        if mode == ReadMode::Structured
+            && let mir::ConstValue::Scalar(interpret::Scalar::Int(int)) = val
+            && matches!(
+                ty.kind(),
+                ty::Char | ty::Bool | ty::Uint(_) | ty::Int(_) | ty::Float(_)
+            )
+        {
+            return Ok(Const {
+                ty,
+                kind: ConstKind::Scalar(int),
             });
         }
         let (ecx, op) =
