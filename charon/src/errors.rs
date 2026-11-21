@@ -9,6 +9,7 @@ use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, PartialOrd};
+use std::hash::{Hash, Hasher};
 use std::io::Write;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
@@ -256,6 +257,9 @@ pub struct ErrorCtx {
     pub error_count: usize,
     /// If set, our messages are held back here instead of printed.
     pub deferred_output: Option<Arc<Mutex<DeferredOutput>>>,
+    /// Hashes of the diagnostics displayed so far (span, message and level), to display each only
+    /// once: passes can run into the same problem many times at the same place.
+    displayed: HashSet<u64>,
 }
 
 /// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes
@@ -300,6 +304,7 @@ impl ErrorCtx {
             def_id_is_local: false,
             error_count: 0,
             deferred_output: None,
+            displayed: HashSet::default(),
         }
     }
 
@@ -354,7 +359,16 @@ impl ErrorCtx {
         } else {
             level
         };
-        let err = self.display_error(krate, span, level, msg.to_string());
+        let key = {
+            let mut hasher = std::hash::DefaultHasher::new();
+            (span, msg, format!("{level:?}")).hash(&mut hasher);
+            hasher.finish()
+        };
+        let err = if self.displayed.insert(key) {
+            self.display_error(krate, span, level, msg.to_string())
+        } else {
+            Error::new(span, msg.to_string())
+        };
         self.error_count += 1;
         if let Some(id) = self.def_id
             && self.items_with_errors.insert(id)
