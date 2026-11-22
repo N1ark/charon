@@ -90,6 +90,9 @@ fn remove_unused_locals<Body: BodyVisitable>(body: &mut GExprBody<Body>) {
     body.drive_body(&mut visitor);
     let used_locals = visitor.used_locals;
     trace!("used_locals: {:?}", used_locals);
+    if used_locals.iter().all(|used| *used) {
+        return;
+    }
 
     // Keep only the variables that are used (storage statements don't count) and update their
     // indices to be contiguous.
