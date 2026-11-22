@@ -100,6 +100,16 @@ pub struct PredicateSearcher<'tcx, Id: ItemId = DefId> {
     pub(crate) has_no_concrete_clauses: bool,
 }
 
+/// Whether the environment has where-clauses that apply to parameter-free types.
+/// The solver prioritises these, so trait proofs then depend on the owner.
+pub fn has_concrete_clauses<'tcx>(tcx: TyCtxt<'tcx>, param_env: ParamEnv<'tcx>) -> bool {
+    param_env
+        .caller_bounds()
+        .all_clauses_interned(tcx)
+        .iter()
+        .any(|clause| !clause.has_non_region_param())
+}
+
 impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
     /// Initialize the elaborator with the predicates accessible within this item.
     pub fn new_for_owner(
@@ -132,15 +142,9 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         out
     }
 
-    /// Whether the environment has where-clauses that apply to parameter-free types.
-    /// The solver prioritises these, so trait proofs then depend on the owner.
+    /// See [`has_concrete_clauses`](fn@has_concrete_clauses).
     pub fn has_concrete_clauses(&self) -> bool {
-        self.typing_env
-            .param_env
-            .caller_bounds()
-            .all_clauses_interned(self.elab_ctx.tcx)
-            .iter()
-            .any(|clause| !clause.has_non_region_param())
+        has_concrete_clauses(self.elab_ctx.tcx, self.typing_env.param_env)
     }
 
     /// Insert the bound clauses in the search context. Prefer inserting them all at once as this

@@ -206,14 +206,18 @@ pub fn solve_trait<'tcx, S: UnderOwnerState<'tcx>>(
     s: &S,
     trait_ref: rustc_middle::ty::PolyTraitRef<'tcx>,
 ) -> TraitProof<'tcx> {
-    if let Some(trait_proof) = s.with_cache(|cache| cache.trait_proofs.get(&trait_ref).cloned()) {
+    if let Some(trait_proof) = s.with_cache_for(trait_ref, |cache| {
+        cache.trait_proofs.get(&trait_ref).cloned()
+    }) {
         return trait_proof;
     }
     let trait_proof = s.with_predicate_searcher(|pred_searcher, elab_ctx| {
         pred_searcher.resolve(elab_ctx, &trait_ref)
     });
     let trait_proof: TraitProof = trait_proof.sinto(s);
-    s.with_cache(|cache| cache.trait_proofs.insert(trait_ref, trait_proof.clone()));
+    s.with_cache_for(trait_ref, |cache| {
+        cache.trait_proofs.insert(trait_ref, trait_proof.clone())
+    });
     trait_proof
 }
 
