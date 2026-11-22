@@ -60,7 +60,7 @@ impl<State: DedupSerializerState> SerializeState<State> for Ustr {
         state: &State,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serialize_dedup(self, self.as_str().to_owned(), state, serializer)
+        serialize_dedup(self, || self.as_str().to_owned(), state, serializer)
     }
 }
 
