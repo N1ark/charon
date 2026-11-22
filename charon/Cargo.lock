@@ -250,6 +250,7 @@ dependencies = [
  "enum-as-inner",
  "env_logger",
  "extension-traits",
+ "fixedbitset",
  "flate2",
  "hashbrown",
  "hax-adt-into",

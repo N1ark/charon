@@ -11,8 +11,8 @@
 //! Also note that we more importantly focus on making the algorithm sound: the
 //! reconstructed program must always be equivalent to the original MIR program,
 //! and the fact that the reconstruction preserves this property must be obvious.
+use fixedbitset::FixedBitSet;
 use itertools::Itertools;
-use petgraph::algo::dijkstra;
 use petgraph::algo::dominators::{Dominators, simple_fast};
 use petgraph::graphmap::DiGraphMap;
 use petgraph::visit::{Dfs, DfsPostOrder, EdgeFiltered, EdgeRef, Walker};
@@ -140,9 +140,8 @@ struct BlockData {
     // TODO: track more nicely the set of targets reachable from a node: panic, return, exit loop,
     // continue loop (this is a partial order).
     pub only_reach_error: bool,
-    /// List of reachable nodes, with the length of shortest path to them. Includes the current
-    /// node.
-    pub shortest_paths: hashbrown::HashMap<BlockId, usize>,
+    /// The nodes reachable from this node in the forward graph, including itself.
+    pub reachable: FixedBitSet,
     /// Let's say we put a quantity of water equal to 1 on the block, and the water flows downards.
     /// Whenever there is a branching, the quantity of water gets equally divided between the
     /// branches. When the control flows join, we put the water back together. The set below
@@ -183,7 +182,7 @@ impl BlockData {
             immediately_dominated_merge_targets: Default::default(),
             within_loops: Default::default(),
             only_reach_error: false,
-            shortest_paths: Default::default(),
+            reachable: Default::default(),
             flow,
             exit_info: Default::default(),
         }
@@ -295,6 +294,14 @@ impl CfgInfo {
                 block_data[block_id].only_reach_error = true;
             }
 
+            // Compute the nodes reachable in the forward graph.
+            let mut reachable = FixedBitSet::with_capacity(body.len());
+            reachable.insert(block_id.index());
+            for &tgt in &fwd_targets {
+                reachable.union_with(&block_data[tgt].reachable);
+            }
+            block_data[block_id].reachable = reachable;
+
             // Compute the flows between each pair of nodes.
             let mut flow: IndexVec<src::BlockId, Flow> = mem::take(&mut block_data[block_id].flow);
             // The flow to self is 1.
@@ -321,9 +328,6 @@ impl CfgInfo {
                 }
             }
             block_data[block_id].flow = flow;
-
-            // Compute shortest paths to all reachable nodes in the forward graph.
-            block_data[block_id].shortest_paths = dijkstra(&fwd_cfg, block_id, None, |_| 1usize);
 
             // Fill in the rest of the domination data.
             let mut dominatees = mem::take(&mut block_data[block_id].immediately_dominates);
@@ -356,7 +360,7 @@ impl CfgInfo {
                 .copied()
                 .filter(|&loop_header| {
                     cfg.neighbors_directed(loop_header, petgraph::Direction::Incoming)
-                        .any(|bid| block_data[block_id].shortest_paths.contains_key(&bid))
+                        .any(|bid| block_data[block_id].reachable.contains(bid.index()))
                 })
                 .collect_vec();
             // The loops that we can reach by taking any number of backward edges.
@@ -393,7 +397,7 @@ impl CfgInfo {
         &self.block_data[block_id]
     }
     // fn can_reach(&self, src: BlockId, tgt: BlockId) -> bool {
-    //     self.block_data[src].shortest_paths.contains_key(&tgt)
+    //     self.block_data[src].reachable.contains(tgt.index())
     // }
     fn topo_rank(&self, block_id: BlockId) -> u32 {
         self.block_data[block_id].reverse_postorder.unwrap()
@@ -428,22 +432,12 @@ impl CfgInfo {
 }
 
 impl BlockData {
-    fn shortest_paths_including_self(&self) -> impl Iterator<Item = (BlockId, usize)> {
-        self.shortest_paths.iter().map(|(bid, d)| (*bid, *d))
-    }
-    fn shortest_paths_excluding_self(&self) -> impl Iterator<Item = (BlockId, usize)> {
-        self.shortest_paths_including_self()
-            .filter(move |&(bid, _)| bid != self.id)
-    }
     fn reachable_including_self(&self) -> impl Iterator<Item = BlockId> {
-        self.shortest_paths_including_self().map(|(bid, _)| bid)
+        self.reachable.ones().map(BlockId::new)
     }
     fn reachable_excluding_self(&self) -> impl Iterator<Item = BlockId> {
-        self.shortest_paths_excluding_self().map(|(bid, _)| bid)
-    }
-    #[expect(unused)]
-    fn can_reach_excluding_self(&self, other: BlockId) -> bool {
-        self.shortest_paths.contains_key(&other) && self.id != other
+        self.reachable_including_self()
+            .filter(move |&bid| bid != self.id)
     }
 }
 

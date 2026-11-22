@@ -87,6 +87,7 @@ either = "1.15.0"
 enum-as-inner = "0.7.0"
 env_logger = { version = "0.11", features = ["color"] }
 extension-traits = "1.0.1"
+fixedbitset = "0.5.7"
 flate2 = { version = "1.0.34", optional = true }
 hashbrown = { version = "0.15.0", default-features = false }
 indexmap = { version = "2.7.1", features = ["serde"] }
