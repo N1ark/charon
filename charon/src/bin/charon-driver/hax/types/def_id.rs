@@ -11,6 +11,8 @@ use crate::hax::prelude::*;
 use charon_lib::ast::HashConsed;
 
 use itertools::Itertools;
+use rustc_data_structures::fingerprint::Fingerprint;
+use rustc_data_structures::stable_hash::{StableHash, StableHasher};
 pub use rustc_middle::mir::Promoted as PromotedId;
 pub use rustc_middle::mir::interpret::AllocId as RAllocId;
 use rustc_span::DUMMY_SP;
@@ -388,11 +390,35 @@ impl DefId {
         contents.make_def_id(s)
     }
 
-    /// The global standing for an anonymous allocation.
+    /// The global standing for an anonymous allocation. Immutable allocations with the same
+    /// contents, including those of the allocations they point to, that we view at the same type
+    /// are the same global: Rust gives constants no unique addresses.
     pub fn make_anon_alloc<'tcx, S: BaseState<'tcx>>(s: &S, alloc_id: RAllocId) -> Self {
         let tcx = s.base().tcx;
-        s.with_global_cache(|cache| cache.anon_allocs.insert(alloc_id));
         let mutability = GlobalRef::Alloc(alloc_id).mutability(tcx);
+        let alloc_id = s.with_global_cache(|cache| {
+            if mutability.is_mut() {
+                return alloc_id;
+            }
+            if let Some(&class) = cache.anon_alloc_classes.get(&alloc_id) {
+                return class;
+            }
+            // The stable hash of an `AllocId` hashes the contents of its allocation, recursively.
+            // We rely on this 128-bit hash being collision-free, as incremental compilation does.
+            let ty = cache.alloc_types.ty(tcx, alloc_id);
+            let contents: Fingerprint = tcx.with_stable_hashing_context(|mut hcx| {
+                let mut hasher = StableHasher::new();
+                (alloc_id, ty).stable_hash(&mut hcx, &mut hasher);
+                hasher.finish()
+            });
+            let class = *cache
+                .anon_alloc_by_contents
+                .entry(contents)
+                .or_insert(alloc_id);
+            cache.anon_alloc_classes.insert(alloc_id, class);
+            class
+        });
+        s.with_global_cache(|cache| cache.anon_allocs.insert(alloc_id));
         let contents = DefIdContents {
             base: DefIdBase::Alloc(alloc_id),
             kind: DefKind::Static {
