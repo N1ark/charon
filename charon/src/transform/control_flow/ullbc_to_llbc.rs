@@ -30,7 +30,14 @@ use crate::ullbc_ast::{self as src, BlockId};
 use crate::utils::{DfsWithPath, ensure_sufficient_stack};
 use crate::{ast::*, register_error};
 
-/// The amount of "flow" reaching a block.
+/// The amount of "flow" reaching a block. Let's say we put a quantity of water equal to 1 on a
+/// block, and the water flows downards. Whenever there is a branching, the quantity of water gets
+/// equally divided between the branches. When the control flows join, we put the water back
+/// together. The flow from a block to one of its descendants is the amount of water the descendant
+/// receives.
+///
+/// This is exactly this problem:
+/// <https://stackoverflow.com/questions/78221666/algorithm-for-total-flow-through-weighted-directed-acyclic-graph>
 #[derive(Debug, Default, Copy, Clone)]
 struct Flow(f64);
 
@@ -87,7 +94,6 @@ struct CfgInfo {
 
 #[derive(Debug)]
 struct BlockData {
-    pub id: BlockId,
     pub span: Span,
     /// The (unique) entrypoints of each loop. Unique because we error on irreducible cfgs.
     pub is_loop_header: bool,
@@ -142,16 +148,8 @@ struct BlockData {
     pub only_reach_error: bool,
     /// The nodes reachable from this node in the forward graph, including itself.
     pub reachable: FixedBitSet,
-    /// Let's say we put a quantity of water equal to 1 on the block, and the water flows downards.
-    /// Whenever there is a branching, the quantity of water gets equally divided between the
-    /// branches. When the control flows join, we put the water back together. The set below
-    /// computes the amount of water received by each descendant of the node.
-    ///
-    /// TODO: there must be a known algorithm which computes this, right?...
-    /// This is exactly this problems:
-    /// <https://stackoverflow.com/questions/78221666/algorithm-for-total-flow-through-weighted-directed-acyclic-graph>
-    /// TODO: the way I compute this is not efficient.
-    pub flow: IndexVec<BlockId, Flow>,
+    /// The children that the flow of this node goes to, see [`Flow`].
+    pub flow_targets: SmallVec<[BlockId; 2]>,
     /// Reconstructed information about loops and switches.
     pub exit_info: ExitInfo,
 }
@@ -169,9 +167,8 @@ struct ExitInfo {
 struct Irreducible(BlockId);
 
 impl BlockData {
-    fn new(id: BlockId, data: &ullbc_ast::BlockData, flow: IndexVec<BlockId, Flow>) -> Self {
+    fn new(data: &ullbc_ast::BlockData) -> Self {
         Self {
-            id,
             span: data.terminator.span,
             is_loop_header: false,
             is_unwind: false,
@@ -183,7 +180,7 @@ impl BlockData {
             within_loops: Default::default(),
             only_reach_error: false,
             reachable: Default::default(),
-            flow,
+            flow_targets: Default::default(),
             exit_info: Default::default(),
         }
     }
@@ -197,10 +194,8 @@ impl CfgInfo {
         // previous one.
         let start_block = BlockId::ZERO;
 
-        let empty_flow = body.map_ref(|_| Flow::ZERO);
-        let mut block_data: IndexVec<BlockId, _> = body.map_ref_indexed(|id, contents| {
-            Box::new(BlockData::new(id, contents, empty_flow.clone()))
-        });
+        let mut block_data: IndexVec<BlockId, _> =
+            body.map_ref(|contents| Box::new(BlockData::new(contents)));
 
         // Build the node graph.
         let mut cfg = Cfg::new();
@@ -302,32 +297,19 @@ impl CfgInfo {
             }
             block_data[block_id].reachable = reachable;
 
-            // Compute the flows between each pair of nodes.
-            let mut flow: IndexVec<src::BlockId, Flow> = mem::take(&mut block_data[block_id].flow);
-            // The flow to self is 1.
-            flow[block_id] = Flow::ONE;
             // If a block has both regular and unwind targets, don't let the unwind path dilute
             // the normal-control-flow heuristic used to pick switch exits. Unwind-only subgraphs
             // still flow through their own targets.
-            let mut flow_targets = fwd_targets
+            let flow_targets: SmallVec<_> = fwd_targets
                 .iter()
                 .copied()
                 .filter(|&child| !block_data[child].is_unwind)
-                .collect_vec();
-            if flow_targets.is_empty() {
-                flow_targets = fwd_targets;
-            }
-            // Divide the flow from each child to a given target block by the number of children.
-            // This is a sparse matrix multiplication and could be implemented using a linalg
-            // library.
-            let num_children = flow_targets.len();
-            for child in flow_targets {
-                for grandchild in block_data[child].reachable_including_self() {
-                    // Flow from `child` to `grandchild`
-                    flow[grandchild] += block_data[child].flow[grandchild].divided_by(num_children);
-                }
-            }
-            block_data[block_id].flow = flow;
+                .collect();
+            block_data[block_id].flow_targets = if flow_targets.is_empty() {
+                fwd_targets.into_iter().collect()
+            } else {
+                flow_targets
+            };
 
             // Fill in the rest of the domination data.
             let mut dominatees = mem::take(&mut block_data[block_id].immediately_dominates);
@@ -396,9 +378,9 @@ impl CfgInfo {
     fn block_data(&self, block_id: BlockId) -> &BlockData {
         &self.block_data[block_id]
     }
-    // fn can_reach(&self, src: BlockId, tgt: BlockId) -> bool {
-    //     self.block_data[src].reachable.contains(tgt.index())
-    // }
+    fn can_reach(&self, src: BlockId, tgt: BlockId) -> bool {
+        self.block_data[src].reachable.contains(tgt.index())
+    }
     fn topo_rank(&self, block_id: BlockId) -> u32 {
         self.block_data[block_id].reverse_postorder.unwrap()
     }
@@ -434,10 +416,6 @@ impl CfgInfo {
 impl BlockData {
     fn reachable_including_self(&self) -> impl Iterator<Item = BlockId> {
         self.reachable.ones().map(BlockId::new)
-    }
-    fn reachable_excluding_self(&self) -> impl Iterator<Item = BlockId> {
-        self.reachable_including_self()
-            .filter(move |&bid| bid != self.id)
     }
 }
 
@@ -692,6 +670,106 @@ impl ExitInfo {
         }
     }
 
+    /// Find the best exit candidate of each switch: the node with the highest flow from the switch,
+    /// and the lowest topological rank. If several nodes have the same flow, we want to take the
+    /// highest one in the hierarchy: hence the use of the topological rank. The candidates are the
+    /// nodes reachable from the switch, except return nodes and, if the switch is inside a loop,
+    /// the nodes outside that loop. There must be one inside, otherwise the switch would not be
+    /// inside the loop.
+    ///
+    /// Ex.:
+    /// ```text
+    /// A  -- we start here
+    /// |
+    /// |---------------------------------------
+    /// |            |            |            |
+    /// B:(0.25,-1)  C:(0.25,-2)  D:(0.25,-3)  E:(0.25,-4)
+    /// |            |            |
+    /// |--------------------------
+    /// |
+    /// F:(0.75,-5)
+    /// |
+    /// |
+    /// G:(0.75,-6)
+    /// ```
+    /// The "best" node (with the highest (flow, rank) in the graph above is F.
+    fn compute_best_switch_exits(cfg: &CfgInfo) -> IndexVec<BlockId, Option<BlockId>> {
+        // The flow from a node to one of its descendants is the sum of the flows from its children
+        // to that descendant, divided by its number of children. To only use linear memory, we
+        // compute the flows to one candidate at a time, from the nodes that reach it, children
+        // first.
+        let postorder = DfsPostOrder::new(&cfg.fwd_cfg, BlockId::ZERO)
+            .iter(&cfg.fwd_cfg)
+            .collect_vec();
+        let mut position = cfg.block_data.map_ref(|_| usize::MAX);
+        for (i, &bid) in postorder.iter().enumerate() {
+            position[bid] = i;
+        }
+        // For each node, the positions in `postorder` of the nodes that reach it.
+        let mut reached_from = cfg
+            .block_data
+            .map_ref(|_| FixedBitSet::with_capacity(postorder.len()));
+        // The positions of the switches, and of the nodes they reach: only the flows from these
+        // matter.
+        let mut switches = FixedBitSet::with_capacity(postorder.len());
+        let mut below_switches = FixedBitSet::with_capacity(postorder.len());
+        for (i, &bid) in postorder.iter().enumerate() {
+            for tgt in cfg.block_data[bid].reachable_including_self() {
+                reached_from[tgt].insert(i);
+            }
+            if cfg.switch_blocks.contains(&bid) {
+                switches.insert(i);
+                below_switches.extend(
+                    cfg.block_data[bid]
+                        .reachable_including_self()
+                        .map(|tgt| position[tgt]),
+                );
+            }
+        }
+        let mut best_exits = cfg.block_data.map_ref(|_| None);
+        let mut flow = cfg.block_data.map_ref(|_| Flow::ZERO);
+        for (candidate, reached_from) in reached_from.iter_enumerated() {
+            let candidate_data = &cfg.block_data[candidate];
+            if candidate_data.is_return || !below_switches.contains(position[candidate]) {
+                continue;
+            }
+            for i in reached_from.intersection(&below_switches) {
+                let bid = postorder[i];
+                let flow_targets = &cfg.block_data[bid].flow_targets;
+                let mut bid_flow = if bid == candidate {
+                    Flow::ONE
+                } else {
+                    Flow::ZERO
+                };
+                for &child in flow_targets {
+                    if cfg.can_reach(child, candidate) {
+                        bid_flow += flow[child].divided_by(flow_targets.len());
+                    }
+                }
+                flow[bid] = bid_flow;
+            }
+            for i in reached_from.intersection(&switches) {
+                let switch = postorder[i];
+                let current_loop = cfg.block_data[switch].within_loops.last().copied();
+                if switch == candidate
+                    || current_loop
+                        .is_some_and(|current_loop| !cfg.is_within_loop(current_loop, candidate))
+                {
+                    continue;
+                }
+                let rank = (
+                    Reverse(candidate_data.is_unwind),
+                    flow[switch],
+                    Reverse(cfg.topo_rank(candidate)),
+                );
+                if best_exits[switch].is_none_or(|best| (rank, candidate) > best) {
+                    best_exits[switch] = Some((rank, candidate));
+                }
+            }
+        }
+        best_exits.map(|best| best.map(|(_, candidate)| candidate))
+    }
+
     /// Let's consider the following piece of code:
     /// ```text
     /// if cond1 { ... } else { ... };
@@ -740,6 +818,7 @@ impl ExitInfo {
     /// goto the exits of the outer switches: for this reason, we give precedence
     /// to the outer switches.
     fn compute_switch_exits(cfg: &mut CfgInfo) {
+        let best_exits = Self::compute_best_switch_exits(cfg);
         // We need to give precedence to the outer switches: we thus iterate
         // over the switch blocks in topological order.
         let mut exits_set = HashSet::default();
@@ -749,43 +828,7 @@ impl ExitInfo {
             .copied()
             .sorted_unstable_by_key(|&bid| (cfg.topo_rank(bid), bid))
         {
-            let block_data = &cfg.block_data[bid];
-            // Find the best successor: this is the node with the highest flow, and the lowest
-            // topological rank. If several nodes have the same flow, we want to take the highest
-            // one in the hierarchy: hence the use of the topological rank.
-            //
-            // Ex.:
-            // ```text
-            // A  -- we start here
-            // |
-            // |---------------------------------------
-            // |            |            |            |
-            // B:(0.25,-1)  C:(0.25,-2)  D:(0.25,-3)  E:(0.25,-4)
-            // |            |            |
-            // |--------------------------
-            // |
-            // F:(0.75,-5)
-            // |
-            // |
-            // G:(0.75,-6)
-            // ```
-            // The "best" node (with the highest (flow, rank) in the graph above is F.
-            // If the switch is inside a loop, we also only consider exists that are inside that
-            // same loop. There must be one, otherwise the switch entry would not be inside the
-            // loop.
-            let current_loop = block_data.within_loops.last().copied();
-            let best_exit: Option<BlockId> = block_data
-                .reachable_excluding_self()
-                .filter(|&b| !cfg.block_data[b].is_return)
-                .filter(|&b| {
-                    current_loop.is_none_or(|current_loop| cfg.is_within_loop(current_loop, b))
-                })
-                .max_by_key(|&id| {
-                    let is_unwind_block = Reverse(cfg.block_data[id].is_unwind);
-                    let flow = &block_data.flow[id];
-                    let rank = Reverse(cfg.topo_rank(id));
-                    ((is_unwind_block, flow, rank), id)
-                });
+            let best_exit = best_exits[bid];
             // We have an exit candidate: we first check that it was not already taken by an
             // external switch.
             //
