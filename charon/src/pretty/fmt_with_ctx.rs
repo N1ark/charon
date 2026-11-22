@@ -1626,7 +1626,7 @@ impl<C: AstFormatter> FmtWithCtx<C> for PathElem {
             }
             PathElem::Instantiated(binder) => {
                 // Anonymize all parameters.
-                let underscore = ustr::Ustr::from("_");
+                let underscore = Ustr::from("_");
                 let params = GenericParams {
                     regions: binder.params.regions.map_ref(|x| RegionParam {
                         name: Some(underscore),

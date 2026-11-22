@@ -10,7 +10,6 @@ use enum_as_inner::EnumAsInner;
 use index_vec::Idx;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
-use ustr::Ustr;
 
 use crate::{ast::*, impl_from_enum};
 
@@ -113,11 +112,13 @@ impl Variance {
 
 /// A type variable in a signature or binder.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize, Drive, DriveMut, DriveTwo)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(stateless)]
 pub struct TypeParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: TypeVarId,
     /// Variable name
+    #[serde_state(stateful)]
     pub name: Ustr,
     /// Variance of this parameter.
     pub variance: Variance,
@@ -125,11 +126,13 @@ pub struct TypeParam {
 
 /// A region variable in a signature or binder.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize, Drive, DriveMut, DriveTwo)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(stateless)]
 pub struct RegionParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: RegionId,
     /// Region name
+    #[serde_state(stateful)]
     pub name: Option<Ustr>,
     /// Variance of this parameter.
     pub variance: Variance,
@@ -164,7 +167,6 @@ pub struct ConstGenericParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: ConstGenericVarId,
     /// Const generic name
-    #[serde_state(stateless)]
     pub name: Ustr,
     /// Type of the const generic
     pub ty: Ty,

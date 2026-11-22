@@ -1,7 +1,6 @@
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fmt::Debug;
 use std::mem;
-use ustr::Ustr;
 
 use crate::hax;
 use crate::hax::{BaseState, Symbol};

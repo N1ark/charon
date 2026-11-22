@@ -1087,7 +1087,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
         Ok(match abi {
             Abi::Rust => mini::CallingConvention::Rust,
             Abi::C => mini::CallingConvention::C,
-            Abi::Other(name) if name == "rust-call" => mini::CallingConvention::Rust,
+            Abi::Other(name) if name.as_str() == "rust-call" => mini::CallingConvention::Rust,
             Abi::Other(name) => {
                 raise!(
                     span,

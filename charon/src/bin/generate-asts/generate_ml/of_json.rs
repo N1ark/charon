@@ -194,9 +194,6 @@ impl<'a> GenerateCtx<'a> {
                         if first == "vec" {
                             first = "list".to_string();
                         }
-                        if first == "ustr" {
-                            first = "string".to_string();
-                        }
                         if first == "index_map" {
                             // That's the `indexmap::IndexMap` case. Pass something dummy for the
                             // `RandomState` parameter.

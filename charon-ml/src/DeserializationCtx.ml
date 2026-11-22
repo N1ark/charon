@@ -28,6 +28,7 @@ type t = {
   size_expr_dedup_tbl : size_expr DedupTbl.t;
   inhabited_predicate_dedup_tbl : inhabited_predicate DedupTbl.t;
   span_dedup_tbl : span DedupTbl.t;
+  string_dedup_tbl : string DedupTbl.t;
 }
 
 let empty () : t =
@@ -39,4 +40,5 @@ let empty () : t =
     size_expr_dedup_tbl = DedupTbl.create 16;
     inhabited_predicate_dedup_tbl = DedupTbl.create 16;
     span_dedup_tbl = DedupTbl.create 4096;
+    string_dedup_tbl = DedupTbl.create 1024;
   }
