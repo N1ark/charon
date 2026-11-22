@@ -10,7 +10,7 @@ use crate::transform::TransformCtx;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_state::{DeserializeState, SerializeState};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 /// The data of a generic crate. We serialize this to pass it to `charon-ml`, so this must be as
@@ -59,6 +59,45 @@ impl<'de> Deserialize<'de> for CharonVersion {
             )));
         }
         Ok(CharonVersion(version))
+    }
+}
+
+/// A postcard flavor that buffers the output and writes it to `W` in chunks. `postcard::to_io`
+/// instead calls `Write::write_all` for each byte and varint, which is slower.
+struct PostcardWriter<W> {
+    buf: Vec<u8>,
+    writer: W,
+}
+
+impl<W: Write> PostcardWriter<W> {
+    const CHUNK_SIZE: usize = 1 << 16;
+
+    fn flush(&mut self) -> postcard::Result<()> {
+        self.writer
+            .write_all(&self.buf)
+            .map_err(|_| postcard::Error::SerializeBufferFull)?;
+        self.buf.clear();
+        Ok(())
+    }
+}
+
+impl<W: Write> postcard::ser_flavors::Flavor for PostcardWriter<W> {
+    type Output = ();
+    fn try_push(&mut self, byte: u8) -> postcard::Result<()> {
+        self.try_extend(&[byte])
+    }
+    fn try_extend(&mut self, data: &[u8]) -> postcard::Result<()> {
+        self.buf.extend_from_slice(data);
+        if self.buf.len() >= Self::CHUNK_SIZE {
+            self.flush()?;
+        }
+        Ok(())
+    }
+    fn finalize(mut self) -> postcard::Result<()> {
+        self.flush()?;
+        self.writer
+            .flush()
+            .map_err(|_| postcard::Error::SerializeBufferFull)
     }
 }
 
@@ -114,23 +153,28 @@ impl CrateData {
             return Err(());
         };
         // Write to the file.
-        let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
         let with_state = serde_state::WithState::new(self, state);
         match format {
             SerializationFormat::Json => {
+                let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
                 if let Err(err) = serde_json::to_writer(&mut writer, &with_state) {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
                 }
             }
             SerializationFormat::Postcard => {
-                if let Err(err) = postcard::to_io(&with_state, &mut writer) {
+                let writer = PostcardWriter {
+                    buf: Vec::new(),
+                    writer: outfile,
+                };
+                if let Err(err) = postcard::serialize_with_flavor(&with_state, writer) {
                     error!("Could not serialize to `{target_filename:?}`: {err:?}");
                     return Err(());
                 }
             }
             #[cfg(feature = "minirust")]
             SerializationFormat::MiniRust => {
+                let mut writer = BufWriter::with_capacity(4 * 1024 * 1024, outfile);
                 if let Err(err) = crate::minirust::serialize(&self.translated, &mut writer) {
                     anstream::eprintln!("{}\n", err.render(&self.translated, Level::ERROR));
                     return Err(());
