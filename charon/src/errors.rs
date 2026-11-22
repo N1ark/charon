@@ -9,6 +9,8 @@ use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, PartialOrd};
+use std::fmt;
+use std::io::Write;
 use std::ops::Range;
 
 const BACKTRACE_ON_ERR: bool = false;
@@ -154,6 +156,19 @@ impl<T: ToString> From<T> for Error {
     }
 }
 
+/// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes each
+/// styled chunk separately.
+fn eprintln_at_once(args: fmt::Arguments<'_>) {
+    let stderr = std::io::stderr();
+    let mut buffer = anstream::AutoStream::new(Vec::new(), anstream::AutoStream::choice(&stderr));
+    let _ = writeln!(buffer, "{args}");
+    if let Err(e) = stderr.lock().write_all(&buffer.into_inner())
+        && e.kind() != std::io::ErrorKind::BrokenPipe
+    {
+        panic!("failed printing to stderr: {e}");
+    }
+}
+
 /// Display an error without a specific location.
 pub fn display_unspanned_error(level: Level, msg: &str) {
     use annotate_snippets::*;
@@ -161,7 +176,7 @@ pub fn display_unspanned_error(level: Level, msg: &str) {
     let message = Renderer::styled()
         .render(&[Group::with_title(title)])
         .to_string();
-    anstream::eprintln!("{message}\n");
+    eprintln_at_once(format_args!("{message}\n"));
 }
 
 /// Display an error at the given source span.
@@ -189,7 +204,7 @@ pub fn display_spanned_error(krate: &TranslatedCrate, span: Span, title: &str, l
     }
 
     let diagnostic = [group];
-    anstream::eprintln!("{}", Renderer::styled().render(&diagnostic));
+    eprintln_at_once(format_args!("{}", Renderer::styled().render(&diagnostic)));
 }
 
 /// We use this to save the origin of an id. This is useful for the external
@@ -286,7 +301,7 @@ impl ErrorCtx {
         msg: String,
     ) -> Error {
         let error = Error { span, msg };
-        anstream::eprintln!("{}\n", error.render(krate, level));
+        eprintln_at_once(format_args!("{}\n", error.render(krate, level)));
         if BACKTRACE_ON_ERR {
             let backtrace = std::backtrace::Backtrace::force_capture();
             eprintln!("{backtrace}\n");
@@ -397,6 +412,6 @@ impl ErrorCtx {
         );
         let message = Group::with_title(level.primary_title(&msg)).elements(snippets);
         let out = Renderer::styled().render(&[message]).to_string();
-        anstream::eprintln!("{}", out);
+        eprintln_at_once(format_args!("{out}"));
     }
 }
