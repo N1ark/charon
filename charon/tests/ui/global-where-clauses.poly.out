@@ -119,7 +119,7 @@ where
     storage_live(_2)
     storage_live(_3)
     _3 = copy x
-    _2 = id<u32>[TraitClause1::ImpliedClause1::ImpliedClause1::ImpliedClause0, TraitClause1::ImpliedClause1](move _3)
+    _2 = id<u32>[{built_in impl Sized for u32}, impl_Copy_for_u32](move _3)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_3)
@@ -189,7 +189,7 @@ where
     let self: &'1 Nil; // arg #1
 
     storage_live(_0)
-    _0 = const TraitClause0::LEN
+    _0 = read LEN
     storage_dead(self)
     return
 }

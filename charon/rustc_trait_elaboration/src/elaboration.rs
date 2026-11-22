@@ -9,8 +9,10 @@ use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty::print::with_no_trimmed_paths;
 use rustc_middle::ty::{self, *};
 use rustc_span::{DUMMY_SP, Symbol};
-use rustc_trait_selection::traits::ImplSource;
+use rustc_trait_selection::solve::inspect::{InspectGoal, ProofTreeVisitor};
+use rustc_trait_selection::traits::{ImplSource, Selection, SelectionResult};
 use rustc_type_ir::Interner;
+use std::ops::ControlFlow;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ItemClause<'tcx, Id = DefId> {
@@ -756,9 +758,11 @@ fn shallow_resolve_trait_ref<'tcx>(
     use rustc_infer::infer::TyCtxtInferExt;
     use rustc_middle::traits::CodegenObligationError;
     use rustc_middle::ty::TypeVisitableExt;
+    use rustc_trait_selection::solve::inspect::InferCtxtProofTreeExt;
     use rustc_trait_selection::traits::{
         Obligation, ObligationCause, ObligationCtxt, SelectionContext, SelectionError,
     };
+    use rustc_type_ir::solve::Goal;
     // Do the initial selection for the obligation. This yields the
     // shallow result we are looking for -- that is, what specific impl.
     let infcx = tcx
@@ -770,7 +774,17 @@ fn shallow_resolve_trait_ref<'tcx>(
     let obligation_cause = ObligationCause::dummy();
     let obligation = Obligation::new(tcx, obligation_cause, param_env, trait_ref);
 
-    let selection = match selcx.poly_select(&obligation) {
+    let mut selection = selcx.poly_select(&obligation);
+    if let Ok(None) = selection
+        && infcx.next_trait_solver()
+    {
+        let goal = Goal::new(tcx, param_env, trait_ref);
+        selection = infcx
+            .visit_proof_tree(goal, &mut SolverSelect)
+            .break_value()
+            .unwrap();
+    }
+    let selection = match selection {
         Ok(Some(selection)) => selection,
         Ok(None) => return Err(CodegenObligationError::Ambiguity),
         Err(SelectionError::Unimplemented) => return Err(CodegenObligationError::Unimplemented),
@@ -800,4 +814,71 @@ fn shallow_resolve_trait_ref<'tcx>(
     }
 
     Ok(impl_source)
+}
+
+/// The new trait solver's selection is ambiguous whenever several candidates apply, but the solver
+/// itself prefers some of them (see `merge_trait_candidates` in rustc): a trivial builtin impl,
+/// else the where-clauses if one of them mentions generic parameters, else the alias bounds, else
+/// the rest; where-clauses that mention no generic parameters only count if nothing else applies.
+/// We select the impl or builtin impl the solver uses, if any; otherwise the goal stays ambiguous
+/// and we look for the clause ourselves.
+struct SolverSelect;
+
+impl<'tcx> ProofTreeVisitor<'tcx> for SolverSelect {
+    type Result = ControlFlow<SelectionResult<'tcx, Selection<'tcx>>>;
+
+    fn span(&self) -> rustc_span::Span {
+        DUMMY_SP
+    }
+
+    fn visit_goal(&mut self, goal: &InspectGoal<'_, 'tcx>) -> Self::Result {
+        use rustc_trait_selection::traits::solve::inspect::ProbeKind;
+        use rustc_trait_selection::traits::{BuiltinImplSource, ImplSourceUserDefinedData};
+        use rustc_type_ir::solve::{CandidateSource::*, Certainty, ParamEnvSource};
+        use std::ops::ControlFlow::Break;
+
+        // Like rustc's selection, only choose between the candidates of a goal that holds.
+        if goal.result() != Ok(Certainty::Yes) {
+            return Break(Ok(None));
+        }
+        let mut candidates: Vec<_> = goal
+            .candidates()
+            .into_iter()
+            .filter_map(|candidate| match candidate.kind() {
+                ProbeKind::TraitCandidate {
+                    source,
+                    result: Ok(_),
+                } => Some((source, candidate)),
+                _ => None,
+            })
+            .collect();
+        let (source, candidate) = if let Some(i) = candidates
+            .iter()
+            .position(|(source, _)| matches!(source, BuiltinImpl(BuiltinImplSource::Trivial)))
+        {
+            candidates.swap_remove(i)
+        } else if candidates.iter().any(|(source, _)| {
+            matches!(source, ParamEnv(ParamEnvSource::NonGlobal) | AliasBound(_))
+        }) {
+            return Break(Ok(None));
+        } else {
+            candidates.retain(|(source, _)| !matches!(source, ParamEnv(_)));
+            let Ok(candidate) = candidates.into_iter().exactly_one() else {
+                return Break(Ok(None));
+            };
+            candidate
+        };
+        if candidate.result() != Ok(Certainty::Yes) {
+            return Break(Ok(None));
+        }
+        Break(Ok(Some(match source {
+            Impl(impl_def_id) => ImplSource::UserDefined(ImplSourceUserDefinedData {
+                impl_def_id,
+                args: candidate.instantiate_impl_args(DUMMY_SP),
+                nested: Default::default(),
+            }),
+            BuiltinImpl(builtin) => ImplSource::Builtin(builtin, Default::default()),
+            ParamEnv(_) | AliasBound(_) | CoherenceUnknowable => unreachable!(),
+        })))
+    }
 }
