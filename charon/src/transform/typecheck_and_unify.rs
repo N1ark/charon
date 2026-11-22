@@ -3,7 +3,8 @@ use derive_generic_visitor::*;
 use index_vec::Idx;
 use itertools::Itertools;
 use petgraph::{graph::IndexType, unionfind::UnionFind};
-use std::{borrow::Cow, fmt::Display};
+use rustc_hash::FxHashSet as HashSet;
+use std::{borrow::Cow, fmt::Display, mem};
 
 use crate::{
     ast::*,
@@ -50,6 +51,14 @@ struct TypeCheckVisitor<'a> {
     /// Some tests where this matters: default-method-with-item-bound.6.rs,
     /// issue-1403-default-method-with-item-constraint
     accept_type_errors: bool,
+    /// Identifies the innermost binder we're under that binds something. Binders that bind nothing
+    /// are all alike, so this and the binder depth determine the binders we're under.
+    binder_id: u32,
+    /// Counts the binders that bind something we've entered, to give them distinct ids.
+    binder_count: u32,
+    /// The hash-consed values we checked without errors, by address, with the binders and
+    /// `accept_type_errors` they were checked under.
+    checked: HashSet<(*const (), u32, usize, bool)>,
 }
 
 impl VisitorWithSpan for TypeCheckVisitor<'_> {
@@ -81,6 +90,22 @@ impl TypeCheckVisitor<'_> {
         );
         // This is a fatal error: the output llbc is inconsistent and should not be used.
         self.ctx.span_err(self.span, &msg, Level::ERROR);
+    }
+
+    /// Visit the contents of a binder, keeping `binder_id` up to date.
+    fn visit_under_binder(
+        &mut self,
+        binds_nothing: bool,
+        visit: impl FnOnce(&mut Self) -> ControlFlow<Infallible>,
+    ) -> ControlFlow<Infallible> {
+        if binds_nothing {
+            return visit(self);
+        }
+        self.binder_count += 1;
+        let outer_binder_id = mem::replace(&mut self.binder_id, self.binder_count);
+        let result = visit(self);
+        self.binder_id = outer_binder_id;
+        result
     }
 
     fn match_regions(&mut self, a: &Region, b: &Region) -> Result<(), TypeError> {
@@ -533,9 +558,41 @@ impl VisitAst for TypeCheckVisitor<'_> {
         self.accept_type_errors |= matches!(&binder.kind, BinderKind::TraitMethod(..))
             && !self.ctx.options.lift_associated_types.is_empty()
             && !binder.params.trait_type_constraints.is_empty();
-        let result = self.visit_inner(binder);
+        let result =
+            self.visit_under_binder(binder.params.is_empty(), |this| this.visit_inner(binder));
         self.accept_type_errors = old_accept_type_errors;
         result
+    }
+
+    fn visit_region_binder<T: AstVisitable>(
+        &mut self,
+        binder: &RegionBinder<T>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_under_binder(binder.regions.is_empty(), |this| this.visit_inner(binder))
+    }
+
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        // Checking a value again under the same binders does the same thing, so we check each value
+        // once, unless that reports errors: we report errors at each occurrence.
+        let key = (
+            value.inner() as *const _ as *const (),
+            self.binder_id,
+            self.binder_stack.len(),
+            self.accept_type_errors,
+        );
+        // A value doesn't contain itself, so we can mark it as checked before checking it.
+        if !self.checked.insert(key) {
+            return Continue(());
+        }
+        let errors_before = self.ctx.errors.borrow().error_count;
+        self.visit_inner(value)?;
+        if self.ctx.errors.borrow().error_count != errors_before {
+            self.checked.remove(&key);
+        }
+        Continue(())
     }
 
     // Check that generics are correctly bound.
@@ -844,6 +901,9 @@ impl TransformPass for Check {
                 body_lt_unifier,
                 did_unify_lifetimes: false,
                 accept_type_errors,
+                binder_id: 0,
+                binder_count: 0,
+                checked: HashSet::default(),
             };
             // Typecheck the item, and accumulate needed lifetime unifications.
             let _ = item.as_ref().drive(&mut visitor);
