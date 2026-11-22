@@ -291,6 +291,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-tree",
+ "unicode-width",
  "ustr",
  "wait-timeout",
  "walkdir",
