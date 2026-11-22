@@ -531,17 +531,6 @@ pub fn run_rustc_driver() -> Result<Option<(TransformOutput, CliOpts)>, CharonFa
         error_ctx.continue_on_failure = !options.abort_on_error;
         error_ctx.error_on_warnings = options.error_on_warnings;
 
-        // To select an impl, the new solver builds the proof tree of the whole goal without
-        // using its evaluation cache, which makes our many trait resolutions much slower.
-        if options.old_trait_solver
-            && !compiler_args.iter().any(|arg| arg.contains("next-solver"))
-            && !options
-                .rustc_args
-                .iter()
-                .any(|arg| arg.contains("next-solver"))
-        {
-            compiler_args.push("-Znext-solver=coherence".to_owned());
-        }
         for extra_flag in options.rustc_args.iter().cloned() {
             compiler_args.push(extra_flag);
         }

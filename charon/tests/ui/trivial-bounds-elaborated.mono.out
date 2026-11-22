@@ -1,19 +1,19 @@
 error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
-  --> tests/ui/trivial-bounds-elaborated.rs:24:5
+  --> tests/ui/trivial-bounds-elaborated.rs:23:5
    |
-24 |     <Env as Unix>::name()
+23 |     <Env as Unix>::name()
    |     ^^^^^^^^^^^^^^^^^^^^^
 
 error: Unexpected error: could not find the trait clause variable Required(test_crate::via_supertrait, 0)
-  --> tests/ui/trivial-bounds-elaborated.rs:31:13
+  --> tests/ui/trivial-bounds-elaborated.rs:30:13
    |
-31 |     foo() + <Env as Unix>::name()
+30 |     foo() + <Env as Unix>::name()
    |             ^^^^^^^^^^^^^^^^^^^^^
 
 error: Unexpected error: could not find the trait clause variable Required(test_crate::via_projection, 3)
-  --> tests/ui/trivial-bounds-elaborated.rs:38:13
+  --> tests/ui/trivial-bounds-elaborated.rs:37:13
    |
-38 |     foo() + <Env as Unix>::name()
+37 |     foo() + <Env as Unix>::name()
    |             ^^^^^^^^^^^^^^^^^^^^^
 
 ERROR Charon failed to translate this code (6 errors)

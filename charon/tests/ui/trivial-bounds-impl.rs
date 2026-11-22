@@ -1,8 +1,6 @@
-//@ revisions=poly,mono,mono-old
+//@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
 //@[mono] known-failure
-//@[mono-old] charon-args=--monomorphize --old-trait-solver
-//@[mono-old] known-failure
 //! Concrete where-clauses that are also proven by an impl: the trait solvers pick either one.
 #![feature(trivial_bounds)]
 #![allow(trivial_bounds)]

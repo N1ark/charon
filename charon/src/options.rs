@@ -66,12 +66,6 @@ pub struct CliOpts {
     #[clap(long = "rustc-arg")]
     #[serde(default)]
     pub rustc_args: Vec<String>,
-    /// Run rustc with its old trait solver outside of coherence, as stable rustc does, instead of
-    /// the new solver that our nightly enables everywhere. Trait resolution is several times
-    /// faster with the old solver, but the two can give different (equivalent) results.
-    #[clap(long)]
-    #[serde(default)]
-    pub old_trait_solver: bool,
     /// A list of target architectures to translate for. Charon will run the compiler once for each
     /// target and aggregate the results, which is useful if the code includes `#[cfg(..)]`
     /// filters.
@@ -627,7 +621,6 @@ impl CliOpts {
                     self.include.push("core::marker::MetaSized".to_owned());
                 }
                 Preset::Soteria => {
-                    self.old_trait_solver = true;
                     self.desugar_drops = true;
                     self.extract_opaque_bodies = true;
                     self.mir = Some(MirLevel::Elaborated);

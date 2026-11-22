@@ -1,8 +1,6 @@
-//@ revisions=poly,mono,mono-old
+//@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
 //@[mono] known-failure
-//@[mono-old] charon-args=--monomorphize --old-trait-solver
-//@[mono-old] known-failure
 //! A call to an item with a trivially-false where-clause must use the caller's where-clause: there
 //! is no impl to resolve to.
 #![feature(trivial_bounds)]
