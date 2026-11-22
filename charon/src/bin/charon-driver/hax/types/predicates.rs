@@ -176,7 +176,11 @@ impl<'tcx, S: UnderOwnerState<'tcx>> SInto<(S, UnitBinder<'tcx>), ProjectionPred
         };
         let item = tcx.associated_item(alias_ty_kind_def_id(alias_ty.kind));
         ProjectionPredicate {
-            trait_proof: solve_trait(s, poly_trait_ref),
+            trait_proof: s
+                .with_predicate_searcher(|searcher, state| {
+                    searcher.resolve_binding(state, &poly_trait_ref)
+                })
+                .sinto(s),
             assoc_item: AssocItem::sfrom(s, &item),
             ty,
         }

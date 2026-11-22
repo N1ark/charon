@@ -522,7 +522,7 @@ where
 fn trivial_clause(_1: S<u8>[{built_in impl Sized for u8}, impl_Tr_for_u8])
 where
     TraitClause0: (u8: Tr),
-    TypeConstraint0: impl_Tr_for_u8::A = u64,
+    TypeConstraint0: TraitClause0::A = u64,
 {
     let mut _0: (); // return
     let mut _1: S<u8>[{built_in impl Sized for u8}, impl_Tr_for_u8]; // arg #1
