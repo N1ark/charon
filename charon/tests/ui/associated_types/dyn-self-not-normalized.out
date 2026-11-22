@@ -1,0 +1,15 @@
+
+thread 'main' panicked at src/transform/normalize/expand_associated_types.rs:1086:21:
+internal error: entered unreachable code: `TraitRefKind::Dyn` only makes sense with a `dyn Trait` Self type
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: Thread panicked while transforming item `Fun(22)`.
+  --> tests/ui/associated_types/dyn-self-not-normalized.rs:16:5
+   |
+16 | /     fn boxed<'a>(self) -> Pin<Box<dyn Future<Output = Self::Output> + Send + 'a>>
+17 | |     where
+18 | |         Self: Sized + Send + 'a,
+...  |
+21 | |     }
+   | |_____^
+
+ERROR Charon failed to translate this code (1 errors)
