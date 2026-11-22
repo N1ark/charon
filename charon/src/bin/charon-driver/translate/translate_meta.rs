@@ -1028,7 +1028,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let item_meta = ItemMeta {
             name,
             span,
-            source_text: def.source_text.clone(),
+            source_text: def.source_text(self.tcx),
             attr_info,
             is_local,
             // Computed by `compute_started_from` after translation.
