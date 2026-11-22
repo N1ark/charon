@@ -258,6 +258,35 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         span: Span,
         trait_proof: &hax::TraitProof<'tcx>,
     ) -> Result<PolyTraitRef, Error> {
+        // Apart from the errors it reports and the fresh body regions it allocates, the translation
+        // only depends on the proof and the binder stack. We cache the translations that report no
+        // error and allocate no region.
+        let key = (
+            trait_proof.clone(),
+            self.error_on_trait_proof_error,
+            self.lifetime_freshener.is_some(),
+        );
+        if let Some(tref) = self.innermost_binder().trait_proof_trans_cache.get(&key) {
+            return Ok(tref.clone());
+        }
+        let error_count = self.t_ctx.errors.borrow().error_count;
+        let fresh_regions = self.lifetime_freshener.as_ref().map(|v| v.slot_count());
+        let tref = self.translate_trait_proof_uncached(span, trait_proof)?;
+        if self.t_ctx.errors.borrow().error_count == error_count
+            && self.lifetime_freshener.as_ref().map(|v| v.slot_count()) == fresh_regions
+        {
+            self.innermost_binder_mut()
+                .trait_proof_trans_cache
+                .insert(key, tref.clone());
+        }
+        Ok(tref)
+    }
+
+    fn translate_trait_proof_uncached(
+        &mut self,
+        span: Span,
+        trait_proof: &hax::TraitProof<'tcx>,
+    ) -> Result<PolyTraitRef, Error> {
         let trait_decl_ref = self.translate_poly_trait_ref(span, &trait_proof.pred)?;
 
         match self.translate_trait_proof_aux(span, trait_proof, trait_decl_ref.clone()) {

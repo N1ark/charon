@@ -67,6 +67,10 @@ pub(crate) struct BindingLevel<'tcx> {
     // Important: we can't reuse type caches from earlier binders as the new binder may change what
     // a given variable resolves to.
     pub type_trans_cache: HashMap<hax::Ty<'tcx>, Ty>,
+    /// Cache the translation of trait proofs, like `type_trans_cache`. The key also records the
+    /// context that influences the translation: `error_on_trait_proof_error` and whether we
+    /// allocate fresh body regions.
+    pub trait_proof_trans_cache: HashMap<(hax::TraitProof<'tcx>, bool, bool), PolyTraitRef>,
 }
 
 /// Small helper: we ignore some region names (when they are equal to "'_")
