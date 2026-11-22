@@ -146,7 +146,7 @@ pub struct TranslateCtx<'tcx> {
     pub cached_file_ids: HashMap<rustc_span::StableSourceFileId, FileId>,
     /// Cache the names to compute them only once each.
     pub cached_names: HashMap<RustcItem<'tcx>, Name>,
-    /// Cache the `ItemMeta`s to compute them only once each.
+    /// The `ItemMeta`s whose computation raised errors, to report these only once.
     pub cached_item_metas: HashMap<TransItemSource<'tcx>, ItemMeta>,
     /// The functions that extern functions can link to, by symbol.
     /// Computed lazily by `exported_fns`.
