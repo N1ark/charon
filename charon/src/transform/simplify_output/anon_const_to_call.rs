@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::transform::CowBox;
 use crate::transform::{TransformCtx, ctx::UllbcPass};
@@ -11,7 +11,7 @@ pub struct Transform {
 /// These globals and their initializers must remain available: a constant repeat cannot use a
 /// runtime call to evaluate its elements, as the element type may not be `Copy`/`Clone`.
 pub(super) fn globals_in_constant_repeats(krate: &TranslatedCrate) -> HashSet<GlobalDeclId> {
-    let mut globals = HashSet::new();
+    let mut globals = HashSet::default();
     krate.dyn_visit(|kind: &ConstantExprKind| {
         if let ConstantExprKind::Repeat { .. } = kind {
             kind.dyn_visit(|gref: &GlobalDeclRef| {
