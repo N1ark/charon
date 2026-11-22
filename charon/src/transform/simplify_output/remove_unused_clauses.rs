@@ -121,6 +121,19 @@ struct RemoveClausesVisitor<'a> {
     remaps: &'a HashMap<ItemId, IndexVec<TraitClauseId, Option<TraitClauseId>>>,
     current_item: ItemId,
     binder_depth: DeBruijnId,
+    memo: &'a mut HashConsMemo<(ItemId, DeBruijnId)>,
+}
+
+// We remap clause variables according to the current item and the binder depth; the rest only
+// depends on `remaps`.
+impl VisitorWithMemo for RemoveClausesVisitor<'_> {
+    type MemoContext = (ItemId, DeBruijnId);
+    fn memo(&mut self) -> &mut HashConsMemo<Self::MemoContext> {
+        self.memo
+    }
+    fn memo_context(&self) -> Option<Self::MemoContext> {
+        Some((self.current_item, self.binder_depth))
+    }
 }
 
 impl VisitorWithBinderDepth for RemoveClausesVisitor<'_> {
@@ -144,6 +157,13 @@ impl VisitorWithItemRefMut for RemoveClausesVisitor<'_> {
 impl VisitAstMut for RemoveClausesVisitor<'_> {
     fn visit<T: AstVisitable>(&mut self, x: &mut T) -> ControlFlow<Self::Break> {
         VisitWithBinderDepth::new(VisitWithItemRef::new(self)).visit(x)
+    }
+
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        x: &mut HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        self.visit_memoized(x)
     }
 
     fn visit_trait_ref_kind(&mut self, x: &mut TraitRefKind) -> ControlFlow<Self::Break> {
@@ -235,12 +255,14 @@ impl TransformPass for Transform {
         };
 
         // Adjust references to clauses.
+        let mut memo = HashConsMemo::default();
         for mut item in ctx.translated.all_items_mut() {
             let item_id = item.as_ref().id();
             item.drive_mut(&mut RemoveClausesVisitor {
                 remaps: &remaps,
                 current_item: item_id,
                 binder_depth: DeBruijnId::ZERO,
+                memo: &mut memo,
             });
         }
     }
