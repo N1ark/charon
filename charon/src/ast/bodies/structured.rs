@@ -241,28 +241,62 @@ impl Block {
     /// Small visitor helper to visit statements and blocks.
     fn visit_helper<F: FnMut(&mut Block), G: FnMut(&mut Statement)>(
         &mut self,
-        exit_blk: F,
-        enter_stmt: G,
+        mut exit_blk: F,
+        mut enter_stmt: G,
     ) {
-        #[derive(Visitor)]
-        pub struct BlockVisitor<F: FnMut(&mut Block), G: FnMut(&mut Statement)> {
-            exit_blk: F,
-            enter_stmt: G,
-        }
-
-        impl<F: FnMut(&mut Block), G: FnMut(&mut Statement)> VisitBodyMut for BlockVisitor<F, G> {
-            fn exit_llbc_block(&mut self, x: &mut Block) {
-                (self.exit_blk)(x)
+        fn visit_block(
+            blk: &mut Block,
+            exit_blk: &mut impl FnMut(&mut Block),
+            enter_stmt: &mut impl FnMut(&mut Statement),
+        ) {
+            for st in &mut blk.statements {
+                enter_stmt(st);
+                match &mut st.kind {
+                    StatementKind::Drop { on_unwind, .. }
+                    | StatementKind::DropEmptyBox { on_unwind, .. }
+                    | StatementKind::Assert { on_unwind, .. }
+                    | StatementKind::Call { on_unwind, .. }
+                    | StatementKind::Panic { on_unwind, .. } => {
+                        visit_block(on_unwind, exit_blk, enter_stmt)
+                    }
+                    StatementKind::InlineAsm {
+                        fallthrough,
+                        labels,
+                        on_unwind,
+                        ..
+                    } => {
+                        if let Some(fallthrough) = fallthrough {
+                            visit_block(fallthrough, exit_blk, enter_stmt);
+                        }
+                        for label in labels {
+                            visit_block(label, exit_blk, enter_stmt);
+                        }
+                        visit_block(on_unwind, exit_blk, enter_stmt);
+                    }
+                    StatementKind::Switch { branches, .. } => {
+                        for branch in branches {
+                            visit_block(branch, exit_blk, enter_stmt);
+                        }
+                    }
+                    StatementKind::Loop(body) => visit_block(body, exit_blk, enter_stmt),
+                    StatementKind::Assign(..)
+                    | StatementKind::SetDiscriminant(..)
+                    | StatementKind::StorageLive(..)
+                    | StatementKind::StorageDead(..)
+                    | StatementKind::PlaceMention(..)
+                    | StatementKind::Borrowck(..)
+                    | StatementKind::Break(..)
+                    | StatementKind::Continue(..)
+                    | StatementKind::UnwindTerminate(..)
+                    | StatementKind::UnwindResume
+                    | StatementKind::Return
+                    | StatementKind::UndefinedBehavior
+                    | StatementKind::Nop => {}
+                }
             }
-            fn enter_llbc_statement(&mut self, x: &mut Statement) {
-                (self.enter_stmt)(x)
-            }
+            exit_blk(blk);
         }
-        BlockVisitor {
-            exit_blk,
-            enter_stmt,
-        }
-        .visit_by_val_infallible(self);
+        visit_block(self, &mut exit_blk, &mut enter_stmt);
     }
 }
 
