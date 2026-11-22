@@ -135,9 +135,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         {
             ty
         } else {
-            let ty = self
-                .translate_ty_inner(span, hax_ty)
-                .unwrap_or_else(|e| TyKind::Error(e.msg).into_ty());
+            let ty = self.translate_ty_uncached(span, hax_ty);
             self.innermost_binder_mut().type_trans_cache.insert(
                 hax_ty.clone(),
                 ty.clone().replace_erased_regions(|| Region::Erased),
@@ -158,6 +156,49 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             self.recording_mono_layouts = false;
         }
         Ok(ty)
+    }
+
+    /// Translate a type that isn't in the cache of the current binder. In mono mode, the
+    /// translations of the types that translate the same in every item are shared between items.
+    fn translate_ty_uncached(&mut self, span: Span, hax_ty: &hax::Ty<'tcx>) -> Ty {
+        let translate = |this: &mut Self| {
+            this.translate_ty_inner(span, hax_ty)
+                .unwrap_or_else(|e| TyKind::Error(e.msg).into_ty())
+        };
+        if !(self.monomorphize()
+            && !self.item_src.kind.is_for_trait()
+            && self.lifetime_freshener.is_none()
+            && is_context_free(self.hax_state(), hax_ty))
+        {
+            return translate(self);
+        }
+        if let Some((ty, deps)) = self.t_ctx.mono_type_cache.get(hax_ty) {
+            // Register the dependencies that translating the type would register.
+            let dep_src = self.make_dep_source(span);
+            let mut errors = self.t_ctx.errors.borrow_mut();
+            for &(id, is_local) in deps {
+                errors.register_dep_source(&dep_src, id, is_local);
+            }
+            return ty.clone();
+        }
+        let (outer_deps, error_count) = {
+            let mut errors = self.t_ctx.errors.borrow_mut();
+            (errors.recorded_deps.replace(Vec::new()), errors.error_count)
+        };
+        let ty = translate(self);
+        let mut errors = self.t_ctx.errors.borrow_mut();
+        let deps = std::mem::replace(&mut errors.recorded_deps, outer_deps).unwrap();
+        if let Some(outer_deps) = &mut errors.recorded_deps {
+            outer_deps.extend_from_slice(&deps);
+        }
+        // A translation that reported errors would report them again in the next item.
+        if errors.error_count == error_count {
+            drop(errors);
+            self.t_ctx
+                .mono_type_cache
+                .insert(hax_ty.clone(), (ty.clone(), deps));
+        }
+        ty
     }
 
     fn translate_ty_inner(&mut self, span: Span, ty: &hax::Ty<'tcx>) -> Result<Ty, Error> {
@@ -1410,5 +1451,33 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             repr_algo,
             align_modif: align_mod,
         }
+    }
+}
+
+/// Whether this type translates the same in every monomorphic item: it mentions no generic
+/// parameters, no variables bound outside of it, and no regions other than erased and `'static`.
+fn is_context_free<'tcx>(s: &impl hax::BaseState<'tcx>, ty: &hax::Ty<'tcx>) -> bool {
+    use hax::TyKind::*;
+    use ty::TypeVisitableExt;
+    match ty.kind() {
+        Bool | Char | Int(_) | Uint(_) | Float(_) | Never => true,
+        Adt(hax::AdtTy { item })
+        | Tuple(hax::TupleTy { item })
+        | Str(hax::StrTy { item })
+        | Foreign(hax::ForeignTy { item })
+        | Array(hax::ArrayTy { item, .. })
+        | Slice(hax::SliceTy { item, .. }) => {
+            let args = item.rustc_args(s);
+            !args.has_type_flags(ty::TypeFlags::HAS_PARAM | ty::TypeFlags::HAS_FREE_LOCAL_REGIONS)
+                && !args.has_escaping_bound_vars()
+        }
+        Ref(r) => {
+            matches!(
+                r.region.kind,
+                hax::RegionKind::ReErased | hax::RegionKind::ReStatic
+            ) && is_context_free(s, &r.ty)
+        }
+        RawPtr(p) => is_context_free(s, &p.ty),
+        _ => false,
     }
 }

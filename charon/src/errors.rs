@@ -269,6 +269,8 @@ pub struct ErrorCtx {
     pub error_count: usize,
     /// The span and message of each error encountered so far.
     displayed: HashSet<(Span, String)>,
+    /// If set, `register_dep_source` also records its arguments here.
+    pub recorded_deps: Option<Vec<(ItemId, bool)>>,
 }
 
 impl ErrorCtx {
@@ -282,6 +284,7 @@ impl ErrorCtx {
             def_id_is_local: false,
             error_count: 0,
             displayed: HashSet::default(),
+            recorded_deps: None,
         }
     }
 
@@ -352,6 +355,9 @@ impl ErrorCtx {
         item_id: ItemId,
         is_local: bool,
     ) {
+        if let Some(deps) = &mut self.recorded_deps {
+            deps.push((item_id, is_local));
+        }
         if let Some(src) = src
             && src.src_id != item_id
             && !is_local
