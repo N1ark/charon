@@ -1,4 +1,3 @@
-//@ known-failure
 //@ charon-args=--lift-associated-types=*
 // Reduced from futures-util's `FutureExt::boxed`: the `Self` type of the `dyn Future` proof is
 // `<Box<dyn Future<..>> as Deref>::Target`, which we haven't normalized yet when we use the proof.
