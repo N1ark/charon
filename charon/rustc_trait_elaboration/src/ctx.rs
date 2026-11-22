@@ -1,3 +1,4 @@
+use rustc_arena::TypedArena;
 use rustc_data_structures::sharded::ShardedHashMap;
 use rustc_hash::FxHashMap;
 use rustc_hir::def_id::DefId;
@@ -147,13 +148,15 @@ impl<'tcx, Id: ItemId> Default for PredicateSearchers<'tcx, Id> {
 }
 
 struct PredicateCache<'tcx, Id: ItemId> {
-    values: ShardedHashMap<Id, ItemPredicates<'tcx, Id>>,
+    values: ShardedHashMap<Id, &'tcx ItemPredicates<'tcx, Id>>,
+    arena: TypedArena<ItemPredicates<'tcx, Id>>,
 }
 
 impl<'tcx, Id: ItemId> Default for PredicateCache<'tcx, Id> {
     fn default() -> Self {
         Self {
             values: Default::default(),
+            arena: Default::default(),
         }
     }
 }
@@ -163,12 +166,12 @@ impl<'tcx, Id: ItemId> PredicateCache<'tcx, Id> {
         &'tcx self,
         def_id: Id,
         compute: impl FnOnce() -> ItemPredicates<'tcx, Id>,
-    ) -> ItemPredicates<'tcx, Id> {
+    ) -> &'tcx ItemPredicates<'tcx, Id> {
         if let Some(predicates) = self.values.get(&def_id) {
             return predicates;
         }
-        let predicates = compute();
-        self.values.insert_unique(def_id, predicates.clone());
+        let predicates = &*self.arena.alloc(compute());
+        self.values.insert_unique(def_id, predicates);
         predicates
     }
 }
@@ -267,7 +270,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         def_id: Id,
         compute: impl FnOnce() -> ItemPredicates<'tcx, Id>,
-    ) -> ItemPredicates<'tcx, Id> {
+    ) -> &'tcx ItemPredicates<'tcx, Id> {
         self.data
             .required_predicates
             .get_or_insert_with(def_id, compute)
@@ -277,7 +280,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         def_id: Id,
         compute: impl FnOnce() -> ItemPredicates<'tcx, Id>,
-    ) -> ItemPredicates<'tcx, Id> {
+    ) -> &'tcx ItemPredicates<'tcx, Id> {
         self.data
             .required_recursively_predicates
             .get_or_insert_with(def_id, compute)
@@ -287,7 +290,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         def_id: Id,
         compute: impl FnOnce() -> ItemPredicates<'tcx, Id>,
-    ) -> ItemPredicates<'tcx, Id> {
+    ) -> &'tcx ItemPredicates<'tcx, Id> {
         self.data
             .implied_predicates
             .get_or_insert_with(def_id, compute)

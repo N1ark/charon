@@ -3,6 +3,7 @@ use crate::hax::prelude::*;
 use rustc_data_structures::intern::Interned;
 use rustc_middle::ty;
 use rustc_span::def_id::DefId as RDefId;
+use std::cell::OnceCell;
 
 /// Reference to an item, with generics. Basically any mention of an item (function, type, etc)
 /// uses this.
@@ -61,11 +62,18 @@ pub struct ItemRefContents<'tcx> {
     /// `in_trait.unwrap().trait`.
     #[value(self.assoc_generics().sinto(s))]
     pub generic_args: Vec<GenericArg<'tcx>>,
-    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>` or `B:
-    /// ToOwned` for `Cow<'a, B>`. Same as above, for associated items this only includes clauses
-    /// for the item itself.
-    #[value(self.assoc_trait_proofs().sinto(s))]
-    pub trait_proofs: Vec<TraitProof<'tcx>>,
+    /// Converted on demand, see [`ItemRefContents::trait_proofs`].
+    #[value(TraitProofs {
+        item: self.clone(),
+        // Proofs that mention type or const parameters can only be converted in an item that has
+        // these parameters.
+        converted: if self.has_non_lt_param {
+            OnceCell::from(self.assoc_trait_proofs().sinto(s))
+        } else {
+            OnceCell::new()
+        },
+    })]
+    trait_proofs: TraitProofs<'tcx>,
     /// If we're referring to a trait associated item, this gives the trait clause/impl we're
     /// referring to.
     #[value(self.in_trait.as_ref().map(|(x, _)| x).sinto(s))]
@@ -80,6 +88,36 @@ pub struct ItemRefContents<'tcx> {
     /// some instantiations of the generics. In that case this reference may be wrong.
     #[value(self.may_be_further_specialized)]
     pub may_be_further_specialized: bool,
+}
+
+/// The trait proofs of an item reference, converted to hax on demand. The converted proofs are
+/// not included in hashing and equality: they are determined by those of the original reference.
+#[derive(Debug, Clone)]
+struct TraitProofs<'tcx> {
+    item: rustc_trait_elaboration::ItemRef<'tcx, DefId>,
+    converted: OnceCell<Vec<TraitProof<'tcx>>>,
+}
+
+impl PartialEq for TraitProofs<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.item.assoc_trait_proofs() == other.item.assoc_trait_proofs()
+    }
+}
+impl Eq for TraitProofs<'_> {}
+impl std::hash::Hash for TraitProofs<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.item.assoc_trait_proofs().hash(state)
+    }
+}
+
+impl<'tcx> ItemRefContents<'tcx> {
+    /// Witnesses of the trait clauses required by the item, e.g. `T: Sized` for `Option<T>` or `B:
+    /// ToOwned` for `Cow<'a, B>`. Same as above, for associated items this only includes clauses
+    /// for the item itself.
+    pub fn trait_proofs<S: UnderOwnerState<'tcx>>(&self, s: &S) -> &[TraitProof<'tcx>] {
+        let TraitProofs { item, converted } = &self.trait_proofs;
+        converted.get_or_init(|| item.assoc_trait_proofs().sinto(s))
+    }
 }
 
 impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, ItemRef<'tcx>>
@@ -183,11 +221,15 @@ impl<'tcx> ItemRef<'tcx> {
 
     /// Construct an `ItemRef` for items that can't have generics (e.g. modules).
     pub fn dummy_without_generics<S: BaseState<'tcx>>(s: &S, def_id: DefId) -> ItemRef<'tcx> {
+        let trait_proofs = TraitProofs {
+            item: rustc_trait_elaboration::ItemRef::dummy_without_generics(def_id.clone()),
+            converted: OnceCell::from(vec![]),
+        };
         let content = ItemRefContents {
             def_id,
             rustc_args: Default::default(),
             generic_args: Default::default(),
-            trait_proofs: Default::default(),
+            trait_proofs,
             in_trait: Default::default(),
             has_param: false,
             has_non_lt_param: false,

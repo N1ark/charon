@@ -1936,7 +1936,7 @@ fn get_implied_predicates<'tcx, S: UnderOwnerState<'tcx>>(
     let owner = s.owner();
     let typing_env = s.typing_env();
     let mut implied_predicates =
-        ItemPredicates::implied(s.base().elab_ctx, &s.base_state(), owner.clone());
+        ItemPredicates::implied(s.base().elab_ctx, &s.base_state(), owner.clone()).clone();
     if args.is_some() {
         for pred in implied_predicates.iter_mut() {
             pred.clause = substitute(tcx, typing_env, args, pred.clause);

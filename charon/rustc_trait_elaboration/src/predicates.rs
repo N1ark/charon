@@ -267,7 +267,7 @@ impl<'tcx, Id: ItemId> ItemPredicates<'tcx, Id> {
         elab_ctx: ElaborationCtx<'tcx, Id>,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> Self {
+    ) -> &'tcx Self {
         elab_ctx.cached_required_predicates(def_id.clone(), || {
             let options = elab_ctx.bounds_options();
             let mut predicates = def_id.predicates_defined_on(state, PredicateDirection::Required);
@@ -313,7 +313,7 @@ impl<'tcx, Id: ItemId> ItemPredicates<'tcx, Id> {
         elab_ctx: ElaborationCtx<'tcx, Id>,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> Self {
+    ) -> &'tcx Self {
         elab_ctx.cached_required_recursively_predicates(def_id.clone(), || {
             fn acc_predicates<'tcx, Id: ItemId>(
                 elab_ctx: ElaborationCtx<'tcx, Id>,
@@ -360,7 +360,7 @@ impl<'tcx, Id: ItemId> ItemPredicates<'tcx, Id> {
         elab_ctx: ElaborationCtx<'tcx, Id>,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> Self {
+    ) -> &'tcx Self {
         elab_ctx.cached_implied_predicates(def_id.clone(), || {
             let tcx = elab_ctx.tcx;
             let options = elab_ctx.bounds_options();

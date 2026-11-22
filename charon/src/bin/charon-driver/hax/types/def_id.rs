@@ -654,7 +654,7 @@ impl DefId {
     pub fn required_predicates<'tcx, S: BaseState<'tcx>>(
         &self,
         s: &S,
-    ) -> ItemPredicates<'tcx, Self> {
+    ) -> &'tcx ItemPredicates<'tcx, Self> {
         let state = s.base_state();
         ItemPredicates::required(s.base().elab_ctx, &state, self.clone())
     }
