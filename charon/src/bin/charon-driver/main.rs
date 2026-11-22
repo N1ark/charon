@@ -36,6 +36,10 @@ extern crate rustc_trait_selection;
 #[macro_use]
 extern crate charon_lib;
 
+// Replaces `malloc` & co for the whole process.
+#[cfg(all(feature = "jemalloc", not(windows)))]
+use tikv_jemalloc_sys as _;
+
 mod driver;
 #[macro_use]
 pub mod hax;
