@@ -14,6 +14,21 @@ use crate::hax;
 use crate::hax::{BaseState, DefPathItem, SInto};
 use charon_lib::{ast::*, name_matcher::NamePattern};
 
+/// The line and display column of `pos`, as `SourceFile::lookup_file_pos_with_col_display` computes
+/// them but without going through the multibyte characters of the file that come before `pos`.
+fn line_and_display_col(file: &rustc_span::SourceFile, pos: rustc_span::BytePos) -> (usize, usize) {
+    let rel_pos = file.relative_position(pos);
+    if let Some(line_index) = file.lookup_line(rel_pos)
+        && let Some(line) = file.get_line(line_index)
+        && let Some(prefix) = line.get(..(rel_pos - file.lines()[line_index]).0 as usize)
+    {
+        (line_index + 1, rustc_span::str_width(prefix))
+    } else {
+        let (line, _col, col_display) = file.lookup_file_pos_with_col_display(pos);
+        (line, col_display)
+    }
+}
+
 // Spans
 impl<'tcx> TranslateCtx<'tcx> {
     /// Register a file if it is a "real" file and was not already registered
@@ -158,7 +173,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         };
 
         let convert_loc = |pos: rustc_span::BytePos| -> Loc {
-            let (line, _col, col_display) = source_file.lookup_file_pos_with_col_display(pos);
+            let (line, col_display) = line_and_display_col(&source_file, pos);
             Loc {
                 line: line as u32,
                 col: col_display as u32,
