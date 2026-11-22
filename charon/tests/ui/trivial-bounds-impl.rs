@@ -1,7 +1,7 @@
 //@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
 //@[mono] known-failure
-//! Concrete where-clauses that an impl also proves.
+//! Concrete where-clauses that an impl also proves: the impl takes precedence.
 #![feature(trivial_bounds)]
 #![allow(trivial_bounds)]
 pub struct Env;

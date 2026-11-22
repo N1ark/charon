@@ -374,6 +374,10 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             && let tref = tref.clone().replace_regions(|| Region::Erased)
             // ...where the type doesn't mention any in-scope clauses
             && tref.type_info().is_closed()
+            // ...in an item whose clauses can't change how monomorphic types normalize
+            && !self
+                .hax_state
+                .with_predicate_searcher(|searcher, _| searcher.has_concrete_clauses())
             // ...and hasn't been seen yet
             && !self.monomorphic_layouts.contains_key(&tref)
             && let Some(layout) = self.translate_layout(span, item, None)

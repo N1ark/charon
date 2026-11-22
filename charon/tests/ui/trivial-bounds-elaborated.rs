@@ -1,6 +1,5 @@
 //@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
-//@[mono] known-failure
 //! Concrete where-clauses that the environment only gets through elaboration (supertraits) or
 //! normalization (associated type bindings).
 #![feature(trivial_bounds)]

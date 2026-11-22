@@ -1,6 +1,5 @@
 //@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
-//@[mono] known-failure
 //! Concrete where-clauses on an inherent impl, on a trait, and on the parent of a closure.
 #![feature(trivial_bounds)]
 #![allow(trivial_bounds)]

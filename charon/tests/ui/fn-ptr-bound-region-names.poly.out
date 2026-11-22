@@ -88,9 +88,9 @@ where
     proof ImpliedClause0: (fn<'_0_2>(&'_0_2 A) -> &'_0_2 B: MetaSized) = {built_in impl MetaSized for fn<'_0_2>(&'_0_2 A) -> &'_0_2 B}
     proof ImpliedClause1: ((&'_0 A,): Sized) = {built_in impl Sized for (&'_0 A,)}
     proof ImpliedClause2: ((&'_0 A,): Tuple) = {built_in impl Tuple for (&'_0 A,)}
-    proof ImpliedClause3: (&'_0 B: Sized) = TraitClause1<'_0>
+    proof ImpliedClause3: (&'_0 B: Sized) = {built_in impl Sized for &'_0 B}
     type Output = &'_0 B
-    fn call_once = call_once<'_0, A, B>[for<'_0_2> TraitClause0<'_0_2>, for<'_0_2> TraitClause1<'_0_2>]
+    fn call_once = call_once<'_0, A, B>[for<'_0_2> {built_in impl Sized for &'_0_2 A}, for<'_0_2> {built_in impl Sized for &'_0_2 B}]
     vtable: lazy
 }
 
