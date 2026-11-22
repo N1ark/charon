@@ -20,10 +20,8 @@ pub struct FullDef<'tcx> {
     pub span: Span,
     /// The span of the whole definition (including e.g. the function body).
     pub source_span: Option<Span>,
-    /// The text of the whole definition.
-    pub source_text: Option<String>,
     /// Attributes on this definition, if applicable.
-    pub attributes: Vec<hir::Attribute>,
+    pub attributes: &'tcx [hir::Attribute],
     /// Visibility of the definition, for definitions where this makes sense.
     pub visibility: Option<bool>,
     /// If this definition is a lang item, we store the identifier, e.g. `sized`.
@@ -212,22 +210,17 @@ where
         }
     }
 
-    let (attributes, visibility, source_text) = match def_id.base {
+    let (attributes, visibility) = match def_id.base {
         DefIdBase::Real(rust_def_id) => {
             let info = def_info(s, rust_def_id);
-            (info.attributes.to_vec(), info.visibility, info.source_text)
+            (info.attributes, info.visibility)
         }
-        _ => (
-            def_id.attrs(tcx).to_vec(),
-            def_id.visibility(tcx),
-            source_text(tcx, source_span),
-        ),
+        _ => (def_id.attrs(tcx), def_id.visibility(tcx)),
     };
     FullDef {
         this,
         span: def_id.def_span(s),
         source_span: source_span.sinto(s),
-        source_text,
         attributes,
         visibility,
         lang_item,
@@ -235,12 +228,6 @@ where
         kind,
         virtual_impls: Default::default(),
     }
-}
-
-fn source_text(tcx: ty::TyCtxt<'_>, source_span: Option<rustc_span::Span>) -> Option<String> {
-    source_span
-        .filter(|source_span| source_span.ctxt().is_root())
-        .and_then(|source_span| tcx.sess.source_map().span_to_snippet(source_span).ok())
 }
 
 /// The parts of the `FullDef`s of the current item that don't depend on generic arguments.
@@ -253,7 +240,6 @@ fn def_info<'tcx, S: UnderOwnerState<'tcx>>(s: &S, rust_def_id: RDefId) -> DefIn
     let source_span = rust_def_id.as_local().map(|ldid| tcx.source_span(ldid));
     let info = DefInfo {
         source_span,
-        source_text: source_text(tcx, source_span),
         attributes: def_id.attrs(tcx),
         visibility: def_id.visibility(tcx),
         lang_item: tcx.as_lang_item(rust_def_id).map(|litem| litem.name()),
@@ -1653,6 +1639,15 @@ impl<'tcx> VirtualTraitImpl<'tcx> {
 impl<'tcx> FullDef<'tcx> {
     pub fn def_id(&self) -> &DefId {
         &self.this.def_id
+    }
+
+    /// The text of the whole definition.
+    pub fn source_text(&self, tcx: ty::TyCtxt<'tcx>) -> Option<String> {
+        let source_span = self.source_span?;
+        if !source_span.ctxt().is_root() {
+            return None;
+        }
+        tcx.sess.source_map().span_to_snippet(source_span).ok()
     }
 
     /// Reference to the item itself.

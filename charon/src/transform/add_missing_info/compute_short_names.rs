@@ -1,5 +1,5 @@
-use rustc_hash::FxHashMap as HashMap;
-use std::collections::hash_map::Entry;
+use indexmap::map::Entry;
+use rustc_hash::FxBuildHasher;
 
 use crate::ast::*;
 
@@ -14,7 +14,7 @@ enum FoundName<'a> {
 }
 
 fn register_short_name_candidate<'a>(
-    short_names: &mut HashMap<PathElem, FoundName<'a>>,
+    short_names: &mut ShortNames<'a>,
     short: PathElem,
     long: &'a [PathElem],
     id: ItemId,
@@ -42,11 +42,14 @@ fn register_short_name_candidate<'a>(
     }
 }
 
+/// Insertion-ordered so that the output doesn't depend on how `PathElem`s hash.
+type ShortNames<'a> = SeqHashMap<PathElem, FoundName<'a>, FxBuildHasher>;
+
 pub struct Transform;
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
         ctx.translated.short_names.clear();
-        let mut short_names: HashMap<PathElem, FoundName> = Default::default();
+        let mut short_names: ShortNames = Default::default();
         for (&id, name) in &ctx.translated.item_names {
             let mut name_slice = name.name.as_slice();
 
@@ -72,7 +75,7 @@ impl TransformPass for Transform {
             // several thanks to monomorphizations).
             let candidate = match name_slice {
                 [.., PathElem::Ident(ident, _)] => {
-                    Some(PathElem::Ident(ident.clone(), Disambiguator::ZERO))
+                    Some(PathElem::Ident(*ident, Disambiguator::ZERO))
                 }
                 // Tuples and `str` are excluded: those are types with a syntax of their own.
                 [.., PathElem::Builtin(builtin, _)] if !builtin.is_tuple() && !builtin.is_str() => {
@@ -82,7 +85,7 @@ impl TransformPass for Transform {
                     if let Some(trait_impl) = ctx.translated.trait_impls.get(*impl_id) =>
                 {
                     trait_impl_short_name(&ctx.translated.item_names, trait_impl)
-                        .map(|short| PathElem::Ident(short, Disambiguator::ZERO))
+                        .map(|short| PathElem::Ident(short.into(), Disambiguator::ZERO))
                 }
 
                 _ => None,

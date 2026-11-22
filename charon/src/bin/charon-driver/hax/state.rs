@@ -119,7 +119,6 @@ mod base {
     #[derive(Clone)]
     pub struct DefInfo<'tcx> {
         pub source_span: Option<rustc_span::Span>,
-        pub source_text: Option<String>,
         pub attributes: &'tcx [rustc_hir::Attribute],
         pub visibility: Option<bool>,
         pub lang_item: Option<Symbol>,
