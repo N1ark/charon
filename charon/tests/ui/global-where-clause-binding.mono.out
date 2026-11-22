@@ -1,0 +1,52 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: test_crate::FloatConst
+pub trait FloatConst<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    vtable: test_crate::FloatConst::{vtable}
+}
+
+// Full name: test_crate::{impl FloatConst for f32}
+impl "impl_FloatConst_for_f32" FloatConst for f32 {
+    proof ImpliedClause0: (f32: MetaSized) = {built_in impl MetaSized for f32}
+    vtable: lazy
+}
+
+// Full name: test_crate::{impl FloatConst for f32}::tau
+pub fn tau() -> f32
+{
+    let mut _0: f32; // return
+
+    storage_live(_0)
+    _0 = const 6.28000021f32
+    return
+}
+
+// Full name: test_crate::double
+pub fn double() -> f32
+{
+    let mut _0: f32; // return
+    let mut _1: f32; // anonymous local
+    let mut _2: f32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = tau()
+    ↳⚡ unwind_continue
+    storage_live(_2)
+    _2 = tau()
+    ↳⚡ unwind_continue
+    _0 = move _1 wrap.+ move _2
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+
+

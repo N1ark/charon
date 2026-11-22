@@ -1,0 +1,93 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::ops::arith::Add
+#[lang_item(Add)]
+pub trait Add<Self, Rhs>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Rhs: Sized)
+    proof ImpliedClause2: (Self::Output: Sized)
+    type Output
+    fn add;
+    vtable: core::ops::arith::Add::{vtable}<Rhs, Self::Output>
+}
+
+// Full name: core::ops::arith::{impl Add<f32> for f32}::add
+#[track_caller]
+pub fn add(_1: f32, _2: f32) -> f32
+= <opaque>
+
+// Full name: core::ops::arith::{impl Add<f32> for f32}
+impl "impl_Add_f32_for_f32" Add<f32> for f32 {
+    proof ImpliedClause0: (f32: MetaSized) = {built_in impl MetaSized for f32}
+    proof ImpliedClause1: (f32: Sized) = {built_in impl Sized for f32}
+    proof ImpliedClause2: (f32: Sized) = {built_in impl Sized for f32}
+    type Output = f32
+    fn add = add
+    vtable: lazy
+}
+
+// Full name: test_crate::FloatConst
+pub trait FloatConst<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn tau<TraitClause0_1: (Self: Sized), TraitClause1_1: (Self: Add<Self>), TypeConstraint0: TraitClause1_1::Output = Self>;
+    vtable: test_crate::FloatConst::{vtable}
+}
+
+// Full name: test_crate::{impl FloatConst for f32}::tau
+pub fn tau() -> f32
+{
+    let mut _0: f32; // return
+
+    storage_live(_0)
+    _0 = const 6.28000021f32
+    return
+}
+
+// Full name: test_crate::{impl FloatConst for f32}
+impl "impl_FloatConst_for_f32" FloatConst for f32 {
+    proof ImpliedClause0: (f32: MetaSized) = {built_in impl MetaSized for f32}
+    fn tau<TraitClause0_1: (f32: Sized), TraitClause1_1: (f32: Add<f32>), TypeConstraint0: impl_Add_f32_for_f32::Output = f32> = tau
+    vtable: lazy
+}
+
+// Full name: test_crate::double
+pub fn double() -> f32
+where
+    TraitClause0: (f32: Add<f32>),
+    TypeConstraint0: impl_Add_f32_for_f32::Output = f32,
+{
+    let mut _0: f32; // return
+    let mut _1: f32; // anonymous local
+    let mut _2: f32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = tau()
+    ↳⚡ unwind_continue
+    storage_live(_2)
+    _2 = tau()
+    ↳⚡ unwind_continue
+    _0 = move _1 wrap.+ move _2
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+
+
