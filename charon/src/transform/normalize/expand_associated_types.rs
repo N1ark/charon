@@ -396,14 +396,23 @@ mod type_constraint_set {
     use crate::{ast::*, ids::IndexVec};
 
     /// A set of local `TraitTypeConstraint`s, represented as a trie.
-    #[derive(Default, Clone)]
+    #[derive(Default, Clone, PartialEq, Eq)]
     pub struct TypeConstraintSet {
         /// For each base clause, a sub-trie of type constraints.
         clauses: HashMap<BaseClause, TypeConstraintSetInner>,
     }
 
+    impl std::hash::Hash for TypeConstraintSet {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            // The iteration order of the map depends on its history.
+            let mut clauses: Vec<_> = self.clauses.iter().collect();
+            clauses.sort_by_key(|(base, _)| **base);
+            clauses.hash(state);
+        }
+    }
+
     /// A set of `TraitTypeConstraint`s that apply to a trait.
-    #[derive(Debug, Default, Clone)]
+    #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
     struct TypeConstraintSetInner {
         /// The trait that the clause at the current path implements, if known. Must be `Some` if
         /// `assoc_tys` is non-empty.
@@ -416,6 +425,10 @@ mod type_constraint_set {
     }
 
     impl TypeConstraintSet {
+        pub fn is_empty(&self) -> bool {
+            self.clauses.is_empty()
+        }
+
         pub fn from_constraints(
             constraints: &IndexVec<TraitTypeConstraintId, RegionBinder<TraitTypeConstraint>>,
         ) -> Self {
@@ -484,10 +497,6 @@ mod type_constraint_set {
         /// Find the entry at that path from the trie, if it exists.
         pub fn find(&self, path: &AssocTypePath) -> Option<&Ty> {
             Some(self.find_ty_and_used_constraint(path)?.1)
-        }
-
-        pub fn is_empty(&self) -> bool {
-            self.clauses.is_empty()
         }
 
         pub fn iter(&self) -> impl Iterator<Item = (AssocTypePath, Ty)> {
@@ -986,7 +995,10 @@ struct UpdateItemBody<'a> {
     item_modifications: &'a HashMap<GenericsSource, ItemModifications>,
     // It's a reversed stack, for when we go under binders.
     type_replacements: BindingStack<TypeConstraintSet>,
-    memo: &'a mut HashConsMemo<()>,
+    /// The id of `type_replacements`.
+    replacements_id: u32,
+    replacements_ids: &'a mut ReplacementStackIds,
+    memo: &'a mut HashConsMemo<u32>,
     /// The error count when we started visiting this item.
     initial_error_count: usize,
     caches: &'a mut Caches,
@@ -1019,20 +1031,46 @@ impl Caches {
     }
 }
 
+/// Identifies stacks of type replacements by their contents.
+#[derive(Default)]
+struct ReplacementStackIds {
+    /// The non-empty replacement sets; `0` is the empty set.
+    sets: HashMap<TypeConstraintSet, u32>,
+    /// The stacks, as the stack below and the set on top; `0` is the empty stack.
+    stacks: HashMap<(u32, u32), u32>,
+}
+
+impl ReplacementStackIds {
+    /// The id of the stack `below` with `set` pushed on top.
+    fn push(&mut self, below: u32, set: &TypeConstraintSet) -> u32 {
+        let set_id = if set.is_empty() {
+            0
+        } else if let Some(&id) = self.sets.get(set) {
+            id
+        } else {
+            let id = self.sets.len() as u32 + 1;
+            self.sets.insert(set.clone(), id);
+            id
+        };
+        let next_id = self.stacks.len() as u32 + 1;
+        *self.stacks.entry((below, set_id)).or_insert(next_id)
+    }
+}
+
 impl Visitor for UpdateItemBody<'_> {
     type Break = StackDepthLimitExceeded;
 }
 
-// We only use `type_replacements` for paths based on clause variables or `Self`, so closed values
-// are rewritten the same way everywhere. `span` and `is_type_alias` only affect error messages, and
-// we don't record visits once an error was reported.
+// The rewrite of a value only depends on `type_replacements`, for paths based on clause variables
+// or `Self`. `span` and `is_type_alias` only affect error messages, and we don't record visits
+// once an error was reported.
 impl VisitorWithMemo for UpdateItemBody<'_> {
-    type MemoContext = ();
-    fn memo(&mut self) -> &mut HashConsMemo<()> {
+    type MemoContext = u32;
+    fn memo(&mut self) -> &mut HashConsMemo<u32> {
         self.memo
     }
-    fn memo_context(&self) -> Option<()> {
-        None
+    fn memo_context(&self) -> Option<u32> {
+        Some(self.replacements_id)
     }
     fn may_record(&self) -> bool {
         self.ctx.errors.borrow().error_count == self.initial_error_count
@@ -1046,9 +1084,12 @@ impl UpdateItemBody<'_> {
         if changes_replacements {
             self.error_msgs.clear();
         }
+        let outer_id = self.replacements_id;
+        self.replacements_id = self.replacements_ids.push(outer_id, &repls);
         self.type_replacements.push(repls);
         let ret = f(self);
         self.type_replacements.pop();
+        self.replacements_id = outer_id;
         if changes_replacements {
             self.error_msgs.clear();
         }
@@ -1591,6 +1632,7 @@ impl TransformPass for Transform {
         // Apply the computed modifications to each item.
         let mut memo = HashConsMemo::default();
         let mut caches = Caches::default();
+        let mut replacements_ids = ReplacementStackIds::default();
         ctx.for_each_item_mut(|ctx, mut item| {
             trace!(
                 "Processing {}",
@@ -1656,12 +1698,15 @@ impl TransformPass for Transform {
             // Update the rest of the items: all the `GenericArgs` and the non-top-level binders
             // (trait methods and inherent impls in `Name`s).
             let is_type_alias = matches!(&item, ItemRefMut::Type(tdecl) if matches!(tdecl.kind, TypeDeclKind::Alias(..)));
+            let replacements_id = replacements_ids.push(0, &type_replacements);
             let mut visitor = UpdateItemBody {
                 ctx,
                 span,
                 is_type_alias,
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
+                replacements_id,
+                replacements_ids: &mut replacements_ids,
                 memo: &mut memo,
                 initial_error_count: ctx.errors.borrow().error_count,
                 caches: &mut caches,
