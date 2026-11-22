@@ -1,0 +1,87 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+struct () {}
+
+// Full name: test_crate::Trait
+pub trait Trait<Self, T>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (T: Sized)
+    vtable: test_crate::Trait::{vtable}<T>
+}
+
+// Full name: test_crate::foo
+pub fn foo<T, const N : u32>()
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Trait<u32 is N..=4294967295u32>),
+{
+    let mut _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = ()
+    return
+}
+
+// Full name: test_crate::bar
+pub fn bar<T, const N : u32>()
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Trait<u32 is N..=4294967295u32>),
+{
+    let mut _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = foo<T, N>[TraitClause0, TraitClause1]()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_crate::baz
+pub fn baz<U, T>()
+where
+    TraitClause0: (U: Sized),
+    TraitClause1: (T: Sized),
+    TraitClause2: (T: Trait<U>),
+{
+    let mut _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = ()
+    return
+}
+
+// Full name: test_crate::qux
+pub fn qux<T, const N : u32>()
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Trait<u32 is N..=4294967295u32>),
+{
+    let mut _0: (); // return
+
+    storage_live(_0)
+    _0 = ()
+    _0 = baz<u32 is N..=4294967295u32, T>[{built_in impl Sized for u32 is N..=4294967295u32}, TraitClause0, TraitClause1]()
+    ↳⚡ unwind_continue
+    return
+}
+
+
+
