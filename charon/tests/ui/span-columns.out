@@ -1,0 +1,19 @@
+error: Error parsing attribute: attribute `rename` should not be empty
+ --> tests/ui/span-columns.rs:3:9
+  |
+3 | /* é 日本 */ #[charon::rename("")] pub type Wide = ();
+  |           ^^^^^^^^^^^^^^^^^^^^^
+
+error: Error parsing attribute: attribute `rename` should not be empty
+ --> tests/ui/span-columns.rs:4:5
+  |
+4 |     #[charon::rename("")] pub type Tab = ();
+  |        ^^^^^^^^^^^^^^^^^^^^^
+
+error: Error parsing attribute: attribute `rename` should contain a valid identifier
+ --> tests/ui/span-columns.rs:5:1
+  |
+5 | #[charon::rename("🦀")] pub type Crab = ();
+  | ^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Charon failed to translate this code (3 errors)
