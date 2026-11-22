@@ -1,0 +1,74 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+struct (_, _, _)::<&'_ [u8; 3usize], &'_ [u8; 3usize], &'_ [u8; 3usize]> {
+  _0: &'_ [u8; 3usize],
+  _1: &'_ [u8; 3usize],
+  _2: &'_ [u8; 3usize],
+}
+
+// Full name: test_crate::{promoted_const}
+static {promoted_const}: [u8; 3usize] = [1u8, 2u8, 3u8]
+
+// Full name: test_crate::TABLE
+const TABLE: &'static [u8; 3usize] = &{promoted_const}
+
+// Full name: test_crate::generic::<u8>
+fn generic::<u8>(_x: u8) -> &'static [u8; 3usize]
+{
+    let mut _0: &'1 [u8; 3usize]; // return
+    let _x: u8; // arg #1
+
+    storage_live(_0)
+    _0 = &{promoted_const}
+    storage_dead(_x)
+    return
+}
+
+// Full name: test_crate::generic::<u32>
+fn generic::<u32>(_x: u32) -> &'static [u8; 3usize]
+{
+    let mut _0: &'1 [u8; 3usize]; // return
+    let _x: u32; // arg #1
+
+    storage_live(_0)
+    _0 = &{promoted_const}
+    storage_dead(_x)
+    return
+}
+
+// Full name: test_crate::use_generic
+pub fn use_generic() -> (&'_ [u8; 3usize], &'_ [u8; 3usize], &'_ [u8; 3usize])
+{
+    let mut _0: (&'_ [u8; 3usize], &'_ [u8; 3usize], &'_ [u8; 3usize]); // return
+    let mut _1: &'1 [u8; 3usize]; // anonymous local
+    let mut _2: &'2 [u8; 3usize]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_1)
+    _1 = generic::<u8>(const 0u8)
+    ↳⚡ unwind_continue
+    storage_live(_2)
+    _2 = generic::<u32>(const 0u32)
+    ↳⚡ unwind_continue
+    _0 = (move _1, move _2, read TABLE)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+
+
