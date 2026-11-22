@@ -72,6 +72,20 @@ impl VisitAst for BuildGraphVisitor<'_> {
         VisitWithBinderDepth::new(VisitWithItemRef::new(self)).visit(x)
     }
 
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        // A value without variables mentions no clause of the current item. The only edges it can
+        // add mark clauses of missing items as used; this matters only if the trait ref we pass to
+        // such a clause mentions variables, in which case its item ref adds the same edge.
+        if value.type_info().mentions_var() {
+            self.visit_inner(value)
+        } else {
+            Continue(())
+        }
+    }
+
     fn visit_trait_param(&mut self, x: &TraitParam) -> ControlFlow<Self::Break> {
         // Check if this is a clause definition at the level of the item. If so, we want to track
         // inter-clause dependencies such as `TraitClause1: (TraitClause0::Item: Copy)`.
