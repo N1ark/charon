@@ -5,7 +5,6 @@
 use derive_generic_visitor::*;
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
-use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::ast::*;
@@ -222,30 +221,15 @@ impl Block {
     /// - return the sequence of statements to introduce before the current statements
     pub fn transform_sequences<F: FnMut(&mut [Statement]) -> Vec<Statement>>(&mut self, mut f: F) {
         self.visit_blocks_bwd(|blk: &mut Block| {
-            let mut final_len = blk.statements.len();
             let mut to_insert = vec![];
             for i in (0..blk.statements.len()).rev() {
                 let new_to_insert = f(&mut blk.statements[i..]);
-                final_len += new_to_insert.len();
-                to_insert.push((i, new_to_insert));
-            }
-            if !to_insert.is_empty() {
-                to_insert.sort_by_key(|(i, _)| *i);
-                // Make it so the first element is always at the end so we can pop it.
-                to_insert.reverse();
-                // Construct the merged list of statements.
-                let old_statements =
-                    mem::replace(&mut blk.statements, Vec::with_capacity(final_len));
-                for (i, stmt) in old_statements.into_iter().enumerate() {
-                    while let Some((j, _)) = to_insert.last()
-                        && *j == i
-                    {
-                        let (_, mut stmts) = to_insert.pop().unwrap();
-                        blk.statements.append(&mut stmts);
-                    }
-                    blk.statements.push(stmt);
+                if !new_to_insert.is_empty() {
+                    to_insert.push((i, new_to_insert));
                 }
             }
+            to_insert.reverse();
+            insert_statements(&mut blk.statements, to_insert);
         })
     }
 
