@@ -19,6 +19,7 @@ use petgraph::visit::{Dfs, DfsPostOrder, EdgeFiltered, EdgeRef, Walker};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use smallvec::SmallVec;
 use std::cmp::Reverse;
+use std::collections::VecDeque;
 use std::mem;
 
 use crate::ids::IndexVec;
@@ -511,6 +512,18 @@ impl ExitInfo {
     ) -> SeqHashMap<src::BlockId, LoopExitRank> {
         let mut loop_exits: SeqHashMap<BlockId, LoopExitRank> = SeqHashMap::new();
         let header_is_unwind = cfg.block_data[loop_header].is_unwind;
+        // The length of the shortest path from the loop header to each node in the forward graph.
+        let mut distance_from_header = cfg.block_data.map_ref(|_| usize::MAX);
+        distance_from_header[loop_header] = 0;
+        let mut queue = VecDeque::from([loop_header]);
+        while let Some(bid) = queue.pop_front() {
+            for tgt in cfg.fwd_cfg.neighbors(bid) {
+                if distance_from_header[tgt] == usize::MAX {
+                    distance_from_header[tgt] = distance_from_header[bid] + 1;
+                    queue.push_back(tgt);
+                }
+            }
+        }
         for block_id in Self::compute_loop_exit_starting_points(cfg, loop_header) {
             for bid in cfg.block_data(block_id).reachable_including_self() {
                 let block_data = &cfg.block_data[bid];
@@ -528,9 +541,7 @@ impl ExitInfo {
                     .entry(bid)
                     .or_insert_with(|| LoopExitRank {
                         path_count: 0,
-                        distance_from_header: Reverse(
-                            cfg.block_data[loop_header].shortest_paths[&bid],
-                        ),
+                        distance_from_header: Reverse(distance_from_header[bid]),
                     })
                     .path_count += 1;
             }
