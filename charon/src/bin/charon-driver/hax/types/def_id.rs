@@ -515,14 +515,22 @@ impl DefId {
 
 impl DefId {
     pub fn can_have_generics<'tcx>(&self, s: &impl BaseState<'tcx>) -> bool {
-        let tcx = s.base().tcx;
+        use DefKind::*;
         match self.base {
-            DefIdBase::Real(def_id)
-            | DefIdBase::Promoted(def_id, ..)
-            | DefIdBase::ImplAssocItem(VirtualImplAssocItem {
-                item_decl_id: def_id,
-                ..
-            }) => can_have_generics(tcx, def_id),
+            DefIdBase::Real(..) | DefIdBase::Promoted(..) | DefIdBase::ImplAssocItem(..) => {
+                !matches!(
+                    self.kind,
+                    ConstParam
+                        | ExternCrate
+                        | ForeignMod
+                        | GlobalAsm
+                        | LifetimeParam
+                        | Macro(..)
+                        | Mod
+                        | TyParam
+                        | Use
+                )
+            }
             DefIdBase::Synthetic(synthetic) => synthetic.can_have_generics(s),
             DefIdBase::Alloc(..) => false,
         }
@@ -592,9 +600,17 @@ impl DefId {
     pub fn identity_args<'tcx>(&self, s: &impl BaseState<'tcx>) -> ty::GenericArgsRef<'tcx> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
-                    identity_args_with_inferred(tcx, def_id)
+            DefIdBase::Real(def_id) => {
+                if self.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &self.kind)
+                } else {
+                    ty::GenericArgsRef::default()
+                }
+            }
+            DefIdBase::Promoted(def_id, ..) => {
+                let parent: DefId = def_id.sinto(s);
+                if parent.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &parent.kind)
                 } else {
                     ty::GenericArgsRef::default()
                 }
@@ -636,7 +652,7 @@ impl DefId {
                 param_env_from_clauses(tcx, impl_predicates.chain(item_predicates))
             }
             DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
+                if self.can_have_generics(s) {
                     tcx.param_env(def_id)
                 } else {
                     ty::ParamEnv::empty()
