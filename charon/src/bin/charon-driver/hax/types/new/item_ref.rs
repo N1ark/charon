@@ -313,8 +313,9 @@ impl<'tcx> ItemRef<'tcx> {
             | DefKind::AnonConst
             | DefKind::PromotedConst => {
                 let tcx = s.base().tcx;
-                let parent = self.def_id.generics_of(s).parent?.sinto(s);
-                let parent_args = self.rustc_args(s).truncate_to(tcx, parent.generics_of(s));
+                let parent: DefId = self.def_id.generics_parent_and_count(s).0?.sinto(s);
+                let (_, parent_count) = parent.generics_parent_and_count(s);
+                let parent_args = tcx.mk_args(&self.rustc_args(s)[..parent_count]);
                 Some(ItemRef::translate_from_hax_def_id(s, parent, parent_args))
             }
             DefKind::Ctor(..) | DefKind::Variant => {
@@ -362,7 +363,17 @@ impl<'tcx> ItemRef<'tcx> {
             tcx.mk_args(&identity_args[typing_parent_count..]),
         );
 
-        let soft_parent = if self.def_id.is_typeck_child(s)
+        let soft_parent = self.soft_typing_parent_from(s, typing_parent);
+        (soft_parent, own_args, own_template)
+    }
+
+    /// The first component of [`Self::soft_typing_parent`], given [`Self::typing_parent`].
+    pub fn soft_typing_parent_from<S: UnderOwnerState<'tcx>>(
+        &self,
+        s: &S,
+        typing_parent: Option<ItemRef<'tcx>>,
+    ) -> Option<ItemRef<'tcx>> {
+        if self.def_id.is_typeck_child(s)
             && let Some(typing_parent) = &typing_parent
             && let Some(nesting_parent) = self.def_id.parent(s)
             && nesting_parent != typing_parent.def_id
@@ -384,8 +395,7 @@ impl<'tcx> ItemRef<'tcx> {
             ))
         } else {
             typing_parent
-        };
-        (soft_parent, own_args, own_template)
+        }
     }
 }
 

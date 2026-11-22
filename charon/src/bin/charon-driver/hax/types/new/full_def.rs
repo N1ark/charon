@@ -160,13 +160,13 @@ where
             diagnostic_item = Default::default();
         }
         DefIdBase::Real(rust_def_id) => {
+            let typing_parent = this.typing_parent(s);
             let mut param_env = if def_id.can_have_generics(s) {
-                get_param_env(s, args, this.typing_parent(s))
+                get_param_env(s, args, typing_parent.clone())
             } else {
                 ParamEnv::empty(s, None)
             };
-            let (soft_parent, _, _) = this.soft_typing_parent(s);
-            param_env.soft_parent = soft_parent;
+            param_env.soft_parent = this.soft_typing_parent_from(s, typing_parent);
             if def_id.is_typeck_child(s) {
                 // Record the value of the inference-only type vars.
                 let identity_args = this.rustc_args(s);
@@ -186,14 +186,10 @@ where
 
             kind = translate_full_def_kind(s, &this, args, param_env);
 
-            source_span = rust_def_id.as_local().map(|ldid| tcx.source_span(ldid));
-            lang_item = s
-                .base()
-                .tcx
-                .as_lang_item(rust_def_id)
-                .map(|litem| litem.name())
-                .sinto(s);
-            diagnostic_item = tcx.get_diagnostic_name(rust_def_id).sinto(s);
+            let info = def_info(s, rust_def_id);
+            source_span = info.source_span;
+            lang_item = info.lang_item;
+            diagnostic_item = info.diagnostic_item;
         }
         DefIdBase::Alloc(alloc_id) => {
             kind = FullDefKind::Static(Static {
@@ -216,11 +212,17 @@ where
         }
     }
 
-    let attributes = def_id.attrs(tcx).to_vec();
-    let visibility = def_id.visibility(tcx);
-    let source_text = source_span
-        .filter(|source_span| source_span.ctxt().is_root())
-        .and_then(|source_span| tcx.sess.source_map().span_to_snippet(source_span).ok());
+    let (attributes, visibility, source_text) = match def_id.base {
+        DefIdBase::Real(rust_def_id) => {
+            let info = def_info(s, rust_def_id);
+            (info.attributes.to_vec(), info.visibility, info.source_text)
+        }
+        _ => (
+            def_id.attrs(tcx).to_vec(),
+            def_id.visibility(tcx),
+            source_text(tcx, source_span),
+        ),
+    };
     FullDef {
         this,
         span: def_id.def_span(s),
@@ -233,6 +235,32 @@ where
         kind,
         virtual_impls: Default::default(),
     }
+}
+
+fn source_text(tcx: ty::TyCtxt<'_>, source_span: Option<rustc_span::Span>) -> Option<String> {
+    source_span
+        .filter(|source_span| source_span.ctxt().is_root())
+        .and_then(|source_span| tcx.sess.source_map().span_to_snippet(source_span).ok())
+}
+
+/// The parts of the `FullDef`s of the current item that don't depend on generic arguments.
+fn def_info<'tcx, S: UnderOwnerState<'tcx>>(s: &S, rust_def_id: RDefId) -> DefInfo<'tcx> {
+    if let Some(info) = s.with_cache(|cache| cache.def_info.clone()) {
+        return info;
+    }
+    let tcx = s.base().tcx;
+    let def_id = s.owner();
+    let source_span = rust_def_id.as_local().map(|ldid| tcx.source_span(ldid));
+    let info = DefInfo {
+        source_span,
+        source_text: source_text(tcx, source_span),
+        attributes: def_id.attrs(tcx),
+        visibility: def_id.visibility(tcx),
+        lang_item: tcx.as_lang_item(rust_def_id).map(|litem| litem.name()),
+        diagnostic_item: tcx.get_diagnostic_name(rust_def_id),
+    };
+    s.with_cache(|cache| cache.def_info = Some(info.clone()));
+    info
 }
 
 impl DefId {
@@ -395,7 +423,7 @@ impl<'tcx> ParamEnv<'tcx> {
             generics: TyGenerics {
                 parent: parent.map(|p| p.def_id.clone()),
                 parent_count: parent
-                    .map(|parent| parent.def_id.generics_of(s).count())
+                    .map(|parent| parent.def_id.generics_parent_and_count(s).1)
                     .unwrap_or(0),
                 params: vec![],
             },
@@ -952,6 +980,8 @@ pub struct Closure<'tcx> {
     /// `extra_early_regions`.
     param_env: ParamEnv<'tcx>,
     sig: PolyFnSig<'tcx>,
+    /// The inputs of `sig`, tupled as the `Fn*` traits take them, e.g. `(A, B, C)`.
+    tupled_inputs: ty::Ty<'tcx>,
     /// The captured variables, which together form the closure's state.
     upvar_tys: Vec<Ty<'tcx>>,
     inline: InlineAttr,
@@ -966,6 +996,11 @@ impl<'tcx> Closure<'tcx> {
     }
     pub fn sig(&self) -> &PolyFnSig<'tcx> {
         &self.sig
+    }
+    /// The inputs of `sig`, tupled as the `Fn*` traits take them, e.g. `(A, B, C)`. `s` must have
+    /// the closure as owner.
+    pub fn tupled_inputs<S: UnderOwnerState<'tcx>>(&self, s: &S) -> Ty<'tcx> {
+        self.tupled_inputs.sinto(s)
     }
     pub fn upvar_tys(&self) -> &[Ty<'tcx>] {
         &self.upvar_tys
@@ -1384,6 +1419,7 @@ where
                 },
                 inline: tcx.codegen_fn_attrs(def_id).inline.sinto(s),
                 sig: hax_sig,
+                tupled_inputs: ty::Ty::new_tup(tcx, sig.skip_binder().inputs()),
                 fn_trait_args: [closure_ty, input_ty],
                 upvar_tys: closure.upvar_tys().sinto(s),
             })
@@ -1902,10 +1938,9 @@ fn get_param_env<'tcx, S: UnderOwnerState<'tcx>>(
     parent: Option<ItemRef<'tcx>>,
 ) -> ParamEnv<'tcx> {
     let owner = s.owner();
-    let generics = owner.generics_of(s).sinto(s);
     match args {
         None => ParamEnv {
-            generics,
+            generics: owner.generics_of(s).sinto(s),
             late_bound: Binder::empty(),
             extra_early_regions: vec![],
             predicates: owner.required_predicates(s).sinto(s),
@@ -1915,9 +1950,9 @@ fn get_param_env<'tcx, S: UnderOwnerState<'tcx>>(
         // An instantiated item is monomorphic.
         Some(_) => ParamEnv {
             generics: TyGenerics {
+                parent: owner.generics_parent_and_count(s).0.sinto(s),
                 parent_count: 0,
                 params: Default::default(),
-                ..generics
             },
             late_bound: Binder::empty(),
             extra_early_regions: vec![],

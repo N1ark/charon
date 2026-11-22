@@ -455,6 +455,15 @@ impl DefId {
     /// Get the span of the definition of this item. This is the span used in diagnostics when
     /// referring to the item.
     pub fn def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
+        if let Some(span) = s.with_item_cache(self, |cache| cache.def_span) {
+            return span;
+        }
+        let span = self.compute_def_span(s);
+        s.with_item_cache(self, |cache| cache.def_span = Some(span));
+        span
+    }
+
+    fn compute_def_span<'tcx>(&self, s: &impl BaseState<'tcx>) -> Span {
         use DefKind::*;
         let tcx = s.base().tcx;
         match self.base {
@@ -541,17 +550,39 @@ impl DefId {
 
 impl DefId {
     pub fn can_have_generics<'tcx>(&self, s: &impl BaseState<'tcx>) -> bool {
-        let tcx = s.base().tcx;
+        use DefKind::*;
         match self.base {
-            DefIdBase::Real(def_id)
-            | DefIdBase::Promoted(def_id, ..)
-            | DefIdBase::ImplAssocItem(VirtualImplAssocItem {
-                item_decl_id: def_id,
-                ..
-            }) => can_have_generics(tcx, def_id),
+            DefIdBase::Real(..) | DefIdBase::Promoted(..) | DefIdBase::ImplAssocItem(..) => {
+                !matches!(
+                    self.kind,
+                    ConstParam
+                        | ExternCrate
+                        | ForeignMod
+                        | GlobalAsm
+                        | LifetimeParam
+                        | Macro(..)
+                        | Mod
+                        | TyParam
+                        | Use
+                )
+            }
             DefIdBase::Synthetic(synthetic) => synthetic.can_have_generics(s),
             DefIdBase::Alloc(..) => false,
         }
+    }
+
+    /// The `parent` and `count()` of `self.generics_of(s)`.
+    pub fn generics_parent_and_count<'tcx>(
+        &self,
+        s: &impl BaseState<'tcx>,
+    ) -> (Option<RDefId>, usize) {
+        if let Some(ret) = s.with_item_cache(self, |cache| cache.generics_parent_and_count) {
+            return ret;
+        }
+        let generics = self.generics_of(s);
+        let ret = (generics.parent, generics.count());
+        s.with_item_cache(self, |cache| cache.generics_parent_and_count = Some(ret));
+        ret
     }
 
     pub fn generics_of<'tcx>(&self, s: &impl BaseState<'tcx>) -> &'tcx ty::Generics {
@@ -618,9 +649,17 @@ impl DefId {
     pub fn identity_args<'tcx>(&self, s: &impl BaseState<'tcx>) -> ty::GenericArgsRef<'tcx> {
         let tcx = s.base().tcx;
         match self.base {
-            DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
-                    identity_args_with_inferred(tcx, def_id)
+            DefIdBase::Real(def_id) => {
+                if self.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &self.kind)
+                } else {
+                    ty::GenericArgsRef::default()
+                }
+            }
+            DefIdBase::Promoted(def_id, ..) => {
+                let parent: DefId = def_id.sinto(s);
+                if parent.can_have_generics(s) {
+                    identity_args_with_inferred(tcx, def_id, &parent.kind)
                 } else {
                     ty::GenericArgsRef::default()
                 }
@@ -636,6 +675,18 @@ impl DefId {
 
     /// The identity arguments, with any erased lifetimes replaced with placeholders regions.
     pub fn identity_args_with_extra_regions<'tcx>(
+        &self,
+        s: &impl UnderOwnerState<'tcx>,
+    ) -> (ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>) {
+        if let Some(cached) = s.with_item_cache(self, |cache| cache.identity_args.clone()) {
+            return cached;
+        }
+        let ret = self.compute_identity_args_with_extra_regions(s);
+        s.with_item_cache(self, |cache| cache.identity_args = Some(ret.clone()));
+        ret
+    }
+
+    fn compute_identity_args_with_extra_regions<'tcx>(
         &self,
         s: &impl UnderOwnerState<'tcx>,
     ) -> (ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>) {
@@ -662,7 +713,7 @@ impl DefId {
                 param_env_from_clauses(tcx, impl_predicates.chain(item_predicates))
             }
             DefIdBase::Real(def_id) | DefIdBase::Promoted(def_id, ..) => {
-                if can_have_generics(tcx, def_id) {
+                if self.can_have_generics(s) {
                     tcx.param_env(def_id)
                 } else {
                     ty::ParamEnv::empty()
