@@ -67,7 +67,7 @@ struct C<mut 'a> {
 }
 
 // Full name: test_crate::D
-struct D<'a> {
+struct D<mut 'a> {
   c: Option<Box<C<'a>>[{built_in impl MetaSized for C<'a>}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<C<'a>>[{built_in impl MetaSized for C<'a>}, {built_in impl Sized for Global}]}],
 }
 
