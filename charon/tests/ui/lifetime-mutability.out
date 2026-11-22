@@ -14,6 +14,17 @@ pub trait Sized<Self>
     non-dyn-compatible
 }
 
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T>
+where
+    TraitClause0: (T: Sized),
+{
+  None,
+  Some { _0: T },
+}
+
 // Full name: alloc::alloc::Global
 #[lang_item(GlobalAlloc)]
 pub struct Global {}
@@ -47,6 +58,28 @@ struct E<mut 'a, 'b> {
 // Full name: test_crate::F
 struct F<'a, mut 'b> {
   _0: E<'b, 'a>,
+}
+
+// Full name: test_crate::C
+struct C<mut 'a> {
+  d: Option<Box<D<'a>>[{built_in impl MetaSized for D<'a>}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<D<'a>>[{built_in impl MetaSized for D<'a>}, {built_in impl Sized for Global}]}],
+  x: &'a mut u32,
+}
+
+// Full name: test_crate::D
+struct D<'a> {
+  c: Option<Box<C<'a>>[{built_in impl MetaSized for C<'a>}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<C<'a>>[{built_in impl MetaSized for C<'a>}, {built_in impl Sized for Global}]}],
+}
+
+// Full name: test_crate::G
+struct G<mut 'a> {
+  h: Option<Box<H<'a>>[{built_in impl MetaSized for H<'a>}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<H<'a>>[{built_in impl MetaSized for H<'a>}, {built_in impl Sized for Global}]}],
+}
+
+// Full name: test_crate::H
+struct H<mut 'a> {
+  g: Option<Box<G<'a>>[{built_in impl MetaSized for G<'a>}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<G<'a>>[{built_in impl MetaSized for G<'a>}, {built_in impl Sized for Global}]}],
+  x: &'a mut u32,
 }
 
 
