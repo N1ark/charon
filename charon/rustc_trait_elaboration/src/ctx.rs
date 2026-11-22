@@ -3,13 +3,15 @@ use rustc_data_structures::sync::{Lock, LockGuard};
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
 use rustc_middle::traits::CodegenObligationError;
-use rustc_middle::ty;
-use rustc_trait_selection::traits::ImplSource;
+use rustc_middle::ty::{self, TypeVisitableExt};
+use rustc_trait_selection::traits::{BuiltinImplSource, ImplSource, ImplSourceUserDefinedData};
+use rustc_type_ir::Interner;
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
-    SearcherKey, ToPolyTraitRef, TraitProof, TraitProofContents, normalize_bound_val,
-    shallow_resolve_trait_ref,
+    SearcherKey, ToPolyTraitRef, TraitProof, TraitProofContents, erase_free_regions,
+    has_unnormalized_aliases, impl_may_apply, matching_impls, normalize_bound_val,
+    shallow_resolve_trait_ref, trait_ref_holds,
 };
 
 pub mod intern {
@@ -97,6 +99,9 @@ pub type ItemRefKey<'tcx, Id> = (Id, ty::GenericArgsRef<'tcx>, AssocItemResoluti
 
 pub(crate) type Selection<'tcx> = Result<ImplSource<'tcx, ()>, CodegenObligationError>;
 
+type ClausesByTrait<'tcx> = FxHashMap<DefId, Vec<Option<ty::TraitRef<'tcx>>>>;
+type MatchingImpls<'tcx> = Option<&'tcx [(DefId, ty::GenericArgsRef<'tcx>)]>;
+
 struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
@@ -108,6 +113,11 @@ struct ElaborationData<'tcx, Id: ItemId = DefId> {
     caller_bound_trefs: Lock<FxHashMap<ty::ParamEnv<'tcx>, FxHashSet<ty::PolyTraitRef<'tcx>>>>,
     /// The results of rustc's trait selection.
     selections: Lock<FxHashMap<(ty::ParamEnv<'tcx>, ty::PolyTraitRef<'tcx>), Selection<'tcx>>>,
+    /// The trait clauses of each environment and the ones they imply, by trait: their trait refs
+    /// with regions erased, or `None` if they may unify with trait refs they aren't equal to.
+    elaborated_trait_clauses: Lock<FxHashMap<ty::ParamEnv<'tcx>, &'tcx ClausesByTrait<'tcx>>>,
+    /// The impls that match each trait ref, see `matching_impls`.
+    matching_impls: Lock<FxHashMap<ty::PolyTraitRef<'tcx>, MatchingImpls<'tcx>>>,
     required_predicates: PredicateCache<'tcx, Id>,
     required_recursively_predicates: PredicateCache<'tcx, Id>,
     implied_predicates: PredicateCache<'tcx, Id>,
@@ -124,6 +134,8 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             concrete_trait_proofs: Default::default(),
             caller_bound_trefs: Default::default(),
             selections: Default::default(),
+            elaborated_trait_clauses: Default::default(),
+            matching_impls: Default::default(),
             required_predicates: Default::default(),
             required_recursively_predicates: Default::default(),
             implied_predicates: Default::default(),
@@ -309,6 +321,102 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         found
     }
 
+    /// Whether a where-clause of the environment, or one it implies, could prove `tref`, which is
+    /// normalized and erased. Without aliases or bound variables, a clause unifies with `tref`
+    /// exactly when they are equal modulo regions.
+    fn where_clause_may_apply(
+        &self,
+        param_env: ty::ParamEnv<'tcx>,
+        tref: ty::PolyTraitRef<'tcx>,
+    ) -> bool {
+        let tcx = self.tcx;
+        let found = self
+            .data
+            .elaborated_trait_clauses
+            .lock()
+            .get(&param_env)
+            .copied();
+        // Elaborating runs rustc queries, so we don't hold the lock meanwhile.
+        let clauses = found.unwrap_or_else(|| {
+            let mut clauses = ClausesByTrait::default();
+            for clause in rustc_type_ir::elaborate::elaborate(tcx, param_env.caller_bounds()) {
+                if let Some(clause) = clause.as_trait_clause() {
+                    let tref = (clause.polarity() == ty::ClausePolarity::Positive
+                        && clause.bound_vars().is_empty()
+                        && !clause.has_aliases())
+                    .then(|| erase_free_regions(tcx, clause.skip_binder().trait_ref));
+                    clauses.entry(clause.def_id()).or_default().push(tref);
+                }
+            }
+            let clauses = &*Box::leak(Box::new(clauses));
+            *self
+                .data
+                .elaborated_trait_clauses
+                .lock()
+                .entry(param_env)
+                .or_insert(clauses)
+        });
+        clauses.get(&tref.def_id()).is_some_and(|clauses| {
+            clauses
+                .iter()
+                .any(|clause| clause.is_none_or(|clause| clause == tref.skip_binder()))
+        })
+    }
+
+    fn matching_impls(&self, tref: ty::PolyTraitRef<'tcx>) -> MatchingImpls<'tcx> {
+        if let Some(found) = self.data.matching_impls.lock().get(&tref) {
+            return *found;
+        }
+        let found = matching_impls(self.tcx, tref).map(|impls| &*impls.leak());
+        self.data.matching_impls.lock().insert(tref, found);
+        found
+    }
+
+    /// Rustc's selection for a normalized and erased `tref` when a single candidate can prove it,
+    /// which we find without building the solver's proof tree: no where-clause or alias bound
+    /// applies, and either no impl applies, leaving builtin impls, or one impl applies and the trait
+    /// has no builtin impls.
+    fn select_single_candidate(
+        &self,
+        param_env: ty::ParamEnv<'tcx>,
+        tref: ty::PolyTraitRef<'tcx>,
+    ) -> Option<ImplSource<'tcx, ()>> {
+        let tcx = self.tcx;
+        let trait_def_id = tref.def_id();
+        if !tcx.next_trait_solver_globally()
+            || matches!(
+                tref.self_ty().skip_binder().kind(),
+                ty::Dynamic(..) | ty::Alias(..)
+            )
+            || tref.has_infer()
+            || tref.references_error()
+            || has_unnormalized_aliases(tref)
+            || tcx.trait_is_alias(trait_def_id)
+            || self.where_clause_may_apply(param_env, tref)
+        {
+            return None;
+        }
+        let impls = self.matching_impls(tref)?;
+        let mut applicable = impls.iter().filter(|(impl_def_id, impl_args)| {
+            impls.len() == 1 || impl_may_apply(tcx, param_env, *impl_def_id, impl_args)
+        });
+        let selection = match (applicable.next(), applicable.next()) {
+            (None, _) => ImplSource::Builtin(BuiltinImplSource::Misc, Default::default()),
+            (Some(&(impl_def_id, args)), None)
+                if tcx.as_trait_lang_item(trait_def_id).is_none()
+                    && !tcx.trait_is_auto(trait_def_id) =>
+            {
+                ImplSource::UserDefined(ImplSourceUserDefinedData {
+                    impl_def_id,
+                    args,
+                    nested: Default::default(),
+                })
+            }
+            _ => return None,
+        };
+        trait_ref_holds(tcx, param_env, tref).then_some(selection)
+    }
+
     /// Rustc's trait selection, cached.
     pub(crate) fn select(
         &self,
@@ -318,7 +426,10 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         if let Some(selection) = self.data.selections.lock().get(&(param_env, tref)) {
             return selection.clone();
         }
-        let selection = shallow_resolve_trait_ref(self.tcx, param_env, tref);
+        let selection = match self.select_single_candidate(param_env, tref) {
+            Some(selection) => Ok(selection),
+            None => shallow_resolve_trait_ref(self.tcx, param_env, tref),
+        };
         self.data
             .selections
             .lock()

@@ -837,6 +837,120 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
     }
 }
 
+/// The positive impls whose header unifies with `tref`, which is normalized and erased, with the
+/// arguments that make them match; `None` if we can't tell these. This doesn't depend on the
+/// environment, except through aliases: rigid aliases (which the environment can't normalize) only
+/// unify with themselves, so `tref` may have those, but we give up on impls whose header has
+/// aliases.
+pub(crate) fn matching_impls<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    tref: PolyTraitRef<'tcx>,
+) -> Option<Vec<(DefId, GenericArgsRef<'tcx>)>> {
+    use rustc_infer::infer::{DefineOpaqueTypes, TyCtxtInferExt};
+    use rustc_middle::traits::ObligationCause;
+
+    let tref = tref.skip_binder();
+    let infcx = tcx
+        .infer_ctxt()
+        .ignoring_regions()
+        .build(TypingMode::PostAnalysis);
+    let mut impls = Vec::new();
+    let unknown = tcx.for_each_relevant_impl(tref.def_id, tref.self_ty(), |impl_def_id| {
+        let impl_args = infcx.fresh_args_for_item(DUMMY_SP, impl_def_id);
+        let impl_tref = tcx
+            .impl_trait_ref(impl_def_id)
+            .instantiate(tcx, impl_args)
+            .skip_normalization();
+        if impl_tref.has_aliases() {
+            return ControlFlow::Break(());
+        }
+        let Ok(ok) = infcx.at(&ObligationCause::dummy(), ParamEnv::empty()).eq(
+            DefineOpaqueTypes::No,
+            impl_tref,
+            tref,
+        ) else {
+            return ControlFlow::Continue(());
+        };
+        let impl_args = infcx.deeply_resolve_ignoring_regions(impl_args);
+        if !ok.obligations.is_empty()
+            || impl_args.has_non_region_infer()
+            || tcx.impl_polarity(impl_def_id) != ty::ImplPolarity::Positive
+        {
+            return ControlFlow::Break(());
+        }
+        impls.push((impl_def_id, tcx.erase_and_anonymize_regions(impl_args)));
+        ControlFlow::Continue(())
+    });
+    unknown.is_continue().then_some(impls)
+}
+
+/// Whether the where-clauses of this impl may hold in this environment, modulo regions.
+pub(crate) fn impl_may_apply<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    param_env: ParamEnv<'tcx>,
+    impl_def_id: DefId,
+    impl_args: GenericArgsRef<'tcx>,
+) -> bool {
+    use rustc_infer::infer::TyCtxtInferExt;
+    use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
+    use rustc_trait_selection::traits::{Obligation, ObligationCause};
+    let infcx = tcx
+        .infer_ctxt()
+        .ignoring_regions()
+        .build(TypingMode::PostAnalysis);
+    tcx.clauses_of(impl_def_id)
+        .instantiate(tcx, impl_args)
+        .clauses
+        .into_iter()
+        .all(|clause| {
+            let obligation = Obligation::new(
+                tcx,
+                ObligationCause::dummy(),
+                param_env,
+                clause.skip_normalization(),
+            );
+            infcx.predicate_may_hold(&obligation)
+        })
+}
+
+/// Whether `value` has aliases that aren't marked rigid.
+pub(crate) fn has_unnormalized_aliases<'tcx>(value: impl TypeVisitable<TyCtxt<'tcx>>) -> bool {
+    struct Visitor;
+    impl<'tcx> TypeVisitor<TyCtxt<'tcx>> for Visitor {
+        type Result = ControlFlow<()>;
+        fn visit_ty(&mut self, ty: Ty<'tcx>) -> Self::Result {
+            if let ty::Alias(ty::IsRigid::No, _) = ty.kind() {
+                return ControlFlow::Break(());
+            }
+            ty.super_visit_with(self)
+        }
+        fn visit_const(&mut self, ct: ty::Const<'tcx>) -> Self::Result {
+            if let ty::ConstKind::Alias(ty::IsRigid::No, _) = ct.kind() {
+                return ControlFlow::Break(());
+            }
+            ct.super_visit_with(self)
+        }
+    }
+    value.has_aliases() && value.visit_with(&mut Visitor).is_break()
+}
+
+/// Whether the trait ref holds in this environment, modulo regions.
+pub(crate) fn trait_ref_holds<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    param_env: ParamEnv<'tcx>,
+    tref: PolyTraitRef<'tcx>,
+) -> bool {
+    use rustc_infer::infer::TyCtxtInferExt;
+    use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
+    use rustc_trait_selection::traits::{Obligation, ObligationCause};
+    let infcx = tcx
+        .infer_ctxt()
+        .ignoring_regions()
+        .build(TypingMode::PostAnalysis);
+    let obligation = Obligation::new(tcx, ObligationCause::dummy(), param_env, tref);
+    infcx.predicate_must_hold_modulo_regions(&obligation)
+}
+
 /// Attempts to resolve an obligation to an `ImplSource`. The result is a shallow `ImplSource`
 /// resolution, meaning that we do not resolve all nested obligations on the impl. Note that type
 /// check should guarantee to us that all nested obligations *could be* resolved if we wanted to.
