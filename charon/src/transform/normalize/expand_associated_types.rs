@@ -103,7 +103,7 @@ mod trait_ref_path {
     }
 
     /// A `TraitRef` represented as a path.
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct TraitRefPath {
         /// The base clause we start from.
         pub base: BaseClause,
@@ -268,7 +268,7 @@ mod trait_ref_path {
     }
 
     /// The path to an associated type that depends on a local clause.
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct AssocTypePath {
         /// The trait clause that has the associated type.
         pub tref: TraitRefPath,
@@ -484,6 +484,10 @@ mod type_constraint_set {
         /// Find the entry at that path from the trie, if it exists.
         pub fn find(&self, path: &AssocTypePath) -> Option<&Ty> {
             Some(self.find_ty_and_used_constraint(path)?.1)
+        }
+
+        pub fn is_empty(&self) -> bool {
+            self.clauses.is_empty()
         }
 
         pub fn iter(&self) -> impl Iterator<Item = (AssocTypePath, Ty)> {
@@ -982,6 +986,9 @@ struct UpdateItemBody<'a> {
     item_modifications: &'a HashMap<GenericsSource, ItemModifications>,
     // It's a reversed stack, for when we go under binders.
     type_replacements: BindingStack<TypeConstraintSet>,
+    /// The messages of the "could not compute" errors we reported under the current replacements,
+    /// keyed by the rest of what they mention. An item often hits the same error many times.
+    error_msgs: HashMap<(AssocTypePath, TraitRef, GenericsSource, GenericArgs), String>,
 }
 
 impl Visitor for UpdateItemBody<'_> {
@@ -990,9 +997,17 @@ impl Visitor for UpdateItemBody<'_> {
 
 impl UpdateItemBody<'_> {
     fn under_binder<R>(&mut self, repls: TypeConstraintSet, f: impl FnOnce(&mut Self) -> R) -> R {
+        // The messages in `error_msgs` list the replacements in scope.
+        let changes_replacements = !repls.is_empty();
+        if changes_replacements {
+            self.error_msgs.clear();
+        }
         self.type_replacements.push(repls);
         let ret = f(self);
         self.type_replacements.pop();
+        if changes_replacements {
+            self.error_msgs.clear();
+        }
         ret
     }
 
@@ -1155,21 +1170,28 @@ impl UpdateItemBody<'_> {
                             Either stop using this option or `--exclude` this trait."
                         );
                     } else {
-                        let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
-                        let base_tref = base_tref.with_ctx(fmt_ctx);
-                        let args = args.with_ctx(fmt_ctx);
-                        register_error!(
-                            self.ctx,
-                            self.span,
-                            "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
-                        item reference {item_name}{args}.\
-                        \nConstraints in scope:\n{}",
-                            self.type_replacements
-                                .iter()
-                                .flat_map(|x| x.iter())
-                                .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
-                                .join("\n"),
+                        let key = (
+                            path.clone(),
+                            base_tref.clone(),
+                            target.clone(),
+                            args.clone(),
                         );
+                        let msg = self.error_msgs.entry(key).or_insert_with(|| {
+                            let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
+                            let base_tref = base_tref.with_ctx(fmt_ctx);
+                            let args = args.with_ctx(fmt_ctx);
+                            format!(
+                                "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
+                            item reference {item_name}{args}.\
+                            \nConstraints in scope:\n{}",
+                                self.type_replacements
+                                    .iter()
+                                    .flat_map(|x| x.iter())
+                                    .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
+                                    .join("\n"),
+                            )
+                        });
+                        register_error!(self.ctx, self.span, "{msg}");
                     }
                 }
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
@@ -1576,6 +1598,7 @@ impl TransformPass for Transform {
                 is_type_alias,
                 item_modifications: &item_modifications,
                 type_replacements: BindingStack::new(type_replacements),
+                error_msgs: Default::default(),
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");
