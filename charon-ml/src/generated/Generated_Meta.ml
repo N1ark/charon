@@ -364,7 +364,9 @@ and rustc_linkage =
 
 and loc = {
   line : int;  (** The (1-based) line number. *)
-  col : int;  (** The (0-based) column offset. *)
+  col : int;
+      (** The (0-based) display column, as rustc computes it: the width of the
+          line before the position, with tabs counting for 4. *)
 }
 
 (** The id of a translated item or associated item definition. *)
