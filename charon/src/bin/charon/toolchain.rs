@@ -21,9 +21,27 @@ pub struct Toolchain {
 }
 
 impl Toolchain {
+    /// The directory where rustup installed this toolchain, if it did.
+    fn rustup_dir(&self) -> Option<PathBuf> {
+        let rustup_home = match env::var_os("RUSTUP_HOME") {
+            Some(dir) => PathBuf::from(dir),
+            None => env::home_dir()?.join(".rustup"),
+        };
+        let dir = rustup_home
+            .join("toolchains")
+            .join(format!("{}-{HOST_TARGET}", self.channel));
+        let rustc = dir
+            .join("bin")
+            .join(format!("rustc{}", env::consts::EXE_SUFFIX));
+        rustc.is_file().then_some(dir)
+    }
+
     fn is_installed(&self) -> Result<bool> {
         // FIXME: check if the right components are installed.
-        let output = self.run("rustc").arg("--version").output()?;
+        if self.rustup_dir().is_some() {
+            return Ok(true);
+        }
+        let output = self.run("rustc")?.arg("--version").output()?;
         Ok(output.status.success())
     }
 
@@ -44,7 +62,26 @@ impl Toolchain {
         Ok(())
     }
 
-    fn run(&self, program: impl AsRef<OsStr>) -> Command {
+    fn run(&self, program: impl AsRef<OsStr>) -> Result<Command> {
+        // On Linux, `rustup run` amounts to setting up the toolchain's environment, which we can do
+        // ourselves when we know where the toolchain is.
+        if cfg!(target_os = "linux")
+            && let Some(dir) = self.rustup_dir()
+        {
+            let prepend = |var: &str, path: PathBuf| {
+                let old = env::var_os(var);
+                env::join_paths(std::iter::once(path).chain(old.iter().flat_map(env::split_paths)))
+            };
+            let mut cmd = Command::new(program);
+            cmd.env("PATH", prepend("PATH", dir.join("bin"))?);
+            cmd.env(
+                "LD_LIBRARY_PATH",
+                prepend("LD_LIBRARY_PATH", dir.join("lib"))?,
+            );
+            cmd.env("RUSTUP_TOOLCHAIN", dir.file_name().unwrap());
+            return Ok(cmd);
+        }
+
         let mut cmd = Command::new("rustup");
         cmd.arg("run");
         cmd.arg(&self.channel);
@@ -58,7 +95,7 @@ impl Toolchain {
             cmd.env("RUSTUP_WINDOWS_PATH_ADD_BIN", "1");
         }
 
-        cmd
+        Ok(cmd)
     }
 }
 
@@ -107,7 +144,7 @@ pub fn in_toolchain(program: impl AsRef<OsStr>) -> Result<Command> {
             }
             *checked = true;
         }
-        toolchain.run(program)
+        toolchain.run(program)?
     };
     Ok(cmd)
 }
