@@ -486,6 +486,10 @@ mod type_constraint_set {
             Some(self.find_ty_and_used_constraint(path)?.1)
         }
 
+        pub fn is_empty(&self) -> bool {
+            self.clauses.is_empty()
+        }
+
         pub fn iter(&self) -> impl Iterator<Item = (AssocTypePath, Ty)> {
             let mut vec = vec![];
             for (base, inner) in &self.clauses {
@@ -986,6 +990,9 @@ struct UpdateItemBody<'a> {
     /// The error count when we started visiting this item.
     initial_error_count: usize,
     caches: &'a mut Caches,
+    /// The messages of the "could not compute" errors we reported under the current replacements,
+    /// keyed by the rest of what they mention. An item often hits the same error many times.
+    error_msgs: HashMap<(AssocTypePath, TraitRef, GenericsSource, GenericArgs), String>,
 }
 
 /// Caches for operations that walk whole types or trait refs; their inputs recur across items.
@@ -1034,9 +1041,17 @@ impl VisitorWithMemo for UpdateItemBody<'_> {
 
 impl UpdateItemBody<'_> {
     fn under_binder<R>(&mut self, repls: TypeConstraintSet, f: impl FnOnce(&mut Self) -> R) -> R {
+        // The messages in `error_msgs` list the replacements in scope.
+        let changes_replacements = !repls.is_empty();
+        if changes_replacements {
+            self.error_msgs.clear();
+        }
         self.type_replacements.push(repls);
         let ret = f(self);
         self.type_replacements.pop();
+        if changes_replacements {
+            self.error_msgs.clear();
+        }
         ret
     }
 
@@ -1197,28 +1212,32 @@ impl UpdateItemBody<'_> {
                         make use of unproved trait facts. To fix this, add the necessary \
                         trait bound to the type alias, ignoring the `type_alias_bounds` warning."
                     );
+                } else if self_path
+                    .as_ref()
+                    .is_some_and(|tref| tref.kind.is_item_clause())
+                {
+                    register_error!(
+                        self.ctx,
+                        self.span,
+                        "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
+                        Either stop using this option or `--exclude` this trait."
+                    );
                 } else {
-                    let path_fmt = path
-                        .on_real_tref(&self.ctx.translated, base_tref.clone())
-                        .map(|ty| ty.to_string_with_ctx(fmt_ctx))
-                        .unwrap_or_else(|| path_fmt.to_string());
-                    if self_path
-                        .as_ref()
-                        .is_some_and(|tref| tref.kind.is_item_clause())
-                    {
-                        register_error!(
-                            self.ctx,
-                            self.span,
-                            "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
-                            Either stop using this option or `--exclude` this trait."
-                        );
-                    } else {
+                    let key = (
+                        path.clone(),
+                        base_tref.clone(),
+                        target.clone(),
+                        args.clone(),
+                    );
+                    let msg = self.error_msgs.entry(key).or_insert_with(|| {
+                        let path_fmt = path
+                            .on_real_tref(&self.ctx.translated, base_tref.clone())
+                            .map(|ty| ty.to_string_with_ctx(fmt_ctx))
+                            .unwrap_or_else(|| path_fmt.to_string());
                         let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
                         let base_tref = base_tref.with_ctx(fmt_ctx);
                         let args = args.with_ctx(fmt_ctx);
-                        register_error!(
-                            self.ctx,
-                            self.span,
+                        format!(
                             "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
                         item reference {item_name}{args}.\
                         \nConstraints in scope:\n{}",
@@ -1227,8 +1246,9 @@ impl UpdateItemBody<'_> {
                                 .flat_map(|x| x.iter())
                                 .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
                                 .join("\n"),
-                        );
-                    }
+                        )
+                    });
+                    register_error!(self.ctx, self.span, "{msg}");
                 }
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
             };
@@ -1645,6 +1665,7 @@ impl TransformPass for Transform {
                 memo: &mut memo,
                 initial_error_count: ctx.errors.borrow().error_count,
                 caches: &mut caches,
+                error_msgs: Default::default(),
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");
