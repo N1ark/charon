@@ -1,9 +1,9 @@
 //@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
-//@[mono] known-failure
-//! The same parameter-free trait reference resolves to the local where-clause in an item that has
-//! it as a clause, and to the impl everywhere else. Charon caches the translation of
-//! parameter-free values across items, which must not mix these up.
+//! A trait reference without type or const parameters resolves to the impl, also in an item that
+//! has it as a where-clause, unless that where-clause mentions a lifetime parameter: then it
+//! resolves to the where-clause in that item. Charon caches the translation of parameter-free
+//! values across items, which must not mix these up.
 pub trait Tr {
     fn method(&self);
 }
