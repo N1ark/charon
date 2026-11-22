@@ -152,9 +152,12 @@ pub struct DepsForItem<'a> {
     ctx: &'a TransformCtx,
     deps: &'a mut Deps,
     current_id: ItemId,
-    // Each item countains its own id; we dont' want to count that as a self-reference. Hence the
-    // first time we see its own id, we skip.
-    seen_current_id: bool,
+    // Each item countains its own id; we dont' want to count that as a self-reference. Hence we
+    // skip the first occurrence of its own id.
+    current_id_occurrences: usize,
+    /// The hash-consed values we already explored, by address, with whether they mention
+    /// `current_id`.
+    explored: HashMap<*const (), bool>,
     // We use this to track the trait impl block the current item belongs to
     // (if relevant).
     //
@@ -212,8 +215,9 @@ impl Deps {
         let mut for_item = DepsForItem {
             ctx,
             deps: self,
-            seen_current_id: false,
             current_id,
+            current_id_occurrences: 0,
+            explored: HashMap::default(),
             parent_trait_impl: None,
             parent_trait_decl: None,
         };
@@ -266,11 +270,13 @@ impl DepsForItem<'_> {
     }
     fn insert_edge(&mut self, tgt: impl Into<ItemId>) {
         let tgt = tgt.into();
-        if tgt == self.current_id && !self.seen_current_id {
-            // Each item contains its own id; this is a hack to avoid considering that as a self
-            // loop.
-            self.seen_current_id = true;
-            return;
+        if tgt == self.current_id {
+            self.current_id_occurrences += 1;
+            if self.current_id_occurrences == 1 {
+                // Each item contains its own id; this is a hack to avoid considering that as a
+                // self loop.
+                return;
+            }
         }
         self.insert_node(tgt);
         // Only add translated items.
@@ -281,6 +287,25 @@ impl DepsForItem<'_> {
 }
 
 impl VisitAst for DepsForItem<'_> {
+    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+        &mut self,
+        value: &HashConsed<WithCachedTypeInfo<T>>,
+    ) -> ControlFlow<Self::Break> {
+        let addr = value.inner() as *const _ as *const ();
+        // Exploring a value again would only add edges we already have, except for self loops.
+        if let Some(&mentions_current_id) = self.explored.get(&addr) {
+            if mentions_current_id {
+                self.insert_edge(self.current_id);
+            }
+            return Continue(());
+        }
+        let occurrences_before = self.current_id_occurrences;
+        self.visit_inner(value)?;
+        let mentions_current_id = self.current_id_occurrences > occurrences_before;
+        self.explored.insert(addr, mentions_current_id);
+        Continue(())
+    }
+
     fn enter_type_decl_id(&mut self, id: &TypeDeclId) {
         self.insert_edge(*id);
     }
