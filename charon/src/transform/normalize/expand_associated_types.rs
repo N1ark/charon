@@ -1133,38 +1133,36 @@ impl UpdateItemBody<'_> {
                         make use of unproved trait facts. To fix this, add the necessary \
                         trait bound to the type alias, ignoring the `type_alias_bounds` warning."
                     );
+                } else if self_path
+                    .as_ref()
+                    .is_some_and(|tref| tref.kind.is_item_clause())
+                {
+                    register_error!(
+                        self.ctx,
+                        self.span,
+                        "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
+                        Either stop using this option or `--exclude` this trait."
+                    );
                 } else {
                     let path_fmt = path
                         .on_real_tref(&self.ctx.translated, base_tref.clone())
                         .map(|ty| ty.to_string_with_ctx(fmt_ctx))
                         .unwrap_or_else(|| path_fmt.to_string());
-                    if self_path
-                        .as_ref()
-                        .is_some_and(|tref| tref.kind.is_item_clause())
-                    {
-                        register_error!(
-                            self.ctx,
-                            self.span,
-                            "GATs cannot work with the `--lift-associated-types` option (implied by `--preset=aeneas`). \
-                            Either stop using this option or `--exclude` this trait."
-                        );
-                    } else {
-                        let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
-                        let base_tref = base_tref.with_ctx(fmt_ctx);
-                        let args = args.with_ctx(fmt_ctx);
-                        register_error!(
-                            self.ctx,
-                            self.span,
-                            "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
-                        item reference {item_name}{args}.\
-                        \nConstraints in scope:\n{}",
-                            self.type_replacements
-                                .iter()
-                                .flat_map(|x| x.iter())
-                                .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
-                                .join("\n"),
-                        );
-                    }
+                    let item_name = target.item_name(&self.ctx.translated, fmt_ctx);
+                    let base_tref = base_tref.with_ctx(fmt_ctx);
+                    let args = args.with_ctx(fmt_ctx);
+                    register_error!(
+                        self.ctx,
+                        self.span,
+                        "Could not compute the value of {path_fmt} (on {base_tref}) needed to update \
+                    item reference {item_name}{args}.\
+                    \nConstraints in scope:\n{}",
+                        self.type_replacements
+                            .iter()
+                            .flat_map(|x| x.iter())
+                            .map(|(path, ty)| format!("  - {path} = {}", ty.with_ctx(fmt_ctx)))
+                            .join("\n"),
+                    );
                 }
                 TyKind::Error(format!("Can't compute {path}")).into_ty()
             };
