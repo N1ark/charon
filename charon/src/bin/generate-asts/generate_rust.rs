@@ -202,7 +202,7 @@ impl RustcDatatypes {
             }
         }
 
-        let mut datatypes = SeqHashMap::new();
+        let mut datatypes = SeqHashMap::default();
         for (&path, datatype) in &self.datatypes {
             let ids = crate_data
                 .type_decls
