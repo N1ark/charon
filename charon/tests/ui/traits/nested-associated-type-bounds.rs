@@ -1,4 +1,3 @@
-//@ known-failure
 //! A bound on an associated type of an associated type: `T::A`'s bounds say that `<T::A as
 //! Iterator>::Item: Clone`, also when a where-clause proves `T::A: Iterator`.
 pub trait Tr {

@@ -1,13 +1,208 @@
-error: Error during trait resolution: Could not find a clause for `Binder { value: <<<T as Tr>::A as std::iter::Iterator>::Item as std::clone::Clone>, bound_vars: [] }` in the item parameters
-  --> tests/ui/traits/nested-associated-type-bounds.rs:16:5
-   |
-16 |     needs_clone(&x)
-   |     ^^^^^^^^^^^^^^^
+# Final LLBC before serialization:
 
-error: Error during trait resolution: Could not find a clause for `Binder { value: <<<T as Tr>::A as std::iter::Iterator>::Item as std::clone::Clone>, bound_vars: [] }` in the item parameters
-  --> tests/ui/traits/nested-associated-type-bounds.rs:16:5
-   |
-16 |     needs_clone(&x)
-   |     ^^^^^^^^^^^^^^^
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
 
-ERROR Charon failed to translate this code (2 errors)
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    fn clone<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::option::Option
+#[lang_item(Option)]
+#[diagnostic_item("Option")]
+pub enum Option<T>
+where
+    TraitClause0: (T: Sized),
+{
+  None,
+  Some { _0: T },
+}
+
+// Full name: core::iter::traits::iterator::Iterator
+#[lang_item(Iterator)]
+#[diagnostic_item("Iterator")]
+pub trait Iterator<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self::Item: Sized)
+    type Item
+    fn next<'_0_1, Outlives0: (Self: '_0_1)>;
+    vtable: core::iter::traits::iterator::Iterator::{vtable}<Self::Item>
+}
+
+struct () {}
+
+// Full name: core::marker::Destruct
+#[lang_item(Destruct)]
+pub trait Destruct<Self>
+{
+    fn drop_glue<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::mem::size_of
+#[diagnostic_item("mem_size_of")]
+pub fn size_of<T>() -> usize
+where
+    TraitClause0: (T: Sized),
+= <opaque>
+
+// Full name: core::panicking::panic_in_cleanup
+#[lang_item(PanicInCleanup)]
+fn panic_in_cleanup() -> !
+= <opaque>
+
+// Full name: test_crate::Tr
+pub trait Tr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self::A: Sized)
+    proof ImpliedClause2: (Self::A: Iterator)
+    proof ImpliedClause3: (Self::ImpliedClause2::Item: Clone)
+    type A
+    vtable: test_crate::Tr::{vtable}<Self::A>
+}
+
+// Full name: test_crate::needs_clone
+fn needs_clone<'_0, X>(_1: &'_0 X)
+where
+    TraitClause0: (X: Sized),
+    TraitClause1: (X: Clone),
+    Outlives0: (X: '_0),
+{
+    let mut _0: (); // return
+    let mut _1: &'1 X; // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    _0 = ()
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::direct
+pub fn direct<T>(x: TraitClause1::ImpliedClause2::Item)
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Tr),
+{
+    let mut _0: (); // return
+    let x: TraitClause1::ImpliedClause2::Item; // arg #1
+    let mut _2: &'1 TraitClause1::ImpliedClause2::Item; // anonymous local
+    let _3: &'2 TraitClause1::ImpliedClause2::Item; // anonymous local
+
+    storage_live(_0)
+    _0 = ()
+    storage_live(_2)
+    storage_live(_3)
+    _3 = &x
+    _2 = &(*_3) with_metadata(read _3.metadata)
+    _0 = needs_clone<'6, TraitClause1::ImpliedClause2::Item>[TraitClause1::ImpliedClause3::ImpliedClause0, TraitClause1::ImpliedClause3](move _2)
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause1::ImpliedClause2::Item}::drop_glue<'7>] x
+        ↳⚡ storage_dead(x)
+            unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_3)
+    conditional_drop[{built_in impl Destruct for TraitClause1::ImpliedClause2::Item}::drop_glue<'8>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::with_clause
+pub fn with_clause<T>(x: TraitClause2::Item)
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Tr),
+    TraitClause2: (TraitClause1::A: Iterator),
+{
+    let mut _0: (); // return
+    let x: TraitClause2::Item; // arg #1
+    let mut _2: &'1 TraitClause2::Item; // anonymous local
+    let _3: &'2 TraitClause2::Item; // anonymous local
+
+    storage_live(_0)
+    _0 = ()
+    storage_live(_2)
+    storage_live(_3)
+    _3 = &x
+    _2 = &(*_3) with_metadata(read _3.metadata)
+    _0 = needs_clone<'6, TraitClause2::Item>[TraitClause1::ImpliedClause3::ImpliedClause0, TraitClause1::ImpliedClause3](move _2)
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause2::Item}::drop_glue<'7>] x
+        ↳⚡ storage_dead(x)
+            unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_3)
+    conditional_drop[{built_in impl Destruct for TraitClause2::Item}::drop_glue<'8>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::with_clause_after
+pub fn with_clause_after<T>(x: TraitClause2::Item)
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Tr),
+    TraitClause2: (TraitClause1::A: Iterator),
+{
+    let mut _0: (); // return
+    let x: TraitClause2::Item; // arg #1
+    let mut _2: usize; // anonymous local
+    let mut _3: &'1 TraitClause2::Item; // anonymous local
+    let _4: &'2 TraitClause2::Item; // anonymous local
+
+    storage_live(_0)
+    _0 = ()
+    storage_live(_2)
+    _2 = size_of<TraitClause1::A>[TraitClause1::ImpliedClause1]()
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause2::Item}::drop_glue<'3>] x
+        ↳⚡ storage_dead(x)
+            unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_2)
+    storage_live(_3)
+    storage_live(_4)
+    _4 = &x
+    _3 = &(*_4) with_metadata(read _4.metadata)
+    _0 = needs_clone<'7, TraitClause2::Item>[TraitClause1::ImpliedClause3::ImpliedClause0, TraitClause1::ImpliedClause3](move _3)
+    ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause2::Item}::drop_glue<'3>] x
+        ↳⚡ storage_dead(x)
+            unwind_terminate(in_cleanup)
+        storage_dead(x)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_4)
+    conditional_drop[{built_in impl Destruct for TraitClause2::Item}::drop_glue<'8>] x
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(x)
+    return
+}
+
+
+
