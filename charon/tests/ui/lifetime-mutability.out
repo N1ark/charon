@@ -45,7 +45,7 @@ struct E<mut 'a, 'b> {
 }
 
 // Full name: test_crate::F
-struct F<mut 'a, 'b> {
+struct F<'a, mut 'b> {
   _0: E<'b, 'a>,
 }
 
