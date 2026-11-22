@@ -17,25 +17,30 @@ use crate::transform::ctx::{BodyTransformCtx, UllbcPass, UllbcStatementTransform
 use crate::ullbc_ast::*;
 
 /// Add a global holding `value`, named like the promoted constants of the current item, and return its place.
-/// `ptr_metadata` is the metadata of pointers to the global.
+/// `ptr_metadata` is the metadata of pointers to the global. `promoted_count` is the number of
+/// promoted constants of the current item, computed on first use.
 fn new_promoted_global(
     ctx: &mut UllbcStatementTransformCtx<'_>,
+    promoted_count: &mut Option<usize>,
     value: ConstantExpr,
     ptr_metadata: ConstantExpr,
 ) -> GlobalDeclRef {
     let krate = &mut ctx.ctx.translated;
     let id = ItemId::Fun(*ctx.def_id);
     let mut name = krate.item_names.get(&id).unwrap().clone();
-    let promoted_count = krate
-        .item_names
-        .values()
-        .filter_map(|n| n.name.split_last())
-        .filter(|(last, prefix)| {
-            matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
-                && *prefix == name.name.as_slice()
-        })
-        .count();
-    let disambiguator = Disambiguator::new(promoted_count);
+    let promoted_count = promoted_count.get_or_insert_with(|| {
+        krate
+            .item_names
+            .values()
+            .filter_map(|n| n.name.split_last())
+            .filter(|(last, prefix)| {
+                matches!(last, PathElem::Builtin(BuiltinPathElem::PromotedConst, _))
+                    && *prefix == name.name.as_slice()
+            })
+            .count()
+    });
+    let disambiguator = Disambiguator::new(*promoted_count);
+    *promoted_count += 1;
     name.name.push(PathElem::Builtin(
         BuiltinPathElem::PromotedConst,
         disambiguator,
@@ -68,6 +73,7 @@ fn new_promoted_global(
 /// The function is recursively called on the aggregate fields (e.g. here x and y).
 fn transform_constant_expr(
     ctx: &mut UllbcStatementTransformCtx<'_>,
+    promoted_count: &mut Option<usize>,
     mut val: ConstantExpr,
 ) -> Operand {
     let rval = match val.kind() {
@@ -114,7 +120,7 @@ fn transform_constant_expr(
                         ConstantExprKind::FnPtr(fn_ptr.clone()),
                         fn_ptr_ty.clone(),
                     );
-                    let fn_ptr = transform_constant_expr(ctx, fn_ptr);
+                    let fn_ptr = transform_constant_expr(ctx, promoted_count, fn_ptr);
                     let ptr_ty = TyKind::RawPtr(base.ty.clone(), RefKind::Shared).into_ty();
                     let cast = UnOp::Cast(CastKind::RawPtr(ptr_ty.clone()));
                     ctx.rval_to_place(Rvalue::UnaryOp(cast, fn_ptr), ptr_ty)
@@ -135,12 +141,13 @@ fn transform_constant_expr(
                             unreachable!("unexpected const metadata")
                         }
                     };
-                    let global_ref = new_promoted_global(ctx, bval.clone(), meta.clone());
+                    let global_ref =
+                        new_promoted_global(ctx, promoted_count, bval.clone(), meta.clone());
                     Place::new_global(global_ref, bval.ty().clone())
                 }
                 GlobalPlaceKind::Value(bval) => {
                     // Recurse on the borrowed value
-                    let bval = transform_constant_expr(ctx, bval.clone());
+                    let bval = transform_constant_expr(ctx, promoted_count, bval.clone());
 
                     // Evaluate the referenced value
                     let bval_ty = bval.ty().clone();
@@ -210,7 +217,7 @@ fn transform_constant_expr(
             if let Rvalue::Ref { ptr_metadata, .. } | Rvalue::RawPtr { ptr_metadata, .. } =
                 &mut rval
             {
-                transform_operand(ctx, ptr_metadata);
+                transform_operand(ctx, promoted_count, ptr_metadata);
             }
             rval
         }
@@ -222,7 +229,7 @@ fn transform_constant_expr(
             let fields = fields
                 .iter()
                 .cloned()
-                .map(|x| transform_constant_expr(ctx, x))
+                .map(|x| transform_constant_expr(ctx, promoted_count, x))
                 .collect();
 
             // Build an `Aggregate` rvalue.
@@ -236,7 +243,7 @@ fn transform_constant_expr(
             let fields = fields
                 .iter()
                 .cloned()
-                .map(|x| transform_constant_expr(ctx, x))
+                .map(|x| transform_constant_expr(ctx, promoted_count, x))
                 .collect_vec();
             let len = ConstantExpr::mk_usize(fields.len() as u128);
             Rvalue::Aggregate(
@@ -245,7 +252,7 @@ fn transform_constant_expr(
             )
         }
         ConstantExprKind::Cast(value, kind) => {
-            let value = transform_constant_expr(ctx, value.clone());
+            let value = transform_constant_expr(ctx, promoted_count, value.clone());
             if let TyKind::Ref(_, pointee, rk) = val.ty().kind() {
                 // Cast to the corresponding raw pointer, then reborrow it as a reference.
                 let raw_ty = TyKind::RawPtr(pointee.clone(), *rk).into_ty();
@@ -267,18 +274,22 @@ fn transform_constant_expr(
             let inner = GlobalPlace::new_global(vtable_ref.clone(), vtable_ty.clone());
             val.with_contents_mut(|kind, _| *kind = ConstantExprKind::Ref(inner, None));
             // Normalize further into a place access.
-            return transform_constant_expr(ctx, val);
+            return transform_constant_expr(ctx, promoted_count, val);
         }
         _ => return Operand::Const(val),
     };
     Operand::Move(ctx.rval_to_place(rval, val.ty().clone()))
 }
 
-fn transform_operand(ctx: &mut UllbcStatementTransformCtx<'_>, op: &mut Operand) {
+fn transform_operand(
+    ctx: &mut UllbcStatementTransformCtx<'_>,
+    promoted_count: &mut Option<usize>,
+    op: &mut Operand,
+) {
     // Transform the constant operands (otherwise do nothing)
     take_mut::take(op, |op| {
         if let Operand::Const(val) = op {
-            transform_constant_expr(ctx, val)
+            transform_constant_expr(ctx, promoted_count, val)
         } else {
             op
         }
@@ -292,13 +303,15 @@ impl UllbcPass for Transform {
     }
 
     fn transform_function(&self, ctx: &mut TransformCtx, fun_decl: &mut FunDecl) {
+        let mut promoted_count = None;
         fun_decl.transform_ullbc_statements(ctx, |ctx, st| {
             let assigns_const = matches!(
                 st.kind,
                 StatementKind::Assign(_, Rvalue::Use(Operand::Const(_), _))
             );
-            st.kind
-                .dyn_visit_in_body_mut(|op: &mut Operand| transform_operand(ctx, op));
+            st.kind.dyn_visit_in_body_mut(|op: &mut Operand| {
+                transform_operand(ctx, &mut promoted_count, op)
+            });
             // If we turned `x = const c` into `tmp = rval; x = move tmp`, assign `rval` directly.
             if assigns_const
                 && let StatementKind::Assign(_, rval) = &mut st.kind
@@ -312,8 +325,9 @@ impl UllbcPass for Transform {
             }
         });
         fun_decl.transform_ullbc_terminators(ctx, |ctx, term| {
-            term.kind
-                .dyn_visit_in_body_mut(|op: &mut Operand| transform_operand(ctx, op));
+            term.kind.dyn_visit_in_body_mut(|op: &mut Operand| {
+                transform_operand(ctx, &mut promoted_count, op)
+            });
         });
         if let Some(body) = fun_decl.body.as_unstructured_mut() {
             for block in body.body.iter_mut() {
