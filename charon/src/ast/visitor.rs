@@ -90,7 +90,7 @@ use derive_generic_visitor::*;
         u8,
         ullbc_ast::UnwindKind,
         usize,
-        ustr::Ustr,
+        Ustr,
     ),
     // Types that are completely skipped, even by `ZipAst`.
     skip(

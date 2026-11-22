@@ -5,7 +5,6 @@ use enum_as_inner::EnumAsInner;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_state::{DeserializeState, SerializeState};
-use ustr::Ustr;
 
 generate_index_type!(Disambiguator);
 
@@ -168,7 +167,7 @@ impl Name {
         Name {
             name: path
                 .iter()
-                .map(|elem| PathElem::Ident(Ustr::from(elem), Disambiguator::ZERO))
+                .map(|elem| PathElem::Ident(Ustr::from(*elem), Disambiguator::ZERO))
                 .collect(),
         }
     }

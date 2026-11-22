@@ -6,7 +6,6 @@ use crate::ast::*;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
-use ustr::Ustr;
 
 generate_index_type!(AsmOperandId, "AsmOperand");
 

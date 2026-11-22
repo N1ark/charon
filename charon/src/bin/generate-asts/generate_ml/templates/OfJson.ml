@@ -52,6 +52,9 @@ let dedup_val_of_json (tbl : 'a DedupTbl.t)
 
 let path_buf_of_json = string_of_json
 
+let ustr_of_json (ctx : of_json_ctx) (js : json) : (string, string) result =
+  dedup_val_of_json ctx.string_dedup_tbl string_of_json ctx js
+
 let big_int_of_json _ (js : json) : (big_int, string) result =
     combine_error_msgs js __FUNCTION__
       (match js with
