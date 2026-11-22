@@ -96,10 +96,7 @@ where
     _2 = &mut (*_1)
     _3 = impl_Drop_for_Foo::drop<'6, T>[TraitClause0](move _2)
     ↳⚡ drop[impl_Destruct_for_Vec::drop_glue<'7, T, Global>[TraitClause0, {built_in impl Sized for Global}]] (*_1).vec
-        ↳⚡ storage_dead(_3)
-            storage_dead(_2)
-            storage_dead(_1)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_3)
         storage_dead(_2)
         storage_dead(_1)

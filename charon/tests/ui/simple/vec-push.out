@@ -232,12 +232,7 @@ where
         _7 = &two-phase-mut (*self_1).buf
         _6 = grow_one<'13, T, A>[TraitClause0, TraitClause1, TraitClause2](move _7)
         ↳⚡ drop[{built_in impl Destruct for T}::drop_glue<'14>] value
-            ↳⚡ storage_dead(_13)
-                storage_dead(end)
-                storage_dead(_6)
-                storage_dead(value)
-                storage_dead(self_1)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(_13)
             storage_dead(end)
             storage_dead(_6)

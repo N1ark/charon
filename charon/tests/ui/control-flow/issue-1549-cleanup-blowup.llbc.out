@@ -132,21 +132,13 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     storage_live(_11)
     _11 = adds_an_unwind_edge()
     ↳⚡ conditional_drop[drop_glue<'0>] _d
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'1>] _c
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
@@ -154,21 +146,13 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     storage_live(_12)
     _12 = adds_an_unwind_edge()
     ↳⚡ conditional_drop[drop_glue<'0>] _d
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'1>] _c
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
@@ -176,21 +160,13 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     storage_live(_13)
     _13 = adds_an_unwind_edge()
     ↳⚡ conditional_drop[drop_glue<'0>] _d
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'1>] _c
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
@@ -198,21 +174,13 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     storage_live(_14)
     _14 = adds_an_unwind_edge()
     ↳⚡ conditional_drop[drop_glue<'0>] _d
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'1>] _c
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
@@ -220,39 +188,27 @@ pub fn cleanup_dag(fail: bool, tag: u8) -> u8
     _0 = const 7u8
     conditional_drop[drop_glue<'4>] _d
     ↳⚡ conditional_drop[drop_glue<'1>] _c
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
     storage_dead(_d)
     conditional_drop[drop_glue<'5>] _c
     ↳⚡ conditional_drop[drop_glue<'2>] _b
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue
     storage_dead(_c)
     conditional_drop[drop_glue<'6>] _b
     ↳⚡ conditional_drop[drop_glue<'3>] _a
-        ↳⚡ storage_dead(tag)
-            storage_dead(fail)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(tag)
         storage_dead(fail)
         unwind_continue

@@ -98,9 +98,7 @@ pub fn infinite_loop()
     loop {
         _2 = may_panic()
         ↳⚡ conditional_drop[drop_glue<'0>] _g
-            ↳⚡ storage_dead(_2)
-                storage_dead(_g)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(_2)
             storage_dead(_g)
             unwind_continue

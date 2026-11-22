@@ -122,13 +122,9 @@ where
     _5 = &x
     _3 = TraitClause2::eq<'6, '7>(move _4, move _5)
     ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -137,13 +133,9 @@ where
         storage_dead(_4)
         _0 = TraitClause0::other_method()
         ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-            ↳⚡ storage_dead(y)
-                storage_dead(x)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
-            ↳⚡ storage_dead(y)
-                storage_dead(x)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
             unwind_continue
@@ -155,9 +147,7 @@ where
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'10>] y
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'9>] x
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -214,9 +204,7 @@ where
     _5 = &x
     _3 = TraitClause3::eq<'6, '7>(move _4, move _5)
     ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -225,9 +213,7 @@ where
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_Override::other_method<T>[TraitClause0, TraitClause1]()
         ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-            ↳⚡ storage_dead(y)
-                storage_dead(x)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
             unwind_continue
@@ -304,13 +290,9 @@ where
     _5 = &x
     _3 = TraitClause3::eq<'6, '7>(move _4, move _5)
     ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue
@@ -319,13 +301,9 @@ where
         storage_dead(_4)
         _0 = impl_GenericTrait_Option_for_NoOverride::other_method<T>[TraitClause0, TraitClause1]()
         ↳⚡ conditional_drop[{built_in impl Destruct for U}::drop_glue<'8>] y
-            ↳⚡ storage_dead(y)
-                storage_dead(x)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
-            ↳⚡ storage_dead(y)
-                storage_dead(x)
-                unwind_terminate(in_cleanup)
+            ↳⚡ unwind_terminate(in_cleanup)
             storage_dead(y)
             storage_dead(x)
             unwind_continue
@@ -337,9 +315,7 @@ where
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for U}::drop_glue<'10>] y
     ↳⚡ conditional_drop[{built_in impl Destruct for Option<T>[TraitClause0]}::drop_glue<'9>] x
-        ↳⚡ storage_dead(y)
-            storage_dead(x)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(y)
         storage_dead(x)
         unwind_continue

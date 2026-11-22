@@ -124,26 +124,11 @@ where
     _3 = (move _4,)
     _0 = call<'5, Self>[TraitClause0](move _2, move _3)
     ↳⚡ conditional_drop[drop_glue<'6, TraitClause0::Item>] _3
-        ↳⚡ storage_dead(_5)
-            storage_dead(i)
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_dead(_6)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'8>] _4
-        ↳⚡ storage_dead(_5)
-            storage_dead(i)
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_dead(_6)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'10>] i
-        ↳⚡ storage_dead(_5)
-            storage_dead(i)
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_dead(_6)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_5)
         storage_dead(i)
         storage_dead(_8)
@@ -152,12 +137,7 @@ where
         unwind_continue
     conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'7>] _4
     ↳⚡ conditional_drop[{built_in impl Destruct for TraitClause0::Item}::drop_glue<'10>] i
-        ↳⚡ storage_dead(_5)
-            storage_dead(i)
-            storage_dead(_8)
-            storage_dead(_7)
-            storage_dead(_6)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_5)
         storage_dead(i)
         storage_dead(_8)

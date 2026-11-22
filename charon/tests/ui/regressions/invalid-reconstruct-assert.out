@@ -534,25 +534,6 @@ where
     }
 
     bb38 (terminate): {
-        storage_dead(_50);
-        storage_dead(_49);
-        storage_dead(_48);
-        storage_dead(_47);
-        storage_dead(_46);
-        storage_dead(_45);
-        storage_dead(_44);
-        storage_dead(_43);
-        storage_dead(_42);
-        storage_dead(_41);
-        storage_dead(_40);
-        storage_dead(_39);
-        storage_dead(_36);
-        storage_dead(_30);
-        storage_dead(_21);
-        storage_dead(_15);
-        storage_dead(base);
-        storage_dead(f);
-        storage_dead(self);
         unwind_terminate(in_cleanup);
     }
 

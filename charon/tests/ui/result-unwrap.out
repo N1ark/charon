@@ -71,11 +71,7 @@ where
     _3 = unsize_cast<&'9 (dyn Debug + '10), &vtable_of(TraitClause1)>(copy _4)
     _0 = unwrap_failed_inner<'20, '21>(move msg, move _3)
     ↳⚡ drop[{built_in impl Destruct for T}::drop_glue<'22>] error
-        ↳⚡ storage_dead(_4)
-            storage_dead(_3)
-            storage_dead(error)
-            storage_dead(msg)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(_4)
         storage_dead(_3)
         storage_dead(error)

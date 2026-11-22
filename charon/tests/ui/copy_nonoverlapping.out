@@ -532,10 +532,7 @@ pub fn panic_nounwind_fmt<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) ->
     storage_dead(_5)
     storage_dead(_4)
     _0 = core::panicking::panic_nounwind_fmt::runtime<'24>(move _3._0, move _3._1)
-    ↳⚡ storage_dead(_3)
-        storage_dead(force_no_backtrace)
-        storage_dead(fmt)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
 }
 
 // Full name: core::panicking::panic_nounwind
@@ -554,10 +551,7 @@ pub fn panic_nounwind(expr: &'static str) -> !
     storage_live(_4)
     _4 = copy expr
     _3 = from_str<'9>(move _4)
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(expr)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
     storage_dead(_4)
     _2 = panic_nounwind_fmt<'14>(move _3, const false)
     ↳⚡ undefined_behavior
@@ -594,11 +588,7 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
     storage_live(_3)
     _3 = copy align
     _2 = is_power_of_two(move _3)
-    ↳⚡ storage_dead(_6)
-        storage_dead(_5)
-        storage_dead(msg)
-        storage_dead(align)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
     if move _2 {
     } else {
         storage_dead(_3)
@@ -609,11 +599,7 @@ fn core::mem::alignment::{Alignment}::new_unchecked::precondition_check(align: u
         storage_live(_7)
         _7 = &(*msg) with_metadata(read msg.metadata)
         _6 = from_str<'7>(move _7)
-        ↳⚡ storage_dead(_6)
-            storage_dead(_5)
-            storage_dead(msg)
-            storage_dead(align)
-            unwind_terminate(abi)
+        ↳⚡ unwind_terminate(abi)
         storage_dead(_7)
         _5 = panic_nounwind_fmt<'12>(move _6, const false)
         ↳⚡ undefined_behavior

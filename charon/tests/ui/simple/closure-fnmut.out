@@ -88,8 +88,7 @@ where
     _3 = (const 0u8,)
     _0 = TraitClause1::call_mut<'3>(move _2, move _3)
     ↳⚡ conditional_drop[{built_in impl Destruct for T0}::drop_glue<'4>] f
-        ↳⚡ storage_dead(f)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(f)
         unwind_continue
     storage_dead(_3)
