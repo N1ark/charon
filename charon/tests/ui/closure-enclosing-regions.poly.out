@@ -4,30 +4,6 @@ error: Unexpected error: could not find the late-bound region variable LateParam
 11 |         let y: &'a u32 = x;
    |                ^^^^^^^
 
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::local_annotation, kind: Named(test_crate::local_annotation::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:11:16
-   |
-11 |         let y: &'a u32 = x;
-   |                ^^^^^^^
-
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::no_capture, kind: Named(test_crate::no_capture::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:19:16
-   |
-19 |         let _: Option<&'a u32> = None;
-   |                ^^^^^^^^^^^^^^^
-
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::no_capture, kind: Named(test_crate::no_capture::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:19:16
-   |
-19 |         let _: Option<&'a u32> = None;
-   |                ^^^^^^^^^^^^^^^
-
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::no_capture, kind: Named(test_crate::no_capture::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:19:16
-   |
-19 |         let _: Option<&'a u32> = None;
-   |                ^^^^^^^^^^^^^^^
-
 error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::no_capture, kind: Named(test_crate::no_capture::'a, "'a") }
   --> tests/ui/closure-enclosing-regions.rs:19:16
    |
@@ -40,29 +16,11 @@ error: Unexpected error: could not find the late-bound region variable LateParam
 27 |             let y: &'a u32 = x;
    |                    ^^^^^^^
 
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::nested, kind: Named(test_crate::nested::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:27:20
-   |
-27 |             let y: &'a u32 = x;
-   |                    ^^^^^^^
-
 error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::enclosing_closure::{closure#0}, kind: Named(test_crate::enclosing_closure::{closure#0}::'a, "'a") }
   --> tests/ui/closure-enclosing-regions.rs:38:20
    |
 38 |             let y: &'a u32 = x;
    |                    ^^^^^^^
-
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::enclosing_closure::{closure#0}, kind: Named(test_crate::enclosing_closure::{closure#0}::'a, "'a") }
-  --> tests/ui/closure-enclosing-regions.rs:38:20
-   |
-38 |             let y: &'a u32 = x;
-   |                    ^^^^^^^
-
-error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::mixed_regions, kind: Named(test_crate::mixed_regions::'late, "'late") }
-  --> tests/ui/closure-enclosing-regions.rs:52:23
-   |
-52 |             let late: &'late T = y;
-   |                       ^^^^^^^^
 
 error: Unexpected error: could not find the late-bound region variable LateParamRegion { scope: test_crate::mixed_regions, kind: Named(test_crate::mixed_regions::'late, "'late") }
   --> tests/ui/closure-enclosing-regions.rs:52:23
