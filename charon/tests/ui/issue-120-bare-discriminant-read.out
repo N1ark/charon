@@ -258,10 +258,7 @@ pub fn panic_nounwind_fmt<'_0>(fmt: Arguments<'_0>, force_no_backtrace: bool) ->
     storage_dead(_5)
     storage_dead(_4)
     _0 = core::panicking::panic_nounwind_fmt::runtime<'24>(move _3._0, move _3._1)
-    ↳⚡ storage_dead(_3)
-        storage_dead(force_no_backtrace)
-        storage_dead(fmt)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
 }
 
 // Full name: core::panicking::panic_nounwind
@@ -280,10 +277,7 @@ pub fn panic_nounwind(expr: &'static str) -> !
     storage_live(_4)
     _4 = copy expr
     _3 = from_str<'9>(move _4)
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(expr)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
     storage_dead(_4)
     _2 = panic_nounwind_fmt<'14>(move _3, const false)
     ↳⚡ undefined_behavior
@@ -318,10 +312,7 @@ pub fn panic_nounwind_nobacktrace(expr: &'static str) -> !
     storage_live(_4)
     _4 = copy expr
     _3 = from_str<'9>(move _4)
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(expr)
-        unwind_terminate(abi)
+    ↳⚡ unwind_terminate(abi)
     storage_dead(_4)
     _2 = panic_nounwind_fmt<'14>(move _3, const true)
     ↳⚡ undefined_behavior
@@ -381,8 +372,7 @@ where
     _3 = &(*_4)
     _2 = discriminant_value<'6, T>[TraitClause0](move _3)
     ↳⚡ drop[drop_glue<'7, T>[TraitClause0]] opt
-        ↳⚡ storage_dead(opt)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(opt)
         unwind_continue
     storage_dead(_3)
