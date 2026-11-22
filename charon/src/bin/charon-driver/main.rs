@@ -142,6 +142,8 @@ fn run_charon() -> Result<usize, CharonFailure> {
             }
         })?;
     }
+    // Freeing the translated crate takes a noticeable time; the OS reclaims it at exit anyway.
+    std::mem::forget(crate_data);
     charon_lib::timing::report(&crate_name);
 
     if options.error_on_warnings && error_count != 0 {
