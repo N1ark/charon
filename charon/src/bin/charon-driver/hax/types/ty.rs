@@ -43,12 +43,12 @@ impl<'tcx> Ty<'tcx> {
 
 impl<'tcx, S: UnderOwnerState<'tcx>> SInto<S, Ty<'tcx>> for rustc_middle::ty::Ty<'tcx> {
     fn sinto(&self, s: &S) -> Ty<'tcx> {
-        if let Some(ty) = s.with_cache(|cache| cache.tys.get(self).cloned()) {
+        if let Some(ty) = s.with_cache_for(*self, |cache| cache.tys.get(self).cloned()) {
             return ty;
         }
         let kind: TyKind<'tcx> = self.kind().sinto(s);
         let ty = Ty::new(s, kind);
-        s.with_cache(|cache| {
+        s.with_cache_for(*self, |cache| {
             cache.tys.insert(*self, ty.clone());
         });
         ty
