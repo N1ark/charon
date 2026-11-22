@@ -5,6 +5,7 @@ use rustc_middle::ty::{self, TyCtxt};
 mod base {
     use crate::hax::prelude::*;
     use itertools::Itertools;
+    use rustc_data_structures::fingerprint::Fingerprint;
     use rustc_hash::FxHashMap;
     use rustc_hir::def_id::{CrateNum, LOCAL_CRATE};
     use rustc_middle::ty;
@@ -45,6 +46,11 @@ mod base {
         /// Anonymous allocations we turned into globals, in encounter order. Used to keep
         /// the order of globals stable across runs.
         pub anon_allocs: indexmap::IndexSet<RAllocId, rustc_hash::FxBuildHasher>,
+        /// The allocation whose global stands for each immutable anonymous allocation, see
+        /// `DefId::make_anon_alloc`.
+        pub anon_alloc_classes: HashMap<RAllocId, RAllocId>,
+        /// The first immutable anonymous allocation we saw with each contents and type.
+        pub anon_alloc_by_contents: HashMap<Fingerprint, RAllocId>,
         /// The types at which we view anonymous allocations.
         pub alloc_types: rustc_const_uneval::AllocTypes<'tcx>,
         /// Cached names and disambiguators for crate names.

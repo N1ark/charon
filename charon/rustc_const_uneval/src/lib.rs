@@ -33,9 +33,8 @@ pub struct Config {
 }
 
 /// How we view an anonymous allocation
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 enum AllocView<'tcx> {
-    #[default]
     Untyped,
     Typed(Ty<'tcx>),
 }
