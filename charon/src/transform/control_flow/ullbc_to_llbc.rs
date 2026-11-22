@@ -24,7 +24,7 @@ use std::mem;
 use crate::ids::IndexVec;
 use crate::llbc_ast::{self as tgt, StatementId};
 use crate::transform::TransformCtx;
-use crate::transform::ctx::TransformPass;
+use crate::transform::ctx::LlbcPass;
 use crate::ullbc_ast::{self as src, BlockId};
 use crate::utils::{DfsWithPath, ensure_sufficient_stack};
 use crate::{ast::*, register_error};
@@ -1397,11 +1397,10 @@ fn translate_body(ctx: &mut TransformCtx, body: &mut Body) {
 }
 
 pub struct Transform;
-impl TransformPass for Transform {
-    fn transform_ctx(&self, ctx: &mut TransformCtx) {
-        // Translate the bodies one at a time.
-        ctx.for_each_body(|ctx, body| {
-            translate_body(ctx, body);
-        });
+impl LlbcPass for Transform {
+    fn transform_function(&self, ctx: &mut TransformCtx, decl: &mut FunDecl) {
+        if decl.body.has_contents() {
+            translate_body(ctx, &mut decl.body);
+        }
     }
 }
