@@ -240,21 +240,34 @@ pub fn run_transformation_passes(options: &CliOpts, ctx: &mut TransformCtx) {
 
     if !options.ullbc {
         // Go from ULLBC to LLBC (Low-Level Borrow Calculus) by reconstructing the control flow.
-        ctx.run_pass(mixed_body(&control_flow::ullbc_to_llbc::Transform));
-        ctx.run_pass(print(
-            options.print_built_llbc,
-            PrintOutput::Stderr,
-            "# LLBC resulting from control-flow reconstruction",
-        ));
+        let reconstruct: CowBox<dyn LlbcPass> =
+            CowBox::Borrowed(&control_flow::ullbc_to_llbc::Transform);
         // Body cleanup passes after control flow reconstruction.
-        let pass = Pass::FusedStructuredBody(Box::new([
+        let cleanups: [CowBox<dyn LlbcPass>; 2] = [
             // Cleanup the cfg.
             CowBox::Borrowed(&control_flow::prettify_cfg::Transform),
             // Replace some operations and array/slice indexing with standard library function
             // calls.
             simplify_output::builtins_to_function_calls::Transform::new(ctx),
-        ]));
-        ctx.run_pass(pass);
+        ];
+        if options.print_built_llbc {
+            ctx.run_pass(Pass::FusedStructuredBody(Box::new([reconstruct])));
+            ctx.run_pass(print(
+                true,
+                PrintOutput::Stderr,
+                "# LLBC resulting from control-flow reconstruction",
+            ));
+            ctx.run_pass(Pass::FusedStructuredBody(Box::new(cleanups)));
+        } else {
+            // Clean up each body right after reconstructing it, so that we never hold all the
+            // freshly reconstructed bodies at once.
+            let [prettify, builtins] = cleanups;
+            ctx.run_pass(Pass::FusedStructuredBody(Box::new([
+                reconstruct,
+                prettify,
+                builtins,
+            ])));
+        }
     }
     // Cleanup passes useful for both llbc and ullbc.
     ctx.run_passes([
