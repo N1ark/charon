@@ -395,7 +395,7 @@ impl<'tcx> ParamEnv<'tcx> {
             generics: TyGenerics {
                 parent: parent.map(|p| p.def_id.clone()),
                 parent_count: parent
-                    .map(|parent| parent.def_id.generics_of(s).count())
+                    .map(|parent| parent.def_id.generics_parent_and_count(s).1)
                     .unwrap_or(0),
                 params: vec![],
             },

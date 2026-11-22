@@ -271,8 +271,9 @@ impl<'tcx> ItemRef<'tcx> {
             | DefKind::AnonConst
             | DefKind::PromotedConst => {
                 let tcx = s.base().tcx;
-                let parent = self.def_id.generics_of(s).parent?.sinto(s);
-                let parent_args = self.rustc_args(s).truncate_to(tcx, parent.generics_of(s));
+                let parent: DefId = self.def_id.generics_parent_and_count(s).0?.sinto(s);
+                let (_, parent_count) = parent.generics_parent_and_count(s);
+                let parent_args = tcx.mk_args(&self.rustc_args(s)[..parent_count]);
                 Some(ItemRef::translate_from_hax_def_id(s, parent, parent_args))
             }
             DefKind::Ctor(..) | DefKind::Variant => {

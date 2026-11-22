@@ -112,6 +112,14 @@ mod base {
         pub trait_proofs: HashMap<ty::PolyTraitRef<'tcx>, crate::hax::traits::TraitProof<'tcx>>,
         /// Generics for this item, if it is virtual.
         pub virtual_generics: Option<&'tcx ty::Generics>,
+        /// See [`DefId::def_span`].
+        pub def_span: Option<Span>,
+        /// See [`DefId::generics_parent_and_count`].
+        pub generics_parent_and_count: Option<(Option<RDefId>, usize)>,
+        /// See [`UnderOwnerState::param_env`].
+        pub param_env: Option<ty::ParamEnv<'tcx>>,
+        /// See [`DefId::identity_args_with_extra_regions`].
+        pub identity_args: Option<(ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>)>,
     }
 
     #[derive(Clone)]
@@ -212,10 +220,15 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner(&self) -> DefId;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
-        self.owner().param_env(self)
+        if let Some(param_env) = self.with_cache(|cache| cache.param_env) {
+            return param_env;
+        }
+        let param_env = self.owner().param_env(self);
+        self.with_cache(|cache| cache.param_env = Some(param_env));
+        param_env
     }
     fn typing_env(&self) -> ty::TypingEnv<'tcx> {
-        self.owner().typing_env(self)
+        ty::TypingEnv::new(self.param_env(), ty::TypingMode::PostAnalysis)
     }
 
     fn as_state_with_owner(&self) -> StateWithOwner<'tcx> {
