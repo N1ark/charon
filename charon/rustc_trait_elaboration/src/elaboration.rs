@@ -100,19 +100,44 @@ pub struct PredicateSearcher<'tcx, Id: ItemId = DefId> {
     pub(crate) has_no_concrete_clauses: bool,
 }
 
-impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
-    /// Initialize the elaborator with the predicates accessible within this item.
-    pub fn new_for_owner(
+/// What the predicate searcher of an item depends on: its environment, the implicit `Self: Trait`
+/// clause of trait items, and its trait clauses with their ids. Items with the same key, e.g. the
+/// methods of an impl that don't add where-clauses, share a searcher.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SearcherKey<'tcx, Id: ItemId = DefId> {
+    param_env: ParamEnv<'tcx>,
+    self_pred: Option<PolyTraitRef<'tcx>>,
+    trait_clauses: Vec<(ItemPredicateId<Id>, PolyTraitRef<'tcx>)>,
+}
+
+impl<'tcx, Id: ItemId> SearcherKey<'tcx, Id> {
+    pub fn for_owner(
         elab_ctx: ElaborationCtx<'tcx, Id>,
         state: &Id::State<'tcx>,
-        owner_id: Id,
+        owner_id: &Id,
     ) -> Self {
-        let initial_self_pred = initial_self_pred(state, &owner_id);
+        Self {
+            param_env: owner_id.param_env(state),
+            self_pred: initial_self_pred(state, owner_id),
+            trait_clauses: ItemPredicates::required_recursively(elab_ctx, state, owner_id.clone())
+                .iter_trait_clauses()
+                .collect(),
+        }
+    }
+}
+
+impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
+    /// Initialize the elaborator with the predicates accessible within an item.
+    pub fn new(
+        elab_ctx: ElaborationCtx<'tcx, Id>,
+        state: &Id::State<'tcx>,
+        key: &SearcherKey<'tcx, Id>,
+    ) -> Self {
         let mut out = Self {
             elab_ctx,
-            typing_env: TypingEnv::new(owner_id.param_env(state), TypingMode::PostAnalysis),
+            typing_env: TypingEnv::new(key.param_env, TypingMode::PostAnalysis),
             candidates: Default::default(),
-            implicit_self_clause: initial_self_pred.is_some(),
+            implicit_self_clause: key.self_pred.is_some(),
             item_refs_cache: Default::default(),
             trait_proofs_cache: Default::default(),
             has_no_concrete_clauses: false,
@@ -120,14 +145,17 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         out.has_no_concrete_clauses = !out.has_concrete_clauses();
         out.insert_predicates(
             state,
-            initial_self_pred.map(|clause| ItemClause {
+            key.self_pred.map(|clause| ItemClause {
                 id: ItemPredicateId::TraitSelf,
                 clause,
             }),
         );
-        out.insert_bound_predicates(
+        out.insert_predicates(
             state,
-            ItemPredicates::required_recursively(elab_ctx, state, owner_id).predicates,
+            key.trait_clauses.iter().map(|(id, clause)| ItemClause {
+                id: id.clone(),
+                clause: *clause,
+            }),
         );
         out
     }

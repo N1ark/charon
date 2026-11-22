@@ -6,7 +6,7 @@ use std::cell::{RefCell, RefMut};
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
-    TraitProof, TraitProofContents,
+    SearcherKey, TraitProof, TraitProofContents,
 };
 
 pub mod intern {
@@ -98,7 +98,7 @@ pub type ItemRefKey<'tcx, Id> = (Id, ty::GenericArgs<'tcx>, AssocItemResolution)
 struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
-    predicate_searchers: RefCell<FxHashMap<Id, PredicateSearcher<'tcx, Id>>>,
+    predicate_searchers: RefCell<PredicateSearchers<'tcx, Id>>,
     concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
     concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
     required_predicates: PredicateCache<'tcx, Id>,
@@ -117,6 +117,24 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             required_predicates: Default::default(),
             required_recursively_predicates: Default::default(),
             implied_predicates: Default::default(),
+        }
+    }
+}
+
+/// The predicate searchers of the items we've seen. Items with the same `SearcherKey` share a
+/// searcher, and thus the resolutions it caches.
+struct PredicateSearchers<'tcx, Id: ItemId> {
+    of_item: FxHashMap<Id, usize>,
+    of_key: FxHashMap<SearcherKey<'tcx, Id>, usize>,
+    searchers: Vec<PredicateSearcher<'tcx, Id>>,
+}
+
+impl<'tcx, Id: ItemId> Default for PredicateSearchers<'tcx, Id> {
+    fn default() -> Self {
+        Self {
+            of_item: Default::default(),
+            of_key: Default::default(),
+            searchers: Default::default(),
         }
     }
 }
@@ -199,23 +217,26 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         state: &Id::State<'tcx>,
         def_id: Id,
     ) -> RefMut<'_, PredicateSearcher<'tcx, Id>> {
-        self.predicate_searcher_for_with(def_id.clone(), || {
-            PredicateSearcher::new_for_owner(*self, state, def_id)
-        })
-    }
-
-    pub fn predicate_searcher_for_with(
-        &self,
-        def_id: Id,
-        make: impl FnOnce() -> PredicateSearcher<'tcx, Id>,
-    ) -> RefMut<'_, PredicateSearcher<'tcx, Id>> {
-        let mut predicate_searchers = self.data.predicate_searchers.borrow_mut();
-        predicate_searchers
-            .entry(def_id.clone())
-            .or_insert_with(make);
-        RefMut::map(predicate_searchers, |predicate_searchers| {
-            predicate_searchers.get_mut(&def_id).unwrap()
-        })
+        let mut searchers = self.data.predicate_searchers.borrow_mut();
+        let index = match searchers.of_item.get(&def_id) {
+            Some(&index) => index,
+            None => {
+                let key = SearcherKey::for_owner(*self, state, &def_id);
+                let index = match searchers.of_key.get(&key) {
+                    Some(&index) => index,
+                    None => {
+                        let index = searchers.searchers.len();
+                        let searcher = PredicateSearcher::new(*self, state, &key);
+                        searchers.searchers.push(searcher);
+                        searchers.of_key.insert(key, index);
+                        index
+                    }
+                };
+                searchers.of_item.insert(def_id, index);
+                index
+            }
+        };
+        RefMut::map(searchers, |searchers| &mut searchers.searchers[index])
     }
 
     pub(crate) fn cached_required_predicates(
