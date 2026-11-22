@@ -156,6 +156,8 @@ pub struct TranslateCtx<'tcx> {
     /// In mono mode, the translations of the types that translate the same in every item, with the
     /// dependencies that their translation registered.
     pub mono_type_cache: HashMap<hax::Ty<'tcx>, (Ty, Vec<(ItemId, bool)>)>,
+    /// The `DefId`s of the intrinsics we resolved by name.
+    pub intrinsic_def_ids: HashMap<rustc_span::Symbol, RDefId>,
 }
 
 /// The functions exported under a given symbol.
