@@ -353,8 +353,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             new_candidates.into_iter().flat_map(|candidate| {
                 let def_id = Id::from_rust_def_id(state, candidate.pred.def_id());
                 ItemPredicates::implied(elab_ctx, state, def_id)
-                    .predicates
-                    .into_iter()
+                    .iter()
                     .filter(|pred| pred.clause.as_trait_clause().is_some())
                     .enumerate()
                     .map(|(index, pred)| {
@@ -745,7 +744,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
     pub fn resolve_predicates<PredicateId: Clone>(
         &mut self,
         state: &Id::State<'tcx>,
-        predicates: ItemPredicates<'tcx, PredicateId>,
+        predicates: &ItemPredicates<'tcx, PredicateId>,
         generics: GenericArgsRef<'tcx>,
     ) -> Vec<TraitProof<'tcx, Id>> {
         let tcx = self.elab_ctx.tcx;

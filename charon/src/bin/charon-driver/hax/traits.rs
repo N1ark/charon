@@ -244,7 +244,7 @@ pub fn solve_item_implied_traits<'tcx, S: UnderOwnerState<'tcx>>(
 fn solve_item_traits_inner<'tcx, S: UnderOwnerState<'tcx>>(
     s: &S,
     generics: ty::GenericArgsRef<'tcx>,
-    predicates: ItemPredicates<'tcx, DefId>,
+    predicates: &ItemPredicates<'tcx, DefId>,
 ) -> Vec<TraitProof<'tcx>> {
     let tcx = s.base().tcx;
     let typing_env = s.typing_env();
