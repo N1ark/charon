@@ -146,7 +146,7 @@ pub struct Local {
     /// `let x: Self = ...;` produces a `x == Self` constraint.
     pub borrowck_constraints: Vec<PlaceTypeConstraint>,
     /// If this local is a drop flag, this is the place whose initialization state it tracks.
-    pub drop_flag_for: Option<Place>,
+    pub drop_flag_for: Option<Box<Place>>,
 }
 
 /// An expression body.
@@ -211,7 +211,7 @@ pub enum FnOperand {
     /// Regular case: call to a top-level function, trait method, etc.
     Regular(FnPtr),
     /// Call through a function pointer, instantiated with the given regions.
-    Dynamic(Operand, RegionArgs),
+    Dynamic(Box<Operand>, RegionArgs),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -348,15 +348,21 @@ pub struct Assert {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub enum BuiltinAssertKind {
-    BoundsCheck { len: Operand, index: Operand },
-    Overflow(BinOp, Operand, Operand),
-    OverflowNeg(Operand),
-    DivisionByZero(Operand),
-    RemainderByZero(Operand),
-    MisalignedPointerDereference { required: Operand, found: Operand },
+    BoundsCheck {
+        len: Box<Operand>,
+        index: Box<Operand>,
+    },
+    Overflow(BinOp, Box<Operand>, Box<Operand>),
+    OverflowNeg(Box<Operand>),
+    DivisionByZero(Box<Operand>),
+    RemainderByZero(Box<Operand>),
+    MisalignedPointerDereference {
+        required: Box<Operand>,
+        found: Box<Operand>,
+    },
     NullPointerDereference,
     NullReferenceCreated,
-    InvalidEnumConstruction(Operand),
+    InvalidEnumConstruction(Box<Operand>),
     ResumedAfterReturn,
     ResumedAfterPanic,
     ResumedAfterDrop,

@@ -393,35 +393,35 @@ and builtin_assert_kind_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("BoundsCheck", `Assoc [ ("len", len); ("index", index) ]) ] ->
-        let* len = operand_of_json ctx len in
-        let* index = operand_of_json ctx index in
+        let* len = box_of_json operand_of_json ctx len in
+        let* index = box_of_json operand_of_json ctx index in
         Ok (BoundsCheck (len, index))
     | `Assoc [ ("Overflow", `List [ _0; _1; _2 ]) ] ->
         let* _0 = binop_of_json ctx _0 in
-        let* _1 = operand_of_json ctx _1 in
-        let* _2 = operand_of_json ctx _2 in
+        let* _1 = box_of_json operand_of_json ctx _1 in
+        let* _2 = box_of_json operand_of_json ctx _2 in
         Ok (Overflow (_0, _1, _2))
     | `Assoc [ ("OverflowNeg", _0) ] ->
-        let* _0 = operand_of_json ctx _0 in
+        let* _0 = box_of_json operand_of_json ctx _0 in
         Ok (OverflowNeg _0)
     | `Assoc [ ("DivisionByZero", _0) ] ->
-        let* _0 = operand_of_json ctx _0 in
+        let* _0 = box_of_json operand_of_json ctx _0 in
         Ok (DivisionByZero _0)
     | `Assoc [ ("RemainderByZero", _0) ] ->
-        let* _0 = operand_of_json ctx _0 in
+        let* _0 = box_of_json operand_of_json ctx _0 in
         Ok (RemainderByZero _0)
     | `Assoc
         [
           ( "MisalignedPointerDereference",
             `Assoc [ ("required", required); ("found", found) ] );
         ] ->
-        let* required = operand_of_json ctx required in
-        let* found = operand_of_json ctx found in
+        let* required = box_of_json operand_of_json ctx required in
+        let* found = box_of_json operand_of_json ctx found in
         Ok (MisalignedPointerDereference (required, found))
     | `String "NullPointerDereference" -> Ok NullPointerDereference
     | `String "NullReferenceCreated" -> Ok NullReferenceCreated
     | `Assoc [ ("InvalidEnumConstruction", _0) ] ->
-        let* _0 = operand_of_json ctx _0 in
+        let* _0 = box_of_json operand_of_json ctx _0 in
         Ok (InvalidEnumConstruction _0)
     | `String "ResumedAfterReturn" -> Ok ResumedAfterReturn
     | `String "ResumedAfterPanic" -> Ok ResumedAfterPanic
@@ -466,8 +466,8 @@ and byte_of_json (ctx : of_json_ctx) (js : json) : (byte, string) result =
         let* _0 = int_of_json ctx _0 in
         Ok (Value _0)
     | `Assoc [ ("Provenance", `List [ _0; _1; _2 ]) ] ->
-        let* _0 = global_provenance_of_json ctx _0 in
-        let* _1 = integer_value_of_json ctx _1 in
+        let* _0 = box_of_json global_provenance_of_json ctx _0 in
+        let* _1 = box_of_json integer_value_of_json ctx _1 in
         let* _2 = int_of_json ctx _2 in
         Ok (Provenance (_0, _1, _2))
     | _ -> Error "")
@@ -799,7 +799,7 @@ and fn_operand_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = fn_ptr_of_json ctx _0 in
         Ok (FnOpRegular _0)
     | `Assoc [ ("Dynamic", `List [ _0; _1 ]) ] ->
-        let* _0 = operand_of_json ctx _0 in
+        let* _0 = box_of_json operand_of_json ctx _0 in
         let* _1 = region_args_of_json ctx _1 in
         Ok (FnOpDynamic (_0, _1))
     | _ -> Error "")
@@ -1812,7 +1812,7 @@ and unsizing_metadata_of_json (ctx : of_json_ctx) (js : json) :
         let* _0 = constant_expr_of_json ctx _0 in
         Ok (MetaLength _0)
     | `Assoc [ ("VTable", `List [ _0; _1 ]) ] ->
-        let* _0 = poly_trait_ref_of_json ctx _0 in
+        let* _0 = box_of_json poly_trait_ref_of_json ctx _0 in
         let* _1 = constant_expr_of_json ctx _1 in
         Ok (MetaVTable (_0, _1))
     | `Assoc [ ("VTableUpcast", _0) ] ->
@@ -2026,7 +2026,7 @@ module Ullbc = struct
                   ("on_unwind", on_unwind);
                 ] );
           ] ->
-          let* asm = inline_asm_of_json ctx asm in
+          let* asm = box_of_json inline_asm_of_json ctx asm in
           let* fallthrough = option_of_json block_id_of_json ctx fallthrough in
           let* labels =
             index_vec_of_json branch_id_of_json block_id_of_json ctx labels
@@ -2196,7 +2196,7 @@ module Llbc = struct
                   ("on_unwind", on_unwind);
                 ] );
           ] ->
-          let* asm = inline_asm_of_json ctx asm in
+          let* asm = box_of_json inline_asm_of_json ctx asm in
           let* fallthrough = option_of_json block_of_json ctx fallthrough in
           let* labels =
             index_vec_of_json branch_id_of_json block_of_json ctx labels
@@ -3570,7 +3570,9 @@ and local_of_json (ctx : of_json_ctx) (js : json) : (local, string) result =
         let* borrowck_constraints =
           list_of_json place_type_constraint_of_json ctx borrowck_constraints
         in
-        let* drop_flag_for = option_of_json place_of_json ctx drop_flag_for in
+        let* drop_flag_for =
+          option_of_json (box_of_json place_of_json) ctx drop_flag_for
+        in
         Ok
           ({
              index;
