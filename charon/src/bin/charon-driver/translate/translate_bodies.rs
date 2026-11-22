@@ -68,7 +68,7 @@ impl<'tcx, 'tctx, 'ictx> BodyTransCtx<'tcx, 'tctx, 'ictx> {
         // Translate the local variables.
         let mut locals = Locals {
             arg_count: body.arg_count,
-            ..Default::default()
+            locals: IndexVec::with_capacity(body.local_decls.len()),
         };
         let mut locals_map = HashMap::default();
         // Translate the parameters
@@ -153,7 +153,9 @@ impl<'tcx, 'tctx, 'ictx, 'bctx> BlockTransCtx<'tcx, 'tctx, 'ictx, 'bctx> {
         }
     }
 
-    fn finish_current_block(self, terminator: Terminator) {
+    fn finish_current_block(mut self, terminator: Terminator) {
+        // Translated bodies live until the end: don't keep spare capacity.
+        self.statements.shrink_to_fit();
         let block = BlockData {
             statements: self.statements,
             terminator,
@@ -663,6 +665,7 @@ impl<'tcx> BodyTransCtx<'tcx, '_, '_> {
             UnwindKind::Regular
         };
         let mut block_ctx = BlockTransCtx::new(self, block_id, kind);
+        block_ctx.statements.reserve_exact(block.statements.len());
         for statement in &block.statements {
             trace!("statement: {:?}", statement);
             block_ctx.translate_statement(source_scopes, statement)?;
@@ -752,6 +755,7 @@ impl<'tcx> BodyTransCtx<'tcx, '_, '_> {
 
         // Create the body
         let comments = self.translate_body_comments(source_text, span);
+        self.locals.locals.shrink_to_fit();
         Ok(Body::Unstructured(ExprBody {
             span,
             locals: self.locals,
