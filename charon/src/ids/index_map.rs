@@ -386,7 +386,10 @@ where
             self.slot_count(),
             "`IndexMap` is not contiguous"
         );
-        self.into_iter().collect()
+        // `collect` can't know the exact length through `flatten`.
+        let mut vec = crate::ids::IndexVec::with_capacity(self.elem_count());
+        vec.extend(self);
+        vec
     }
 }
 
