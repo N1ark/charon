@@ -95,19 +95,19 @@ pub fn before(x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32])
 }
 
 // Full name: test_crate::with_clause
-pub fn with_clause(x: Wrap<u32>[{built_in impl Sized for u32}, TraitClause0])
+pub fn with_clause(x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32])
 where
     TraitClause0: (u32: Tr),
 {
     let mut _0: (); // return
-    let x: Wrap<u32>[{built_in impl Sized for u32}, TraitClause0]; // arg #1
+    let x: Wrap<u32>[{built_in impl Sized for u32}, impl_Tr_for_u32]; // arg #1
     let mut _2: &'0 u32; // anonymous local
 
     storage_live(_0)
     _0 = ()
     storage_live(_2)
     _2 = &x._0
-    _0 = TraitClause0::method<'1>(move _2)
+    _0 = impl_Tr_for_u32::method<'1>(move _2)
     ↳⚡ storage_dead(x)
         unwind_continue
     storage_dead(_2)

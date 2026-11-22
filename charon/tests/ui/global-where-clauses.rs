@@ -1,6 +1,5 @@
 //@ revisions=poly,mono
 //@[mono] charon-args=--monomorphize
-//@[mono] known-failure
 //! A where-clause that mentions no generic parameters only proves a trait ref that no impl proves:
 //! `id::<u32>` and `<Nil as List>::LEN` use the impls in every item.
 pub trait CastInto<T>: Copy {

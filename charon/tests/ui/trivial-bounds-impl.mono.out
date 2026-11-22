@@ -14,16 +14,4 @@ error: Hax panicked when translating `test_crate::Lt::lt`.
 18 |     fn lt() -> u32;
    |     ^^^^^^^^^^^^^^^
 
-error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
-  --> tests/ui/trivial-bounds-impl.rs:29:5
-   |
-29 |     <Env as Unix>::name()
-   |     ^^^^^^^^^^^^^^^^^^^^^
-
-error: Unexpected error: could not find the trait clause variable Required(test_crate::bar, 0)
-  --> tests/ui/trivial-bounds-impl.rs:35:13
-   |
-35 |     foo() + <Env as Unix>::name()
-   |             ^^^^^^^^^^^^^^^^^^^^^
-
-ERROR Charon failed to translate this code (9 errors)
+ERROR Charon failed to translate this code (3 errors)

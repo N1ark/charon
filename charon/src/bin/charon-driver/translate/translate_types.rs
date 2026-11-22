@@ -474,6 +474,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             && let tref = tref.clone().replace_regions(|| Region::Erased)
             // ...where the type doesn't mention any in-scope clauses
             && tref.type_info().is_closed()
+            // ...in an item whose clauses can't change the layout of monomorphic types
+            && !rustc_trait_elaboration::has_concrete_clauses(self.hax_state.param_env())
             // ...and hasn't been seen yet
             && !self.monomorphic_layouts.contains_key(&tref)
             && let Some(layout) = self.translate_layout(span, item, None)

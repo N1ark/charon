@@ -43,7 +43,7 @@ where
     let mut _0: u32; // return
 
     storage_live(_0)
-    _0 = TraitClause0::name()
+    _0 = name()
     ↳⚡ unwind_continue
     return
 }
@@ -65,12 +65,12 @@ where
     storage_live(_0)
     storage_live(_4)
     storage_live(_2)
-    _2 = foo[TraitClause0]()
+    _2 = foo[impl_Unix_for_Env]()
     ↳⚡ storage_dead(_4)
         storage_dead(self)
         unwind_continue
     storage_live(_3)
-    _3 = TraitClause0::name()
+    _3 = name()
     ↳⚡ storage_dead(_4)
         storage_dead(self)
         unwind_continue
@@ -106,12 +106,12 @@ where
     storage_live(_0)
     storage_live(_4)
     storage_live(_2)
-    _2 = foo[TraitClause0::ImpliedClause1]()
+    _2 = foo[impl_Unix_for_Env]()
     ↳⚡ storage_dead(_4)
         storage_dead(self)
         unwind_continue
     storage_live(_3)
-    _3 = TraitClause0::ImpliedClause1::name()
+    _3 = name()
     ↳⚡ storage_dead(_4)
         storage_dead(self)
         unwind_continue
@@ -141,7 +141,7 @@ pub fn impl_Tr_for_S::d<'_0>(self: &'_0 S) -> u32
         storage_dead(self)
         unwind_continue
     storage_live(_3)
-    _3 = impl_Unix_for_Env::name()
+    _3 = name()
     ↳⚡ storage_dead(_4)
         storage_dead(self)
         unwind_continue
@@ -168,13 +168,13 @@ where
     TraitClause0: (Env: Unix),
 {}
 
-// Full name: test_crate::closure_user::{impl Fn<()> for {closure}[TraitClause0]}::call
-extern "rust-call" fn call<'_0>(_1: &'_0 {closure}[TraitClause0], tupled_args: ()) -> u32
+// Full name: test_crate::closure_user::{impl Fn<()> for {closure}[impl_Unix_for_Env]}::call
+extern "rust-call" fn call<'_0>(_1: &'_0 {closure}[impl_Unix_for_Env], tupled_args: ()) -> u32
 where
     TraitClause0: (Env: Unix),
 {
     let mut _0: u32; // return
-    let mut _1: &'0 {closure}[TraitClause0]; // arg #1
+    let mut _1: &'0 {closure}[impl_Unix_for_Env]; // arg #1
     let mut tupled_args: (); // arg #2
     let mut _3: u32; // anonymous local
     let mut _4: u32; // anonymous local
@@ -183,13 +183,13 @@ where
     storage_live(_0)
     storage_live(_5)
     storage_live(_3)
-    _3 = foo[TraitClause0]()
+    _3 = foo[impl_Unix_for_Env]()
     ↳⚡ storage_dead(_5)
         storage_dead(tupled_args)
         storage_dead(_1)
         unwind_continue
     storage_live(_4)
-    _4 = TraitClause0::name()
+    _4 = name()
     ↳⚡ storage_dead(_5)
         storage_dead(tupled_args)
         storage_dead(_1)
@@ -210,8 +210,8 @@ where
     TraitClause0: (Env: Unix),
 {
     let mut _0: u32; // return
-    let f: {closure}[TraitClause0]; // local
-    let mut _2: &'0 {closure}[TraitClause0]; // anonymous local
+    let f: {closure}[impl_Unix_for_Env]; // local
+    let mut _2: &'0 {closure}[impl_Unix_for_Env]; // anonymous local
     let mut _3: (); // anonymous local
 
     storage_live(_0)
@@ -222,7 +222,7 @@ where
     _2 = &f
     storage_live(_3)
     _3 = ()
-    _0 = call<'1>[TraitClause0](move _2, move _3)
+    _0 = call<'1>[impl_Unix_for_Env](move _2, move _3)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_2)
