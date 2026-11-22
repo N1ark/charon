@@ -18,6 +18,8 @@ mod base {
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
         pub per_item: HashMap<DefId, Rc<RefCell<ItemCache<'tcx>>>>,
+        /// The translated definitions, optionally instantiated with generic arguments.
+        pub full_defs: HashMap<(DefId, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Map rustc def ids to their hax counterpart.
         pub def_ids: HashMap<RDefId, DefId>,
         /// Data for synthetic items. See the `synthetic_items` module.
@@ -81,12 +83,6 @@ mod base {
     /// Per-item cache
     #[derive(Default)]
     pub struct ItemCache<'tcx> {
-        /// The translated definitions, generic in the Body kind.
-        /// Each rustc `DefId` gives several hax `DefId`s: one for each promoted constant (if any),
-        /// and the base one represented by `None`. Moreover we can instantiate definitions with
-        /// generic arguments.
-        pub full_defs:
-            HashMap<(Option<PromotedId>, Option<ty::GenericArgsRef<'tcx>>), Arc<FullDef<'tcx>>>,
         /// Cache the `Ty` translations.
         pub tys: HashMap<ty::Ty<'tcx>, Ty<'tcx>>,
         /// Cache the `ItemRef` translations. This is fast because `GenericArgsRef` is interned.
