@@ -876,11 +876,15 @@ pub(crate) fn matching_impls<'tcx>(
         .build(TypingMode::PostAnalysis);
     let mut impls = Vec::new();
     let unknown = tcx.for_each_relevant_impl(tref.def_id, tref.self_ty(), |impl_def_id| {
+        let impl_tref = tcx.impl_trait_ref(impl_def_id);
+        // The same quick rejection as the solver's.
+        if !ty::DeepRejectCtxt::relate_rigid_infer(tcx)
+            .args_may_unify(tref.args, impl_tref.skip_binder().args)
+        {
+            return ControlFlow::Continue(());
+        }
         let impl_args = infcx.fresh_args_for_item(DUMMY_SP, impl_def_id);
-        let impl_tref = tcx
-            .impl_trait_ref(impl_def_id)
-            .instantiate(tcx, impl_args)
-            .skip_normalization();
+        let impl_tref = impl_tref.instantiate(tcx, impl_args).skip_normalization();
         if impl_tref.has_aliases() {
             return ControlFlow::Break(());
         }
