@@ -1,0 +1,101 @@
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::bar, 0)
+  --> tests/ui/trivial-bounds-impl.rs:35:13
+   |
+35 |     foo() + <Env as Unix>::name()
+   |             ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::bar, 0)
+  --> tests/ui/trivial-bounds-impl.rs:35:13
+   |
+35 |     foo() + <Env as Unix>::name()
+   |             ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::bar, 0)
+  --> tests/ui/trivial-bounds-impl.rs:35:13
+   |
+35 |     foo() + <Env as Unix>::name()
+   |             ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::bar, 0)
+  --> tests/ui/trivial-bounds-impl.rs:35:13
+   |
+35 |     foo() + <Env as Unix>::name()
+   |             ^^^^^^^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /rustc-dev/923c95cdf5ba65cea505aa2ea829f578e1506ed8/compiler/rustc_type_ir/src/binder.rs:849:9:
+expected region for `'a/#0` ('a/#0/0) but found Type(W<'a/#0>) when instantiating args=[W<'a/#0>]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+error: Hax panicked when translating `test_crate::Lt::lt`.
+  --> tests/ui/trivial-bounds-impl.rs:18:5
+   |
+18 |     fn lt() -> u32;
+   |     ^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /rustc-dev/923c95cdf5ba65cea505aa2ea829f578e1506ed8/compiler/rustc_type_ir/src/binder.rs:849:9:
+expected region for `'a/#0` ('a/#0/0) but found Type(W<'{erased}>) when instantiating args=[W<'{erased}>]
+error: Hax panicked when translating `test_crate::Lt::lt`.
+  --> tests/ui/trivial-bounds-impl.rs:18:5
+   |
+18 |     fn lt() -> u32;
+   |     ^^^^^^^^^^^^^^^
+
+
+thread 'rustc' panicked at /rustc-dev/923c95cdf5ba65cea505aa2ea829f578e1506ed8/compiler/rustc_type_ir/src/binder.rs:849:9:
+expected region for `'a/#0` ('a/#0/0) but found Type(W<'{erased}>) when instantiating args=[W<'{erased}>]
+error: Hax panicked when translating `test_crate::Lt::lt`.
+  --> tests/ui/trivial-bounds-impl.rs:18:5
+   |
+18 |     fn lt() -> u32;
+   |     ^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-impl.rs:29:5
+   |
+29 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Charon failed to translate this code (15 errors)
