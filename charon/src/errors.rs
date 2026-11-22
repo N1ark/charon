@@ -218,6 +218,8 @@ pub struct ErrorCtx {
     pub def_id_is_local: bool,
     /// The number of errors encountered so far.
     pub error_count: usize,
+    /// The span and message of each error encountered so far.
+    displayed: HashSet<(Span, String)>,
 }
 
 impl ErrorCtx {
@@ -230,6 +232,7 @@ impl ErrorCtx {
             def_id: None,
             def_id_is_local: false,
             error_count: 0,
+            displayed: HashSet::default(),
         }
     }
 
@@ -273,7 +276,11 @@ impl ErrorCtx {
         } else {
             level
         };
-        let err = self.display_error(krate, span, level, msg.to_string());
+        let err = if self.displayed.insert((span, msg.to_owned())) {
+            self.display_error(krate, span, level, msg.to_owned())
+        } else {
+            Error::new(span, msg.to_owned())
+        };
         self.error_count += 1;
         if let Some(id) = self.def_id
             && self.items_with_errors.insert(id)
