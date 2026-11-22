@@ -212,10 +212,11 @@ pub mod type_map {
             &mut self,
             f: impl FnOnce() -> M::Value<T>,
         ) -> &mut M::Value<T> {
-            if self.get::<T>().is_none() {
-                self.insert(f());
-            }
-            self.get_mut::<T>().unwrap()
+            let val: &mut dyn Mappable = &mut **self
+                .data
+                .entry(TypeId::of::<T>())
+                .or_insert_with(|| Box::new(f()));
+            (val as &mut dyn Any).downcast_mut().unwrap()
         }
         pub fn or_default<T: Mappable>(&mut self) -> &mut M::Value<T>
         where
