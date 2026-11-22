@@ -103,7 +103,7 @@ mod trait_ref_path {
     }
 
     /// A `TraitRef` represented as a path.
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct TraitRefPath {
         /// The base clause we start from.
         pub base: BaseClause,
@@ -268,7 +268,7 @@ mod trait_ref_path {
     }
 
     /// The path to an associated type that depends on a local clause.
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct AssocTypePath {
         /// The trait clause that has the associated type.
         pub tref: TraitRefPath,
@@ -985,6 +985,31 @@ struct UpdateItemBody<'a> {
     memo: &'a mut HashConsMemo<()>,
     /// The error count when we started visiting this item.
     initial_error_count: usize,
+    caches: &'a mut Caches,
+}
+
+/// Caches for operations that walk whole types or trait refs; their inputs recur across items.
+#[derive(Default)]
+struct Caches {
+    /// `PolyTraitRef::erase`, keyed by the bound trait ref and the number of bound regions.
+    erased: HashMap<(TraitRef, usize), TraitRef>,
+    /// `lookup_path_in_env` on trait refs to impls, which doesn't depend on the environment.
+    impl_lookups: HashMap<(AssocTypePath, TraitRef), Ty>,
+    /// `Ty::move_under_binders`.
+    moved: HashMap<(Ty, DeBruijnId), Ty>,
+    /// `AssocTypePath::to_name`.
+    path_names: HashMap<AssocTypePath, String>,
+}
+
+impl Caches {
+    fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> String {
+        if let Some(name) = self.path_names.get(path) {
+            return name.clone();
+        }
+        let name = path.to_name(krate);
+        self.path_names.insert(path.clone(), name.clone());
+        name
+    }
 }
 
 impl Visitor for UpdateItemBody<'_> {
@@ -1015,7 +1040,7 @@ impl UpdateItemBody<'_> {
         ret
     }
 
-    fn lookup_type_replacement(&self, path: &AssocTypePath) -> Option<Ty> {
+    fn lookup_type_replacement(&mut self, path: &AssocTypePath) -> Option<Ty> {
         let mut path = path.clone();
         let dbid = match &mut path.tref.base {
             BaseClause::Local(DeBruijnVar::Bound(dbid, _)) => {
@@ -1026,7 +1051,12 @@ impl UpdateItemBody<'_> {
             _ => self.type_replacements.depth(),
         };
         let ty = self.type_replacements[dbid].find(&path)?;
-        let mut ty = ty.clone().move_under_binders(dbid);
+        let mut ty = self
+            .caches
+            .moved
+            .entry((ty.clone(), dbid))
+            .or_insert_with(|| ty.clone().move_under_binders(dbid))
+            .clone();
         if let TyKind::TraitType(tref, type_id, _args) = ty.kind() {
             let path = TraitRefPath::self_ref(tref.trait_id()).with_assoc_type(*type_id);
             // Unnormalizable types may very well show up, e.g. when trait loopiness forces us to
@@ -1038,7 +1068,7 @@ impl UpdateItemBody<'_> {
         Some(ty)
     }
 
-    fn lookup_path_on_trait_ref(&self, path: &AssocTypePath, tref: &TraitRef) -> Option<Ty> {
+    fn lookup_path_on_trait_ref(&mut self, path: &AssocTypePath, tref: &TraitRef) -> Option<Ty> {
         if let Some(ty) = self.lookup_path_in_env(path, tref) {
             return Some(ty);
         }
@@ -1056,10 +1086,14 @@ impl UpdateItemBody<'_> {
     }
 
     /// Look up the path using the facts available for this specific trait ref.
-    fn lookup_path_in_env(&self, path: &AssocTypePath, tref: &TraitRef) -> Option<Ty> {
+    fn lookup_path_in_env(&mut self, path: &AssocTypePath, tref: &TraitRef) -> Option<Ty> {
         assert!(path.tref.base.is_self_clause());
         match &tref.kind {
             TraitRefKind::TraitImpl(impl_ref) => {
+                let key = (path.clone(), tref.clone());
+                if let Some(ty) = self.caches.impl_lookups.get(&key) {
+                    return Some(ty.clone());
+                }
                 // The type constraints of trait impls already contain all relevant type
                 // equalities.
                 let ty = self
@@ -1067,11 +1101,11 @@ impl UpdateItemBody<'_> {
                     .get(&GenericsSource::item(impl_ref.id))?
                     .type_constraints
                     .find(path)?;
-                Some(
-                    ItemBinder::new(impl_ref.id, ty.clone())
-                        .substitute(ItemBinder::new(CurrentItem, &impl_ref.generics))
-                        .under_current_binder(),
-                )
+                let ty = ItemBinder::new(impl_ref.id, ty.clone())
+                    .substitute(ItemBinder::new(CurrentItem, &impl_ref.generics))
+                    .under_current_binder();
+                self.caches.impl_lookups.insert(key, ty.clone());
+                Some(ty)
             }
             TraitRefKind::Clause(..) | TraitRefKind::SelfId => {
                 let path = path.on_tref(&tref.to_path().unwrap());
@@ -1142,7 +1176,12 @@ impl UpdateItemBody<'_> {
                         .bound_at_depth(DeBruijnId::zero())
                         .expect("found replacement not at binder level 0?");
                     path = path.pop_base();
-                    args.trait_refs[clause_id].clone().erase()
+                    let tref = &args.trait_refs[clause_id].0;
+                    self.caches
+                        .erased
+                        .entry((tref.skip_binder.clone(), tref.regions.len()))
+                        .or_insert_with(|| tref.clone().erase())
+                        .clone()
                 }
             };
             let ty = if let Some(ty) = self.lookup_path_on_trait_ref(&path, &base_tref) {
@@ -1272,9 +1311,10 @@ impl VisitAstMut for UpdateItemBody<'_> {
         }
         let krate = &self.ctx.translated;
         let replacements = modifications.compute_replacements(|path| {
+            let name = self.caches.path_name(path, krate);
             let var_id = generics
                 .types
-                .push_with(|id| TypeParam::new(id, path.to_name(krate), Variance::Invariant));
+                .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
             TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
         });
         self.under_binder(replacements, |this| this.visit_inner(binder))
@@ -1530,6 +1570,7 @@ impl TransformPass for Transform {
 
         // Apply the computed modifications to each item.
         let mut memo = HashConsMemo::default();
+        let mut caches = Caches::default();
         ctx.for_each_item_mut(|ctx, mut item| {
             trace!(
                 "Processing {}",
@@ -1571,13 +1612,11 @@ impl TransformPass for Transform {
                 })
             } else {
                 modifications.compute_replacements(|path| {
+                    let name = caches.path_name(path, &ctx.translated);
                     let var_id = item
                         .generic_params()
                         .types
-                        .push_with(|id| {
-                            let name = path.to_name(&ctx.translated);
-                            TypeParam::new(id, name, Variance::Invariant)
-                        });
+                        .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
                     TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
                 })
             };
@@ -1605,6 +1644,7 @@ impl TransformPass for Transform {
                 type_replacements: BindingStack::new(type_replacements),
                 memo: &mut memo,
                 initial_error_count: ctx.errors.borrow().error_count,
+                caches: &mut caches,
             };
             if let Break(_) = item.drive_mut(&mut visitor) {
                 register_error!(ctx, visitor.span, "Stack depth limit exceeded while expanding associated types");
