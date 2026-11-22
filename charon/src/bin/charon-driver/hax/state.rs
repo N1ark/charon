@@ -41,7 +41,7 @@ mod base {
         pub synthetic_item_data: HashMap<SyntheticItem, SyntheticItemData<'tcx>>,
         /// Anonymous allocations we turned into globals, in encounter order. Used to keep
         /// the order of globals stable across runs.
-        pub anon_allocs: indexmap::IndexSet<RAllocId>,
+        pub anon_allocs: indexmap::IndexSet<RAllocId, rustc_hash::FxBuildHasher>,
         /// The types at which we view anonymous allocations.
         pub alloc_types: rustc_const_uneval::AllocTypes<'tcx>,
         /// Cached names and disambiguators for crate names.

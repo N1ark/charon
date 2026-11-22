@@ -771,7 +771,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         let target_data = &self.tcx.data_layout;
         let triple = self.get_target_triple();
 
-        let mut primitive_alignments = SeqHashMap::new();
+        let mut primitive_alignments = SeqHashMap::default();
         primitive_alignments.insert(ScalarTy::Bool, target_data.i8_align.bytes());
         for (ty, alignment) in [
             (IntegerTy::Signed(IntTy::I8), target_data.i8_align.bytes()),
