@@ -41,10 +41,32 @@ impl GlobalRef {
     }
 }
 
+impl<'tcx> AllocView<'tcx> {
+    /// The view of an allocation as plain bytes: `[u8; N]` if that type covers it, else untyped.
+    pub(crate) fn bytes(tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> Self {
+        let size = GlobalRef::Alloc(alloc_id)
+            .memory(tcx)
+            .unwrap()
+            .inner()
+            .size();
+        let ty = Ty::new_array(tcx, tcx.types.u8, size.bytes());
+        if ConstReader::ty_covers_alloca(tcx, alloc_id, ty) {
+            AllocView::Typed(ty)
+        } else {
+            AllocView::Untyped
+        }
+    }
+}
+
 impl<'tcx> AllocTypes<'tcx> {
-    /// Gets the view for this allocation; if none had been decided, it is now viewed untyped.
-    pub(crate) fn get(&self, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
-        *self.0.borrow_mut().entry(alloc_id).or_default()
+    /// Gets the view for this allocation; if none had been decided, it is now viewed as plain
+    /// bytes.
+    pub(crate) fn get(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> AllocView<'tcx> {
+        *self
+            .0
+            .borrow_mut()
+            .entry(alloc_id)
+            .or_insert_with(|| AllocView::bytes(tcx, alloc_id))
     }
 
     pub(crate) fn update_if_unset(
@@ -55,13 +77,13 @@ impl<'tcx> AllocTypes<'tcx> {
         self.0.borrow_mut().entry(alloc_id).or_insert_with(f);
     }
 
-    pub(crate) fn is_typed(&self, alloc_id: interpret::AllocId) -> bool {
-        matches!(self.get(alloc_id), AllocView::Typed(_))
+    pub(crate) fn is_typed(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> bool {
+        matches!(self.get(tcx, alloc_id), AllocView::Typed(_))
     }
 
     /// The type at which we view the allocation `alloc_id`.
     pub fn ty(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> Ty<'tcx> {
-        if let AllocView::Typed(ty) = self.get(alloc_id) {
+        if let AllocView::Typed(ty) = self.get(tcx, alloc_id) {
             return ty;
         }
         // if we haven't seen it with a type, then it's untyped!
@@ -78,10 +100,10 @@ impl<'tcx> AllocTypes<'tcx> {
 
 impl<'tcx> AllocTarget<'tcx> {
     /// Whether this target is read as its typed value.
-    pub(crate) fn is_read_typed(&self, views: &AllocTypes<'tcx>) -> bool {
+    pub(crate) fn is_read_typed(&self, tcx: TyCtxt<'tcx>, views: &AllocTypes<'tcx>) -> bool {
         match self {
             AllocTarget::Global(GlobalRef::Static(_)) => true,
-            AllocTarget::Global(GlobalRef::Alloc(alloc_id)) => views.is_typed(*alloc_id),
+            AllocTarget::Global(GlobalRef::Alloc(alloc_id)) => views.is_typed(tcx, *alloc_id),
             AllocTarget::Fn(_) | AllocTarget::VTable(..) | AllocTarget::TypeId(_) => false,
         }
     }
