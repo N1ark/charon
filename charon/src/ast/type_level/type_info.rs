@@ -7,7 +7,7 @@ use crate::ast::*;
 
 bitflags::bitflags! {
     #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct TypeFlags: u8 {
+    pub struct TypeFlags: u16 {
         const HAS_ERASED_OR_BODY_REGIONS = 1 << 0;
         const MENTIONS_SELF_CLAUSE = 1 << 1;
         const USES_SIZE_METADATA = 1 << 2;
@@ -16,13 +16,20 @@ bitflags::bitflags! {
         const HAS_STATIC_REGION = 1 << 5;
         const HAS_REGION_VAR = 1 << 6;
         const HAS_REGIONS = 1 << 7;
+        const HAS_NON_EMPTY_BINDER = 1 << 8;
+        const MENTIONS_UNKNOWN_TRAIT_REF = 1 << 9;
+        const MENTIONS_FN_PTR = 1 << 10;
+        const MENTIONS_CONSTANT_REPEAT = 1 << 11;
+        const HAS_ERASED_CLAUSE_ARGS = 1 << 12;
     }
 }
 
 /// Various bits of information about the contents of a type-level value.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeInfo {
-    pub max_de_bruijn_id: Option<DeBruijnId>,
+    /// One more than the largest `DeBruijnId` mentioned, or 0 if none. Every hash-consed value
+    /// carries a `TypeInfo`, so we keep it small.
+    max_de_bruijn_id_plus_one: u16,
     pub flags: TypeFlags,
 }
 
@@ -48,12 +55,9 @@ impl TypeInfo {
                 &mut self,
                 value: &HashConsed<WithCachedTypeInfo<T>>,
             ) -> ControlFlow<Self::Break> {
-                let TypeInfo {
-                    max_de_bruijn_id,
-                    flags,
-                } = value.type_info();
-                self.info.flags |= flags;
-                if let Some(id) = max_de_bruijn_id {
+                let info = value.type_info();
+                self.info.flags |= info.flags;
+                if let Some(id) = info.max_de_bruijn_id() {
                     self.visit_de_bruijn_id(&id);
                 }
                 Continue(())
@@ -61,12 +65,9 @@ impl TypeInfo {
 
             fn visit_de_bruijn_id(&mut self, &id: &DeBruijnId) -> ControlFlow<Self::Break> {
                 if let Some(id) = id.sub(self.binder_depth) {
-                    self.info.max_de_bruijn_id = Some(
-                        self.info
-                            .max_de_bruijn_id
-                            .unwrap_or(DeBruijnId::ZERO)
-                            .max(id),
-                    );
+                    let plus_one = u16::try_from(id.index + 1).expect("too many nested binders");
+                    let max = &mut self.info.max_de_bruijn_id_plus_one;
+                    *max = (*max).max(plus_one);
                 }
                 Continue(())
             }
@@ -75,6 +76,22 @@ impl TypeInfo {
                 if matches!(var, DeBruijnVar::Free(_)) {
                     self.info.flags.insert(TypeFlags::MENTIONS_FREE_VAR);
                 }
+            }
+
+            fn enter_region_binder<T: AstVisitable>(&mut self, binder: &RegionBinder<T>) {
+                if !binder.regions.is_empty() || !binder.outlives.is_empty() {
+                    self.info.flags.insert(TypeFlags::HAS_NON_EMPTY_BINDER);
+                }
+            }
+
+            fn enter_binder<T: AstVisitable>(&mut self, binder: &Binder<T>) {
+                if !binder.params.is_empty() {
+                    self.info.flags.insert(TypeFlags::HAS_NON_EMPTY_BINDER);
+                }
+            }
+
+            fn enter_fn_ptr(&mut self, _: &FnPtr) {
+                self.info.flags.insert(TypeFlags::MENTIONS_FN_PTR);
             }
 
             fn enter_region(&mut self, region: &Region) {
@@ -112,16 +129,28 @@ impl TypeInfo {
             }
 
             fn enter_trait_ref_kind(&mut self, kind: &TraitRefKind) {
+                if let TraitRefKind::Clause(_, args)
+                | TraitRefKind::ParentClause(_, _, args)
+                | TraitRefKind::ItemClause {
+                    clause_args: args, ..
+                } = kind
+                    && args.regions.iter().any(Region::is_erased)
+                {
+                    self.info.flags.insert(TypeFlags::HAS_ERASED_CLAUSE_ARGS);
+                }
                 match kind {
                     TraitRefKind::ParentClause(..) | TraitRefKind::ItemClause { .. } => {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE)
                     }
                     TraitRefKind::SelfId => self.info.flags.insert(TypeFlags::MENTIONS_SELF_CLAUSE),
+                    TraitRefKind::Unknown(_) => self
+                        .info
+                        .flags
+                        .insert(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF),
                     TraitRefKind::TraitImpl(..)
                     | TraitRefKind::Clause(..)
                     | TraitRefKind::BuiltinOrAuto { .. }
-                    | TraitRefKind::Dyn
-                    | TraitRefKind::Unknown(_) => {}
+                    | TraitRefKind::Dyn => {}
                 }
             }
 
@@ -137,6 +166,9 @@ impl TypeInfo {
                     | ConstantExprKind::OffsetOf(..) => {
                         self.info.flags.insert(TypeFlags::POTENTIALLY_NORMALIZABLE);
                     }
+                    ConstantExprKind::Repeat { .. } => {
+                        self.info.flags.insert(TypeFlags::MENTIONS_CONSTANT_REPEAT);
+                    }
                     ConstantExprKind::Var(..)
                     | ConstantExprKind::Bool(..)
                     | ConstantExprKind::Integer(..)
@@ -144,7 +176,6 @@ impl TypeInfo {
                     | ConstantExprKind::Float(..)
                     | ConstantExprKind::Adt(..)
                     | ConstantExprKind::Array(..)
-                    | ConstantExprKind::Repeat { .. }
                     | ConstantExprKind::Ref(..)
                     | ConstantExprKind::Ptr(..)
                     | ConstantExprKind::Str(..)
@@ -204,14 +235,43 @@ impl TypeInfo {
         self.flags.contains(TypeFlags::HAS_REGIONS)
     }
 
+    /// Whether this value contains a binder that binds variables or has predicates.
+    pub fn has_non_empty_binder(&self) -> bool {
+        self.flags.contains(TypeFlags::HAS_NON_EMPTY_BINDER)
+    }
+
+    /// Whether this value contains a `TraitRefKind::Unknown`.
+    pub fn mentions_unknown_trait_ref(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_UNKNOWN_TRAIT_REF)
+    }
+
+    /// Whether this value contains a `FnPtr`.
+    pub fn mentions_fn_ptr(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_FN_PTR)
+    }
+
+    /// Whether this value contains a `ConstantExprKind::Repeat`.
+    pub fn mentions_constant_repeat(&self) -> bool {
+        self.flags.contains(TypeFlags::MENTIONS_CONSTANT_REPEAT)
+    }
+
+    /// Whether this value contains a clause-based trait ref (`Clause`, `ParentClause` or
+    /// `ItemClause`) with an erased region argument.
+    pub fn has_erased_clause_args(&self) -> bool {
+        self.flags.contains(TypeFlags::HAS_ERASED_CLAUSE_ARGS)
+    }
+
     /// The largest `DeBruijnId` mentioned by this item, if any.
     pub fn max_de_bruijn_id(&self) -> Option<DeBruijnId> {
-        self.max_de_bruijn_id
+        let index = self.max_de_bruijn_id_plus_one.checked_sub(1)?;
+        Some(DeBruijnId {
+            index: index.into(),
+        })
     }
 
     /// Whether this value mentions a type-level variable (region, type, constant, trait).
     pub fn mentions_var(&self) -> bool {
-        self.max_de_bruijn_id.is_some() || self.flags.contains(TypeFlags::MENTIONS_FREE_VAR)
+        self.max_de_bruijn_id().is_some() || self.flags.contains(TypeFlags::MENTIONS_FREE_VAR)
     }
 
     /// Whether this value mentions `TraitRef::SelfClause`.

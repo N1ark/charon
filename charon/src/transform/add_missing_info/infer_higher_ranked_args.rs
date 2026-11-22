@@ -29,6 +29,16 @@ impl VisitorWithBinderStack for Infer<'_> {
 
 impl Infer<'_> {
     fn infer(&self, proof: &TraitRef) -> Option<TraitRef> {
+        // Only erased region arguments can be inferred.
+        if let TraitRefKind::Clause(_, args)
+        | TraitRefKind::ParentClause(_, _, args)
+        | TraitRefKind::ItemClause {
+            clause_args: args, ..
+        } = &proof.kind
+            && !args.regions.iter().any(Region::is_erased)
+        {
+            return None;
+        }
         let mut kind = proof.kind.clone();
         // Retrieve the poly trait ref that this proof refers to, along with the provided
         // arguments.
@@ -76,9 +86,6 @@ impl Infer<'_> {
             }
             _ => return None,
         };
-        if !args.regions.iter().any(Region::is_erased) {
-            return None;
-        }
 
         // The predicate that this proof proves, this time the cached version.
         let target = RegionBinder::empty(proof.trait_decl_ref.clone());
@@ -112,7 +119,7 @@ impl VisitAstMut for Infer<'_> {
         &mut self,
         value: &mut HashConsed<WithCachedTypeInfo<T>>,
     ) -> ControlFlow<Self::Break> {
-        if value.type_info().has_erased_or_body_regions() {
+        if value.type_info().has_erased_clause_args() {
             self.visit_memoized(value)
         } else {
             ControlFlow::Continue(())
