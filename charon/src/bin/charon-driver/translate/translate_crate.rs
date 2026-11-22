@@ -252,13 +252,10 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// If this is a trait method declaration, return the `DefId` of its parent trait.
     fn as_trait_method_decl(&mut self, def_id: &hax::DefId) -> Option<hax::DefId> {
         if matches!(def_id.kind, hax::DefKind::AssocFn)
-            && let def = self.poly_hax_def(def_id).ok()?
-            && let hax::FullDefKind::AssocFn(f) = def.kind()
-            && let associated_item = f.associated_item()
-            && let hax::AssocItemContainer::TraitContainer { trait_ref } =
-                &associated_item.container
+            && let Some(rust_def_id) = def_id.as_real_def_id()
+            && let ty::AssocContainer::Trait = self.tcx.associated_item(rust_def_id).container
         {
-            Some(trait_ref.def_id.clone())
+            Some(self.tcx.parent(rust_def_id).sinto(&self.hax_state))
         } else {
             None
         }
