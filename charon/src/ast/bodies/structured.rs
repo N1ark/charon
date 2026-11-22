@@ -271,7 +271,7 @@ impl Block {
                         if let Some(fallthrough) = fallthrough {
                             visit_block(fallthrough, exit_blk, enter_stmt);
                         }
-                        for label in labels {
+                        for label in labels.iter_mut() {
                             visit_block(label, exit_blk, enter_stmt);
                         }
                         visit_block(on_unwind, exit_blk, enter_stmt);
