@@ -279,9 +279,9 @@ impl TypeCheckVisitor<'_> {
             TraitRefKind::Clause(var, args)
                 if let Some(clause) = self.binder_stack.get_var(*var) =>
             {
-                let (depth, _) = self.binder_stack.as_bound_var(*var);
-                let pred = clause.trait_.clone().move_under_binders(depth);
-                Self::apply_poly_predicate(pred, args)?
+                // Matching ignores variables, so we don't move the predicate under the binders
+                // between here and the clause.
+                Self::apply_poly_predicate(clause.trait_.clone(), args)?
             }
             TraitRefKind::ParentClause(parent, clause_id, args)
                 if let Some(tdecl) = self.ctx.translated.trait_decls.get(parent.trait_id())
