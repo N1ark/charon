@@ -38,5 +38,16 @@ struct B<mut 'a, mut 'b> {
   _0: A<'a, 'b>,
 }
 
+// Full name: test_crate::E
+struct E<mut 'a, 'b> {
+  x: &'a mut u32,
+  y: &'b u32,
+}
+
+// Full name: test_crate::F
+struct F<mut 'a, 'b> {
+  _0: E<'b, 'a>,
+}
+
 
 
