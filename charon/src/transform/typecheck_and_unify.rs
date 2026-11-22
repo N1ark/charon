@@ -44,6 +44,10 @@ struct TypeCheckVisitor<'a> {
     body_lt_unifier: Option<UnionFind<RegionId>>,
     /// Whether `body_lt_unifier` merged anything, i.e. whether the body needs rewriting.
     did_unify_lifetimes: bool,
+    /// If set, the lifetime unifications to apply later instead of right away.
+    pending_unifications: Option<Vec<(RegionId, RegionId)>>,
+    /// Set when matching a value with its arguments on the side finds a variable they lack.
+    needs_substitution: bool,
     /// Defaulted methods may have contradictory premises like `Self::Item = bool` and
     /// `Self::Item = u32` which may equate entirely different types. We don't try to reason about
     /// this and instead accept this fact. It's fine because the original methods will be
@@ -73,6 +77,27 @@ impl VisitorWithBinderStack for TypeCheckVisitor<'_> {
 }
 
 struct TypeError;
+
+/// How to read the variables of a value we match: `args`, if set, are the arguments for the
+/// variables bound at `depth`, which we haven't substituted. Matching ignores the other variables.
+#[derive(Clone, Copy)]
+struct Env<'a> {
+    args: Option<&'a GenericArgs>,
+    depth: DeBruijnId,
+}
+
+impl<'a> Env<'a> {
+    const NONE: Self = Env {
+        args: None,
+        depth: DeBruijnId::ZERO,
+    };
+    fn under_binder(self) -> Self {
+        Env {
+            depth: self.depth.incr(),
+            ..self
+        }
+    }
+}
 
 impl TypeCheckVisitor<'_> {
     fn error(&self, message: impl Display) {
@@ -108,28 +133,81 @@ impl TypeCheckVisitor<'_> {
         result
     }
 
-    fn match_regions(&mut self, a: &Region, b: &Region) -> Result<(), TypeError> {
+    /// The value of `var` in `env`, if `env` substitutes it.
+    fn lookup_var<'e, Id: Idx, T>(
+        &mut self,
+        var: DeBruijnVar<Id>,
+        env: Env<'e>,
+        args: impl FnOnce(&'e GenericArgs) -> &'e IndexVec<Id, T>,
+    ) -> Result<Option<&'e T>, TypeError> {
+        if let Some(all_args) = env.args
+            && let DeBruijnVar::Bound(dbid, id) = var
+            && dbid == env.depth
+        {
+            match args(all_args).get(id) {
+                Some(arg) => Ok(Some(arg)),
+                None => {
+                    // Substitution would fail.
+                    self.needs_substitution = true;
+                    Err(TypeError)
+                }
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn match_regions(
+        &mut self,
+        a: &Region,
+        ea: Env<'_>,
+        b: &Region,
+        eb: Env<'_>,
+    ) -> Result<(), TypeError> {
+        if let Region::Var(var) = a
+            && let Some(a) = self.lookup_var(*var, ea, |args| &args.regions)?
+        {
+            return self.match_regions(a, Env::NONE, b, eb);
+        }
+        if let Region::Var(var) = b
+            && let Some(b) = self.lookup_var(*var, eb, |args| &args.regions)?
+        {
+            return self.match_regions(a, ea, b, Env::NONE);
+        }
         if let (Region::Lub(a), Region::Lub(b)) = (a, b) {
-            return self.match_tys(a, b);
+            return self.match_tys(a, ea, b, eb);
         }
         if let (Region::Body(a), Region::Body(b)) = (a, b)
             && let Some(unifier) = &mut self.body_lt_unifier
         {
-            self.did_unify_lifetimes |= unifier.union(*a, *b);
+            match &mut self.pending_unifications {
+                Some(pending) => pending.push((*a, *b)),
+                None => self.did_unify_lifetimes |= unifier.union(*a, *b),
+            }
         }
         Ok(())
     }
 
     /// Compare two types for equality. Because we can't use the full power of rustc's type
     /// equality, we err on the side of accepting.
-    fn match_tys(&mut self, a: &Ty, b: &Ty) -> Result<(), TypeError> {
-        // Equal values match, and matching them has no effect.
-        if a == b {
+    fn match_tys(&mut self, a: &Ty, ea: Env<'_>, b: &Ty, eb: Env<'_>) -> Result<(), TypeError> {
+        // Equal values match, and matching them has no effect, unless we look up their variables.
+        if a == b && (ea.args.is_none() && eb.args.is_none() || !a.type_info().mentions_var()) {
             return Ok(());
+        }
+        if let TyKind::TypeVar(var) = a.kind()
+            && let Some(a) = self.lookup_var(*var, ea, |args| &args.types)?
+        {
+            return self.match_tys(a, Env::NONE, b, eb);
+        }
+        if let TyKind::TypeVar(var) = b.kind()
+            && let Some(b) = self.lookup_var(*var, eb, |args| &args.types)?
+        {
+            return self.match_tys(a, ea, b, Env::NONE);
         }
         match (a.kind(), b.kind()) {
             (TyKind::Adt(a), TyKind::Adt(b)) if a.id == b.id => {
-                self.match_generics(&a.generics, &b.generics)?
+                self.match_generics(&a.generics, ea, &b.generics, eb)?
             }
             (TyKind::Adt(a), TyKind::Adt(b))
                 if self.ctx.options.monomorphize_with_hax
@@ -143,23 +221,23 @@ impl TypeCheckVisitor<'_> {
             (TyKind::Scalar(a), TyKind::Scalar(b)) if a == b => {}
             (TyKind::Never, TyKind::Never) => {}
             (TyKind::Array(aty, ..), TyKind::Array(bty, ..)) => {
-                self.match_tys(aty, bty)?;
+                self.match_tys(aty, ea, bty, eb)?;
             }
             // Like array lengths and const generic arguments, we don't compare the patterns.
             (TyKind::Pattern(aty, _), TyKind::Pattern(bty, _)) => {
-                self.match_tys(aty, bty)?;
+                self.match_tys(aty, ea, bty, eb)?;
             }
             (TyKind::Slice(aty, _), TyKind::Slice(bty, _)) => {
-                self.match_tys(aty, bty)?;
+                self.match_tys(aty, ea, bty, eb)?;
             }
             (TyKind::Ref(aregion, aty, akind), TyKind::Ref(bregion, bty, bkind))
                 if akind == bkind =>
             {
-                self.match_regions(aregion, bregion)?;
-                self.match_tys(aty, bty)?;
+                self.match_regions(aregion, ea, bregion, eb)?;
+                self.match_tys(aty, ea, bty, eb)?;
             }
             (TyKind::RawPtr(aty, akind), TyKind::RawPtr(bty, bkind)) if akind == bkind => {
-                self.match_tys(aty, bty)?
+                self.match_tys(aty, ea, bty, eb)?
             }
             (TyKind::DynTrait(..), TyKind::DynTrait(..)) => {}
             (TyKind::FnPtr(..), TyKind::FnPtr(..)) => {}
@@ -178,22 +256,31 @@ impl TypeCheckVisitor<'_> {
     fn match_trait_decl_refs(
         &mut self,
         a: &TraitDeclRef,
+        ea: Env<'_>,
         b: &TraitDeclRef,
+        eb: Env<'_>,
     ) -> Result<(), TypeError> {
         if a.id != b.id {
             return Err(TypeError);
         }
-        self.match_generics(&a.generics, &b.generics)?;
+        self.match_generics(&a.generics, ea, &b.generics, eb)?;
         Ok(())
     }
 
     fn match_poly_trait_decl_refs(
         &mut self,
         a: &PolyTraitDeclRef,
+        ea: Env<'_>,
         b: &PolyTraitDeclRef,
+        eb: Env<'_>,
     ) -> Result<(), TypeError> {
         // Matching ignores variables, so we don't need to instantiate the binders.
-        self.match_trait_decl_refs(&a.skip_binder, &b.skip_binder)
+        self.match_trait_decl_refs(
+            &a.skip_binder,
+            ea.under_binder(),
+            &b.skip_binder,
+            eb.under_binder(),
+        )
     }
 
     fn apply_poly_predicate(
@@ -221,9 +308,9 @@ impl TypeCheckVisitor<'_> {
             TraitRefKind::Clause(var, args)
                 if let Some(clause) = self.binder_stack.get_var(*var) =>
             {
-                let (depth, _) = self.binder_stack.as_bound_var(*var);
-                let pred = clause.trait_.clone().move_under_binders(depth);
-                Self::apply_poly_predicate(pred, args)?
+                // Matching ignores variables, so we don't move the predicate under the binders
+                // between here and the clause.
+                Self::apply_poly_predicate(clause.trait_.clone(), args)?
             }
             TraitRefKind::ParentClause(parent, clause_id, args)
                 if let Some(tdecl) = self.ctx.translated.trait_decls.get(parent.trait_id())
@@ -276,7 +363,7 @@ impl TypeCheckVisitor<'_> {
             }
             _ => return Ok(()),
         };
-        self.match_trait_decl_refs(&tref.trait_decl_ref, &target_pred)
+        self.match_trait_decl_refs(&tref.trait_decl_ref, Env::NONE, &target_pred, Env::NONE)
     }
 
     fn match_poly_trait_ref_against_itself(
@@ -292,13 +379,21 @@ impl TypeCheckVisitor<'_> {
     fn match_poly_trait_refs(
         &mut self,
         a: &PolyTraitRef,
+        ea: Env<'_>,
         b: &PolyTraitRef,
+        eb: Env<'_>,
     ) -> Result<(), TypeError> {
-        self.match_poly_trait_decl_refs(&a.pred(), &b.pred())
+        self.match_poly_trait_decl_refs(&a.pred(), ea, &b.pred(), eb)
     }
 
-    fn match_generics(&mut self, a: &GenericArgs, b: &GenericArgs) -> Result<(), TypeError> {
-        if a == b {
+    fn match_generics(
+        &mut self,
+        a: &GenericArgs,
+        ea: Env<'_>,
+        b: &GenericArgs,
+        eb: Env<'_>,
+    ) -> Result<(), TypeError> {
+        if a == b && ea.args.is_none() && eb.args.is_none() {
             return Ok(());
         }
         if a.regions.len() != b.regions.len()
@@ -309,13 +404,13 @@ impl TypeCheckVisitor<'_> {
             return Err(TypeError);
         }
         for (a, b) in a.regions.iter().zip(b.regions.iter()) {
-            self.match_regions(a, b)?;
+            self.match_regions(a, ea, b, eb)?;
         }
         for (a, b) in a.types.iter().zip(b.types.iter()) {
-            self.match_tys(a, b)?;
+            self.match_tys(a, ea, b, eb)?;
         }
         for (a, b) in a.trait_refs.iter().zip(b.trait_refs.iter()) {
-            self.match_poly_trait_refs(a, b)?;
+            self.match_poly_trait_refs(a, ea, b, eb)?;
         }
         Ok(())
     }
@@ -413,30 +508,70 @@ impl TypeCheckVisitor<'_> {
                 \n     got: {actual_regions} in {tref}"
             ));
         }
-        if let Ok(clause) = tclause.try_substitute() {
-            let tref_pred = tref.pred();
-            if self
-                .match_poly_trait_decl_refs(&clause.trait_, &tref_pred)
-                .is_err()
-            {
-                let args_fmt = &self.val_fmt_ctx();
-                let clause = clause.with_ctx(args_fmt);
-                let tref_pred = tref_pred.with_ctx(args_fmt);
-                let tref = tref.with_ctx(args_fmt);
-                self.error(format!(
-                    "Mismatched trait clause:\
-                    \nexpected: {clause}\
-                    \n     got: {tref}: {tref_pred}"
-                ));
-            } else if self.match_poly_trait_ref_against_itself(tref).is_err() {
-                let args_fmt = &self.val_fmt_ctx();
-                let tref_pred = tref_pred.with_ctx(args_fmt);
-                let tref = tref.with_ctx(args_fmt);
-                self.error(format!(
-                    "Incoherent trait reference:\
-                    \n     got: {tref}: {tref_pred}"
-                ));
+        // We match the clause with its arguments on the side instead of substituting them. We only
+        // check clauses whose substitution succeeds, so we hold back the lifetime unifications
+        // until we know it does.
+        let tref_pred = tref.pred();
+        let mut unsubstituted_match = None;
+        if !tclause.val.type_info().uses_size_metadata() {
+            let env = Env {
+                args: Some(tclause.generics),
+                depth: DeBruijnId::ZERO,
+            };
+            self.pending_unifications = Some(Vec::new());
+            let result =
+                self.match_poly_trait_decl_refs(&tclause.val.trait_, env, &tref_pred, Env::NONE);
+            let unifications = self.pending_unifications.take().unwrap();
+            if !mem::take(&mut self.needs_substitution) {
+                unsubstituted_match = Some((result, unifications));
             }
+        }
+        let (mismatched_clause, unifications) = match unsubstituted_match {
+            Some((Ok(()), unifications)) => (None, unifications),
+            Some((Err(TypeError), unifications)) => {
+                let Ok(clause) = tclause.try_substitute() else {
+                    return;
+                };
+                (Some(clause), unifications)
+            }
+            None => {
+                let Ok(clause) = tclause.try_substitute() else {
+                    return;
+                };
+                match self.match_poly_trait_decl_refs(
+                    &clause.trait_,
+                    Env::NONE,
+                    &tref_pred,
+                    Env::NONE,
+                ) {
+                    Ok(()) => (None, Vec::new()),
+                    Err(TypeError) => (Some(clause), Vec::new()),
+                }
+            }
+        };
+        if let Some(unifier) = &mut self.body_lt_unifier {
+            for (a, b) in unifications {
+                self.did_unify_lifetimes |= unifier.union(a, b);
+            }
+        }
+        if let Some(clause) = mismatched_clause {
+            let args_fmt = &self.val_fmt_ctx();
+            let clause = clause.with_ctx(args_fmt);
+            let tref_pred = tref_pred.with_ctx(args_fmt);
+            let tref = tref.with_ctx(args_fmt);
+            self.error(format!(
+                "Mismatched trait clause:\
+                \nexpected: {clause}\
+                \n     got: {tref}: {tref_pred}"
+            ));
+        } else if self.match_poly_trait_ref_against_itself(tref).is_err() {
+            let args_fmt = &self.val_fmt_ctx();
+            let tref_pred = tref_pred.with_ctx(args_fmt);
+            let tref = tref.with_ctx(args_fmt);
+            self.error(format!(
+                "Incoherent trait reference:\
+                \n     got: {tref}: {tref_pred}"
+            ));
         }
     }
 
@@ -904,6 +1039,8 @@ impl TransformPass for Check {
                 visit_stack: Default::default(),
                 body_lt_unifier,
                 did_unify_lifetimes: false,
+                pending_unifications: None,
+                needs_substitution: false,
                 accept_type_errors,
                 binder_id: 0,
                 binder_count: 0,
