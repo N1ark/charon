@@ -11,19 +11,7 @@ error: Hax panicked when translating `test_crate::Lt::lt`.
 
 thread 'rustc' panicked at /rustc-dev/923c95cdf5ba65cea505aa2ea829f578e1506ed8/compiler/rustc_type_ir/src/binder.rs:849:9:
 expected region for `'a/#0` ('a/#0/0) but found Type(W<'{erased}>) when instantiating args=[W<'{erased}>]
-error: Hax panicked when translating `test_crate::Lt::lt`.
-  --> tests/ui/trivial-bounds-impl.rs:18:5
-   |
-18 |     fn lt() -> u32;
-   |     ^^^^^^^^^^^^^^^
-
 
 thread 'rustc' panicked at /rustc-dev/923c95cdf5ba65cea505aa2ea829f578e1506ed8/compiler/rustc_type_ir/src/binder.rs:849:9:
 expected region for `'a/#0` ('a/#0/0) but found Type(W<'{erased}>) when instantiating args=[W<'{erased}>]
-error: Hax panicked when translating `test_crate::Lt::lt`.
-  --> tests/ui/trivial-bounds-impl.rs:18:5
-   |
-18 |     fn lt() -> u32;
-   |     ^^^^^^^^^^^^^^^
-
 ERROR Charon failed to translate this code (3 errors)

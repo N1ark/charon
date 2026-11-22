@@ -225,22 +225,19 @@ where
     _3 = &t
     _2 = TraitClause1::clone<'3>(move _3)
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] t
-        ↳⚡ storage_dead(t)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(t)
         unwind_continue
     storage_dead(_3)
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'5>] _2
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] t
-        ↳⚡ storage_dead(t)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(t)
         unwind_continue
     storage_dead(_2)
     _0 = foo[impl_Unix_for_Env]()
     ↳⚡ conditional_drop[{built_in impl Destruct for T}::drop_glue<'4>] t
-        ↳⚡ storage_dead(t)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(t)
         unwind_continue
     conditional_drop[{built_in impl Destruct for T}::drop_glue<'6>] t

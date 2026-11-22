@@ -226,45 +226,36 @@ where
     _6 = move self
     _5 = pin<Self>[TraitClause1](move _6)
     ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'156>] _6
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Self}::drop_glue<'170>] self
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(self)
         unwind_continue
     _4 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '157)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '159)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '166)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '168)}, {built_in impl Sized for Global}]}], &vtable_of(TraitClause0::ImpliedClause1)>(move _5)
     conditional_drop[drop_glue<'169, Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<Self>[TraitClause0::ImpliedClause0, {built_in impl Sized for Global}]}]] _5
     ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'822>] _6
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[drop_glue<'901, Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]}]] _4
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Self}::drop_glue<'170>] self
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(self)
         unwind_continue
     storage_dead(_6)
     storage_dead(_5)
     _3 = assert_future<Clause0_Clause1_Output, Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '71)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '71)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '71)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '71)}, {built_in impl Sized for Global}]}]>[TraitClause0::ImpliedClause1::ImpliedClause1, {built_in impl Sized for Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '71)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '71)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '71)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '71)}, {built_in impl Sized for Global}]}]}, impl_Future_for_Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '52)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '54)}, {built_in impl Sized for Global}], (dyn Future<Clause0_Clause1_Output> + Send + '64), Clause0_Clause1_Output>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '61)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '63)}, {built_in impl Sized for Global}]}, impl_DerefMut_for_Box<(dyn Future<Clause0_Clause1_Output> + Send + '64), Global>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '66)}, {built_in impl Sized for Global}], Future<(dyn Future<Clause0_Clause1_Output> + Send + '70), Clause0_Clause1_Output>]](move _4)
     ↳⚡ conditional_drop[drop_glue<'901, Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]}]] _4
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Self}::drop_glue<'170>] self
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(self)
         unwind_continue
     _2 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '902)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '904)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '911)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '913)}, {built_in impl Sized for Global}]}],  at []>(move _3)
     conditional_drop[drop_glue<'992, Box<(dyn Future<Clause0_Clause1_Output> + Send + '962)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '964)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '962)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '964)}, {built_in impl Sized for Global}]}]] _3
     ↳⚡ conditional_drop[drop_glue<'901, Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '871)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '873)}, {built_in impl Sized for Global}]}]] _4
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         conditional_drop[{built_in impl Destruct for Self}::drop_glue<'170>] self
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(self)
         unwind_continue
     storage_dead(_4)
@@ -272,8 +263,7 @@ where
     _0 = unsize_cast<Pin<Box<(dyn Future<Clause0_Clause1_Output> + Send + '993)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '995)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '1002)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '1004)}, {built_in impl Sized for Global}]}],  at []>(move _2)
     conditional_drop[drop_glue<'1083, Box<(dyn Future<Clause0_Clause1_Output> + Send + '1053)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '1055)}, {built_in impl Sized for Global}]>[{built_in impl Sized for Box<(dyn Future<Clause0_Clause1_Output> + Send + '1053)>[{built_in impl MetaSized for (dyn Future<Clause0_Clause1_Output> + Send + '1055)}, {built_in impl Sized for Global}]}]] _2
     ↳⚡ conditional_drop[{built_in impl Destruct for Self}::drop_glue<'170>] self
-        ↳⚡ storage_dead(self)
-            unwind_terminate(in_cleanup)
+        ↳⚡ unwind_terminate(in_cleanup)
         storage_dead(self)
         unwind_continue
     storage_dead(_2)
