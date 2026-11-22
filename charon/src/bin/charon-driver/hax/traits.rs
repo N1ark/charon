@@ -221,6 +221,18 @@ pub fn solve_trait<'tcx, S: UnderOwnerState<'tcx>>(
     trait_proof
 }
 
+/// Solve the trait reference of an associated type binding, see
+/// [`PredicateSearcher::resolve_binding`].
+pub fn solve_binding_trait<'tcx, S: UnderOwnerState<'tcx>>(
+    s: &S,
+    trait_ref: rustc_middle::ty::PolyTraitRef<'tcx>,
+) -> TraitProof<'tcx> {
+    s.with_predicate_searcher(|pred_searcher, state| {
+        pred_searcher.resolve_binding(state, &trait_ref)
+    })
+    .sinto(s)
+}
+
 /// Translate a reference to an item, resolving the appropriate trait clauses as needed.
 #[tracing::instrument(level = "trace", skip(s), ret)]
 pub fn translate_item_ref<'tcx, S: UnderOwnerState<'tcx>>(

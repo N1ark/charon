@@ -26,21 +26,6 @@ pub trait Add<Self, Rhs>
     vtable: core::ops::arith::Add::{vtable}<Rhs, Self::Output>
 }
 
-// Full name: core::ops::arith::{impl Add<f32> for f32}::add
-#[track_caller]
-pub fn add(_1: f32, _2: f32) -> f32
-= <opaque>
-
-// Full name: core::ops::arith::{impl Add<f32> for f32}
-impl "impl_Add_f32_for_f32" Add<f32> for f32 {
-    proof ImpliedClause0: (f32: MetaSized) = {built_in impl MetaSized for f32}
-    proof ImpliedClause1: (f32: Sized) = {built_in impl Sized for f32}
-    proof ImpliedClause2: (f32: Sized) = {built_in impl Sized for f32}
-    type Output = f32
-    fn add = add
-    vtable: lazy
-}
-
 // Full name: test_crate::FloatConst
 pub trait FloatConst<Self>
 {
@@ -62,7 +47,7 @@ pub fn tau() -> f32
 // Full name: test_crate::{impl FloatConst for f32}
 impl "impl_FloatConst_for_f32" FloatConst for f32 {
     proof ImpliedClause0: (f32: MetaSized) = {built_in impl MetaSized for f32}
-    fn tau<TraitClause0_1: (f32: Sized), TraitClause1_1: (f32: Add<f32>), TypeConstraint0: impl_Add_f32_for_f32::Output = f32> = tau
+    fn tau<TraitClause0_1: (f32: Sized), TraitClause1_1: (f32: Add<f32>), TypeConstraint0: TraitClause1_1::Output = f32> = tau
     vtable: lazy
 }
 
@@ -70,7 +55,7 @@ impl "impl_FloatConst_for_f32" FloatConst for f32 {
 pub fn double() -> f32
 where
     TraitClause0: (f32: Add<f32>),
-    TypeConstraint0: impl_Add_f32_for_f32::Output = f32,
+    TypeConstraint0: TraitClause0::Output = f32,
 {
     let mut _0: f32; // return
     let mut _1: f32; // anonymous local

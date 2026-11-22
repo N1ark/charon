@@ -542,6 +542,26 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         trait_proof
     }
 
+    /// Resolve the trait reference of an associated type binding. If it is a where-clause in
+    /// scope, the binding constrains that clause, so we use it even when an impl proves the trait
+    /// reference too.
+    pub fn resolve_binding(
+        &mut self,
+        state: &Id::State<'tcx>,
+        tref: &PolyTraitRef<'tcx>,
+    ) -> TraitProof<'tcx, Id> {
+        let tcx = self.elab_ctx.tcx;
+        let tref = ty::set_aliases_to_non_rigid(tcx, *tref).skip_normalization();
+        let erased_tref = normalize_bound_val(tcx, self.typing_env, tref);
+        match self.resolve_local(state, erased_tref) {
+            Some(candidate) => self.elab_ctx.intern_trait_proof(TraitProofContents {
+                kind: candidate.proof.kind.clone(),
+                pred: tref,
+            }),
+            None => self.resolve(state, &tref),
+        }
+    }
+
     fn resolve_uncached(
         &mut self,
         state: &Id::State<'tcx>,
