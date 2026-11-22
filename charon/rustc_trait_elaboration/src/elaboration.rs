@@ -523,7 +523,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
             })
         };
 
-        let impl_source = shallow_resolve_trait_ref(tcx, self.typing_env.param_env, erased_tref);
+        let impl_source = self.elab_ctx.select(self.typing_env.param_env, erased_tref);
         let atom = match impl_source {
             Ok(ImplSource::UserDefined(ImplSourceUserDefinedData {
                 impl_def_id,
@@ -770,7 +770,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
 /// This expects that `trait_ref` is fully normalized.
 ///
 /// This is based on `rustc_traits::codegen::codegen_select_candidate` in rustc.
-fn shallow_resolve_trait_ref<'tcx>(
+pub(crate) fn shallow_resolve_trait_ref<'tcx>(
     tcx: TyCtxt<'tcx>,
     param_env: ParamEnv<'tcx>,
     trait_ref: PolyTraitRef<'tcx>,
