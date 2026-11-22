@@ -1290,7 +1290,8 @@ fn remove_useless_jump_blocks(body: &mut tgt::ExprBody) {
 
     impl VisitBodyMut for RemoveUselessJumpsVisitor {
         fn visit_llbc_block(&mut self, block: &mut tgt::Block) -> ControlFlow<Self::Break> {
-            for mut st in mem::take(&mut block.statements) {
+            let len = block.statements.len();
+            for mut st in mem::replace(&mut block.statements, Vec::with_capacity(len)) {
                 if let tgt::StatementKind::Loop(block) = &mut st.kind {
                     let counts = &self.counts[&st.id];
                     let remove = counts.continue_count == 0
