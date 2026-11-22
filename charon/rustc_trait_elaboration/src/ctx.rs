@@ -1,12 +1,14 @@
 use rustc_data_structures::sharded::ShardedHashMap;
 use rustc_hash::FxHashMap;
 use rustc_hir::def_id::DefId;
+use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty;
+use rustc_trait_selection::traits::ImplSource;
 use std::cell::{RefCell, RefMut};
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
-    SearcherKey, TraitProof, TraitProofContents,
+    SearcherKey, TraitProof, TraitProofContents, shallow_resolve_trait_ref,
 };
 
 pub mod intern {
@@ -95,12 +97,16 @@ impl<'tcx, Id: ItemId> Copy for ElaborationCtx<'tcx, Id> {}
 
 pub type ItemRefKey<'tcx, Id> = (Id, ty::GenericArgsRef<'tcx>, AssocItemResolution);
 
+pub(crate) type Selection<'tcx> = Result<ImplSource<'tcx, ()>, CodegenObligationError>;
+
 struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
     predicate_searchers: RefCell<PredicateSearchers<'tcx, Id>>,
     concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
     concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
+    /// The results of rustc's trait selection.
+    selections: RefCell<FxHashMap<(ty::ParamEnv<'tcx>, ty::PolyTraitRef<'tcx>), Selection<'tcx>>>,
     required_predicates: PredicateCache<'tcx, Id>,
     required_recursively_predicates: PredicateCache<'tcx, Id>,
     implied_predicates: PredicateCache<'tcx, Id>,
@@ -114,6 +120,7 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
             predicate_searchers: Default::default(),
             concrete_item_refs: Default::default(),
             concrete_trait_proofs: Default::default(),
+            selections: Default::default(),
             required_predicates: Default::default(),
             required_recursively_predicates: Default::default(),
             implied_predicates: Default::default(),
@@ -210,6 +217,23 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         contents: TraitProofContents<'tcx, Id>,
     ) -> TraitProof<'tcx, Id> {
         self.data.intern_trait_proof(contents)
+    }
+
+    /// Rustc's trait selection, cached.
+    pub(crate) fn select(
+        &self,
+        param_env: ty::ParamEnv<'tcx>,
+        tref: ty::PolyTraitRef<'tcx>,
+    ) -> Selection<'tcx> {
+        if let Some(selection) = self.data.selections.borrow().get(&(param_env, tref)) {
+            return selection.clone();
+        }
+        let selection = shallow_resolve_trait_ref(self.tcx, param_env, tref);
+        self.data
+            .selections
+            .borrow_mut()
+            .insert((param_env, tref), selection.clone());
+        selection
     }
 
     pub fn predicate_searcher_for(
