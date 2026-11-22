@@ -6,8 +6,7 @@ use serde_state::SerializeState;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
-#[serde_state(stateless)]
-pub struct TraitItemName(pub ustr::Ustr);
+pub struct TraitItemName(pub Ustr);
 
 generate_index_type!(TraitMethodId, "TraitMethod");
 generate_index_type!(AssocTypeId, "AssocType");

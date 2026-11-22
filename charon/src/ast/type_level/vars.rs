@@ -112,24 +112,28 @@ impl Variance {
 
 /// A type variable in a signature or binder.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize, Drive, DriveMut, DriveTwo)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(stateless)]
 pub struct TypeParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: TypeVarId,
     /// Variable name
-    pub name: String,
+    #[serde_state(stateful)]
+    pub name: Ustr,
     /// Variance of this parameter.
     pub variance: Variance,
 }
 
 /// A region variable in a signature or binder.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize, Drive, DriveMut, DriveTwo)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(stateless)]
 pub struct RegionParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: RegionId,
     /// Region name
-    pub name: Option<String>,
+    #[serde_state(stateful)]
+    pub name: Option<Ustr>,
     /// Variance of this parameter.
     pub variance: Variance,
     /// Whether this lifetime is (recursively) used in a `&'a mut T` type. Only `true` if this
@@ -163,7 +167,7 @@ pub struct ConstGenericParam {
     /// Index identifying the variable among other variables bound at the same level.
     pub index: ConstGenericVarId,
     /// Const generic name
-    pub name: String,
+    pub name: Ustr,
     /// Type of the const generic
     pub ty: Ty,
 }
@@ -233,17 +237,17 @@ pub enum PredicateOrigin {
 }
 
 impl TypeParam {
-    pub fn new(index: TypeVarId, name: String, variance: Variance) -> Self {
+    pub fn new(index: TypeVarId, name: impl Into<Ustr>, variance: Variance) -> Self {
         Self {
             index,
-            name,
+            name: name.into(),
             variance,
         }
     }
 }
 
 impl RegionParam {
-    pub fn new(index: RegionId, name: Option<String>, variance: Variance) -> Self {
+    pub fn new(index: RegionId, name: Option<Ustr>, variance: Variance) -> Self {
         Self {
             index,
             name,
@@ -255,8 +259,12 @@ impl RegionParam {
 }
 
 impl ConstGenericParam {
-    pub fn new(index: ConstGenericVarId, name: String, ty: Ty) -> Self {
-        Self { index, name, ty }
+    pub fn new(index: ConstGenericVarId, name: impl Into<Ustr>, ty: Ty) -> Self {
+        Self {
+            index,
+            name: name.into(),
+            ty,
+        }
     }
 }
 

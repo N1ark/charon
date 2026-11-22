@@ -139,6 +139,7 @@ pub(crate) fn generate(
         "charon_lib::ast::type_level::type_info::TypeFlags",
         "charon_lib::ast::type_level::type_info::TypeInfo",
         "charon_lib::ast::type_level::type_info::WithCachedTypeInfo",
+        "charon_lib::utils::ustr::Ustr",
     ];
 
     #[rustfmt::skip]
@@ -171,6 +172,7 @@ pub(crate) fn generate(
         all_types.remove(
             &ctx.id_from_name("charon_lib::ast::type_level::type_info::WithCachedTypeInfo"),
         );
+        all_types.remove(&ctx.id_from_name("charon_lib::utils::ustr::Ustr"));
         let all_llbc_types: HashSet<_> =
             ctx.children_of_many(&["charon_lib::ast::bodies::structured::Block"]);
         let all_ullbc_types: HashSet<_> = ctx.children_of_many(&[

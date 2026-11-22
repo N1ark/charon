@@ -5,6 +5,7 @@ use enum_as_inner::EnumAsInner;
 
 pub mod dedup;
 pub mod hash_cons;
+pub mod ustr;
 pub use dedup::*;
 pub use hash_cons::*;
 

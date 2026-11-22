@@ -52,6 +52,10 @@ let dedup_val_of_postcard (tbl : 'a DedupTbl.t)
 
 let path_buf_of_postcard = string_of_postcard
 
+let ustr_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
+    (string, string) result =
+  dedup_val_of_postcard ctx.string_dedup_tbl string_of_postcard ctx st
+
 let opt_indexed_map_of_postcard :
     'a0 'a1.
     (of_postcard_ctx -> postcard_state -> ('a0, string) result) ->

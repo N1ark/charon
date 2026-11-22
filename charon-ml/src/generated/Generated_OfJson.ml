@@ -51,6 +51,9 @@ let dedup_val_of_json (tbl : 'a DedupTbl.t)
 
 let path_buf_of_json = string_of_json
 
+let ustr_of_json (ctx : of_json_ctx) (js : json) : (string, string) result =
+  dedup_val_of_json ctx.string_dedup_tbl string_of_json ctx js
+
 let big_int_of_json _ (js : json) : (big_int, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
@@ -76,7 +79,7 @@ and abi_of_json (ctx : of_json_ctx) (js : json) : (abi, string) result =
     | `String "Rust" -> Ok AbiRust
     | `String "C" -> Ok AbiC
     | `Assoc [ ("Other", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (AbiOther _0)
     | _ -> Error "")
 
@@ -213,10 +216,10 @@ and asm_register_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("Explicit", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (Explicit _0)
     | `Assoc [ ("Class", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (Class _0)
     | _ -> Error "")
 
@@ -225,7 +228,7 @@ and asm_template_piece_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("Text", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (AsmTemplateText _0)
     | `Assoc
         [
@@ -535,7 +538,7 @@ and const_generic_param_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("index", index); ("name", name); ("ty", ty) ] ->
         let* index = const_generic_var_id_of_json ctx index in
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         let* ty = ty_of_json ctx ty in
         Ok ({ index; name; ty } : const_generic_param)
     | _ -> Error "")
@@ -1333,7 +1336,7 @@ and region_param_of_json (ctx : of_json_ctx) (js : json) :
           ("late_bound", late_bound);
         ] ->
         let* index = region_id_of_json ctx index in
-        let* name = option_of_json string_of_json ctx name in
+        let* name = option_of_json ustr_of_json ctx name in
         let* variance = variance_of_json ctx variance in
         let* mutability = lifetime_mutability_of_json ctx mutability in
         let* late_bound = bool_of_json ctx late_bound in
@@ -1754,7 +1757,7 @@ and type_param_of_json (ctx : of_json_ctx) (js : json) :
     (match js with
     | `Assoc [ ("index", index); ("name", name); ("variance", variance) ] ->
         let* index = type_var_id_of_json ctx index in
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         let* variance = variance_of_json ctx variance in
         Ok ({ index; name; variance } : type_param)
     | _ -> Error "")
@@ -2298,7 +2301,7 @@ and rustc_arch_of_json (ctx : of_json_ctx) (js : json) :
     | `String "X86_64" -> Ok RustcArchX86_64
     | `String "Xtensa" -> Ok RustcArchXtensa
     | `Assoc [ ("Other", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (RustcArchOther _0)
     | _ -> Error "")
 
@@ -2408,20 +2411,20 @@ and rustc_attribute_kind_of_json (ctx : of_json_ctx) (js : json) :
         let* span = span_of_json ctx span in
         Ok (RustcAttributeKindDeprecated (deprecation, span))
     | `Assoc [ ("ExportName", `Assoc [ ("name", name); ("span", span) ]) ] ->
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         let* span = span_of_json ctx span in
         Ok (RustcAttributeKindExportName (name, span))
     | `String "Fundamental" -> Ok RustcAttributeKindFundamental
     | `Assoc [ ("Ignore", `Assoc [ ("span", span); ("reason", reason) ]) ] ->
         let* span = span_of_json ctx span in
-        let* reason = option_of_json string_of_json ctx reason in
+        let* reason = option_of_json ustr_of_json ctx reason in
         Ok (RustcAttributeKindIgnore (span, reason))
     | `Assoc [ ("Inline", `List [ _0; _1 ]) ] ->
         let* _0 = rustc_inline_attr_of_json ctx _0 in
         let* _1 = span_of_json ctx _1 in
         Ok (RustcAttributeKindInline (_0, _1))
     | `Assoc [ ("LinkSection", `Assoc [ ("name", name) ]) ] ->
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         Ok (RustcAttributeKindLinkSection name)
     | `Assoc [ ("Linkage", `List [ _0; _1 ]) ] ->
         let* _0 = rustc_linkage_of_json ctx _0 in
@@ -2452,14 +2455,14 @@ and rustc_attribute_kind_of_json (ctx : of_json_ctx) (js : json) :
     | `String "RustcAllocatorZeroed" ->
         Ok RustcAttributeKindRustcAllocatorZeroed
     | `Assoc [ ("RustcAllocatorZeroedVariant", `Assoc [ ("name", name) ]) ] ->
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         Ok (RustcAttributeKindRustcAllocatorZeroedVariant name)
     | `String "RustcDeallocator" -> Ok RustcAttributeKindRustcDeallocator
     | `String "RustcIntrinsic" -> Ok RustcAttributeKindRustcIntrinsic
     | `String "RustcNoWritable" -> Ok RustcAttributeKindRustcNoWritable
     | `String "RustcReallocator" -> Ok RustcAttributeKindRustcReallocator
     | `Assoc [ ("ShouldPanic", `Assoc [ ("reason", reason) ]) ] ->
-        let* reason = option_of_json string_of_json ctx reason in
+        let* reason = option_of_json ustr_of_json ctx reason in
         Ok (RustcAttributeKindShouldPanic reason)
     | `Assoc
         [
@@ -2472,7 +2475,7 @@ and rustc_attribute_kind_of_json (ctx : of_json_ctx) (js : json) :
               ] );
         ] ->
         let* features =
-          list_of_json (pair_of_json string_of_json span_of_json) ctx features
+          list_of_json (pair_of_json ustr_of_json span_of_json) ctx features
         in
         let* attr_span = span_of_json ctx attr_span in
         let* was_forced = bool_of_json ctx was_forced in
@@ -2591,7 +2594,7 @@ and rustc_cfg_abi_of_json (ctx : of_json_ctx) (js : json) :
     | `String "V8Plus" -> Ok RustcCfgAbiV8Plus
     | `String "Unspecified" -> Ok RustcCfgAbiUnspecified
     | `Assoc [ ("Other", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (RustcCfgAbiOther _0)
     | _ -> Error "")
 
@@ -2671,7 +2674,7 @@ and rustc_deprecated_since_of_json (ctx : of_json_ctx) (js : json) :
         Ok (RustcDeprecatedSinceRustcVersion _0)
     | `String "Future" -> Ok RustcDeprecatedSinceFuture
     | `Assoc [ ("NonStandard", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (RustcDeprecatedSinceNonStandard _0)
     | `String "Unspecified" -> Ok RustcDeprecatedSinceUnspecified
     | `String "Err" -> Ok RustcDeprecatedSinceErr
@@ -2684,7 +2687,7 @@ and rustc_deprecation_of_json (ctx : of_json_ctx) (js : json) :
     | `Assoc [ ("since", since); ("note", note); ("suggestion", suggestion) ] ->
         let* since = rustc_deprecated_since_of_json ctx since in
         let* note = option_of_json rustc_ident_of_json ctx note in
-        let* suggestion = option_of_json string_of_json ctx suggestion in
+        let* suggestion = option_of_json ustr_of_json ctx suggestion in
         Ok ({ since; note; suggestion } : rustc_deprecation)
     | _ -> Error "")
 
@@ -2751,7 +2754,7 @@ and rustc_env_of_json (ctx : of_json_ctx) (js : json) :
     | `String "V5" -> Ok RustcEnvV5
     | `String "Unspecified" -> Ok RustcEnvUnspecified
     | `Assoc [ ("Other", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (RustcEnvOther _0)
     | _ -> Error "")
 
@@ -3051,7 +3054,7 @@ and rustc_ident_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("name", name); ("span", span) ] ->
-        let* name = string_of_json ctx name in
+        let* name = ustr_of_json ctx name in
         let* span = span_of_json ctx span in
         Ok ({ name; span } : rustc_ident)
     | _ -> Error "")
@@ -3155,7 +3158,7 @@ and rustc_inline_attr_of_json (ctx : of_json_ctx) (js : json) :
         [ ("Force", `Assoc [ ("attr_span", attr_span); ("reason", reason) ]) ]
       ->
         let* attr_span = span_of_json ctx attr_span in
-        let* reason = option_of_json string_of_json ctx reason in
+        let* reason = option_of_json ustr_of_json ctx reason in
         Ok (RustcInlineAttrForce (attr_span, reason))
     | _ -> Error "")
 
@@ -3722,7 +3725,7 @@ and rustc_os_of_json (ctx : of_json_ctx) (js : json) : (rustc_os, string) result
     | `String "Zkvm" -> Ok RustcOsZkvm
     | `String "Unknown" -> Ok RustcOsUnknown
     | `Assoc [ ("Other", _0) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         Ok (RustcOsOther _0)
     | _ -> Error "")
 
@@ -4166,7 +4169,7 @@ and trait_item_name_of_json (ctx : of_json_ctx) (js : json) :
     (trait_item_name, string) result =
   combine_error_msgs js __FUNCTION__
     (match js with
-    | x -> string_of_json ctx x
+    | x -> ustr_of_json ctx x
     | _ -> Error "")
 
 and trait_method_of_json (ctx : of_json_ctx) (js : json) :

@@ -73,9 +73,9 @@ pub(crate) struct BindingLevel<'tcx> {
 }
 
 /// Small helper: we ignore some region names (when they are equal to "'_")
-fn translate_region_name(s: hax::Symbol) -> Option<String> {
-    let s = s.to_string();
-    if s == "'_" { None } else { Some(s) }
+fn translate_region_name(s: hax::Symbol) -> Option<Ustr> {
+    let s = s.as_str();
+    if s == "'_" { None } else { Some(s.into()) }
 }
 
 fn translate_variance(variance: Option<&hax::Variance>) -> Variance {
@@ -144,7 +144,7 @@ impl<'tcx> BindingLevel<'tcx> {
             Anon => (None, None),
             NamedForPrinting(symbol) => (translate_region_name(symbol), None),
             Named(def_id, symbol) => (translate_region_name(symbol), Some(def_id)),
-            ClosureEnv => (Some("@env".to_owned()), None),
+            ClosureEnv => (Some("@env".into()), None),
         };
         let rid = self.params.regions.push_with(|index| RegionParam {
             late_bound: true,
@@ -193,7 +193,7 @@ impl<'tcx> BindingLevel<'tcx> {
         }
         let var_id = self.params.types.push_with(|index| TypeParam {
             index,
-            name,
+            name: name.into(),
             variance,
         });
         self.type_vars_map.insert(rid, Some(var_id));
@@ -206,7 +206,7 @@ impl<'tcx> BindingLevel<'tcx> {
             .const_generics
             .push_with(|index| ConstGenericParam {
                 index,
-                name: name.to_string(),
+                name: name.as_str().into(),
                 ty,
             });
         self.const_generic_vars_map.insert(rid, var_id);

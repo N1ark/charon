@@ -7,10 +7,10 @@
     clippy::large_enum_variant
 )]
 
+use crate::ast::Ustr;
 use crate::ast::meta::Span;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use serde::{Deserialize, Serialize};
-use ustr::Ustr;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FromRustcError;
