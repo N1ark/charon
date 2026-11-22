@@ -1,0 +1,13 @@
+error: Error during trait resolution: Could not find a clause for `Binder { value: <<<T as Tr>::A as std::iter::Iterator>::Item as std::clone::Clone>, bound_vars: [] }` in the item parameters
+  --> tests/ui/traits/nested-associated-type-bounds.rs:16:5
+   |
+16 |     needs_clone(&x)
+   |     ^^^^^^^^^^^^^^^
+
+error: Error during trait resolution: Could not find a clause for `Binder { value: <<<T as Tr>::A as std::iter::Iterator>::Item as std::clone::Clone>, bound_vars: [] }` in the item parameters
+  --> tests/ui/traits/nested-associated-type-bounds.rs:16:5
+   |
+16 |     needs_clone(&x)
+   |     ^^^^^^^^^^^^^^^
+
+ERROR Charon failed to translate this code (2 errors)
