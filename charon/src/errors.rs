@@ -9,6 +9,9 @@ use petgraph::prelude::DiGraphMap;
 use rustc_hash::FxHashSet as HashSet;
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, PartialOrd};
+use std::fmt;
+use std::io::Write;
+use std::ops::Range;
 
 const BACKTRACE_ON_ERR: bool = false;
 
@@ -82,10 +85,13 @@ impl Error {
         if let Some(file) = krate.files.get(span.file_id) {
             origin = format!("{}", file.name);
             if let Some(source) = &file.contents {
+                let (source, line_start, range) =
+                    covering_lines(source, span.to_byte_range(source));
                 let snippet = Snippet::source(source)
+                    .line_start(line_start)
                     .path(&origin)
                     .fold(true)
-                    .annotation(AnnotationKind::Primary.span(span.to_byte_range(source)));
+                    .annotation(AnnotationKind::Primary.span(range));
                 group = group.element(snippet);
             } else {
                 // Show just the file and line/col.
@@ -98,6 +104,36 @@ impl Error {
 
         Renderer::styled().render(&[group]).to_string()
     }
+}
+
+/// The lines of `source` that `range` touches, the number of the first one, and `range` relative to
+/// them. The renderer takes time linear in the source it is given, so we only give it these lines.
+fn covering_lines(source: &str, range: Range<usize>) -> (&str, usize, Range<usize>) {
+    if range.start > range.end || range.end > source.len() {
+        return (source, 1, range);
+    }
+    let bytes = source.as_bytes();
+    let line_start_before = |pos: usize| {
+        bytes[..pos]
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |i| i + 1)
+    };
+    let mut lo = line_start_before(range.start);
+    // The renderer counts lines in the text before the end of the range: keep that text non-empty.
+    if range.end == lo && lo > 0 {
+        lo = line_start_before(lo - 1);
+    }
+    let hi = bytes[range.end..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map_or(source.len(), |i| range.end + i + 1);
+    let line_start = 1 + bytes[..lo].iter().filter(|&&b| b == b'\n').count();
+    (
+        &source[lo..hi],
+        line_start,
+        range.start - lo..range.end - lo,
+    )
 }
 
 /// Attach a source span to an error.
@@ -120,6 +156,19 @@ impl<T: ToString> From<T> for Error {
     }
 }
 
+/// Like `anstream::eprintln!`, but in a single write: stderr is unbuffered, and `anstream` writes each
+/// styled chunk separately.
+fn eprintln_at_once(args: fmt::Arguments<'_>) {
+    let stderr = std::io::stderr();
+    let mut buffer = anstream::AutoStream::new(Vec::new(), anstream::AutoStream::choice(&stderr));
+    let _ = writeln!(buffer, "{args}");
+    if let Err(e) = stderr.lock().write_all(&buffer.into_inner())
+        && e.kind() != std::io::ErrorKind::BrokenPipe
+    {
+        panic!("failed printing to stderr: {e}");
+    }
+}
+
 /// Display an error without a specific location.
 pub fn display_unspanned_error(level: Level, msg: &str) {
     use annotate_snippets::*;
@@ -127,7 +176,7 @@ pub fn display_unspanned_error(level: Level, msg: &str) {
     let message = Renderer::styled()
         .render(&[Group::with_title(title)])
         .to_string();
-    anstream::eprintln!("{message}\n");
+    eprintln_at_once(format_args!("{message}\n"));
 }
 
 /// Display an error at the given source span.
@@ -155,7 +204,7 @@ pub fn display_spanned_error(krate: &TranslatedCrate, span: Span, title: &str, l
     }
 
     let diagnostic = [group];
-    anstream::eprintln!("{}", Renderer::styled().render(&diagnostic));
+    eprintln_at_once(format_args!("{}", Renderer::styled().render(&diagnostic)));
 }
 
 /// We use this to save the origin of an id. This is useful for the external
@@ -255,7 +304,7 @@ impl ErrorCtx {
         msg: String,
     ) -> Error {
         let error = Error { span, msg };
-        anstream::eprintln!("{}\n", error.render(krate, level));
+        eprintln_at_once(format_args!("{}\n", error.render(krate, level)));
         if BACKTRACE_ON_ERR {
             let backtrace = std::backtrace::Backtrace::force_capture();
             eprintln!("{backtrace}\n");
@@ -370,6 +419,6 @@ impl ErrorCtx {
         );
         let message = Group::with_title(level.primary_title(&msg)).elements(snippets);
         let out = Renderer::styled().render(&[message]).to_string();
-        anstream::eprintln!("{}", out);
+        eprintln_at_once(format_args!("{out}"));
     }
 }
