@@ -878,6 +878,17 @@ impl std::fmt::Debug for SpecialJump {
     }
 }
 
+/// What comes after the translation of a terminator.
+enum Next {
+    /// Control-flow continues to this block.
+    Jump(BlockId),
+    /// Like `Jump`, but the span of the translated block includes that of the assert statement
+    /// the terminator translated to.
+    AssertJump(BlockId),
+    /// The terminator doesn't continue to a single block; this is its translation.
+    Done(tgt::Block),
+}
+
 /// How to handle blocks reachable from multiple branches.
 enum ReconstructMode {
     /// Duplicate blocks reachable from multiple branches.
@@ -984,10 +995,16 @@ impl<'a> ReconstructCtx<'a> {
         }
     }
 
-    fn translate_terminator(&mut self, terminator: &src::Terminator) -> tgt::Block {
+    /// Translate a terminator. When control-flow continues to a single block, we push the
+    /// statement the terminator translates to (if any) to `statements` and return that block.
+    fn translate_terminator(
+        &mut self,
+        terminator: &src::Terminator,
+        statements: &mut Vec<tgt::Statement>,
+    ) -> Next {
         let src_span = terminator.span;
 
-        match &terminator.kind {
+        let block = match &terminator.kind {
             src::TerminatorKind::Panic { call, on_unwind } => {
                 let on_unwind = self.translate_block(*on_unwind);
                 tgt::Statement::new(
@@ -1020,17 +1037,15 @@ impl<'a> ReconstructCtx<'a> {
                 on_unwind,
             } => {
                 let on_unwind = self.translate_block(*on_unwind);
-                let st = tgt::Statement::new(
+                statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Call {
                         call: call.clone(),
                         dest: dest.clone(),
                         on_unwind,
                     },
-                );
-                let mut block = self.translate_jump(terminator.span, *target);
-                block.statements.insert(0, st);
-                block
+                ));
+                return Next::Jump(*target);
             }
             src::TerminatorKind::Drop {
                 kind,
@@ -1040,7 +1055,7 @@ impl<'a> ReconstructCtx<'a> {
                 on_unwind,
             } => {
                 let on_unwind = self.translate_block(*on_unwind);
-                let st = tgt::Statement::new(
+                statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::Drop {
                         place: place.clone(),
@@ -1048,10 +1063,8 @@ impl<'a> ReconstructCtx<'a> {
                         kind: *kind,
                         on_unwind,
                     },
-                );
-                let mut block = self.translate_jump(terminator.span, *target);
-                block.statements.insert(0, st);
-                block
+                ));
+                return Next::Jump(*target);
             }
             src::TerminatorKind::DropEmptyBox {
                 place,
@@ -1059,16 +1072,14 @@ impl<'a> ReconstructCtx<'a> {
                 on_unwind,
             } => {
                 let on_unwind = self.translate_block(*on_unwind);
-                let st = tgt::Statement::new(
+                statements.push(tgt::Statement::new(
                     src_span,
                     tgt::StatementKind::DropEmptyBox {
                         place: place.clone(),
                         on_unwind,
                     },
-                );
-                let mut block = self.translate_jump(terminator.span, *target);
-                block.statements.insert(0, st);
-                block
+                ));
+                return Next::Jump(*target);
             }
             src::TerminatorKind::Assert {
                 assert,
@@ -1081,8 +1092,8 @@ impl<'a> ReconstructCtx<'a> {
                     on_failure: AbortKind::Panic,
                     on_unwind,
                 };
-                let target = self.translate_jump(terminator.span, *target);
-                tgt::Statement::new(src_span, st).into_block().merge(target)
+                statements.push(tgt::Statement::new(src_span, st));
+                return Next::AssertJump(*target);
             }
             src::TerminatorKind::InlineAsm {
                 asm,
@@ -1102,7 +1113,7 @@ impl<'a> ReconstructCtx<'a> {
                 };
                 tgt::Statement::new(src_span, st).into_block()
             }
-            src::TerminatorKind::Goto { target } => self.translate_jump(terminator.span, *target),
+            src::TerminatorKind::Goto { target } => return Next::Jump(*target),
             src::TerminatorKind::Switch { data, branches } => {
                 let branches =
                     branches.map_ref(|target| self.translate_jump(terminator.span, *target));
@@ -1116,43 +1127,85 @@ impl<'a> ReconstructCtx<'a> {
                 };
                 tgt::Statement::new(span, st).into_block()
             }
-        }
+        };
+        Next::Done(block)
     }
 
-    /// Translate just the block statements and terminator.
-    fn translate_block_itself(&mut self, block_id: BlockId) -> tgt::Block {
-        let block = &self.body.body[block_id];
-        // Translate the statements inside the block
-        let statements = block
-            .statements
+    /// Translate the block statements and terminator, followed by the blocks control-flow
+    /// continues to as long as they need no surrounding control-flow. We loop over those instead
+    /// of recursing so that long straight-line code doesn't hit the recursion limit.
+    fn translate_block_itself(&mut self, mut block_id: BlockId) -> tgt::Block {
+        let body = self.body;
+        let mut statements = Vec::new();
+        // The spans to combine with that of the last block, as if each block's statements were
+        // followed by a nested block for the rest.
+        let mut spans = Vec::new();
+        let last_block = loop {
+            let block = &body.body[block_id];
+            let first = statements.len();
+            statements.extend(
+                block
+                    .statements
+                    .iter()
+                    .map(|st| self.translate_statement(st)),
+            );
+            if statements.len() > first {
+                spans.push(combine_span_iter(
+                    statements[first..].iter().map(|st| &st.span),
+                ));
+            }
+            let target = match self.translate_terminator(&block.terminator, &mut statements) {
+                Next::Done(block) => break block,
+                Next::Jump(target) => target,
+                Next::AssertJump(target) => {
+                    spans.push(statements.last().unwrap().span);
+                    target
+                }
+            };
+            // This is `translate_jump`, except that we loop instead of calling `translate_block`
+            // when the target needs no surrounding control-flow.
+            if self
+                .special_jump_stack
+                .iter()
+                .any(|jump| jump.target_block == target)
+            {
+                break self.translate_jump(block.terminator.span, target);
+            }
+            let old_context_depth = self.special_jump_stack.len();
+            self.push_special_jumps(target);
+            if self.special_jump_stack.len() != old_context_depth {
+                break ensure_sufficient_stack(|| {
+                    self.translate_block_with_special_jumps(target, old_context_depth)
+                });
+            }
+            block_id = target;
+        };
+        let span = spans
             .iter()
-            .map(|st| self.translate_statement(st))
-            .collect_vec();
-        // Translate the terminator.
-        let terminator = self.translate_terminator(&block.terminator);
-        // Prepend the statements to the terminator.
-        if let Some(st) = tgt::Block::from_seq(statements) {
-            st.merge(terminator)
-        } else {
-            terminator
-        }
+            .rev()
+            .fold(last_block.span, |span, part| combine_span(part, &span));
+        statements.extend(last_block.statements);
+        tgt::Block::new(span, statements)
     }
 
     /// Translate a block including surrounding control-flow like looping.
     #[tracing::instrument(skip(self), fields(stack = ?self.special_jump_stack))]
     fn translate_block(&mut self, block_id: src::BlockId) -> tgt::Block {
-        ensure_sufficient_stack(|| self.translate_block_inner(block_id))
+        ensure_sufficient_stack(|| {
+            let old_context_depth = self.special_jump_stack.len();
+            self.push_special_jumps(block_id);
+            self.translate_block_with_special_jumps(block_id, old_context_depth)
+        })
     }
-    fn translate_block_inner(&mut self, block_id: src::BlockId) -> tgt::Block {
-        // Some of the blocks we might jump to inside this tree can't be translated as normal
-        // blocks: the loop backward edges must become `continue`s and the merge nodes may need
-        // some care if we're jumping to them from distant locations.
-        // For this purpose, we push to the `special_jump_stack` the block ids that must be
-        // translated specially. In `translate_jump` we check the stack. At the end of this
-        // function we restore the stack to its previous state.
-        let old_context_depth = self.special_jump_stack.len();
+
+    /// Some of the blocks we might jump to inside the tree of this block can't be translated as
+    /// normal blocks: the loop backward edges must become `continue`s and the merge nodes may need
+    /// some care if we're jumping to them from distant locations.
+    /// For this purpose, we push to the `special_jump_stack` the block ids that must be translated
+    /// specially. In `translate_jump` we check the stack. `translate_block_with_special_jumps`
+    /// then restores the stack to its previous state.
+    fn push_special_jumps(&mut self, block_id: src::BlockId) {
         let block_data = &self.cfg.block_data[block_id];
-        let span = block_data.span;
 
         // Catch jumps to the loop header or loop exit.
         if block_data.is_loop_header {
@@ -1194,7 +1247,16 @@ impl<'a> ReconstructCtx<'a> {
             self.special_jump_stack
                 .push(SpecialJump::new(bid, SpecialJumpKind::NextBlock));
         }
+    }
 
+    /// Translate a block after `push_special_jumps`, popping the special jumps above
+    /// `old_context_depth`.
+    fn translate_block_with_special_jumps(
+        &mut self,
+        block_id: src::BlockId,
+        old_context_depth: usize,
+    ) -> tgt::Block {
+        let span = self.cfg.block_data[block_id].span;
         // Translate this block. Any jumps to a loop header or a merge node will be replaced with
         // `continue`/`break`.
         let mut block = self.translate_block_itself(block_id);
