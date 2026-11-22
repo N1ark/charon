@@ -2,6 +2,7 @@ use super::translate_crate::VirtualImplKind;
 use super::translate_ctx::*;
 use crate::hax;
 use charon_lib::{ast::*, ids::IndexVec};
+use rustc_middle::ty::TypeVisitableExt;
 
 impl<'tcx> TranslateCtx<'tcx> {
     pub fn recognize_builtin_impl(
@@ -119,6 +120,19 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         span: Span,
         bound_trait_ref: &hax::Binder<hax::TraitRef<'tcx>>,
     ) -> Result<PolyTraitDeclRef, Error> {
+        // If nothing is bound, translating in the current binder gives the same result and uses
+        // its caches. Warmer caches change the numbering of body regions (cache misses allocate
+        // regions that may end up unused), so we only do this when body regions are erased.
+        if bound_trait_ref.bound_vars.is_empty()
+            && self.options.erase_body_lifetimes
+            && !bound_trait_ref
+                .value
+                .rustc_args(self.hax_state())
+                .has_escaping_bound_vars()
+        {
+            let trait_ref = self.translate_trait_ref(span, &bound_trait_ref.value)?;
+            return Ok(RegionBinder::empty(trait_ref));
+        }
         self.translate_region_binder(span, bound_trait_ref, move |ctx, trait_ref| {
             ctx.translate_trait_ref(span, trait_ref)
         })
