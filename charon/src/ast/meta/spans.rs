@@ -280,7 +280,7 @@ impl<State: DedupSerializerState> SerializeState<State> for Span {
         state: &State,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serialize_dedup(self, self.unpack(), state, serializer)
+        serialize_dedup(self, || self.unpack(), state, serializer)
     }
 }
 impl<'de, State: DedupSerializerState> DeserializeState<'de, State> for Span {
