@@ -9,8 +9,10 @@ use rustc_middle::traits::CodegenObligationError;
 use rustc_middle::ty::print::with_no_trimmed_paths;
 use rustc_middle::ty::{self, *};
 use rustc_span::{DUMMY_SP, Symbol};
-use rustc_trait_selection::traits::ImplSource;
+use rustc_trait_selection::solve::inspect::{InspectGoal, ProofTreeVisitor};
+use rustc_trait_selection::traits::{ImplSource, Selection, SelectionResult};
 use rustc_type_ir::{CallerBoundsIterator, Interner};
+use std::ops::ControlFlow;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ItemClause<'tcx, Id = DefId> {
@@ -772,9 +774,11 @@ fn shallow_resolve_trait_ref<'tcx>(
     use rustc_infer::infer::TyCtxtInferExt;
     use rustc_middle::traits::CodegenObligationError;
     use rustc_middle::ty::TypeVisitableExt;
+    use rustc_trait_selection::solve::inspect::InferCtxtProofTreeExt;
     use rustc_trait_selection::traits::{
         Obligation, ObligationCause, ObligationCtxt, SelectionContext, SelectionError,
     };
+    use rustc_type_ir::solve::Goal;
     // Do the initial selection for the obligation. This yields the
     // shallow result we are looking for -- that is, what specific impl.
     let infcx = tcx
@@ -786,7 +790,17 @@ fn shallow_resolve_trait_ref<'tcx>(
     let obligation_cause = ObligationCause::dummy();
     let obligation = Obligation::new(tcx, obligation_cause, param_env, trait_ref);
 
-    let selection = match selcx.poly_select(&obligation) {
+    let mut selection = selcx.poly_select(&obligation);
+    if let Ok(None) = selection
+        && infcx.next_trait_solver()
+    {
+        let goal = Goal::new(tcx, param_env, trait_ref);
+        selection = infcx
+            .visit_proof_tree(goal, &mut SolverSelect)
+            .break_value()
+            .unwrap();
+    }
+    let selection = match selection {
         Ok(Some(selection)) => selection,
         Ok(None) => return Err(CodegenObligationError::Ambiguity),
         Err(SelectionError::Unimplemented) => return Err(CodegenObligationError::Unimplemented),
@@ -816,4 +830,41 @@ fn shallow_resolve_trait_ref<'tcx>(
     }
 
     Ok(impl_source)
+}
+
+/// The new trait solver's selection is ambiguous whenever several candidates apply, but the solver
+/// itself uses a trivial builtin impl whenever one applies, e.g. over a where-clause that proves
+/// `Sized` (see `merge_trait_candidates` in rustc). We select that impl too; otherwise the goal stays
+/// ambiguous and we look for the clause ourselves.
+struct SolverSelect;
+
+impl<'tcx> ProofTreeVisitor<'tcx> for SolverSelect {
+    type Result = ControlFlow<SelectionResult<'tcx, Selection<'tcx>>>;
+
+    fn span(&self) -> rustc_span::Span {
+        DUMMY_SP
+    }
+
+    fn visit_goal(&mut self, goal: &InspectGoal<'_, 'tcx>) -> Self::Result {
+        use rustc_trait_selection::traits::BuiltinImplSource::Trivial;
+        use rustc_trait_selection::traits::solve::inspect::ProbeKind;
+        use rustc_type_ir::solve::{CandidateSource::BuiltinImpl, Certainty};
+
+        // Like rustc's selection, only choose between the candidates of a goal that holds.
+        if goal.result() == Ok(Certainty::Yes)
+            && goal.candidates().iter().any(|candidate| {
+                matches!(
+                    candidate.kind(),
+                    ProbeKind::TraitCandidate {
+                        source: BuiltinImpl(Trivial),
+                        result: Ok(_),
+                    }
+                )
+            })
+        {
+            ControlFlow::Break(Ok(Some(ImplSource::Builtin(Trivial, Default::default()))))
+        } else {
+            ControlFlow::Break(Ok(None))
+        }
+    }
 }
