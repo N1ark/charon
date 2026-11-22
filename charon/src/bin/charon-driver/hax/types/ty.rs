@@ -254,9 +254,12 @@ pub struct ArrayTy<'tcx> {
 
 impl<'tcx> ArrayTy<'tcx> {
     /// The `Sized` proof for the element type, if we're not hiding `Sized`.
-    pub fn element_sized_proof(&self) -> Option<&TraitProof<'tcx>> {
+    pub fn element_sized_proof<S: UnderOwnerState<'tcx>>(
+        &self,
+        s: &S,
+    ) -> Option<&TraitProof<'tcx>> {
         if self.has_sized_proof {
-            Some(&self.item.trait_proofs[0])
+            Some(&self.item.trait_proofs(s)[0])
         } else {
             None
         }
@@ -277,9 +280,12 @@ pub struct SliceTy<'tcx> {
 
 impl<'tcx> SliceTy<'tcx> {
     /// The `Sized` proof for the element type, if we're not hiding `Sized`.
-    pub fn element_sized_proof(&self) -> Option<&TraitProof<'tcx>> {
+    pub fn element_sized_proof<S: UnderOwnerState<'tcx>>(
+        &self,
+        s: &S,
+    ) -> Option<&TraitProof<'tcx>> {
         if self.has_sized_proof {
-            Some(&self.item.trait_proofs[0])
+            Some(&self.item.trait_proofs(s)[0])
         } else {
             None
         }
