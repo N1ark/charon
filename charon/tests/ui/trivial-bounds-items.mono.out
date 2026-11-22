@@ -1,0 +1,109 @@
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#1}, 0)
+  --> tests/ui/trivial-bounds-items.rs:28:17
+   |
+28 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#1}, 0)
+  --> tests/ui/trivial-bounds-items.rs:28:17
+   |
+28 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::closure_user, 0)
+  --> tests/ui/trivial-bounds-items.rs:44:24
+   |
+44 |     let f = || foo() + <Env as Unix>::name();
+   |                        ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::closure_user, 0)
+  --> tests/ui/trivial-bounds-items.rs:44:24
+   |
+44 |     let f = || foo() + <Env as Unix>::name();
+   |                        ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#1}, 0)
+  --> tests/ui/trivial-bounds-items.rs:28:17
+   |
+28 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#1}, 0)
+  --> tests/ui/trivial-bounds-items.rs:28:17
+   |
+28 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the type variable Self
+  --> tests/ui/trivial-bounds-items.rs:36:17
+   |
+36 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable TraitSelf
+  --> tests/ui/trivial-bounds-items.rs:36:17
+   |
+36 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the type variable Self
+  --> tests/ui/trivial-bounds-items.rs:36:17
+   |
+36 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable TraitSelf
+  --> tests/ui/trivial-bounds-items.rs:36:17
+   |
+36 |         foo() + <Env as Unix>::name()
+   |                 ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::foo, 0)
+  --> tests/ui/trivial-bounds-items.rs:20:5
+   |
+20 |     <Env as Unix>::name()
+   |     ^^^^^^^^^^^^^^^^^^^^^
+
+ERROR Charon failed to translate this code (18 errors)
