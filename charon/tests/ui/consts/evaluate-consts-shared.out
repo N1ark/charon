@@ -20,12 +20,11 @@ struct (_, _, _)::<&'_ [u8; 3usize], &'_ [u8; 3usize], &'_ [u8; 3usize]> {
   _2: &'_ [u8; 3usize],
 }
 
-static test_crate::{promoted_const}: [u8; 3usize] = [1u8, 2u8, 3u8]
-
-static test_crate::{promoted_const#1}: [u8; 3usize] = [1u8, 2u8, 3u8]
+// Full name: test_crate::{promoted_const}
+static {promoted_const}: [u8; 3usize] = [1u8, 2u8, 3u8]
 
 // Full name: test_crate::TABLE
-const TABLE: &'static [u8; 3usize] = &test_crate::{promoted_const}
+const TABLE: &'static [u8; 3usize] = &{promoted_const}
 
 // Full name: test_crate::generic::<u8>
 fn generic::<u8>(_x: u8) -> &'static [u8; 3usize]
@@ -34,7 +33,7 @@ fn generic::<u8>(_x: u8) -> &'static [u8; 3usize]
     let _x: u8; // arg #1
 
     storage_live(_0)
-    _0 = &test_crate::{promoted_const#1}
+    _0 = &{promoted_const}
     storage_dead(_x)
     return
 }
@@ -46,7 +45,7 @@ fn generic::<u32>(_x: u32) -> &'static [u8; 3usize]
     let _x: u32; // arg #1
 
     storage_live(_0)
-    _0 = &test_crate::{promoted_const#1}
+    _0 = &{promoted_const}
     storage_dead(_x)
     return
 }
