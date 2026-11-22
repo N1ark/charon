@@ -685,14 +685,15 @@ impl<'tcx> TranslateCtx<'tcx> {
             return Ok(item_id);
         }
 
-        let item_def = self.poly_hax_def(item_def_id)?;
-        let assoc = match item_def.kind() {
-            hax::FullDefKind::AssocTy(t) => t.associated_item(),
-            hax::FullDefKind::AssocConst(c) => c.associated_item(),
-            hax::FullDefKind::AssocFn(f) => f.associated_item(),
-            _ => panic!("Unexpected def for associated item: {item_def:?}"),
+        // The trait item this item implements, if it is an impl item.
+        let decl_def_id = match self
+            .tcx
+            .associated_item(item_def_id.real_rust_def_id())
+            .container
+        {
+            ty::AssocContainer::TraitImpl(Ok(decl_id)) => &decl_id.sinto(&self.hax_state),
+            _ => item_def_id,
         };
-        let decl_def_id = assoc.implemented_trait_item_id();
 
         if decl_def_id != item_def_id
             && let Some(&item_id) = self.assoc_item_id_map.get(decl_def_id)
