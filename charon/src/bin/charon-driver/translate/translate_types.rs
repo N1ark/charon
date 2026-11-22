@@ -138,10 +138,15 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             let ty = self
                 .translate_ty_inner(span, hax_ty)
                 .unwrap_or_else(|e| TyKind::Error(e.msg).into_ty());
-            self.innermost_binder_mut().type_trans_cache.insert(
-                hax_ty.clone(),
-                ty.clone().replace_erased_regions(|| Region::Erased),
-            );
+            // Without a freshener, erased regions are already translated to `Region::Erased`.
+            let cached = if self.lifetime_freshener.is_some() {
+                ty.clone().replace_erased_regions(|| Region::Erased)
+            } else {
+                ty.clone()
+            };
+            self.innermost_binder_mut()
+                .type_trans_cache
+                .insert(hax_ty.clone(), cached);
             ty
         };
         if let Some(v) = &mut self.lifetime_freshener {
