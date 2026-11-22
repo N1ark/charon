@@ -26,7 +26,7 @@ use std::path::PathBuf;
 
 use super::translate_ctx::*;
 use crate::hax;
-use crate::hax::SInto;
+use crate::hax::{BaseState, SInto};
 use charon_lib::ast::*;
 use charon_lib::name_matcher::NamePattern;
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
@@ -252,13 +252,10 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// If this is a trait method declaration, return the `DefId` of its parent trait.
     fn as_trait_method_decl(&mut self, def_id: &hax::DefId) -> Option<hax::DefId> {
         if matches!(def_id.kind, hax::DefKind::AssocFn)
-            && let def = self.poly_hax_def(def_id).ok()?
-            && let hax::FullDefKind::AssocFn(f) = def.kind()
-            && let associated_item = f.associated_item()
-            && let hax::AssocItemContainer::TraitContainer { trait_ref } =
-                &associated_item.container
+            && let Some(rust_def_id) = def_id.as_real_def_id()
+            && let ty::AssocContainer::Trait = self.tcx.associated_item(rust_def_id).container
         {
-            Some(trait_ref.def_id.clone())
+            Some(self.tcx.parent(rust_def_id).sinto(&self.hax_state))
         } else {
             None
         }
@@ -509,15 +506,20 @@ impl<'tcx> TranslateCtx<'tcx> {
         }
         let kind = self.base_kind_for_item(def_id)?;
         let item_src = if self.options.monomorphize_with_hax {
-            if let Ok(def) = self.poly_hax_def(def_id)
-                && !def.has_any_generics()
-            {
-                // Monomorphize this item and the items it depends on.
-                TransItemSource::monomorphic(def.this(), kind)
+            // Monomorphize this item and the items it depends on; skip polymorphic items.
+            let s = self.hax_state.with_hax_owner(def_id);
+            let item = if !def_id.can_have_generics(&s) {
+                hax::ItemRef::dummy_without_generics(&s, def_id.clone())
+            } else if def_id.generics_of(&s).count() == 0 {
+                hax::ItemRef::translate_from_hax_def_id(
+                    &s,
+                    def_id.clone(),
+                    def_id.identity_args(&s),
+                )
             } else {
-                // Skip polymorphic items and items that cause errors.
                 return None;
-            }
+            };
+            TransItemSource::monomorphic(&item, kind)
         } else {
             TransItemSource::polymorphic(def_id, kind)
         };
@@ -683,14 +685,15 @@ impl<'tcx> TranslateCtx<'tcx> {
             return Ok(item_id);
         }
 
-        let item_def = self.poly_hax_def(item_def_id)?;
-        let assoc = match item_def.kind() {
-            hax::FullDefKind::AssocTy(t) => t.associated_item(),
-            hax::FullDefKind::AssocConst(c) => c.associated_item(),
-            hax::FullDefKind::AssocFn(f) => f.associated_item(),
-            _ => panic!("Unexpected def for associated item: {item_def:?}"),
+        // The trait item this item implements, if it is an impl item.
+        let decl_def_id = match self
+            .tcx
+            .associated_item(item_def_id.real_rust_def_id())
+            .container
+        {
+            ty::AssocContainer::TraitImpl(Ok(decl_id)) => &decl_id.sinto(&self.hax_state),
+            _ => item_def_id,
         };
-        let decl_def_id = assoc.implemented_trait_item_id();
 
         if decl_def_id != item_def_id
             && let Some(&item_id) = self.assoc_item_id_map.get(decl_def_id)
