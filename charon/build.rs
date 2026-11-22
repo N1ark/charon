@@ -29,4 +29,9 @@ fn main() {
         .or_else(|| git(&["rev-parse", "HEAD"]))
         .unwrap_or_else(|| "unknown".to_owned());
     println!("cargo::rustc-env=CHARON_GIT_COMMIT={commit}");
+
+    // `charon-driver` is built for this target and links the toolchain's `librustc_driver`, so this
+    // is the host target of the toolchain.
+    let target = env::var("TARGET").unwrap();
+    println!("cargo::rustc-env=CHARON_HOST_TARGET={target}");
 }
