@@ -191,7 +191,7 @@ impl<'tcx> ItemRef<'tcx> {
         assoc_item_resolution: AssocItemResolution,
     ) -> ItemRef<'tcx> {
         let key = (hax_def_id.clone(), generics, assoc_item_resolution);
-        if let Some(item) = s.with_cache(|cache| cache.item_refs.get(&key).cloned()) {
+        if let Some(item) = s.with_cache_for(generics, |cache| cache.item_refs.get(&key).cloned()) {
             return item;
         }
 
@@ -213,7 +213,7 @@ impl<'tcx> ItemRef<'tcx> {
 
         let content: ItemRefContents<'tcx> = item_ref.sinto(s);
         let item = content.intern(s);
-        s.with_cache(|cache| {
+        s.with_cache_for(generics, |cache| {
             cache.item_refs.insert(key, item.clone());
         });
         item

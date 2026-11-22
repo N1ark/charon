@@ -35,6 +35,9 @@ mod base {
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
         pub per_item: HashMap<DefId, ItemCache<'tcx>>,
+        /// Cache of parameter-free values, shared by the items that translate them the same way.
+        /// See [`UnderOwnerState::with_cache_for`].
+        pub shared: ItemCache<'tcx>,
         /// Map rustc def ids to their hax counterpart.
         pub def_ids: HashMap<RDefId, DefId>,
         /// Data for synthetic items. See the `synthetic_items` module.
@@ -112,6 +115,9 @@ mod base {
         pub trait_proofs: HashMap<ty::PolyTraitRef<'tcx>, crate::hax::traits::TraitProof<'tcx>>,
         /// Generics for this item, if it is virtual.
         pub virtual_generics: Option<&'tcx ty::Generics>,
+        /// Whether this item uses the shared cache of parameter-free values, see
+        /// [`UnderOwnerState::with_cache_for`].
+        pub uses_shared_cache: Option<bool>,
     }
 
     #[derive(Clone)]
@@ -229,6 +235,31 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     /// this will likely result in `BorrowMut` panics.
     fn with_cache<T>(&self, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
         self.with_item_cache(&self.owner(), f)
+    }
+    /// Access the cache for the translation of `value` in the current item. The item only matters
+    /// through its clauses (for trait resolution and normalization), and only concrete clauses
+    /// can apply to a value without (non-lifetime) parameters. So the items without concrete
+    /// clauses translate such values the same, and share a cache for them, like the concrete
+    /// caches of `rustc_trait_elaboration`. You must not call `sinto` within this function as this
+    /// will likely result in `BorrowMut` panics.
+    fn with_cache_for<T>(
+        &self,
+        value: impl ty::TypeVisitable<TyCtxt<'tcx>>,
+        f: impl FnOnce(&mut ItemCache<'tcx>) -> T,
+    ) -> T {
+        let uses_shared_cache = match self.with_cache(|cache| cache.uses_shared_cache) {
+            Some(b) => b,
+            None => {
+                let b = !rustc_trait_elaboration::has_concrete_clauses(self.param_env());
+                self.with_cache(|cache| cache.uses_shared_cache = Some(b));
+                b
+            }
+        };
+        if uses_shared_cache && !ty::TypeVisitableExt::has_non_region_param(&value) {
+            self.with_global_cache(|cache| f(&mut cache.shared))
+        } else {
+            self.with_cache(f)
+        }
     }
     fn with_predicate_searcher<T>(
         &self,
