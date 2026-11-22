@@ -12,24 +12,6 @@ mod base {
     use rustc_trait_elaboration::{ElaborationCtx, ItemRefKey, intern::Interner};
     use std::{cell::RefCell, sync::Arc};
 
-    pub struct LocalContextS {
-        pub vars: HashMap<rustc_middle::thir::LocalVarId, String>,
-    }
-
-    impl Default for LocalContextS {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    impl LocalContextS {
-        pub fn new() -> LocalContextS {
-            LocalContextS {
-                vars: HashMap::default(),
-            }
-        }
-    }
-
     /// Global caches
     #[derive(Default)]
     pub struct GlobalCache<'tcx> {
@@ -120,8 +102,6 @@ mod base {
         pub trait_proof_interner: &'tcx Interner<'tcx, TraitProofContents<'tcx>>,
         pub item_ref_interner: &'tcx Interner<'tcx, ItemRefContents<'tcx>>,
         pub options: Rc<crate::hax::options::Options>,
-        pub local_ctx: Rc<RefCell<LocalContextS>>,
-        pub opt_def_id: Option<rustc_hir::def_id::DefId>,
         pub cache: Rc<RefCell<GlobalCache<'tcx>>>,
         pub elab_ctx: crate::hax::traits::ElaborationCtx<'tcx, DefId>,
         pub tcx: ty::TyCtxt<'tcx>,
@@ -140,10 +120,6 @@ mod base {
                 item_ref_interner: Box::leak(Box::default()),
                 cache: Default::default(),
                 options: Rc::new(options),
-                // Always prefer `s.owner_id()` to `s.base().opt_def_id`.
-                // `opt_def_id` is used in `utils` for error reporting
-                opt_def_id: None,
-                local_ctx: Rc::new(RefCell::new(LocalContextS::new())),
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
@@ -173,11 +149,9 @@ pub trait BaseState<'tcx>: Sized {
 
     /// Create a state with the given owner.
     fn with_hax_owner(&self, owner: &DefId) -> StateWithOwner<'tcx> {
-        let mut base = self.base().clone();
-        base.opt_def_id = owner.as_real_or_promoted();
         State {
             owner: owner.clone(),
-            base,
+            base: self.base().clone(),
         }
     }
     /// Create a state with the given owner.
