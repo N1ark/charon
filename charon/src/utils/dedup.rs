@@ -107,11 +107,11 @@ pub enum SerDedup<T> {
     Untagged(T),
 }
 
-/// Serialize `value`, deduplicating it if the state says so. `repr` is the serialized form of
-/// `value`, only used the first time we meet it.
+/// Serialize `value`, deduplicating it if the state says so. `repr` computes the serialized form
+/// of `value`, only needed the first time we meet it.
 pub fn serialize_dedup<T, R, State, S>(
     value: &T,
-    repr: R,
+    repr: impl FnOnce() -> R,
     state: &State,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
@@ -122,9 +122,9 @@ where
     S: serde::Serializer,
 {
     let repr = match state.record_serialized(value) {
-        Some(Ok(id)) => SerDedup::Value(id, repr),
+        Some(Ok(id)) => SerDedup::Value(id, repr()),
         Some(Err(id)) => SerDedup::Deduplicated(id),
-        None => SerDedup::Untagged(repr),
+        None => SerDedup::Untagged(repr()),
     };
     repr.serialize_state(state, serializer)
 }
