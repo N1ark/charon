@@ -80,10 +80,10 @@ pub fn main() -> Result<()> {
             }
             options.apply_preset();
             options.validate()?;
-            let translate = if options.merge_crates {
+            let translate: fn(_, _) -> _ = if options.merge_crates {
                 translate_merged_crates
             } else {
-                translate_with_cargo
+                |options, cargo_args| Ok(translate_with_cargo(options, cargo_args)?.0)
             };
             let targets = std::mem::take(&mut options.targets);
             if targets.is_empty() {
@@ -206,17 +206,14 @@ fn translate_merged_crates(
     // Each crate is written to `<temp_dir>/<crate_name>.<extension>`.
     opts.dest_dir = Some(temp_dir.path().to_owned());
     opts.dest_file = None;
-    let status = translate_with_cargo(opts, cargo_args.clone())?;
+    let (status, crate_names) = translate_with_cargo(opts, cargo_args)?;
     if !status.success() {
         return Ok(status);
     }
 
     // TODO: a lib and a bin of the same package have the same crate name and overwrite each
     // other's output.
-    let crate_names = cargo_targets(&cargo_args)?
-        .into_iter()
-        .unique()
-        .collect_vec();
+    let crate_names = crate_names.into_iter().unique().collect_vec();
     let krates: Vec<_> = crate_names
         .iter()
         .map(|crate_name| {
@@ -289,10 +286,12 @@ fn output_merged_crate(options: &CliOpts, merged: CrateData) -> anyhow::Result<E
     Ok(ExitStatus::default())
 }
 
+/// Run `cargo build` with `charon-driver` as the compiler. Also returns the names of the crates
+/// selected for translation.
 fn translate_with_cargo(
     mut options: CliOpts,
     mut cargo_args: Vec<String>,
-) -> anyhow::Result<ExitStatus> {
+) -> anyhow::Result<(ExitStatus, Vec<String>)> {
     ensure_rustup();
     // Cargo controls the directory where the driver is run, so we resolve these paths relative to
     // the current directory.
@@ -328,9 +327,10 @@ fn translate_with_cargo(
     // `CHARON_SELECTED_CRATE_{crate_name}` changes, then cache should be invalidated and the
     // driver re-run. We then set it with a fresh value for all the crates that are targeted by the
     // current command (e.g. the workspace roots, or a crate selected with `-p`).
-    for crate_name in cargo_targets(&cargo_args)? {
+    let crate_names = cargo_targets(&cargo_args)?;
+    for crate_name in &crate_names {
         let nonce = fresh_nonce();
-        cmd.env(selected_crate_var(&crate_name), &nonce);
+        cmd.env(selected_crate_var(crate_name), &nonce);
     }
     cmd.arg("build");
 
@@ -339,11 +339,12 @@ fn translate_with_cargo(
     }
     cmd.args(cargo_args);
     trace!("running {cmd:?}");
-    Ok(cmd
+    let status = cmd
         .spawn()
         .expect("could not run cargo")
         .wait()
-        .expect("failed to wait for cargo?"))
+        .expect("failed to wait for cargo?");
+    Ok((status, crate_names))
 }
 
 /// Returns the names of the crates that `cargo build <build_args>` selects.
