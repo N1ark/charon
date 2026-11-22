@@ -458,10 +458,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             let ty = def.type_of(&self.hax_state).unwrap();
             let tcx = self.hax_state.base().tcx;
             let typing_env = self.hax_state.typing_env();
-            let implements = |trait_id| {
-                let tref = ty::Binder::dummy(ty::TraitRef::new(tcx, trait_id, [ty]));
-                !hax::solve_trait(&self.hax_state, tref).kind.is_error()
-            };
+            let implements = |trait_id| hax::implements_trait(&self.hax_state, ty, trait_id);
             Box::new(ImplementsMarkerTraits {
                 is_sized: ty.is_sized(tcx, typing_env),
                 is_send: implements(tcx.get_diagnostic_item(sym::Send).unwrap()),
