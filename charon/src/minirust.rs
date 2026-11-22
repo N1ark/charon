@@ -1150,7 +1150,9 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                 Byte::Uninit => bytes.push(None),
                 Byte::Value(value) => bytes.push(Some(*value)),
                 // MiniRust doesn't have TypeId provenance so we lower it to a hash of the type.
-                Byte::Provenance(GlobalProvenance::TypeId(ty), ptr_offset, i) => {
+                Byte::Provenance(provenance, ptr_offset, i)
+                    if let GlobalProvenance::TypeId(ty) = &**provenance =>
+                {
                     let val = self.type_id_val(span, ty, ptr_offset.to_bits() as u64)?;
                     let val_bytes = if T::ENDIANNESS == mini::LittleEndian {
                         val.to_le_bytes()
@@ -1160,7 +1162,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
                     bytes.push(Some(val_bytes[*i as usize]));
                 }
                 Byte::Provenance(provenance, ptr_offset, pointer_byte) => {
-                    let name = match provenance {
+                    let name = match &**provenance {
                         GlobalProvenance::Global(gref)
                             if self
                                 .krate

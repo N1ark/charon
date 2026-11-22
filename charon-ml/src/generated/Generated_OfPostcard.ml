@@ -343,31 +343,31 @@ and builtin_assert_kind_of_postcard (ctx : of_postcard_ctx)
     (let* __tag = int_of_postcard ctx st in
      match __tag with
      | 0 ->
-         let* len = operand_of_postcard ctx st in
-         let* index = operand_of_postcard ctx st in
+         let* len = box_of_postcard operand_of_postcard ctx st in
+         let* index = box_of_postcard operand_of_postcard ctx st in
          Ok (BoundsCheck (len, index))
      | 1 ->
          let* _0 = binop_of_postcard ctx st in
-         let* _1 = operand_of_postcard ctx st in
-         let* _2 = operand_of_postcard ctx st in
+         let* _1 = box_of_postcard operand_of_postcard ctx st in
+         let* _2 = box_of_postcard operand_of_postcard ctx st in
          Ok (Overflow (_0, _1, _2))
      | 2 ->
-         let* _0 = operand_of_postcard ctx st in
+         let* _0 = box_of_postcard operand_of_postcard ctx st in
          Ok (OverflowNeg _0)
      | 3 ->
-         let* _0 = operand_of_postcard ctx st in
+         let* _0 = box_of_postcard operand_of_postcard ctx st in
          Ok (DivisionByZero _0)
      | 4 ->
-         let* _0 = operand_of_postcard ctx st in
+         let* _0 = box_of_postcard operand_of_postcard ctx st in
          Ok (RemainderByZero _0)
      | 5 ->
-         let* required = operand_of_postcard ctx st in
-         let* found = operand_of_postcard ctx st in
+         let* required = box_of_postcard operand_of_postcard ctx st in
+         let* found = box_of_postcard operand_of_postcard ctx st in
          Ok (MisalignedPointerDereference (required, found))
      | 6 -> Ok NullPointerDereference
      | 7 -> Ok NullReferenceCreated
      | 8 ->
-         let* _0 = operand_of_postcard ctx st in
+         let* _0 = box_of_postcard operand_of_postcard ctx st in
          Ok (InvalidEnumConstruction _0)
      | 9 -> Ok ResumedAfterReturn
      | 10 -> Ok ResumedAfterPanic
@@ -415,8 +415,8 @@ and byte_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = u8_of_postcard ctx st in
          Ok (Value _0)
      | 2 ->
-         let* _0 = global_provenance_of_postcard ctx st in
-         let* _1 = integer_value_of_postcard ctx st in
+         let* _0 = box_of_postcard global_provenance_of_postcard ctx st in
+         let* _1 = box_of_postcard integer_value_of_postcard ctx st in
          let* _2 = u8_of_postcard ctx st in
          Ok (Provenance (_0, _1, _2))
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
@@ -723,7 +723,7 @@ and fn_operand_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = fn_ptr_of_postcard ctx st in
          Ok (FnOpRegular _0)
      | 1 ->
-         let* _0 = operand_of_postcard ctx st in
+         let* _0 = box_of_postcard operand_of_postcard ctx st in
          let* _1 = region_args_of_postcard ctx st in
          Ok (FnOpDynamic (_0, _1))
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
@@ -1540,7 +1540,7 @@ and unsizing_metadata_of_postcard (ctx : of_postcard_ctx) (st : postcard_state)
          let* _0 = constant_expr_of_postcard ctx st in
          Ok (MetaLength _0)
      | 1 ->
-         let* _0 = poly_trait_ref_of_postcard ctx st in
+         let* _0 = box_of_postcard poly_trait_ref_of_postcard ctx st in
          let* _1 = constant_expr_of_postcard ctx st in
          Ok (MetaVTable (_0, _1))
      | 2 ->
@@ -1687,7 +1687,7 @@ module Ullbc = struct
            let* on_unwind = block_id_of_postcard ctx st in
            Ok (DropEmptyBox (place, target, on_unwind))
        | 5 ->
-           let* asm = inline_asm_of_postcard ctx st in
+           let* asm = box_of_postcard inline_asm_of_postcard ctx st in
            let* fallthrough = option_of_postcard block_id_of_postcard ctx st in
            let* labels =
              index_vec_of_postcard branch_id_of_postcard block_id_of_postcard
@@ -1797,7 +1797,7 @@ module Llbc = struct
            let* on_unwind = block_of_postcard ctx st in
            Ok (Assert (assert_, on_failure, on_unwind))
        | 9 ->
-           let* asm = inline_asm_of_postcard ctx st in
+           let* asm = box_of_postcard inline_asm_of_postcard ctx st in
            let* fallthrough = option_of_postcard block_of_postcard ctx st in
            let* labels =
              index_vec_of_postcard branch_id_of_postcard block_of_postcard ctx
@@ -2971,7 +2971,9 @@ and local_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
      let* borrowck_constraints =
        list_of_postcard place_type_constraint_of_postcard ctx st
      in
-     let* drop_flag_for = option_of_postcard place_of_postcard ctx st in
+     let* drop_flag_for =
+       option_of_postcard (box_of_postcard place_of_postcard) ctx st
+     in
      Ok
        ({
           index;

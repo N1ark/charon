@@ -337,7 +337,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             hax::UnsizingMetadata::DirectVTable(trait_proof) => {
                 let tref = self.translate_trait_proof(span, trait_proof)?;
                 let vtable = self.translate_vtable_instance_const(span, trait_proof)?;
-                UnsizingMetadata::VTable(tref, vtable)
+                UnsizingMetadata::VTable(Box::new(tref), vtable)
             }
             hax::UnsizingMetadata::NestedVTable(dyn_trait_proof) => {
                 // This binds a fake `T: SrcTrait` variable.
@@ -1746,15 +1746,16 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                 let on_unwind = self.translate_unwind_action(span, unwind)?;
                 let kind = self.translate_assert_kind(span, msg)?;
                 let (lang_item, args) = match &kind {
-                    BuiltinAssertKind::BoundsCheck { len, index } => {
-                        (LangItem::PanicBoundsCheck, vec![index.clone(), len.clone()])
-                    }
+                    BuiltinAssertKind::BoundsCheck { len, index } => (
+                        LangItem::PanicBoundsCheck,
+                        vec![Operand::clone(index), Operand::clone(len)],
+                    ),
                     BuiltinAssertKind::MisalignedPointerDereference { required, found } => (
                         LangItem::PanicMisalignedPointerDereference,
-                        vec![required.clone(), found.clone()],
+                        vec![Operand::clone(required), Operand::clone(found)],
                     ),
                     BuiltinAssertKind::InvalidEnumConstruction(source) => {
-                        (msg.panic_function(), vec![source.clone()])
+                        (msg.panic_function(), vec![Operand::clone(source)])
                     }
                     _ => (msg.panic_function(), vec![]),
                 };
@@ -1925,12 +1926,12 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                     .map(|target| self.translate_basic_block_id(*target))
                     .collect();
                 let on_unwind = self.translate_unwind_action(span, unwind)?;
-                let asm = InlineAsm {
+                let asm = Box::new(InlineAsm {
                     kind,
                     template,
                     operands,
                     options,
-                };
+                });
                 ullbc_ast::TerminatorKind::InlineAsm {
                     asm,
                     fallthrough,
@@ -2034,7 +2035,7 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                     sig.regions
                         .map_ref_indexed(|_, _| self.translate_erased_region()),
                 );
-                FnOperand::Dynamic(op, regions)
+                FnOperand::Dynamic(Box::new(op), regions)
             }
             _ => raise_error!(
                 self,
@@ -2174,31 +2175,31 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
     ) -> Result<BuiltinAssertKind, Error> {
         match kind {
             mir::AssertKind::BoundsCheck { len, index } => {
-                let len = self.translate_operand(span, len)?;
-                let index = self.translate_operand(span, index)?;
+                let len = Box::new(self.translate_operand(span, len)?);
+                let index = Box::new(self.translate_operand(span, index)?);
                 Ok(BuiltinAssertKind::BoundsCheck { len, index })
             }
             mir::AssertKind::Overflow(binop, left, right) => {
                 let binop = self.translate_binaryop_kind(span, *binop)?;
-                let left = self.translate_operand(span, left)?;
-                let right = self.translate_operand(span, right)?;
+                let left = Box::new(self.translate_operand(span, left)?);
+                let right = Box::new(self.translate_operand(span, right)?);
                 Ok(BuiltinAssertKind::Overflow(binop, left, right))
             }
             mir::AssertKind::OverflowNeg(operand) => {
-                let operand = self.translate_operand(span, operand)?;
+                let operand = Box::new(self.translate_operand(span, operand)?);
                 Ok(BuiltinAssertKind::OverflowNeg(operand))
             }
             mir::AssertKind::DivisionByZero(operand) => {
-                let operand = self.translate_operand(span, operand)?;
+                let operand = Box::new(self.translate_operand(span, operand)?);
                 Ok(BuiltinAssertKind::DivisionByZero(operand))
             }
             mir::AssertKind::RemainderByZero(operand) => {
-                let operand = self.translate_operand(span, operand)?;
+                let operand = Box::new(self.translate_operand(span, operand)?);
                 Ok(BuiltinAssertKind::RemainderByZero(operand))
             }
             mir::AssertKind::MisalignedPointerDereference { required, found } => {
-                let required = self.translate_operand(span, required)?;
-                let found = self.translate_operand(span, found)?;
+                let required = Box::new(self.translate_operand(span, required)?);
+                let found = Box::new(self.translate_operand(span, found)?);
                 Ok(BuiltinAssertKind::MisalignedPointerDereference { required, found })
             }
             mir::AssertKind::NullPointerDereference => {
@@ -2208,7 +2209,7 @@ impl<'tcx> BlockTransCtx<'tcx, '_, '_, '_> {
                 Ok(BuiltinAssertKind::NullReferenceCreated)
             }
             mir::AssertKind::InvalidEnumConstruction(operand) => {
-                let operand = self.translate_operand(span, operand)?;
+                let operand = Box::new(self.translate_operand(span, operand)?);
                 Ok(BuiltinAssertKind::InvalidEnumConstruction(operand))
             }
             mir::AssertKind::ResumedAfterDrop(..)

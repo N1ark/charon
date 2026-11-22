@@ -743,7 +743,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
         builder.call(
             output,
             Call {
-                func: FnOperand::Dynamic(fn_ptr, late_bound_regions),
+                func: FnOperand::Dynamic(Box::new(fn_ptr), late_bound_regions),
                 args,
                 safety: CallSafety::Inherit,
             },

@@ -57,8 +57,8 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
             hax::ConstantByte::Uninit => Byte::Uninit,
             hax::ConstantByte::Value(v) => Byte::Value(*v),
             hax::ConstantByte::Provenance(prov, offset, i) => Byte::Provenance(
-                self.translate_provenance(span, prov)?,
-                IntegerValue::mk_usize(*offset as u128),
+                Box::new(self.translate_provenance(span, prov)?),
+                Box::new(IntegerValue::mk_usize(*offset as u128)),
                 *i,
             ),
         })

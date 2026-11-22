@@ -6,6 +6,7 @@ use derive_generic_visitor::*;
 use enum_as_inner::EnumAsInner;
 use serde_state::{DeserializeState, SerializeState};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use thin_vec::ThinVec;
 
 use crate::ast::*;
 
@@ -39,7 +40,8 @@ pub struct Statement {
     pub kind: StatementKind,
     /// Comments that precede this statement.
     // This is filled in a late pass after all the control-flow manipulation.
-    pub comments_before: Vec<String>,
+    #[serde_state(stateless)]
+    pub comments_before: ThinVec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,7 +96,7 @@ pub enum StatementKind {
     },
     /// An inline assembly block.
     InlineAsm {
-        asm: InlineAsm,
+        asm: Box<InlineAsm>,
         /// Next block if the control-flow continues without jumping. Absent for `naked_asm!` and `noreturn`.
         fallthrough: Option<Block>,
         /// Targets of [`AsmOperand::Label`] operands.
@@ -314,7 +316,7 @@ impl Statement {
             span,
             id: StatementId::fresh(),
             kind,
-            comments_before: vec![],
+            comments_before: ThinVec::new(),
         }
     }
 

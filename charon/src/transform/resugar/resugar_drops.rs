@@ -69,7 +69,7 @@ impl UllbcPass for Transform {
                         target,
                         ..
                     } = &drop_block.terminator.kind
-                    && place == flagged_place
+                    && *place == **flagged_place
                     && drop_block.statements.is_empty()
                     && *target == false_target
                 {
