@@ -994,6 +994,19 @@ struct Caches {
     impl_lookups: HashMap<(AssocTypePath, TraitRef), Ty>,
     /// `Ty::move_under_binders`.
     moved: HashMap<(Ty, DeBruijnId), Ty>,
+    /// `AssocTypePath::to_name`.
+    path_names: HashMap<AssocTypePath, String>,
+}
+
+impl Caches {
+    fn path_name(&mut self, path: &AssocTypePath, krate: &TranslatedCrate) -> String {
+        if let Some(name) = self.path_names.get(path) {
+            return name.clone();
+        }
+        let name = path.to_name(krate);
+        self.path_names.insert(path.clone(), name.clone());
+        name
+    }
 }
 
 impl Visitor for UpdateItemBody<'_> {
@@ -1273,9 +1286,10 @@ impl VisitAstMut for UpdateItemBody<'_> {
         }
         let krate = &self.ctx.translated;
         let replacements = modifications.compute_replacements(|path| {
+            let name = self.caches.path_name(path, krate);
             let var_id = generics
                 .types
-                .push_with(|id| TypeParam::new(id, path.to_name(krate), Variance::Invariant));
+                .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
             TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
         });
         self.under_binder(replacements, |this| this.visit_inner(binder))
@@ -1565,13 +1579,11 @@ impl TransformPass for Transform {
                 })
             } else {
                 modifications.compute_replacements(|path| {
+                    let name = caches.path_name(path, &ctx.translated);
                     let var_id = item
                         .generic_params()
                         .types
-                        .push_with(|id| {
-                            let name = path.to_name(&ctx.translated);
-                            TypeParam::new(id, name, Variance::Invariant)
-                        });
+                        .push_with(|id| TypeParam::new(id, name, Variance::Invariant));
                     TyKind::TypeVar(DeBruijnVar::new_at_zero(var_id)).into_ty()
                 })
             };
