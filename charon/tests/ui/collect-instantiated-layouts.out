@@ -517,19 +517,6 @@ where
 //         },
 //     ],
 //     repr(Rust),
-// layout of `S<u8>[{built_in impl Sized for u8}, impl_Tr_for_u8]`:
-//     size: 8usize,
-//     align: 8usize,
-//     discriminator: _,
-//     inhabited: (false || if_inhabited(u64)),
-//     variants: [
-//         _: {
-//             offset of _0: 0,
-//             inhabited: (false || if_inhabited(u64)),
-//             tagger: [],
-//         },
-//     ],
-//     repr(Rust),
 
 // Full name: test_crate::trivial_clause
 fn trivial_clause(_1: S<u8>[{built_in impl Sized for u8}, impl_Tr_for_u8])
