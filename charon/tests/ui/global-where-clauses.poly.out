@@ -1,0 +1,266 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: core::marker::Sized
+#[fundamental]
+#[lang_item(Sized)]
+pub trait Sized<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: core::clone::Clone
+#[lang_item(Clone)]
+#[diagnostic_item("Clone")]
+pub trait Clone<Self>
+{
+    proof ImpliedClause0: (Self: Sized)
+    fn clone<'_0_1, Outlives0: (Self: '_0_1)>;
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u32}::clone
+pub fn clone<'_0>(_1: &'_0 u32) -> u32
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u32}
+impl "impl_Clone_for_u32" Clone for u32 {
+    proof ImpliedClause0: (u32: Sized) = {built_in impl Sized for u32}
+    fn clone<'_0_1> = clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::marker::Copy
+#[lang_item(Copy)]
+#[diagnostic_item("Copy")]
+pub trait Copy<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Clone)
+    non-dyn-compatible
+}
+
+// Full name: core::marker::{impl Copy for u32}
+impl "impl_Copy_for_u32" Copy for u32 {
+    proof ImpliedClause0: (u32: MetaSized) = {built_in impl MetaSized for u32}
+    proof ImpliedClause1: (u32: Clone) = impl_Clone_for_u32
+    non-dyn-compatible
+}
+
+struct () {}
+
+// Full name: test_crate::CastInto
+pub trait CastInto<Self, T>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Copy)
+    proof ImpliedClause2: (T: Sized)
+    fn cast;
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl CastInto<u64> for u32}::cast
+pub fn cast(self: u32) -> u64
+{
+    let mut _0: u64; // return
+    let self: u32; // arg #1
+    let mut _2: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = copy self
+    _0 = cast<u64>(move _2)
+    storage_dead(_2)
+    storage_dead(self)
+    return
+}
+
+// Full name: test_crate::{impl CastInto<u64> for u32}
+impl "impl_CastInto_u64_for_u32" CastInto<u64> for u32 {
+    proof ImpliedClause0: (u32: MetaSized) = {built_in impl MetaSized for u32}
+    proof ImpliedClause1: (u32: Copy) = impl_Copy_for_u32
+    proof ImpliedClause2: (u64: Sized) = {built_in impl Sized for u64}
+    fn cast = cast
+    non-dyn-compatible
+}
+
+// Full name: test_crate::id
+fn id<T>(x: T) -> T
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (T: Copy),
+{
+    let mut _0: T; // return
+    let x: T; // arg #1
+
+    storage_live(_0)
+    _0 = copy x
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::generic
+pub fn generic<T>(x: u32) -> T
+where
+    TraitClause0: (T: Sized),
+    TraitClause1: (u32: CastInto<T>),
+{
+    let mut _0: T; // return
+    let x: u32; // arg #1
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    storage_live(_3)
+    _3 = copy x
+    _2 = id<u32>[TraitClause1::ImpliedClause1::ImpliedClause1::ImpliedClause0, TraitClause1::ImpliedClause1](move _3)
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(_3)
+    _0 = TraitClause1::cast(move _2)
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::plain
+pub fn plain(x: u32) -> u32
+{
+    let mut _0: u32; // return
+    let x: u32; // arg #1
+    let mut _2: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = copy x
+    _0 = id<u32>[{built_in impl Sized for u32}, impl_Copy_for_u32](move _2)
+    ↳⚡ storage_dead(x)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::Nil
+pub struct Nil {}
+
+// Full name: test_crate::List
+pub trait List<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    const LEN : usize
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl List for Nil}::LEN
+pub fn LEN() -> usize
+{
+    let mut _0: usize; // return
+
+    storage_live(_0)
+    _0 = const 0usize
+    return
+}
+
+// Full name: test_crate::{impl List for Nil}::LEN
+pub const LEN: usize = LEN()
+
+// Full name: test_crate::{impl List for Nil}
+impl "impl_List_for_Nil" List for Nil {
+    proof ImpliedClause0: (Nil: MetaSized) = {built_in impl MetaSized for Nil}
+    const LEN = LEN
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{Nil}::len
+pub fn len<'_0>(self: &'_0 Nil) -> usize
+where
+    TraitClause0: (Nil: List),
+{
+    let mut _0: usize; // return
+    let self: &'1 Nil; // arg #1
+
+    storage_live(_0)
+    _0 = const TraitClause0::LEN
+    storage_dead(self)
+    return
+}
+
+// Full name: test_crate::main
+pub fn main() -> u64
+{
+    let mut _0: u64; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: usize; // anonymous local
+    let mut _5: &'1 Nil; // anonymous local
+    let mut _6: u32; // anonymous local
+    let mut _7: &'2 Nil; // anonymous local
+    let mut _8: &'3 Nil; // anonymous local
+    let mut _9: &'8 Nil; // anonymous local
+    let mut _10: Nil; // anonymous local
+
+    storage_live(_0)
+    storage_live(_6)
+    storage_live(_7)
+    storage_live(_1)
+    storage_live(_2)
+    _2 = plain(const 1u32)
+    ↳⚡ storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
+    storage_live(_8)
+    storage_live(_9)
+    storage_live(_10)
+    _10 = Nil {  }
+    _9 = &_10
+    _8 = move _9
+    storage_live(_3)
+    storage_live(_4)
+    storage_live(_5)
+    _7 = move _8
+    _5 = &(*_7)
+    _4 = len<'7>[impl_List_for_Nil](move _5)
+    ↳⚡ storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
+    storage_dead(_5)
+    _3 = cast<u32>(move _4)
+    storage_dead(_4)
+    _6 = copy _2 panic.+ copy _3
+    _1 = move _6
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    _0 = generic<u64>[{built_in impl Sized for u64}, impl_CastInto_u64_for_u32](const 2u32)
+    ↳⚡ storage_dead(_7)
+        storage_dead(_6)
+        storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        unwind_continue
+    storage_dead(_7)
+    storage_dead(_6)
+    storage_dead(_10)
+    storage_dead(_9)
+    storage_dead(_8)
+    return
+}
+
+
+

@@ -1,0 +1,25 @@
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#2}::len, 0)
+  --> tests/ui/global-where-clauses.rs:40:9
+   |
+40 |         <Self as List>::LEN
+   |         ^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::{impl#2}::len, 0)
+  --> tests/ui/global-where-clauses.rs:40:9
+   |
+40 |         <Self as List>::LEN
+   |         ^^^^^^^^^^^^^^^^^^^
+
+error: Unexpected error: could not find the type variable T
+  --> tests/ui/global-where-clauses.rs:22:8
+   |
+22 |     id(x).cast()
+   |        ^
+
+error: Unexpected error: could not find the trait clause variable Required(test_crate::generic, 1)
+  --> tests/ui/global-where-clauses.rs:22:8
+   |
+22 |     id(x).cast()
+   |        ^
+
+ERROR Charon failed to translate this code (4 errors)
