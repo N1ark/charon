@@ -1,0 +1,139 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+// Full name: test_crate::Env
+pub struct Env {}
+
+// Full name: test_crate::Unix
+pub trait Unix<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Unix for Env}
+impl "impl_Unix_for_Env" Unix for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Unix for Env}::name
+pub fn name() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 1u32
+    return
+}
+
+// Full name: test_crate::Sub
+pub trait Sub<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Self: Unix)
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Sub for Env}
+impl "impl_Sub_for_Env" Sub for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    proof ImpliedClause1: (Env: Unix) = impl_Unix_for_Env
+    non-dyn-compatible
+}
+
+// Full name: test_crate::foo
+pub fn foo() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = name()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_crate::via_supertrait
+pub fn via_supertrait() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::via_projection::<Empty::<Env>>
+pub fn via_projection::<Empty::<Env>>() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = foo()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = name()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+// Full name: test_crate::user
+pub fn user() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_1)
+    _1 = via_supertrait()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    storage_live(_2)
+    _2 = via_projection::<Empty::<Env>>()
+    ↳⚡ storage_dead(_3)
+        unwind_continue
+    _3 = copy _1 panic.+ copy _2
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_1)
+    storage_dead(_3)
+    return
+}
+
+
+

@@ -1,0 +1,341 @@
+# Final LLBC before serialization:
+
+// Full name: core::marker::MetaSized
+#[fundamental]
+#[lang_item(MetaSized)]
+pub trait MetaSized<Self>
+
+struct () {}
+
+// Full name: test_crate::Env
+pub struct Env {}
+
+// Full name: test_crate::Unix
+pub trait Unix<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    fn name;
+    non-dyn-compatible
+}
+
+// Full name: test_crate::{impl Unix for Env}::name
+pub fn name() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 1u32
+    return
+}
+
+// Full name: test_crate::{impl Unix for Env}
+impl "impl_Unix_for_Env" Unix for Env {
+    proof ImpliedClause0: (Env: MetaSized) = {built_in impl MetaSized for Env}
+    fn name = name
+    non-dyn-compatible
+}
+
+// Full name: test_crate::foo
+pub fn foo() -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = name()
+    ↳⚡ unwind_continue
+    return
+}
+
+// Full name: test_crate::S
+pub struct S {}
+
+// Full name: test_crate::{S}::m
+pub fn m<'_0>(self: &'_0 S) -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+    let self: &'1 S; // arg #1
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_2)
+    _2 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    storage_live(_3)
+    _3 = name()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    _4 = copy _2 panic.+ copy _3
+    _0 = move _4
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_4)
+    storage_dead(self)
+    return
+}
+
+// Full name: test_crate::Tr
+pub trait Tr<Self>
+{
+    proof ImpliedClause0: (Self: MetaSized)
+    proof ImpliedClause1: (Env: Unix)
+    fn d<'_0_1, Outlives0: (Self: '_0_1)> = test_crate::Tr::d<'_0_1, Self>[Self]
+    vtable: test_crate::Tr::{vtable}
+}
+
+pub fn test_crate::Tr::d<'_0, Self>(self: &'_0 Self) -> u32
+where
+    TraitClause0: (Self: Tr),
+    Outlives0: (Self: '_0),
+{
+    let mut _0: u32; // return
+    let self: &'1 Self; // arg #1
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_2)
+    _2 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    storage_live(_3)
+    _3 = name()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    _4 = copy _2 panic.+ copy _3
+    _0 = move _4
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_4)
+    storage_dead(self)
+    return
+}
+
+// Full name: test_crate::{impl Tr for S}::d
+pub fn impl_Tr_for_S::d<'_0>(self: &'_0 S) -> u32
+{
+    let mut _0: u32; // return
+    let self: &'1 S; // arg #1
+    let mut _2: u32; // anonymous local
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_4)
+    storage_live(_2)
+    _2 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    storage_live(_3)
+    _3 = name()
+    ↳⚡ storage_dead(_4)
+        storage_dead(self)
+        unwind_continue
+    _4 = copy _2 panic.+ copy _3
+    _0 = move _4
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_4)
+    storage_dead(self)
+    return
+}
+
+// Full name: test_crate::{impl Tr for S}
+impl "impl_Tr_for_S" Tr for S {
+    proof ImpliedClause0: (S: MetaSized) = {built_in impl MetaSized for S}
+    proof ImpliedClause1: (Env: Unix) = impl_Unix_for_Env
+    fn d<'_0_1> = impl_Tr_for_S::d<'_0_1>
+    vtable: lazy
+}
+
+// Full name: test_crate::closure_user::{closure}
+struct {closure}
+where
+    TraitClause0: (Env: Unix),
+{}
+
+// Full name: test_crate::closure_user::{impl Fn<()> for {closure}[impl_Unix_for_Env]}::call
+extern "rust-call" fn call<'_0>(_1: &'_0 {closure}[impl_Unix_for_Env], tupled_args: ()) -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+    let mut _1: &'1 {closure}[impl_Unix_for_Env]; // arg #1
+    let mut tupled_args: (); // arg #2
+    let mut _3: u32; // anonymous local
+    let mut _4: u32; // anonymous local
+    let mut _5: u32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_5)
+    storage_live(_3)
+    _3 = foo[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_5)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
+    storage_live(_4)
+    _4 = name()
+    ↳⚡ storage_dead(_5)
+        storage_dead(tupled_args)
+        storage_dead(_1)
+        unwind_continue
+    _5 = copy _3 panic.+ copy _4
+    _0 = move _5
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(_5)
+    storage_dead(tupled_args)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::closure_user
+pub fn closure_user() -> u32
+where
+    TraitClause0: (Env: Unix),
+{
+    let mut _0: u32; // return
+    let f: {closure}[impl_Unix_for_Env]; // local
+    let mut _2: &'1 {closure}[impl_Unix_for_Env]; // anonymous local
+    let mut _3: (); // anonymous local
+
+    storage_live(_0)
+    storage_live(f)
+    f = {closure} {  }
+    fake_read(f)
+    storage_live(_2)
+    _2 = &f
+    storage_live(_3)
+    _3 = ()
+    _0 = call<'3>[impl_Unix_for_Env](move _2, move _3)
+    ↳⚡ unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(f)
+    return
+}
+
+// Full name: test_crate::user
+pub fn user() -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: u32; // anonymous local
+    let mut _2: u32; // anonymous local
+    let mut _3: &'1 S; // anonymous local
+    let mut _4: u32; // anonymous local
+    let mut _5: &'2 S; // anonymous local
+    let mut _6: u32; // anonymous local
+    let mut _7: u32; // anonymous local
+    let mut _8: u32; // anonymous local
+    let mut _9: &'3 S; // anonymous local
+    let mut _10: &'4 S; // anonymous local
+    let mut _11: &'5 S; // anonymous local
+    let mut _12: &'10 S; // anonymous local
+    let mut _13: &'15 S; // anonymous local
+    let mut _14: S; // anonymous local
+    let mut _15: &'16 S; // anonymous local
+    let mut _16: S; // anonymous local
+
+    storage_live(_11)
+    storage_live(_13)
+    storage_live(_14)
+    _14 = S {  }
+    _13 = &_14
+    _11 = move _13
+    storage_live(_0)
+    storage_live(_6)
+    storage_live(_8)
+    storage_live(_9)
+    storage_live(_10)
+    storage_live(_1)
+    storage_live(_2)
+    storage_live(_3)
+    _10 = move _11
+    _3 = &(*_10)
+    _2 = m<'9>[impl_Unix_for_Env](move _3)
+    ↳⚡ storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_6)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        unwind_continue
+    storage_live(_12)
+    storage_live(_15)
+    storage_live(_16)
+    _16 = S {  }
+    _15 = &_16
+    _12 = move _15
+    storage_dead(_3)
+    storage_live(_4)
+    storage_live(_5)
+    _9 = move _12
+    _5 = &(*_9)
+    _4 = impl_Tr_for_S::d<'14>(move _5)
+    ↳⚡ storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_6)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        unwind_continue
+    storage_dead(_5)
+    _6 = copy _2 panic.+ copy _4
+    _1 = move _6
+    storage_dead(_4)
+    storage_dead(_2)
+    storage_live(_7)
+    _7 = closure_user[impl_Unix_for_Env]()
+    ↳⚡ storage_dead(_10)
+        storage_dead(_9)
+        storage_dead(_8)
+        storage_dead(_6)
+        storage_dead(_16)
+        storage_dead(_15)
+        storage_dead(_14)
+        storage_dead(_13)
+        storage_dead(_12)
+        storage_dead(_11)
+        unwind_continue
+    _8 = copy _1 panic.+ copy _7
+    _0 = move _8
+    storage_dead(_7)
+    storage_dead(_1)
+    storage_dead(_10)
+    storage_dead(_9)
+    storage_dead(_8)
+    storage_dead(_6)
+    storage_dead(_16)
+    storage_dead(_15)
+    storage_dead(_14)
+    storage_dead(_13)
+    storage_dead(_12)
+    storage_dead(_11)
+    return
+}
+
+
+
