@@ -94,7 +94,7 @@ impl<T: mini::Target> TranslateCtx<'_, T> {
         let span = fdecl.item_meta.span;
         let function = if let [PathElem::Ident(krate, _), PathElem::Ident(item, _)] =
             fdecl.item_meta.name.as_slice_uninstantiated()
-            && krate == "intrinsics"
+            && krate.as_str() == "intrinsics"
         {
             // Recognize the intrinsics used by MiniRust's `minimize` test suite.
             let intrinsic_op = match item.as_str() {

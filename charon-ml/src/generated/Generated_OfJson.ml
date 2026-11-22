@@ -3734,7 +3734,7 @@ and path_elem_of_json (ctx : of_json_ctx) (js : json) :
   combine_error_msgs js __FUNCTION__
     (match js with
     | `Assoc [ ("Ident", `List [ _0; _1 ]) ] ->
-        let* _0 = string_of_json ctx _0 in
+        let* _0 = ustr_of_json ctx _0 in
         let* _1 = disambiguator_of_json ctx _1 in
         Ok (PeIdent (_0, _1))
     | `Assoc [ ("Impl", _0) ] ->

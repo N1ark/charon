@@ -3132,7 +3132,7 @@ and path_elem_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
     (let* __tag = int_of_postcard ctx st in
      match __tag with
      | 0 ->
-         let* _0 = string_of_postcard ctx st in
+         let* _0 = ustr_of_postcard ctx st in
          let* _1 = disambiguator_of_postcard ctx st in
          Ok (PeIdent (_0, _1))
      | 1 ->
