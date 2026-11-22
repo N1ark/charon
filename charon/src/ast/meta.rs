@@ -50,8 +50,10 @@ pub struct ItemMeta {
     pub name: Name,
     pub span: Span,
     /// The source code that corresponds to this item.
+    #[serde_state(stateful)]
     pub source_text: Option<Ustr>,
     /// Attributes and visibility.
+    #[serde_state(stateful)]
     pub attr_info: AttrInfo,
     /// `true` if the type decl is a local type decl, `false` if it comes from an external crate.
     pub is_local: bool,
@@ -71,6 +73,7 @@ pub struct ItemMeta {
     /// If the item is a rustc lang item, record which one it is.
     pub lang_item: Option<LangItem>,
     /// If the item is a rustc diagnostic item, record its internal identifier.
+    #[serde_state(stateful)]
     pub diagnostic_item: Option<Ustr>,
     /// Whether an error occurred while translating this item.
     pub has_errors: bool,

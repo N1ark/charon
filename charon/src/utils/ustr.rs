@@ -1,6 +1,8 @@
 //! Interned strings.
+use crate::utils::dedup::*;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_state::{DeserializeState, SerializeState};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
@@ -90,13 +92,37 @@ impl fmt::Debug for Ustr {
     }
 }
 
+// Like hash-consed values, interned strings are deduplicated in the serialized output.
 impl Serialize for Ustr {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(self.0)
+        SerDedup::Untagged(self.as_str()).serialize(serializer)
     }
 }
 impl<'de> Deserialize<'de> for Ustr {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        Ok(Ustr::from(String::deserialize(deserializer)?))
+        use serde::de::Error;
+        match SerDedup::<String>::deserialize(deserializer)? {
+            SerDedup::Untagged(s) => Ok(Ustr::from(s)),
+            SerDedup::Value(..) | SerDedup::Deduplicated(..) => {
+                Err(D::Error::custom(stateless_deserialize_error::<Ustr>()))
+            }
+        }
+    }
+}
+impl<State: DedupSerializerState> SerializeState<State> for Ustr {
+    fn serialize_state<S: Serializer>(
+        &self,
+        state: &State,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serialize_dedup(self, || self.as_str().to_owned(), state, serializer)
+    }
+}
+impl<'de, State: DedupSerializerState> DeserializeState<'de, State> for Ustr {
+    fn deserialize_state<D: Deserializer<'de>>(
+        state: &State,
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        deserialize_dedup(state, deserializer, |s: String| Ustr::from(s))
     }
 }

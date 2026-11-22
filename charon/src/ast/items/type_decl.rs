@@ -75,6 +75,7 @@ pub enum TypeDeclKind {
 pub struct Variant {
     pub id: VariantId,
     pub span: Span,
+    #[serde_state(stateful)]
     pub attr_info: AttrInfo,
     #[cfg_attr(feature = "charon_on_charon", charon::rename("variant_name"))]
     pub name: String,
@@ -91,6 +92,7 @@ pub struct Variant {
 #[serde_state(stateless)]
 pub struct Field {
     pub span: Span,
+    #[serde_state(stateful)]
     pub attr_info: AttrInfo,
     #[cfg_attr(feature = "charon_on_charon", charon::rename("field_name"))]
     pub name: String,

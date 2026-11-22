@@ -3,6 +3,7 @@ use crate::utils::ustr::Ustr;
 use derive_generic_visitor::{Drive, DriveMut, DriveTwo};
 use enum_as_inner::EnumAsInner;
 use serde::{Deserialize, Serialize};
+use serde_state::{DeserializeState, SerializeState};
 
 /// `#[inline]` built-in attribute.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -69,7 +70,8 @@ pub struct RawAttribute {
 
 /// Information about the attributes and visibility of an item, field or variant..
 #[derive(Debug, Default, Clone)]
-#[derive(Serialize, Deserialize, Drive, DriveMut, DriveTwo)]
+#[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
+#[serde_state(stateless)]
 pub struct AttrInfo {
     /// Attributes (`#[...]`).
     pub attributes: Vec<Attribute>,
@@ -78,6 +80,7 @@ pub struct AttrInfo {
     /// The name computed from `charon::rename` and `charon::variants_prefix` attributes, if any.
     /// This provides a custom name that can be used by consumers of llbc. E.g. Aeneas uses this to
     /// rename definitions in the extracted code.
+    #[serde_state(stateful)]
     pub rename: Option<Ustr>,
     /// Whether this item is declared public. Impl blocks and closures don't have visibility
     /// modifiers; we arbitrarily set this to `false` for them.

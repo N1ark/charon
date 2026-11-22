@@ -23,15 +23,13 @@ pub static BOX_WRITE_PATTERN: &str = "alloc::boxed::_::write"; // `_` matches an
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 #[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("Pe"))]
 pub enum PathElem {
-    #[serde_state(stateless)]
-    Ident(Ustr, Disambiguator),
+    Ident(Ustr, #[serde_state(stateless)] Disambiguator),
     Impl(ImplElem),
     /// This item was obtained by instantiating its parent with the given args. The binder binds
     /// the parameters of the new items. If the binder binds nothing then this is a
     /// monomorphization.
     Instantiated(Instantiation),
     /// This item is only available on the given target. Only appears in multi-target mode.
-    #[serde_state(stateless)]
     Target(Ustr),
     /// A path element that doesn't come from the source code: either a builtin type such as
     /// tuples, or an item that has no name of its own such as a closure or a vtable.

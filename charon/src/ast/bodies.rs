@@ -152,7 +152,6 @@ pub struct Local {
     pub index: LocalId,
     /// Variable name - may be `None` if the variable was introduced by Rust
     /// through desugaring.
-    #[serde_state(stateless)]
     pub name: Option<Ustr>,
     /// Span of the variable declaration.
     pub span: Span,

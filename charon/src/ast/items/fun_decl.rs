@@ -43,7 +43,7 @@ pub enum Abi {
     Rust,
     C,
     /// Rust's spelling for the ABI, e.g. "C-unwind" or "system".
-    Other(crate::utils::ustr::Ustr),
+    Other(#[serde_state(stateful)] crate::utils::ustr::Ustr),
 }
 
 /// Where a given function came from.

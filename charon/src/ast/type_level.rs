@@ -163,9 +163,7 @@ where
 #[derive(Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub struct GenericParams {
-    #[serde_state(stateless)]
     pub regions: IndexVec<RegionId, RegionParam>,
-    #[serde_state(stateless)]
     pub types: IndexVec<TypeVarId, TypeParam>,
     pub const_generics: IndexVec<ConstGenericVarId, ConstGenericParam>,
     // TODO: rename to match [GenericArgs]?
@@ -322,7 +320,6 @@ pub struct Binder<T> {
 #[serde_state(state_implements = DedupSerializerState)] // Avoid corecursive impls due to perfect derive
 pub struct RegionBinder<T> {
     #[cfg_attr(feature = "charon_on_charon", charon::rename("binder_regions"))]
-    #[serde_state(stateless)]
     pub regions: IndexVec<RegionId, RegionParam>,
     /// Outlives relations involving the bound regions.
     pub outlives: Vec<PolyOutlivesPred>,

@@ -6,7 +6,6 @@ use serde_state::SerializeState;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
-#[serde_state(stateless)]
 pub struct TraitItemName(pub crate::utils::ustr::Ustr);
 
 generate_index_type!(TraitMethodId, "TraitMethod");
@@ -95,7 +94,6 @@ pub struct TraitDecl {
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub struct TraitAssocConst {
     pub name: TraitItemName,
-    #[serde_state(stateless)]
     pub attr_info: AttrInfo,
     pub ty: Ty,
     pub default: Option<GlobalDeclRef>,
@@ -106,7 +104,6 @@ pub struct TraitAssocConst {
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
 pub struct TraitAssocTy {
     pub name: TraitItemName,
-    #[serde_state(stateless)]
     pub attr_info: AttrInfo,
     pub default: Option<TraitAssocTyImpl>,
     /// List of trait clauses that apply to this type.

@@ -43,7 +43,7 @@ pub enum AsmKind {
 #[cfg_attr(feature = "charon_on_charon", charon::variants_prefix("AsmTemplate"))]
 pub enum AsmTemplatePiece {
     /// Literal assembly text.
-    Text(#[serde_state(stateless)] Ustr),
+    Text(Ustr),
     /// Substitutes an operand, optionally with an architecture-specific register modifier.
     Placeholder {
         operand_id: AsmOperandId,
@@ -55,7 +55,6 @@ pub enum AsmTemplatePiece {
 /// An explicit register (such as `"rax"`) or a register class (such as `reg`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[derive(SerializeState, DeserializeState, Drive, DriveMut, DriveTwo)]
-#[serde_state(stateless)]
 pub enum AsmRegister {
     Explicit(Ustr),
     Class(Ustr),
