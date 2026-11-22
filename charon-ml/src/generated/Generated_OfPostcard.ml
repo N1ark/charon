@@ -1038,11 +1038,11 @@ and place_kind_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
          let* _0 = local_id_of_postcard ctx st in
          Ok (PlaceLocal _0)
      | 1 ->
-         let* _0 = box_of_postcard place_of_postcard ctx st in
+         let* _0 = place_of_postcard ctx st in
          let* _1 = projection_elem_of_postcard ctx st in
          Ok (PlaceProjection (_0, _1))
      | 2 ->
-         let* _0 = global_decl_ref_of_postcard ctx st in
+         let* _0 = box_of_postcard global_decl_ref_of_postcard ctx st in
          Ok (PlaceGlobal _0)
      | _ -> Error ("unknown enum variant tag: " ^ string_of_int __tag))
 
