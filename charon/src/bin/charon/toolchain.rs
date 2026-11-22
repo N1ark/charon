@@ -21,8 +21,26 @@ pub struct Toolchain {
 }
 
 impl Toolchain {
+    /// The directory where rustup installed this toolchain, if it did.
+    fn rustup_dir(&self) -> Option<PathBuf> {
+        let rustup_home = match env::var_os("RUSTUP_HOME") {
+            Some(dir) => PathBuf::from(dir),
+            None => env::home_dir()?.join(".rustup"),
+        };
+        let dir = rustup_home
+            .join("toolchains")
+            .join(format!("{}-{HOST_TARGET}", self.channel));
+        let rustc = dir
+            .join("bin")
+            .join(format!("rustc{}", env::consts::EXE_SUFFIX));
+        rustc.is_file().then_some(dir)
+    }
+
     fn is_installed(&self) -> Result<bool> {
         // FIXME: check if the right components are installed.
+        if self.rustup_dir().is_some() {
+            return Ok(true);
+        }
         let output = self.run("rustc").arg("--version").output()?;
         Ok(output.status.success())
     }
