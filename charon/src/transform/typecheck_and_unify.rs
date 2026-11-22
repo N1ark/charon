@@ -116,7 +116,8 @@ impl TypeCheckVisitor<'_> {
             (TyKind::Array(aty, ..), TyKind::Array(bty, ..)) => {
                 self.match_tys(aty, bty)?;
             }
-            (TyKind::Pattern(aty, apat), TyKind::Pattern(bty, bpat)) if apat == bpat => {
+            // Like array lengths and const generic arguments, we don't compare the patterns.
+            (TyKind::Pattern(aty, _), TyKind::Pattern(bty, _)) => {
                 self.match_tys(aty, bty)?;
             }
             (TyKind::Slice(aty, _), TyKind::Slice(bty, _)) => {
