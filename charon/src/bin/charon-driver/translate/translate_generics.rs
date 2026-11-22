@@ -793,10 +793,12 @@ impl LifetimeMutabilityComputer {
                             if let Some(mutabilities) =
                                 self.computer.compute_lifetime_mutabilities(self.s, &item)
                             {
-                                for arg in args.iter() {
+                                // The parameters of an ADT have no parent, so their index is their
+                                // position.
+                                for (param, arg) in args.iter().enumerate() {
                                     if let Some(r) = arg.as_region()
                                         && let ty::RegionKind::ReEarlyParam(r) = r.kind()
-                                        && mutabilities.contains(&r.index)
+                                        && mutabilities.contains(&(param as u32))
                                     {
                                         self.set.insert(r.index);
                                     }
