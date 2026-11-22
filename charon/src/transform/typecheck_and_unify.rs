@@ -851,12 +851,27 @@ impl TransformPass for Check {
             if visitor.did_unify_lifetimes
                 && let ItemRefMut::Fun(fun_decl) = item
             {
-                let mut unifier = visitor.body_lt_unifier.take().unwrap();
-                fun_decl.body.dyn_visit_mut(|r: &mut Region| {
-                    if let Region::Body(body_id) = r {
-                        *body_id = unifier.find_mut(*body_id);
+                #[derive(Visitor)]
+                struct UnifyBodyRegions(UnionFind<RegionId>);
+                impl VisitAstMut for UnifyBodyRegions {
+                    fn visit_with_cached_type_info<T: AstVisitable + HashConsable>(
+                        &mut self,
+                        value: &mut HashConsed<WithCachedTypeInfo<T>>,
+                    ) -> ControlFlow<Self::Break> {
+                        if value.type_info().has_erased_or_body_regions() {
+                            self.visit_inner(value)
+                        } else {
+                            Continue(())
+                        }
                     }
-                });
+                    fn enter_region(&mut self, r: &mut Region) {
+                        if let Region::Body(body_id) = r {
+                            *body_id = self.0.find_mut(*body_id);
+                        }
+                    }
+                }
+                let unifier = visitor.body_lt_unifier.take().unwrap();
+                let _ = UnifyBodyRegions(unifier).visit(&mut fun_decl.body);
             }
         });
     }
