@@ -40,7 +40,8 @@ pub struct File {
 pub struct Loc {
     /// The (1-based) line number.
     pub line: u32,
-    /// The (0-based) column offset.
+    /// The (0-based) display column, as rustc computes it: the width of the line before the
+    /// position, with tabs counting for 4.
     pub col: u32,
 }
 
@@ -375,7 +376,24 @@ impl Loc {
     }
 
     pub fn to_byte(self, source: &str) -> usize {
-        line_to_start_byte(source, self.line as usize) + self.col as usize
+        let line_start = line_to_start_byte(source, self.line as usize);
+        let mut width = 0;
+        for (i, c) in source[line_start..].char_indices() {
+            if width >= self.col as usize || c == '\n' {
+                return line_start + i;
+            }
+            // Same as `rustc_span::char_width`.
+            width += match c {
+                '\t' => 4,
+                '\u{0}'..='\u{8}'
+                | '\u{B}'..='\u{1F}'
+                | '\u{7F}'
+                | '\u{202A}'..='\u{202E}'
+                | '\u{2066}'..='\u{2069}' => 1,
+                _ => unicode_width::UnicodeWidthChar::width(c).unwrap_or(1),
+            };
+        }
+        source.len()
     }
 }
 

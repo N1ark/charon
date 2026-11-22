@@ -116,6 +116,7 @@ toml = { version = "0.8", features = ["parse"] }
 tracing-subscriber = { version = "0.3", features = [ "env-filter", "std", "fmt", ] }
 tracing-tree = { git = "https://github.com/Nadrieril/tracing-tree", features = [ "time", ] } # Fork with improved formating and timing info.
 tracing.workspace = true
+unicode-width = "0.2"
 ustr = { version = "1.1.0", features = ["serde"] }
 wait-timeout = "0.2.0"
 which = "7.0"
