@@ -98,6 +98,10 @@ impl TypeCheckVisitor<'_> {
     /// Compare two types for equality. Because we can't use the full power of rustc's type
     /// equality, we err on the side of accepting.
     fn match_tys(&mut self, a: &Ty, b: &Ty) -> Result<(), TypeError> {
+        // Equal values match, and matching them has no effect.
+        if a == b {
+            return Ok(());
+        }
         match (a.kind(), b.kind()) {
             (TyKind::Adt(a), TyKind::Adt(b)) if a.id == b.id => {
                 self.match_generics(&a.generics, &b.generics)?
@@ -254,6 +258,9 @@ impl TypeCheckVisitor<'_> {
     }
 
     fn match_generics(&mut self, a: &GenericArgs, b: &GenericArgs) -> Result<(), TypeError> {
+        if a == b {
+            return Ok(());
+        }
         if a.regions.len() != b.regions.len()
             || a.types.len() != b.types.len()
             || a.const_generics.len() != b.const_generics.len()
