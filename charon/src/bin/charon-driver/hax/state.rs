@@ -120,6 +120,19 @@ mod base {
         pub param_env: Option<ty::ParamEnv<'tcx>>,
         /// See [`DefId::identity_args_with_extra_regions`].
         pub identity_args: Option<(ty::GenericArgsRef<'tcx>, Vec<ty::PlaceholderRegion<'tcx>>)>,
+        /// The parts of the `FullDef`s of this item that don't depend on generic arguments.
+        pub def_info: Option<DefInfo<'tcx>>,
+    }
+
+    /// The parts of a `FullDef` that don't depend on generic arguments.
+    #[derive(Clone)]
+    pub struct DefInfo<'tcx> {
+        pub source_span: Option<rustc_span::Span>,
+        pub source_text: Option<String>,
+        pub attributes: &'tcx [rustc_hir::Attribute],
+        pub visibility: Option<bool>,
+        pub lang_item: Option<Symbol>,
+        pub diagnostic_item: Option<Symbol>,
     }
 
     #[derive(Clone)]

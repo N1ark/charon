@@ -321,7 +321,17 @@ impl<'tcx> ItemRef<'tcx> {
             tcx.mk_args(&identity_args[typing_parent_count..]),
         );
 
-        let soft_parent = if self.def_id.is_typeck_child(s)
+        let soft_parent = self.soft_typing_parent_from(s, typing_parent);
+        (soft_parent, own_args, own_template)
+    }
+
+    /// The first component of [`Self::soft_typing_parent`], given [`Self::typing_parent`].
+    pub fn soft_typing_parent_from<S: UnderOwnerState<'tcx>>(
+        &self,
+        s: &S,
+        typing_parent: Option<ItemRef<'tcx>>,
+    ) -> Option<ItemRef<'tcx>> {
+        if self.def_id.is_typeck_child(s)
             && let Some(typing_parent) = &typing_parent
             && let Some(nesting_parent) = self.def_id.parent(s)
             && nesting_parent != typing_parent.def_id
@@ -343,8 +353,7 @@ impl<'tcx> ItemRef<'tcx> {
             ))
         } else {
             typing_parent
-        };
-        (soft_parent, own_args, own_template)
+        }
     }
 }
 
