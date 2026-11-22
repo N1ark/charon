@@ -59,22 +59,10 @@ impl<'tcx> AssocItem<'tcx> {
                     .impl_trait_ref(container_id)
                     .instantiate(tcx, container_args);
                 let implemented_trait_ref = normalize(tcx, s.typing_env(), implemented_trait_ref);
-                let implemented_trait_item = {
-                    let implemented_item_id = implemented_item_id.sinto(s);
-                    let generics =
-                        item_args.rebase_onto(tcx, container_id, implemented_trait_ref.args);
-                    // Don't resolve, otherwise we'll always get the impl item id back.
-                    ItemRef::translate_from_hax_def_id_maybe_resolve(
-                        s,
-                        implemented_item_id,
-                        generics,
-                        AssocItemResolution::None,
-                    )
-                };
                 AssocItemContainer::TraitImplContainer {
                     impl_: item,
                     implemented_trait_ref: implemented_trait_ref.sinto(s),
-                    implemented_trait_item,
+                    implemented_trait_item: implemented_item_id.sinto(s),
                     overrides_default: tcx.defaultness(implemented_item_id).has_value(),
                 }
             }
@@ -116,7 +104,7 @@ impl<'tcx> AssocItem<'tcx> {
             AssocItemContainer::TraitImplContainer {
                 implemented_trait_item,
                 ..
-            } => &implemented_trait_item.def_id,
+            } => implemented_trait_item,
             _ => &self.def_id,
         }
     }
@@ -160,8 +148,8 @@ pub enum AssocItemContainer<'tcx> {
         impl_: ItemRef<'tcx>,
         /// The trait ref implemented by the impl block.
         implemented_trait_ref: TraitRef<'tcx>,
-        /// The the associated item (in the trait declaration) that is being implemented.
-        implemented_trait_item: ItemRef<'tcx>,
+        /// The associated item (in the trait declaration) that is being implemented.
+        implemented_trait_item: DefId,
         /// Whether the corresponding trait item had a default (and therefore this one overrides
         /// it).
         overrides_default: bool,
