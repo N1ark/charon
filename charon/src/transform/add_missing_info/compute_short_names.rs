@@ -1,4 +1,5 @@
-use indexmap::map::Entry;
+use rustc_hash::FxHashMap as HashMap;
+use std::collections::hash_map::Entry;
 
 use crate::ast::*;
 
@@ -13,7 +14,7 @@ enum FoundName<'a> {
 }
 
 fn register_short_name_candidate<'a>(
-    short_names: &mut ShortNames<'a>,
+    short_names: &mut HashMap<PathElem, FoundName<'a>>,
     short: PathElem,
     long: &'a [PathElem],
     id: ItemId,
@@ -41,14 +42,11 @@ fn register_short_name_candidate<'a>(
     }
 }
 
-/// Insertion-ordered so that the output doesn't depend on how `PathElem`s hash.
-type ShortNames<'a> = SeqHashMap<PathElem, FoundName<'a>>;
-
 pub struct Transform;
 impl TransformPass for Transform {
     fn transform_ctx(&self, ctx: &mut TransformCtx) {
         ctx.translated.short_names.clear();
-        let mut short_names: ShortNames = Default::default();
+        let mut short_names: HashMap<PathElem, FoundName> = Default::default();
         for (&id, name) in &ctx.translated.item_names {
             let mut name_slice = name.name.as_slice();
 
