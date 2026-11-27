@@ -47,8 +47,10 @@ impl<T> HashConsable for T where T: Hash + PartialEq + Eq + Clone + Mappable {}
 // direct dependency and as a dylib, then the static will be duplicated, causing hashing and
 // equality on `HashCons` to be broken.
 mod intern_table {
+    use hashbrown::HashTable;
     use rustc_hash::FxBuildHasher;
     use std::borrow::Borrow;
+    use std::hash::{BuildHasher, Hash};
     use std::mem::ManuallyDrop;
     use std::ops::DerefMut;
     use std::sync::{Arc, LazyLock, RwLock};
@@ -57,9 +59,7 @@ mod intern_table {
     use crate::utils::hash_by_addr::HashByAddr;
     use crate::utils::type_map::{Mappable, Mapper, TypeMap};
 
-    type SeqHashSet<T> = indexmap::IndexSet<T, FxBuildHasher>;
-
-    // This is a static mutable `SeqHashSet<Arc<T>>` that records for each `T` value a unique
+    // This is a static mutable set of `Arc<T>` that records for each `T` value a unique
     // `Arc<T>` that contains the same value. Values inside the set are hashed/compared
     // as is normal for `T`.
     // Once we've gotten an `Arc` out of the set however, we're sure that "T-equality"
@@ -67,9 +67,23 @@ mod intern_table {
     // and hashing behavior.
     struct InternMapper;
     impl Mapper for InternMapper {
-        type Value<T: Mappable> = SeqHashSet<Arc<T>>;
+        type Value<T: Mappable> = HashTable<Arc<T>>;
     }
-    static INTERNED: LazyLock<RwLock<TypeMap<InternMapper>>> = LazyLock::new(Default::default);
+    // The table is split in shards by hash, so that threads interning different values rarely wait
+    // for each other.
+    const SHARDS: usize = 8;
+    // Each shard is on cache lines of its own, so that threads don't contend on neighbouring ones.
+    #[repr(align(128))]
+    struct Shard(LazyLock<RwLock<TypeMap<InternMapper>>>);
+    static INTERNED: [Shard; SHARDS] = [const { Shard(LazyLock::new(Default::default)) }; SHARDS];
+
+    /// The hash of `value`, and the shard of the table that has the values equal to it.
+    fn shard<V: Hash + ?Sized>(value: &V) -> (u64, &'static RwLock<TypeMap<InternMapper>>) {
+        let hash = FxBuildHasher.hash_one(value);
+        // The hash tables use the top 7 bits and the low bits: we use the bits below the top 7.
+        let index = (hash >> (u64::BITS - 7 - SHARDS.ilog2())) as usize % SHARDS;
+        (hash, &INTERNED[index].0)
+    }
 
     // The excessive generality is to make it work for both `U = T` and `U = Arc<T>`.
     pub(super) fn intern<T: HashConsable, U>(inner: U) -> HashConsed<T>
@@ -78,21 +92,23 @@ mod intern_table {
         U: Into<Arc<T>> + std::hash::Hash,
         U: indexmap::Equivalent<Arc<T>>,
     {
+        let (hash, shard) = shard(&inner);
+        let eq = |arc: &Arc<T>| inner.equivalent(arc);
         // Fast read-only check.
-        let arc = if let read_guard = INTERNED.read().unwrap()
+        let arc = if let read_guard = shard.read().unwrap()
             && let Some(set) = read_guard.get::<T>()
-            && let Some(arc) = set.get(&inner)
+            && let Some(arc) = set.find(hash, eq)
         {
             arc.clone()
         } else {
             // Concurrent access is possible right here, so we have to check everything again.
-            let mut write_guard = INTERNED.write().unwrap();
-            let set: &mut SeqHashSet<Arc<T>> = write_guard.or_default::<T>();
-            if let Some(arc) = set.get(&inner) {
+            let mut write_guard = shard.write().unwrap();
+            let set: &mut HashTable<Arc<T>> = write_guard.or_default::<T>();
+            if let Some(arc) = set.find(hash, eq) {
                 arc.clone()
             } else {
                 let arc: Arc<T> = inner.into();
-                set.insert(arc.clone());
+                set.insert_unique(hash, arc.clone(), |arc| FxBuildHasher.hash_one(arc));
                 arc
             }
         };
@@ -127,13 +143,15 @@ mod intern_table {
                 }
                 {
                     // Take the write guard just long enough to drop the other `Arc` to this value.
-                    let mut write_guard = INTERNED.write().unwrap();
+                    let (hash, shard) = shard(&**arc);
+                    let mut write_guard = shard.write().unwrap();
                     // Check the count again, it could have changed concurrently.
                     if Arc::strong_count(arc) != 2 {
                         return Self::new_not_unique(x);
                     }
-                    if let Some(other_arc) = write_guard.or_default::<T>().swap_take(&*arc) {
-                        drop(other_arc);
+                    let set = write_guard.or_default::<T>();
+                    if let Ok(entry) = set.find_entry(hash, |other| Arc::ptr_eq(other, arc)) {
+                        drop(entry.remove());
                     } else {
                         // Nothing was removed, early return.
                         return Self::new_not_unique(x);
