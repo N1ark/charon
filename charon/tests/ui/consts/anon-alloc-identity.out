@@ -34,8 +34,6 @@ where
   _1: B,
 }
 
-static test_crate::{promoted_const}: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
-
 static test_crate::{promoted_const#1}: [u8; 4usize] = [5u8, 0u8, 6u8, 0u8]
 
 static test_crate::{promoted_const#2}: [u8; 2usize] = [7u8, 8u8]
@@ -43,6 +41,8 @@ static test_crate::{promoted_const#2}: [u8; 2usize] = [7u8, 8u8]
 static test_crate::{promoted_const#3}: [u32; 3usize] = [1u32, 2u32, 3u32]
 
 static test_crate::{promoted_const#4}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(0x01, --, --, --, 0x02, 0x00, 0x00, 0x00)
+
+static test_crate::{promoted_const}: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
 
 struct test_crate::Sync<T>
 where

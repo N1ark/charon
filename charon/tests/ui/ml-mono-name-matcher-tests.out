@@ -190,30 +190,14 @@ fn funs_with_disambiguator(b: bool) -> u32
     return
 }
 
-// Full name: test_crate::MonoContainer::<i32>
-struct MonoContainer::<i32> {
-  item: i32,
-}
-
 // Full name: test_crate::MonoContainer::<&'_ str>
 struct MonoContainer::<&'_ str> {
   item: &'_ str,
 }
 
-#[pattern::pass("test_crate::{test_crate::MonoContainer<@T>}::create<@T>")]
-#[pattern::pass("test_crate::_::create<@T>")]
-fn test_crate::{MonoContainer::<i32>}::create::<i32>(item: i32) -> MonoContainer::<i32>
-{
-    let mut _0: MonoContainer::<i32>; // return
-    let item: i32; // arg #1
-    let mut _2: i32; // anonymous local
-
-    storage_live(_0)
-    storage_live(_2)
-    _2 = move item
-    _0 = MonoContainer::<i32> { item: move _2 }
-    storage_dead(_2)
-    return
+// Full name: test_crate::MonoContainer::<i32>
+struct MonoContainer::<i32> {
+  item: i32,
 }
 
 #[pattern::pass("test_crate::{test_crate::MonoContainer<@T>}::create<@T>")]
@@ -228,6 +212,22 @@ fn test_crate::{MonoContainer::<&'_ str>}::create::<&'_ str>(item: &'_ str) -> M
     storage_live(_2)
     _2 = move item
     _0 = MonoContainer::<&'_ str> { item: move _2 }
+    storage_dead(_2)
+    return
+}
+
+#[pattern::pass("test_crate::{test_crate::MonoContainer<@T>}::create<@T>")]
+#[pattern::pass("test_crate::_::create<@T>")]
+fn test_crate::{MonoContainer::<i32>}::create::<i32>(item: i32) -> MonoContainer::<i32>
+{
+    let mut _0: MonoContainer::<i32>; // return
+    let item: i32; // arg #1
+    let mut _2: i32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = move item
+    _0 = MonoContainer::<i32> { item: move _2 }
     storage_dead(_2)
     return
 }

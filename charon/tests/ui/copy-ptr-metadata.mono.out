@@ -32,12 +32,26 @@ pub fn index::<u32, RangeFull, 2usize><'_0>(_1: &'_0 [u32; 2usize], _2: RangeFul
 #[lang_item(DynMetadata)]
 pub opaque type DynMetadata::<(dyn Trait)>
 
-// Full name: test_crate::metadata::<u32>
-pub fn metadata::<u32>(ptr: *const u32)
+struct test_crate::Trait::{vtable} {
+  size: usize,
+  align: usize,
+  drop: *const (),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+}
+
+// Full name: test_crate::Trait
+trait Trait<Self>
 {
-    let mut _0: (); // return
-    let ptr: *const u32; // arg #1
-    let mut _2: *const u32; // anonymous local
+    proof ImpliedClause0: (Self: MetaSized)
+    vtable: test_crate::Trait::{vtable}
+}
+
+// Full name: test_crate::metadata::<(dyn Trait)>
+pub fn metadata::<(dyn Trait)>(ptr: *const (dyn Trait)) -> DynMetadata::<(dyn Trait)>
+{
+    let mut _0: DynMetadata::<(dyn Trait)>; // return
+    let ptr: *const (dyn Trait + '0); // arg #1
+    let mut _2: *const (dyn Trait + '1); // anonymous local
 
     storage_live(_0)
     storage_live(_2)
@@ -64,26 +78,12 @@ pub fn metadata::<[u32]>(ptr: *const [u32]) -> usize
     return
 }
 
-struct test_crate::Trait::{vtable} {
-  size: usize,
-  align: usize,
-  drop: *const (),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
-// Full name: test_crate::Trait
-trait Trait<Self>
+// Full name: test_crate::metadata::<u32>
+pub fn metadata::<u32>(ptr: *const u32)
 {
-    proof ImpliedClause0: (Self: MetaSized)
-    vtable: test_crate::Trait::{vtable}
-}
-
-// Full name: test_crate::metadata::<(dyn Trait)>
-pub fn metadata::<(dyn Trait)>(ptr: *const (dyn Trait)) -> DynMetadata::<(dyn Trait)>
-{
-    let mut _0: DynMetadata::<(dyn Trait)>; // return
-    let ptr: *const (dyn Trait + '0); // arg #1
-    let mut _2: *const (dyn Trait + '1); // anonymous local
+    let mut _0: (); // return
+    let ptr: *const u32; // arg #1
+    let mut _2: *const u32; // anonymous local
 
     storage_live(_0)
     storage_live(_2)

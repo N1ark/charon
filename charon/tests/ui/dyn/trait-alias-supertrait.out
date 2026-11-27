@@ -9,13 +9,6 @@ pub trait MetaSized<Self>
 
 struct () {}
 
-struct test_crate::Base::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Base)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Base
 trait Base<Self>
 {
@@ -23,12 +16,11 @@ trait Base<Self>
     vtable: test_crate::Base::{vtable}
 }
 
-struct test_crate::Alias::{vtable} {
+struct test_crate::Base::{vtable} {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Alias)),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Base)),
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Base::{vtable},
 }
 
 // Full name: test_crate::Alias
@@ -39,12 +31,12 @@ trait Alias<Self>
     vtable: test_crate::Alias::{vtable}
 }
 
-struct test_crate::Sub::{vtable} {
+struct test_crate::Alias::{vtable} {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Sub)),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Alias)),
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Alias::{vtable},
+  super_trait_1: &'static test_crate::Base::{vtable},
 }
 
 // Full name: test_crate::Sub
@@ -53,6 +45,14 @@ trait Sub<Self>
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self: Alias)
     vtable: test_crate::Sub::{vtable}
+}
+
+struct test_crate::Sub::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Sub)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static test_crate::Alias::{vtable},
 }
 
 // Full name: test_crate::needs_alias

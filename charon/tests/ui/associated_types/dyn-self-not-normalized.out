@@ -26,19 +26,19 @@ pub trait Destruct<Self>
     non-dyn-compatible
 }
 
-struct test_crate::Trait::{vtable}<Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait<Ty0>)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Trait
 pub trait Trait<Self, Self_Output>
 {
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self_Output: Sized)
     vtable: test_crate::Trait::{vtable}<Self_Output>
+}
+
+struct test_crate::Trait::{vtable}<Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Trait<Ty0>)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::Deref

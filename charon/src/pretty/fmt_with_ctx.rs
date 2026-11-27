@@ -2305,12 +2305,19 @@ impl<T> RegionBinder<T> {
     }
 
     /// Formats the binder as `for<params> value`.
-    fn fmt_as_for<'a, C>(&'a self, ctx: &'a C) -> String
+    fn fmt_as_for<'a, C>(&'a self, ctx: &'a C) -> impl Display + 'a
     where
         C: AstFormatter,
         T: FmtWithCtx<C::Reborrow<'a>>,
     {
-        self.fmt_as_for_with(ctx, |ctx, x| x.to_string_with_ctx(ctx))
+        std::fmt::from_fn(move |f| {
+            let ctx = &ctx.push_bound_regions(&self.regions);
+            let regions = self.fmt_params_with_ctx(ctx);
+            if !regions.is_empty() {
+                write!(f, "for<{regions}> ")?;
+            }
+            self.skip_binder.fmt_with_ctx(ctx, f)
+        })
     }
     /// Formats the binder as `for<params> value`.
     fn fmt_as_for_with<'a, C>(

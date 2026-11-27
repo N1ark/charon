@@ -16,22 +16,22 @@ vtable core::marker::MetaSized::{vtable}::<S>: core::marker::MetaSized::{vtable}
 fn panic_in_cleanup() -> !
 = <opaque>
 
-// Full name: alloc::boxed::Box::<S>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<S, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<S, Global>}::drop_glue::<S, Global>
-unsafe fn {impl Destruct for Box::<S, Global>}::drop_glue::<S, Global><'_0>(_1: &'_0 mut Box::<S, Global>)
-= <opaque>
-
 // Full name: alloc::boxed::Box::<(dyn Trait)>
 #[fundamental]
 #[lang_item(OwnedBox)]
 pub opaque type Box::<(dyn Trait), Global>
 
+// Full name: alloc::boxed::Box::<S>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<S, Global>
+
 // Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global>
 unsafe fn {impl Destruct for Box::<(dyn Trait), Global>}::drop_glue::<(dyn Trait), Global><'_0>(_1: &'_0 mut Box::<(dyn Trait), Global>)
+= <opaque>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<S, Global>}::drop_glue::<S, Global>
+unsafe fn {impl Destruct for Box::<S, Global>}::drop_glue::<S, Global><'_0>(_1: &'_0 mut Box::<S, Global>)
 = <opaque>
 
 // Full name: test_crate::S

@@ -130,16 +130,16 @@ where
   Err { _0: E },
 }
 
-struct (_,)<A> {
-  _0: A,
-}
-
 struct (_, _)<A, B>
 where
     TraitClause0: (A: Sized),
 {
   _0: A,
   _1: B,
+}
+
+struct (_,)<A> {
+  _0: A,
 }
 
 // Full name: test_crate::foo

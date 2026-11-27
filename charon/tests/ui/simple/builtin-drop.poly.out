@@ -115,6 +115,33 @@ where
   _1: B,
 }
 
+// Full name: (_, _)::{impl Destruct for (A, B)}::drop_glue
+unsafe fn impl_Destruct_for_tuple::drop_glue<'_0, A, B>(_1: &'_0 mut (A, B))
+where
+    TraitClause0: (A: Sized),
+    TraitClause1: (A: Destruct),
+    TraitClause2: (B: Destruct),
+    Outlives0: (A: '_0),
+    Outlives1: (B: '_0),
+{
+    let mut _0: (); // return
+    let _1: &'1 mut (A, B); // arg #1
+
+    storage_live(_0)
+    drop[TraitClause1::drop_glue<'2>] (*_1)._0
+    ↳⚡ drop[TraitClause2::drop_glue<'4>] (*_1)._1
+        ↳⚡ storage_dead(_1)
+            unwind_terminate(in_cleanup)
+        storage_dead(_1)
+        unwind_continue
+    drop[TraitClause2::drop_glue<'3>] (*_1)._1
+    ↳⚡ storage_dead(_1)
+        unwind_continue
+    _0 = ()
+    storage_dead(_1)
+    return
+}
+
 // Full name: {impl Destruct for [T]}::drop_glue
 unsafe fn impl_Destruct_for_slice::drop_glue<'_0, T>(_1: &'_0 mut [T])
 where
@@ -246,33 +273,6 @@ where
         unwind_continue
     _0 = ()
     storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: (_, _)::{impl Destruct for (A, B)}::drop_glue
-unsafe fn impl_Destruct_for_tuple::drop_glue<'_0, A, B>(_1: &'_0 mut (A, B))
-where
-    TraitClause0: (A: Sized),
-    TraitClause1: (A: Destruct),
-    TraitClause2: (B: Destruct),
-    Outlives0: (A: '_0),
-    Outlives1: (B: '_0),
-{
-    let mut _0: (); // return
-    let _1: &'1 mut (A, B); // arg #1
-
-    storage_live(_0)
-    drop[TraitClause1::drop_glue<'2>] (*_1)._0
-    ↳⚡ drop[TraitClause2::drop_glue<'4>] (*_1)._1
-        ↳⚡ storage_dead(_1)
-            unwind_terminate(in_cleanup)
-        storage_dead(_1)
-        unwind_continue
-    drop[TraitClause2::drop_glue<'3>] (*_1)._1
-    ↳⚡ storage_dead(_1)
-        unwind_continue
-    _0 = ()
     storage_dead(_1)
     return
 }

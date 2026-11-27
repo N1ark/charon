@@ -113,26 +113,22 @@ struct PolyReprC::<u32> {
 //     ],
 //     repr(C),
 
-// Full name: test_crate::GenericEnum::<u32>
-enum GenericEnum::<u32> {
+// Full name: test_crate::GenericEnum::<!>
+enum GenericEnum::<!> {
   None,
-  Some { _0: u32 },
+  Some { _0: ! },
 }
 // layout:
-//     size: 8usize (guaranteed: at_least(align_to((offset_of(GenericEnum::<u32>.Some._0) + size_of::<u32>()), align_of::<u32>()))),
-//     align: 4usize (guaranteed: at_least(align_of::<u32>())),
-//     discriminator: read at offset 0 { 0u32 => None, 1u32 => Some, _ => invalid },
+//     size: 0usize (guaranteed: at_least(offset_of(GenericEnum::<!>.Some._0))),
+//     align: 1usize (guaranteed: at_least(1usize)),
+//     discriminator: None,
 //     inhabited: true,
 //     variants: [
 //         None: {
 //             inhabited: true,
-//             tagger: [0 := 0u32],
+//             tagger: [],
 //         },
-//         Some: {
-//             offset of _0: 4 (guaranteed: aligned(align_of::<u32>())),
-//             inhabited: true,
-//             tagger: [0 := 1u32],
-//         },
+//         Some: none,
 //     ],
 //     repr(Rust),
 
@@ -159,22 +155,26 @@ enum GenericEnum::<NonZero::<u32>> {
 //     ],
 //     repr(Rust),
 
-// Full name: test_crate::GenericEnum::<!>
-enum GenericEnum::<!> {
+// Full name: test_crate::GenericEnum::<u32>
+enum GenericEnum::<u32> {
   None,
-  Some { _0: ! },
+  Some { _0: u32 },
 }
 // layout:
-//     size: 0usize (guaranteed: at_least(offset_of(GenericEnum::<!>.Some._0))),
-//     align: 1usize (guaranteed: at_least(1usize)),
-//     discriminator: None,
+//     size: 8usize (guaranteed: at_least(align_to((offset_of(GenericEnum::<u32>.Some._0) + size_of::<u32>()), align_of::<u32>()))),
+//     align: 4usize (guaranteed: at_least(align_of::<u32>())),
+//     discriminator: read at offset 0 { 0u32 => None, 1u32 => Some, _ => invalid },
 //     inhabited: true,
 //     variants: [
 //         None: {
 //             inhabited: true,
-//             tagger: [],
+//             tagger: [0 := 0u32],
 //         },
-//         Some: none,
+//         Some: {
+//             offset of _0: 4 (guaranteed: aligned(align_of::<u32>())),
+//             inhabited: true,
+//             tagger: [0 := 1u32],
+//         },
 //     ],
 //     repr(Rust),
 

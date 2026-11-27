@@ -1,7 +1,5 @@
 # Final LLBC before serialization:
 
-opaque type core::any::Any::{vtable}
-
 // Full name: core::marker::MetaSized
 #[fundamental]
 #[lang_item(MetaSized)]
@@ -10,6 +8,8 @@ pub trait MetaSized<Self>
 // Full name: core::any::TypeId
 #[lang_item(TypeId)]
 pub opaque type TypeId
+
+opaque type core::any::Any::{vtable}
 
 // Full name: core::any::Any
 #[diagnostic_item("Any")]

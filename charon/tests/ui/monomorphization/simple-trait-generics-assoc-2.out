@@ -18,9 +18,9 @@ pub trait Sized<Self>
 
 struct () {}
 
-vtable core::marker::MetaSized::{vtable}::<i32>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
-
 vtable core::marker::MetaSized::{vtable}::<bool>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
+vtable core::marker::MetaSized::{vtable}::<i32>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
 struct test_crate::Trait::{vtable} {
   size: usize,

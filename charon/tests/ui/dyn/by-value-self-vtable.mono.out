@@ -9,31 +9,13 @@ pub trait MetaSized<Self>
 
 struct () {}
 
-vtable core::marker::MetaSized::{vtable}::<S>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
-
 vtable core::marker::MetaSized::{vtable}::<*mut u32>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
+vtable core::marker::MetaSized::{vtable}::<S>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
 // Full name: core::panicking::panic_in_cleanup
 #[lang_item(PanicInCleanup)]
 fn panic_in_cleanup() -> !
-= <opaque>
-
-// Full name: alloc::boxed::Box::<S>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<S, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<S, Global>}::drop_glue::<S, Global>
-unsafe fn {impl Destruct for Box::<S, Global>}::drop_glue::<S, Global><'_0>(_1: &'_0 mut Box::<S, Global>)
-= <opaque>
-
-// Full name: alloc::boxed::Box::<*mut u32>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<*mut u32, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global>
-unsafe fn {impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global><'_0>(_1: &'_0 mut Box::<*mut u32, Global>)
 = <opaque>
 
 // Full name: alloc::boxed::Box::<(dyn Consume)>
@@ -41,8 +23,31 @@ unsafe fn {impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Glo
 #[lang_item(OwnedBox)]
 pub opaque type Box::<(dyn Consume), Global>
 
+// Full name: alloc::boxed::Box::<*mut u32>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<*mut u32, Global>
+
+// Full name: alloc::boxed::Box::<S>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<S, Global>
+
 // Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global>
 unsafe fn {impl Destruct for Box::<(dyn Consume), Global>}::drop_glue::<(dyn Consume), Global><'_0>(_1: &'_0 mut Box::<(dyn Consume), Global>)
+= <opaque>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global>
+unsafe fn {impl Destruct for Box::<*mut u32, Global>}::drop_glue::<*mut u32, Global><'_0>(_1: &'_0 mut Box::<*mut u32, Global>)
+= <opaque>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<S, Global>}::drop_glue::<S, Global>
+unsafe fn {impl Destruct for Box::<S, Global>}::drop_glue::<S, Global><'_0>(_1: &'_0 mut Box::<S, Global>)
+= <opaque>
+
+#[track_caller]
+#[diagnostic_item("box_new")]
+pub fn alloc::boxed::{Box::<*mut u32, Global>}::new::<*mut u32>(_1: *mut u32) -> Box::<*mut u32, Global>
 = <opaque>
 
 // Full name: test_crate::S
@@ -53,11 +58,6 @@ struct S {
 #[track_caller]
 #[diagnostic_item("box_new")]
 pub fn alloc::boxed::{Box::<S, Global>}::new::<S>(_1: S) -> Box::<S, Global>
-= <opaque>
-
-#[track_caller]
-#[diagnostic_item("box_new")]
-pub fn alloc::boxed::{Box::<*mut u32, Global>}::new::<*mut u32>(_1: *mut u32) -> Box::<*mut u32, Global>
 = <opaque>
 
 struct test_crate::Consume::{vtable} {

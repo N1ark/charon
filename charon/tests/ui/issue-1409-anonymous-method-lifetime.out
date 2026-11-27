@@ -98,25 +98,6 @@ impl<'_0> "impl_From_for_S" From<&'_0 u64> for S {
     non-dyn-compatible
 }
 
-// Full name: test_crate::{impl From<&'_0 u64> for S}::{impl FnMut<(&'_0 u64,)> for from<'_0>}::call_mut
-pub extern "rust-call" fn call_mut<'_0, '_1>(_1: &'_1 mut from<'_0>, _2: (&'_0 u64,)) -> S
-where
-    Outlives0: ('_0: '_1),
-{
-    let mut _0: S; // return
-    let _1: &'2 mut from<'_0>; // arg #1
-    let _2: (&'5 u64,); // arg #2
-
-    storage_live(_0)
-    _0 = from<'_0>(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
 // Full name: test_crate::{impl From<&'_0 u64> for S}::{impl FnOnce<(&'_0 u64,)> for from<'_0>}::call_once
 pub extern "rust-call" fn call_once<'_0>(_1: from<'_0>, _2: (&'_0 u64,)) -> S
 {
@@ -143,6 +124,25 @@ impl<'_0> FnOnce<(&'_0 u64,)> for from<'_0> {
     type Output = S
     fn call_once = call_once<'_0>
     vtable: lazy
+}
+
+// Full name: test_crate::{impl From<&'_0 u64> for S}::{impl FnMut<(&'_0 u64,)> for from<'_0>}::call_mut
+pub extern "rust-call" fn call_mut<'_0, '_1>(_1: &'_1 mut from<'_0>, _2: (&'_0 u64,)) -> S
+where
+    Outlives0: ('_0: '_1),
+{
+    let mut _0: S; // return
+    let _1: &'2 mut from<'_0>; // arg #1
+    let _2: (&'5 u64,); // arg #2
+
+    storage_live(_0)
+    _0 = from<'_0>(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::{impl From<&'_0 u64> for S}::{impl FnMut<(&'_0 u64,)> for from<'_0>}

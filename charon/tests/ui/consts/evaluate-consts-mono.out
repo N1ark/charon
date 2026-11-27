@@ -13,14 +13,14 @@ pub fn use_len() -> usize
     return
 }
 
-// Full name: test_crate::{impl HasSize for u8}::SIZE::<u8>
-const impl_HasSize_for_u8::SIZE::<u8>: usize = 1usize
+// Full name: test_crate::{impl HasSize for [u32; 3usize]}::SIZE::<[u32; 3usize]>
+const impl_HasSize_for_array::SIZE::<[u32; 3usize]>: usize = 12usize
 
 // Full name: test_crate::{impl HasSize for u64}::SIZE::<u64>
 const impl_HasSize_for_u64::SIZE::<u64>: usize = 8usize
 
-// Full name: test_crate::{impl HasSize for [u32; 3usize]}::SIZE::<[u32; 3usize]>
-const impl_HasSize_for_array::SIZE::<[u32; 3usize]>: usize = 12usize
+// Full name: test_crate::{impl HasSize for u8}::SIZE::<u8>
+const impl_HasSize_for_u8::SIZE::<u8>: usize = 1usize
 
 // Full name: test_crate::use_size
 pub fn use_size() -> usize

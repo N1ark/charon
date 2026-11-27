@@ -7,6 +7,8 @@
 //! to be explicit about mutual recursion. This should come useful for translation to any other
 //! language with these properties.
 use crate::options::TranslateOptions;
+use crate::pretty::FmtWithCtx;
+use crate::pretty::formatter::{FmtCtx, IntoFormatter};
 use crate::transform::TransformCtx;
 use crate::ullbc_ast::*;
 use crate::utils::*;
@@ -14,7 +16,8 @@ use derive_generic_visitor::*;
 use itertools::Itertools;
 use petgraph::graphmap::DiGraphMap;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::fmt::{Debug, Display, Error};
+use std::cmp::Ordering;
+use std::fmt::{self, Debug, Display, Error, Write};
 use std::vec::Vec;
 
 use crate::transform::ctx::TransformPass;
@@ -429,6 +432,52 @@ fn compute_declarations_graph(
     deps.graph
 }
 
+/// Compare two names like their formatted strings. We format only as much as needed: names at the
+/// same place often share a prefix, and some print huge generic arguments.
+fn cmp_formatted_names(fmt: &FmtCtx<'_>, a: &Name, b: &Name) -> Ordering {
+    /// The first bytes of what is written, up to a limit.
+    struct Prefix(Vec<u8>, usize);
+    impl fmt::Write for Prefix {
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            let room = self.1 - self.0.len();
+            self.0.extend_from_slice(&s.as_bytes()[..s.len().min(room)]);
+            if s.len() > room {
+                Err(fmt::Error)
+            } else {
+                Ok(())
+            }
+        }
+    }
+    // Equal path elements print the same.
+    let shared = a
+        .name
+        .iter()
+        .zip(&b.name)
+        .take_while(|(x, y)| x == y)
+        .count();
+    let format = |elems: &[PathElem], len| {
+        let mut prefix = Prefix(Vec::new(), len);
+        let whole = write!(
+            prefix,
+            "{}",
+            elems.iter().map(|x| x.with_ctx(fmt)).format("::")
+        )
+        .is_ok();
+        (prefix.0, whole)
+    };
+    for len in [256, usize::MAX] {
+        let (a, a_whole) = format(&a.name[shared..], len);
+        let (b, b_whole) = format(&b.name[shared..], len);
+        match a.cmp(&b) {
+            // Both strings go on.
+            Ordering::Equal if !a_whole && !b_whole => {}
+            Ordering::Equal => return b_whole.cmp(&a_whole),
+            ord => return ord,
+        }
+    }
+    unreachable!("whole strings compare")
+}
+
 fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {
     // Build the graph of dependencies between items.
     let graph = compute_declarations_graph(ctx);
@@ -456,21 +505,24 @@ fn compute_reordered_decls(ctx: &mut TransformCtx) -> Vec<DeclarationGroup> {
         let item_meta = item.item_meta();
         let span = item_meta.span.data();
         let file_name_order = sorted_file_ids.get(span.file_id);
-        (
-            item_meta.is_local,
-            file_name_order,
-            span.beg,
-            item_meta.name.mono_args().cloned(),
-            item.id(),
-        )
+        (item_meta.is_local, file_name_order, span.beg)
     };
+    // Ids depend on the order of translation, names don't: we order the items at the same place by
+    // name.
+    let fmt = &ctx.into_fmt();
     // We record for each item the order in which we're sorting it, to make `sort_by` cheap.
     let item_sorted_index: HashMap<ItemId, usize> = ctx
         .translated
         .all_items()
-        .sorted_by_cached_key(sort_by)
+        .map(|item| (sort_by(&item), item))
+        .sorted_by(|(key_a, a), (key_b, b)| {
+            key_a
+                .cmp(key_b)
+                .then_with(|| cmp_formatted_names(fmt, &a.item_meta().name, &b.item_meta().name))
+                .then_with(|| a.id().cmp(&b.id()))
+        })
         .enumerate()
-        .map(|(i, item)| (item.id(), i))
+        .map(|(i, (_, item))| (item.id(), i))
         .collect();
     let sort_by = |id: &ItemId| item_sorted_index.get(id).unwrap();
 

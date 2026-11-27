@@ -20,15 +20,6 @@ struct () {}
 
 vtable core::marker::MetaSized::{vtable}<Self>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
-struct test_crate::Tr::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Tr)),
-  method_inherited: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
-  method_overridden: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Tr
 trait Tr<Self>
 {
@@ -36,6 +27,15 @@ trait Tr<Self>
     fn inherited<'_0_1, Outlives0: (Self: '_0_1)>;
     fn overridden<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Tr::{vtable}
+}
+
+struct test_crate::Tr::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Tr)),
+  method_inherited: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
+  method_overridden: fn<'_0_1>(&'_0_1 (dyn Tr)) -> u8,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::{impl Tr for T}::overridden

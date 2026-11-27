@@ -37,14 +37,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
-  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -59,13 +51,12 @@ pub trait FnOnce<Self, Args>
     vtable: core::ops::function::FnOnce::{vtable}<Args, Self::Output>
 }
 
-struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
+struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
-  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
+  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::FnMut
@@ -81,13 +72,13 @@ pub trait FnMut<Self, Args>
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
 
-struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+struct core::ops::function::FnMut::{vtable}<Args, Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
-  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>)),
+  method_call_mut: extern "rust-call" fn<'_0_1>(&'_0_1 mut (dyn FnMut<Args, ImpliedClause1::Output = Ty0>), Args) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
+  super_trait_1: &'static core::ops::function::FnOnce::{vtable}<Args, Ty0>,
 }
 
 // Full name: core::ops::function::Fn
@@ -101,6 +92,15 @@ pub trait Fn<Self, Args>
     proof ImpliedClause3: (Args: Tuple)
     fn call<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::Fn::{vtable}<Args, Self::ImpliedClause1::ImpliedClause1::Output>
+}
+
+struct core::ops::function::Fn::{vtable}<Args, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>)),
+  method_call: extern "rust-call" fn<'_0_1>(&'_0_1 (dyn Fn<Args, ImpliedClause1::ImpliedClause1::Output = Ty0>), Args) -> Ty0,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable}<Args, Ty0>,
 }
 
 struct (_,)<A> {
@@ -189,6 +189,17 @@ unsafe fn {impl FnOnce<(u32,)> for some_fn}::{vtable_drop_shim}<'_0>(dyn_self: &
 // Full name: test_crate::{impl FnOnce<(u32,)> for some_fn}::{vtable}
 vtable {impl FnOnce<(u32,)> for some_fn}::{vtable}: core::ops::function::FnOnce::{vtable}<(u32,), u32> = core::ops::function::FnOnce::{vtable} { size: size_of::<some_fn>(), align: align_of::<some_fn>(), drop: fnptr({impl FnOnce<(u32,)> for some_fn}::{vtable_drop_shim}<'_>), method_call_once: fnptr({impl FnOnce<(u32,)> for some_fn}::{vtable_method}), super_trait_0: &core::marker::MetaSized::{vtable}<some_fn> }
 
+// Full name: test_crate::{impl FnOnce<(u32,)> for some_fn}
+impl FnOnce<(u32,)> for some_fn {
+    proof ImpliedClause0: (some_fn: MetaSized) = {built_in impl MetaSized for some_fn}
+    proof ImpliedClause1: ((u32,): Sized) = {built_in impl Sized for (u32,)}
+    proof ImpliedClause2: ((u32,): Tuple) = {built_in impl Tuple for (u32,)}
+    proof ImpliedClause3: (u32: Sized) = {built_in impl Sized for u32}
+    type Output = u32
+    fn call_once = {impl FnOnce<(u32,)> for some_fn}::call_once
+    vtable: {impl FnOnce<(u32,)> for some_fn}::{vtable}
+}
+
 // Full name: test_crate::{impl FnMut<(u32,)> for some_fn}::call_mut
 extern "rust-call" fn {impl FnMut<(u32,)> for some_fn}::call_mut<'_0>(_1: &'_0 mut some_fn, _2: (u32,)) -> u32
 {
@@ -247,6 +258,16 @@ unsafe fn {impl FnMut<(u32,)> for some_fn}::{vtable_drop_shim}<'_0>(dyn_self: &'
 // Full name: test_crate::{impl FnMut<(u32,)> for some_fn}::{vtable}
 vtable {impl FnMut<(u32,)> for some_fn}::{vtable}: core::ops::function::FnMut::{vtable}<(u32,), u32> = core::ops::function::FnMut::{vtable} { size: size_of::<some_fn>(), align: align_of::<some_fn>(), drop: fnptr({impl FnMut<(u32,)> for some_fn}::{vtable_drop_shim}<'_>), method_call_mut: fnptr({impl FnMut<(u32,)> for some_fn}::{vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<some_fn>, super_trait_1: &{impl FnOnce<(u32,)> for some_fn}::{vtable} }
 
+// Full name: test_crate::{impl FnMut<(u32,)> for some_fn}
+impl FnMut<(u32,)> for some_fn {
+    proof ImpliedClause0: (some_fn: MetaSized) = {built_in impl MetaSized for some_fn}
+    proof ImpliedClause1: (some_fn: FnOnce<(u32,)>) = {impl FnOnce<(u32,)> for some_fn}
+    proof ImpliedClause2: ((u32,): Sized) = {built_in impl Sized for (u32,)}
+    proof ImpliedClause3: ((u32,): Tuple) = {built_in impl Tuple for (u32,)}
+    fn call_mut<'_0_1> = {impl FnMut<(u32,)> for some_fn}::call_mut<'_0_1>
+    vtable: {impl FnMut<(u32,)> for some_fn}::{vtable}
+}
+
 // Full name: test_crate::{impl Fn<(u32,)> for some_fn}::call
 extern "rust-call" fn {impl Fn<(u32,)> for some_fn}::call<'_0>(_1: &'_0 some_fn, _2: (u32,)) -> u32
 {
@@ -304,27 +325,6 @@ unsafe fn {impl Fn<(u32,)> for some_fn}::{vtable_drop_shim}<'_0>(dyn_self: &'_0 
 
 // Full name: test_crate::{impl Fn<(u32,)> for some_fn}::{vtable}
 vtable {impl Fn<(u32,)> for some_fn}::{vtable}: core::ops::function::Fn::{vtable}<(u32,), u32> = core::ops::function::Fn::{vtable} { size: size_of::<some_fn>(), align: align_of::<some_fn>(), drop: fnptr({impl Fn<(u32,)> for some_fn}::{vtable_drop_shim}<'_>), method_call: fnptr({impl Fn<(u32,)> for some_fn}::{vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<some_fn>, super_trait_1: &{impl FnMut<(u32,)> for some_fn}::{vtable} }
-
-// Full name: test_crate::{impl FnOnce<(u32,)> for some_fn}
-impl FnOnce<(u32,)> for some_fn {
-    proof ImpliedClause0: (some_fn: MetaSized) = {built_in impl MetaSized for some_fn}
-    proof ImpliedClause1: ((u32,): Sized) = {built_in impl Sized for (u32,)}
-    proof ImpliedClause2: ((u32,): Tuple) = {built_in impl Tuple for (u32,)}
-    proof ImpliedClause3: (u32: Sized) = {built_in impl Sized for u32}
-    type Output = u32
-    fn call_once = {impl FnOnce<(u32,)> for some_fn}::call_once
-    vtable: {impl FnOnce<(u32,)> for some_fn}::{vtable}
-}
-
-// Full name: test_crate::{impl FnMut<(u32,)> for some_fn}
-impl FnMut<(u32,)> for some_fn {
-    proof ImpliedClause0: (some_fn: MetaSized) = {built_in impl MetaSized for some_fn}
-    proof ImpliedClause1: (some_fn: FnOnce<(u32,)>) = {impl FnOnce<(u32,)> for some_fn}
-    proof ImpliedClause2: ((u32,): Sized) = {built_in impl Sized for (u32,)}
-    proof ImpliedClause3: ((u32,): Tuple) = {built_in impl Tuple for (u32,)}
-    fn call_mut<'_0_1> = {impl FnMut<(u32,)> for some_fn}::call_mut<'_0_1>
-    vtable: {impl FnMut<(u32,)> for some_fn}::{vtable}
-}
 
 // Full name: test_crate::{impl Fn<(u32,)> for some_fn}
 impl Fn<(u32,)> for some_fn {
@@ -421,6 +421,20 @@ where
     TraitClause0: (T: Sized),
  = core::ops::function::FnOnce::{vtable} { size: size_of::<generic_fn<T>[TraitClause0]>(), align: align_of::<generic_fn<T>[TraitClause0]>(), drop: fnptr({impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_drop_shim}<'_, T>[TraitClause0]), method_call_once: fnptr({impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_method}<T>[TraitClause0]), super_trait_0: &core::marker::MetaSized::{vtable}<generic_fn<T>[TraitClause0]> }
 
+// Full name: test_crate::{impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}
+impl<T> FnOnce<(T,)> for generic_fn<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (generic_fn<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for generic_fn<T>[TraitClause0]}
+    proof ImpliedClause1: ((T,): Sized) = {built_in impl Sized for (T,)}
+    proof ImpliedClause2: ((T,): Tuple) = {built_in impl Tuple for (T,)}
+    proof ImpliedClause3: (T: Sized) = TraitClause0
+    type Output = T
+    fn call_once = {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::call_once<T>[TraitClause0]
+    vtable: {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0]
+}
+
 // Full name: test_crate::{impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::call_mut
 extern "rust-call" fn {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::call_mut<'_0, T>(_1: &'_0 mut generic_fn<T>[TraitClause0], _2: (T,)) -> T
 where
@@ -490,6 +504,19 @@ vtable {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>: core::op
 where
     TraitClause0: (T: Sized),
  = core::ops::function::FnMut::{vtable} { size: size_of::<generic_fn<T>[TraitClause0]>(), align: align_of::<generic_fn<T>[TraitClause0]>(), drop: fnptr({impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_drop_shim}<'_, T>[TraitClause0]), method_call_mut: fnptr({impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_method}<'_, T>[TraitClause0]), super_trait_0: &core::marker::MetaSized::{vtable}<generic_fn<T>[TraitClause0]>, super_trait_1: &{impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0] }
+
+// Full name: test_crate::{impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}
+impl<T> FnMut<(T,)> for generic_fn<T>[TraitClause0]
+where
+    TraitClause0: (T: Sized),
+{
+    proof ImpliedClause0: (generic_fn<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for generic_fn<T>[TraitClause0]}
+    proof ImpliedClause1: (generic_fn<T>[TraitClause0]: FnOnce<(T,)>) = {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}<T>[TraitClause0]
+    proof ImpliedClause2: ((T,): Sized) = {built_in impl Sized for (T,)}
+    proof ImpliedClause3: ((T,): Tuple) = {built_in impl Tuple for (T,)}
+    fn call_mut<'_0_1> = {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::call_mut<'_0_1, T>[TraitClause0]
+    vtable: {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0]
+}
 
 // Full name: test_crate::{impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::call
 extern "rust-call" fn {impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::call<'_0, T>(_1: &'_0 generic_fn<T>[TraitClause0], _2: (T,)) -> T
@@ -561,33 +588,6 @@ where
     TraitClause0: (T: Sized),
  = core::ops::function::Fn::{vtable} { size: size_of::<generic_fn<T>[TraitClause0]>(), align: align_of::<generic_fn<T>[TraitClause0]>(), drop: fnptr({impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_drop_shim}<'_, T>[TraitClause0]), method_call: fnptr({impl Fn<(T,)> for generic_fn<T>[TraitClause0]}::{vtable_method}<'_, T>[TraitClause0]), super_trait_0: &core::marker::MetaSized::{vtable}<generic_fn<T>[TraitClause0]>, super_trait_1: &{impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0] }
 
-// Full name: test_crate::{impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}
-impl<T> FnOnce<(T,)> for generic_fn<T>[TraitClause0]
-where
-    TraitClause0: (T: Sized),
-{
-    proof ImpliedClause0: (generic_fn<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for generic_fn<T>[TraitClause0]}
-    proof ImpliedClause1: ((T,): Sized) = {built_in impl Sized for (T,)}
-    proof ImpliedClause2: ((T,): Tuple) = {built_in impl Tuple for (T,)}
-    proof ImpliedClause3: (T: Sized) = TraitClause0
-    type Output = T
-    fn call_once = {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::call_once<T>[TraitClause0]
-    vtable: {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0]
-}
-
-// Full name: test_crate::{impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}
-impl<T> FnMut<(T,)> for generic_fn<T>[TraitClause0]
-where
-    TraitClause0: (T: Sized),
-{
-    proof ImpliedClause0: (generic_fn<T>[TraitClause0]: MetaSized) = {built_in impl MetaSized for generic_fn<T>[TraitClause0]}
-    proof ImpliedClause1: (generic_fn<T>[TraitClause0]: FnOnce<(T,)>) = {impl FnOnce<(T,)> for generic_fn<T>[TraitClause0]}<T>[TraitClause0]
-    proof ImpliedClause2: ((T,): Sized) = {built_in impl Sized for (T,)}
-    proof ImpliedClause3: ((T,): Tuple) = {built_in impl Tuple for (T,)}
-    fn call_mut<'_0_1> = {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::call_mut<'_0_1, T>[TraitClause0]
-    vtable: {impl FnMut<(T,)> for generic_fn<T>[TraitClause0]}::{vtable}<T>[TraitClause0]
-}
-
 // Full name: test_crate::{impl Fn<(T,)> for generic_fn<T>[TraitClause0]}
 impl<T> Fn<(T,)> for generic_fn<T>[TraitClause0]
 where
@@ -619,6 +619,44 @@ extern "rust-call" fn impl_Fn_tuple_for_closure::call<'_0>(_1: &'_0 {closure}, t
     storage_dead(_3)
     storage_dead(tupled_args)
     storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::main::{impl Fn<(u32,)> for {closure}}::{vtable_method}
+extern "rust-call" fn impl_Fn_tuple_for_closure::{vtable_method}<'_0>(_1: &'_0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32>), _2: (u32,)) -> u32
+{
+    let mut _0: u32; // return
+    let mut _1: &'_0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '0); // arg #1
+    let mut _2: (u32,); // arg #2
+    let mut _3: &'_0 {closure}; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = concretize<&'_0 {closure}>(move _1)
+    _0 = impl_Fn_tuple_for_closure::call<'_0>(move _3, move _2)
+    ↳⚡ storage_dead(_3)
+        storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_3)
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::main::{impl Fn<(u32,)> for {closure}}::{vtable_drop_shim}
+unsafe fn impl_Fn_tuple_for_closure::{vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32>))
+{
+    let mut ret: (); // return
+    let mut dyn_self: &'_0 mut (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '0); // arg #1
+    let mut target_self: &'_0 mut {closure}; // local
+
+    storage_live(ret)
+    ret = ()
+    storage_live(target_self)
+    target_self = concretize<&'_0 mut {closure}>(move dyn_self)
+    storage_dead(target_self)
+    storage_dead(dyn_self)
     return
 }
 
@@ -747,44 +785,6 @@ unsafe fn impl_FnMut_tuple_for_closure::{vtable_drop_shim}<'_0>(dyn_self: &'_0 m
 
 // Full name: test_crate::main::{impl FnMut<(u32,)> for {closure}}::{vtable}
 vtable impl_FnMut_tuple_for_closure::{vtable}: core::ops::function::FnMut::{vtable}<(u32,), u32> = core::ops::function::FnMut::{vtable} { size: size_of::<{closure}>(), align: align_of::<{closure}>(), drop: fnptr(impl_FnMut_tuple_for_closure::{vtable_drop_shim}<'_>), method_call_mut: fnptr(impl_FnMut_tuple_for_closure::{vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<{closure}>, super_trait_1: &impl_FnOnce_tuple_for_closure::{vtable} }
-
-// Full name: test_crate::main::{impl Fn<(u32,)> for {closure}}::{vtable_method}
-extern "rust-call" fn impl_Fn_tuple_for_closure::{vtable_method}<'_0>(_1: &'_0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32>), _2: (u32,)) -> u32
-{
-    let mut _0: u32; // return
-    let mut _1: &'_0 (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '0); // arg #1
-    let mut _2: (u32,); // arg #2
-    let mut _3: &'_0 {closure}; // anonymous local
-
-    storage_live(_0)
-    storage_live(_3)
-    _3 = concretize<&'_0 {closure}>(move _1)
-    _0 = impl_Fn_tuple_for_closure::call<'_0>(move _3, move _2)
-    ↳⚡ storage_dead(_3)
-        storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_3)
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::main::{impl Fn<(u32,)> for {closure}}::{vtable_drop_shim}
-unsafe fn impl_Fn_tuple_for_closure::{vtable_drop_shim}<'_0>(dyn_self: &'_0 mut (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32>))
-{
-    let mut ret: (); // return
-    let mut dyn_self: &'_0 mut (dyn Fn<(u32,), ImpliedClause1::ImpliedClause1::Output = u32> + '0); // arg #1
-    let mut target_self: &'_0 mut {closure}; // local
-
-    storage_live(ret)
-    ret = ()
-    storage_live(target_self)
-    target_self = concretize<&'_0 mut {closure}>(move dyn_self)
-    storage_dead(target_self)
-    storage_dead(dyn_self)
-    return
-}
 
 // Full name: test_crate::main::{impl Fn<(u32,)> for {closure}}::{vtable}
 vtable impl_Fn_tuple_for_closure::{vtable}: core::ops::function::Fn::{vtable}<(u32,), u32> = core::ops::function::Fn::{vtable} { size: size_of::<{closure}>(), align: align_of::<{closure}>(), drop: fnptr(impl_Fn_tuple_for_closure::{vtable_drop_shim}<'_>), method_call: fnptr(impl_Fn_tuple_for_closure::{vtable_method}<'_>), super_trait_0: &core::marker::MetaSized::{vtable}<{closure}>, super_trait_1: &impl_FnMut_tuple_for_closure::{vtable} }

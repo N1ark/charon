@@ -34,14 +34,14 @@ pub struct Nested::<u8> {
   _0: u8,
 }
 
-// Full name: test_crate::Wrapper::<u8>
-pub struct Wrapper::<u8> {
-  _0: u8,
-}
-
 // Full name: test_crate::Wrapper::<Nested::<u8>>
 pub struct Wrapper::<Nested::<u8>> {
   _0: Nested::<u8>,
+}
+
+// Full name: test_crate::Wrapper::<u8>
+pub struct Wrapper::<u8> {
+  _0: u8,
 }
 
 // Full name: test_crate::Parent

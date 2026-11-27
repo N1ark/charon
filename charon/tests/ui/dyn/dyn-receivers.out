@@ -303,18 +303,6 @@ where
     return
 }
 
-struct test_crate::T::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn T)),
-  method_by_box: fn(Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
-  method_by_rc: fn(Rc<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
-  method_by_arc: fn(Arc<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
-  method_by_pin_mut: fn<'_0_1>(Pin<&'_0_1 mut (dyn T)>[{built_in impl Sized for &'_0_1 mut (dyn T)}]),
-  method_by_pin_box: fn(Pin<Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::T
 trait T<Self>
 {
@@ -325,6 +313,18 @@ trait T<Self>
     fn by_pin_mut<'_0_1, Outlives0: (Self: '_0_1)>;
     fn by_pin_box;
     vtable: test_crate::T::{vtable}
+}
+
+struct test_crate::T::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn T)),
+  method_by_box: fn(Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
+  method_by_rc: fn(Rc<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
+  method_by_arc: fn(Arc<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]),
+  method_by_pin_mut: fn<'_0_1>(Pin<&'_0_1 mut (dyn T)>[{built_in impl Sized for &'_0_1 mut (dyn T)}]),
+  method_by_pin_box: fn(Pin<Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]>[{built_in impl Sized for Box<(dyn T), Global>[{built_in impl MetaSized for (dyn T)}, {built_in impl Sized for Global}, impl_Allocator_for_Global]}]),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::call_box

@@ -124,26 +124,6 @@ pub opaque type Box::<[String], Global>
 unsafe fn {impl Destruct for Box::<[String], Global>}::drop_glue::<[String], Global><'_0>(_1: &'_0 mut Box::<[String], Global>)
 = <opaque>
 
-// Full name: {impl Destruct for [String; 4usize]}::drop_glue::<String, 4usize>
-unsafe fn impl_Destruct_for_array::drop_glue::<String, 4usize><'_0>(_1: &'_0 mut [String; 4usize])
-{
-    let mut _0: (); // return
-    let _1: &'1 mut [String; 4usize]; // arg #1
-    let mut _2: &'3 mut [String]; // anonymous local
-
-    storage_live(_0)
-    storage_live(_2)
-    _2 = unsize_cast<&'4 mut [String], 4usize>(move _1)
-    _0 = drop_glue::<[String]><'8>(move _2)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    _0 = ()
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
 struct (_, _)::<String, String> {
   _0: String,
   _1: String,
@@ -166,6 +146,26 @@ unsafe fn {impl Destruct for (String, String)}::drop_glue::<String, String><'_0>
     ↳⚡ storage_dead(_1)
         unwind_continue
     _0 = ()
+    storage_dead(_1)
+    return
+}
+
+// Full name: {impl Destruct for [String; 4usize]}::drop_glue::<String, 4usize>
+unsafe fn impl_Destruct_for_array::drop_glue::<String, 4usize><'_0>(_1: &'_0 mut [String; 4usize])
+{
+    let mut _0: (); // return
+    let _1: &'1 mut [String; 4usize]; // arg #1
+    let mut _2: &'3 mut [String]; // anonymous local
+
+    storage_live(_0)
+    storage_live(_2)
+    _2 = unsize_cast<&'4 mut [String], 4usize>(move _1)
+    _0 = drop_glue::<[String]><'8>(move _2)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    _0 = ()
+    storage_dead(_2)
     storage_dead(_1)
     return
 }

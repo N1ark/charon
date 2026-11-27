@@ -23,8 +23,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-opaque type core::ops::function::Fn::{vtable}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -47,6 +45,8 @@ pub trait FnMut<Self, Args>
     proof ImpliedClause3: (Args: Tuple)
     vtable: core::ops::function::FnMut::{vtable}
 }
+
+opaque type core::ops::function::Fn::{vtable}
 
 // Full name: core::ops::function::Fn
 #[fundamental]
@@ -82,8 +82,10 @@ pub fn assert_failed::<i32, i32><'_0, '_1, '_2>(_1: AssertKind, _2: &'_0 i32, _3
 
 struct () {}
 
-// Full name: {impl Fn<(i32,)> for fn(i32)}::{vtable}::<i32, ()>
-vtable {impl Fn<(i32,)> for fn(i32)}::{vtable}::<i32, ()>: core::ops::function::Fn::{vtable} = Opaque(VTable was chosen to be opaque)
+struct (_, _)::<&'_ i32, &'_ i32> {
+  _0: &'_ i32,
+  _1: &'_ i32,
+}
 
 struct (_,)::<i32> {
   _0: i32,
@@ -106,6 +108,9 @@ impl FnMut<(i32,)> for fn(i32) {
     vtable: lazy
 }
 
+// Full name: {impl Fn<(i32,)> for fn(i32)}::{vtable}::<i32, ()>
+vtable {impl Fn<(i32,)> for fn(i32)}::{vtable}::<i32, ()>: core::ops::function::Fn::{vtable} = Opaque(VTable was chosen to be opaque)
+
 // Full name: {impl Fn<(i32,)> for fn(i32)}
 impl Fn<(i32,)> for fn(i32) {
     proof ImpliedClause0: (fn(i32): MetaSized) = {built_in impl MetaSized for fn(i32)}
@@ -113,11 +118,6 @@ impl Fn<(i32,)> for fn(i32) {
     proof ImpliedClause2: ((i32,): Sized) = {built_in impl Sized for (i32,)}
     proof ImpliedClause3: ((i32,): Tuple) = {built_in impl Tuple for (i32,)}
     vtable: {impl Fn<(i32,)> for fn(i32)}::{vtable}::<i32, ()>
-}
-
-struct (_, _)::<&'_ i32, &'_ i32> {
-  _0: &'_ i32,
-  _1: &'_ i32,
 }
 
 struct test_crate::BAR::{closure} {}

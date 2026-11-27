@@ -6,11 +6,11 @@ struct (_,)::<&'_ u32> {
   _0: &'_ u32,
 }
 
-// Full name: test_crate::foo::<u8>
-fn foo::<u8><'a>(x: &'a u8)
+// Full name: test_crate::foo::<char>
+fn foo::<char><'a>(x: &'a char)
 {
     let mut _0: (); // return
-    let x: &'1 u8; // arg #1
+    let x: &'1 char; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -23,6 +23,18 @@ fn foo::<u32><'a>(x: &'a u32)
 {
     let mut _0: (); // return
     let x: &'1 u32; // arg #1
+
+    storage_live(_0)
+    _0 = ()
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::foo::<u8>
+fn foo::<u8><'a>(x: &'a u8)
+{
+    let mut _0: (); // return
+    let x: &'1 u8; // arg #1
 
     storage_live(_0)
     _0 = ()
@@ -44,18 +56,6 @@ extern "rust-call" fn call::<u32><'a, '_1>(_1: &'_1 for<'a> foo::<u32><'a>, _2: 
         unwind_continue
     storage_dead(_2)
     storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::foo::<char>
-fn foo::<char><'a>(x: &'a char)
-{
-    let mut _0: (); // return
-    let x: &'1 char; // arg #1
-
-    storage_live(_0)
-    _0 = ()
-    storage_dead(x)
     return
 }
 

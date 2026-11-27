@@ -22,8 +22,6 @@ where
 
 struct () {}
 
-static test_crate::{promoted_const}: u8 = 1u8
-
 static test_crate::{promoted_const#1}: u16 = 2u16
 
 static test_crate::{promoted_const#2}: u32 = 3u32
@@ -35,6 +33,8 @@ static test_crate::{promoted_const#4}: u128 = 5u128
 static test_crate::{promoted_const#5}: [u32; 3usize] = [1u32, 2u32, 3u32]
 
 static test_crate::{promoted_const#6}: MaybeUninit<[u8; 16usize]>[{built_in impl Sized for [u8; 16usize]}] = RawMemory(0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, --, --, --, --, --, --, --)
+
+static test_crate::{promoted_const}: u8 = 1u8
 
 // Full name: test_crate::S
 struct S {

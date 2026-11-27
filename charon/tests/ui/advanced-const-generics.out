@@ -147,11 +147,11 @@ impl "impl_ConstParamTy__for_Foo" ConstParamTy_ for Foo {
     non-dyn-compatible
 }
 
-// Full name: test_crate::{impl Debug for Foo}::fmt::{promoted_const#1}
-pub const test_crate::impl_Debug_for_Foo::fmt::{promoted_const#1}: str = "B" with_metadata(1usize)
-
 // Full name: test_crate::{impl Debug for Foo}::fmt::{promoted_const}
 pub const test_crate::impl_Debug_for_Foo::fmt::{promoted_const}: str = "A" with_metadata(1usize)
+
+// Full name: test_crate::{impl Debug for Foo}::fmt::{promoted_const#1}
+pub const test_crate::impl_Debug_for_Foo::fmt::{promoted_const#1}: str = "B" with_metadata(1usize)
 
 // Full name: test_crate::{impl Debug for Foo}::fmt
 #[inline(hint)]

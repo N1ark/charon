@@ -124,10 +124,6 @@ where
   _1: B,
 }
 
-struct (_,)<A> {
-  _0: A,
-}
-
 // Full name: (_, _)::{impl Destruct for (A, B)}::drop_glue
 unsafe fn impl_Destruct_for_tuple::drop_glue<'_0, A, B>(_1: &'_0 mut (A, B))
 where
@@ -151,6 +147,10 @@ where
     _0 = ()
     storage_dead(_1)
     return
+}
+
+struct (_,)<A> {
+  _0: A,
 }
 
 // Full name: test_crate::BoolTrait
@@ -1544,40 +1544,6 @@ pub fn flabada<'a>(_x: &'a ()) -> Wrapper<(bool, &'a ())>[{built_in impl Sized f
         unwind_continue
 }
 
-// Full name: test_crate::{impl Fn<(&'a (),)> for for<'a> flabada<'a>}::call
-pub extern "rust-call" fn {impl Fn<(&'a (),)> for for<'a> flabada<'a>}::call<'a, '_1>(_1: &'_1 for<'a> flabada<'a>, _2: (&'a (),)) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
-{
-    let mut _0: Wrapper<(bool, &'12 ())>[{built_in impl Sized for (bool, &'12 ())}]; // return
-    let _1: &'17 for<'a> flabada<'a>; // arg #1
-    let _2: (&'19 (),); // arg #2
-
-    storage_live(_0)
-    _0 = flabada<'20>(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::{impl FnMut<(&'a (),)> for for<'a> flabada<'a>}::call_mut
-pub extern "rust-call" fn call_mut<'a, '_1>(_1: &'_1 mut for<'a> flabada<'a>, _2: (&'a (),)) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
-{
-    let mut _0: Wrapper<(bool, &'12 ())>[{built_in impl Sized for (bool, &'12 ())}]; // return
-    let _1: &'17 mut for<'a> flabada<'a>; // arg #1
-    let _2: (&'19 (),); // arg #2
-
-    storage_live(_0)
-    _0 = flabada<'20>(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
 // Full name: test_crate::{impl FnOnce<(&'a (),)> for for<'a> flabada<'a>}::call_once
 pub extern "rust-call" fn call_once<'a>(_1: for<'a> flabada<'a>, _2: (&'a (),)) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
 {
@@ -1606,6 +1572,23 @@ impl<'a> FnOnce<(&'a (),)> for for<'a> flabada<'a> {
     vtable: lazy
 }
 
+// Full name: test_crate::{impl FnMut<(&'a (),)> for for<'a> flabada<'a>}::call_mut
+pub extern "rust-call" fn call_mut<'a, '_1>(_1: &'_1 mut for<'a> flabada<'a>, _2: (&'a (),)) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
+{
+    let mut _0: Wrapper<(bool, &'12 ())>[{built_in impl Sized for (bool, &'12 ())}]; // return
+    let _1: &'17 mut for<'a> flabada<'a>; // arg #1
+    let _2: (&'19 (),); // arg #2
+
+    storage_live(_0)
+    _0 = flabada<'20>(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
 // Full name: test_crate::{impl FnMut<(&'a (),)> for for<'a> flabada<'a>}
 impl<'a> FnMut<(&'a (),)> for for<'a> flabada<'a> {
     proof ImpliedClause0: (for<'a> flabada<'a>: MetaSized) = {built_in impl MetaSized for for<'a> flabada<'a>}
@@ -1614,6 +1597,23 @@ impl<'a> FnMut<(&'a (),)> for for<'a> flabada<'a> {
     proof ImpliedClause3: ((&'a (),): Tuple) = {built_in impl Tuple for (&'a (),)}
     fn call_mut<'_0_1> = call_mut<'a, '_0_1>
     vtable: lazy
+}
+
+// Full name: test_crate::{impl Fn<(&'a (),)> for for<'a> flabada<'a>}::call
+pub extern "rust-call" fn {impl Fn<(&'a (),)> for for<'a> flabada<'a>}::call<'a, '_1>(_1: &'_1 for<'a> flabada<'a>, _2: (&'a (),)) -> Wrapper<(bool, &'a ())>[{built_in impl Sized for (bool, &'a ())}]
+{
+    let mut _0: Wrapper<(bool, &'12 ())>[{built_in impl Sized for (bool, &'12 ())}]; // return
+    let _1: &'17 for<'a> flabada<'a>; // arg #1
+    let _2: (&'19 (),); // arg #2
+
+    storage_live(_0)
+    _0 = flabada<'20>(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::{impl Fn<(&'a (),)> for for<'a> flabada<'a>}

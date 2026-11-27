@@ -7,6 +7,9 @@ pub trait MetaSized<Self>
 
 struct () {}
 
+// Full name: test_crate::function::{closure}
+struct {closure} {}
+
 // Full name: test_crate::function::{closure}::closure_precondition
 #[charon::contract(kind = "pre", for = "call")]
 fn closure_precondition() -> bool
@@ -17,9 +20,6 @@ fn closure_precondition() -> bool
     _0 = const true
     return
 }
-
-// Full name: test_crate::function::{closure}
-struct {closure} {}
 
 // Full name: test_crate::function::{impl Fn<()> for {closure}}::call
 #[charon::has_contract(kind = "pre", contract = closure_precondition)]

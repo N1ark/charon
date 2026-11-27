@@ -6,6 +6,72 @@ struct (_,)::<i32> {
   _0: i32,
 }
 
+// Full name: test_crate::plain
+fn plain(x: i32) -> i32
+{
+    let mut _0: i32; // return
+    let x: i32; // arg #1
+    let mut _2: i32; // anonymous local
+    let mut _3: i32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    storage_live(_2)
+    _2 = copy x
+    _3 = copy _2 panic.+ const 1i32
+    _0 = move _3
+    storage_dead(_2)
+    storage_dead(_3)
+    storage_dead(x)
+    return
+}
+
+// Full name: test_crate::{impl Fn<(i32,)> for plain}::call
+extern "rust-call" fn {impl Fn<(i32,)> for plain}::call<'_0>(_1: &'_0 plain, _2: (i32,)) -> i32
+{
+    let mut _0: i32; // return
+    let _1: &'1 plain; // arg #1
+    let _2: (i32,); // arg #2
+
+    storage_live(_0)
+    _0 = plain(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
+// Full name: test_crate::apply::<plain>
+fn apply::<plain>(f: plain, x: i32) -> i32
+{
+    let mut _0: i32; // return
+    let f: plain; // arg #1
+    let x: i32; // arg #2
+    let mut _3: &'1 plain; // anonymous local
+    let mut _4: (i32,); // anonymous local
+    let mut _5: i32; // anonymous local
+
+    storage_live(_0)
+    storage_live(_3)
+    _3 = &f
+    storage_live(_4)
+    storage_live(_5)
+    _5 = copy x
+    _4 = (move _5,)
+    _0 = {impl Fn<(i32,)> for plain}::call<'5>(move _3, move _4)
+    ↳⚡ storage_dead(x)
+        storage_dead(f)
+        unwind_continue
+    storage_dead(_5)
+    storage_dead(_4)
+    storage_dead(_3)
+    storage_dead(x)
+    storage_dead(f)
+    return
+}
+
 struct test_crate::main::{closure} {}
 
 // Full name: test_crate::main::{impl Fn<(i32,)> for test_crate::main::{closure}}::call
@@ -63,31 +129,11 @@ fn apply::<test_crate::main::{closure}>(f: test_crate::main::{closure}, x: i32) 
     return
 }
 
-// Full name: test_crate::plain
-fn plain(x: i32) -> i32
+// Full name: test_crate::{impl FnMut<(i32,)> for plain}::call_mut
+extern "rust-call" fn {impl FnMut<(i32,)> for plain}::call_mut<'_0>(_1: &'_0 mut plain, _2: (i32,)) -> i32
 {
     let mut _0: i32; // return
-    let x: i32; // arg #1
-    let mut _2: i32; // anonymous local
-    let mut _3: i32; // anonymous local
-
-    storage_live(_0)
-    storage_live(_3)
-    storage_live(_2)
-    _2 = copy x
-    _3 = copy _2 panic.+ const 1i32
-    _0 = move _3
-    storage_dead(_2)
-    storage_dead(_3)
-    storage_dead(x)
-    return
-}
-
-// Full name: test_crate::{impl Fn<(i32,)> for plain}::call
-extern "rust-call" fn {impl Fn<(i32,)> for plain}::call<'_0>(_1: &'_0 plain, _2: (i32,)) -> i32
-{
-    let mut _0: i32; // return
-    let _1: &'1 plain; // arg #1
+    let _1: &'1 mut plain; // arg #1
     let _2: (i32,); // arg #2
 
     storage_live(_0)
@@ -100,24 +146,24 @@ extern "rust-call" fn {impl Fn<(i32,)> for plain}::call<'_0>(_1: &'_0 plain, _2:
     return
 }
 
-// Full name: test_crate::apply::<plain>
-fn apply::<plain>(f: plain, x: i32) -> i32
+// Full name: test_crate::apply_mut::<plain>
+fn apply_mut::<plain>(f: plain, x: i32) -> i32
 {
     let mut _0: i32; // return
-    let f: plain; // arg #1
+    let mut f: plain; // arg #1
     let x: i32; // arg #2
-    let mut _3: &'1 plain; // anonymous local
+    let mut _3: &'1 mut plain; // anonymous local
     let mut _4: (i32,); // anonymous local
     let mut _5: i32; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
-    _3 = &f
+    _3 = &mut f
     storage_live(_4)
     storage_live(_5)
     _5 = copy x
     _4 = (move _5,)
-    _0 = {impl Fn<(i32,)> for plain}::call<'5>(move _3, move _4)
+    _0 = {impl FnMut<(i32,)> for plain}::call_mut<'5>(move _3, move _4)
     ↳⚡ storage_dead(x)
         storage_dead(f)
         unwind_continue
@@ -186,11 +232,11 @@ fn apply_mut::<test_crate::main::{closure#1}>(f: test_crate::main::{closure#1}, 
     return
 }
 
-// Full name: test_crate::{impl FnMut<(i32,)> for plain}::call_mut
-extern "rust-call" fn {impl FnMut<(i32,)> for plain}::call_mut<'_0>(_1: &'_0 mut plain, _2: (i32,)) -> i32
+// Full name: test_crate::{impl FnOnce<(i32,)> for plain}::call_once
+extern "rust-call" fn {impl FnOnce<(i32,)> for plain}::call_once(_1: plain, _2: (i32,)) -> i32
 {
     let mut _0: i32; // return
-    let _1: &'1 mut plain; // arg #1
+    let _1: plain; // arg #1
     let _2: (i32,); // arg #2
 
     storage_live(_0)
@@ -203,24 +249,24 @@ extern "rust-call" fn {impl FnMut<(i32,)> for plain}::call_mut<'_0>(_1: &'_0 mut
     return
 }
 
-// Full name: test_crate::apply_mut::<plain>
-fn apply_mut::<plain>(f: plain, x: i32) -> i32
+// Full name: test_crate::apply_once::<plain>
+fn apply_once::<plain>(f: plain, x: i32) -> i32
 {
     let mut _0: i32; // return
-    let mut f: plain; // arg #1
+    let f: plain; // arg #1
     let x: i32; // arg #2
-    let mut _3: &'1 mut plain; // anonymous local
+    let mut _3: plain; // anonymous local
     let mut _4: (i32,); // anonymous local
     let mut _5: i32; // anonymous local
 
     storage_live(_0)
     storage_live(_3)
-    _3 = &mut f
+    _3 = move f
     storage_live(_4)
     storage_live(_5)
     _5 = copy x
     _4 = (move _5,)
-    _0 = {impl FnMut<(i32,)> for plain}::call_mut<'5>(move _3, move _4)
+    _0 = {impl FnOnce<(i32,)> for plain}::call_once(move _3, move _4)
     ↳⚡ storage_dead(x)
         storage_dead(f)
         unwind_continue
@@ -278,52 +324,6 @@ fn apply_once::<test_crate::main::{closure#2}>(f: test_crate::main::{closure#2},
     _5 = copy x
     _4 = (move _5,)
     _0 = {impl FnOnce<(i32,)> for test_crate::main::{closure#2}}::call_once(move _3, move _4)
-    ↳⚡ storage_dead(x)
-        storage_dead(f)
-        unwind_continue
-    storage_dead(_5)
-    storage_dead(_4)
-    storage_dead(_3)
-    storage_dead(x)
-    storage_dead(f)
-    return
-}
-
-// Full name: test_crate::{impl FnOnce<(i32,)> for plain}::call_once
-extern "rust-call" fn {impl FnOnce<(i32,)> for plain}::call_once(_1: plain, _2: (i32,)) -> i32
-{
-    let mut _0: i32; // return
-    let _1: plain; // arg #1
-    let _2: (i32,); // arg #2
-
-    storage_live(_0)
-    _0 = plain(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::apply_once::<plain>
-fn apply_once::<plain>(f: plain, x: i32) -> i32
-{
-    let mut _0: i32; // return
-    let f: plain; // arg #1
-    let x: i32; // arg #2
-    let mut _3: plain; // anonymous local
-    let mut _4: (i32,); // anonymous local
-    let mut _5: i32; // anonymous local
-
-    storage_live(_0)
-    storage_live(_3)
-    _3 = move f
-    storage_live(_4)
-    storage_live(_5)
-    _5 = copy x
-    _4 = (move _5,)
-    _0 = {impl FnOnce<(i32,)> for plain}::call_once(move _3, move _4)
     ↳⚡ storage_dead(x)
         storage_dead(f)
         unwind_continue

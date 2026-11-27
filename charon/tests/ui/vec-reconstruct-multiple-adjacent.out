@@ -31,17 +31,6 @@ where
     TraitClause1: (T: Clone),
 = <opaque>
 
-// Full name: core::clone::impls::{impl Clone for u8}::clone
-pub fn impl_Clone_for_u8::clone<'_0>(_1: &'_0 u8) -> u8
-= <opaque>
-
-// Full name: core::clone::impls::{impl Clone for u8}
-impl "impl_Clone_for_u8" Clone for u8 {
-    proof ImpliedClause0: (u8: Sized) = {built_in impl Sized for u8}
-    fn clone<'_0_1> = impl_Clone_for_u8::clone<'_0_1>
-    non-dyn-compatible
-}
-
 // Full name: core::clone::impls::{impl Clone for i32}::clone
 pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 = <opaque>
@@ -50,6 +39,17 @@ pub fn impl_Clone_for_i32::clone<'_0>(_1: &'_0 i32) -> i32
 impl "impl_Clone_for_i32" Clone for i32 {
     proof ImpliedClause0: (i32: Sized) = {built_in impl Sized for i32}
     fn clone<'_0_1> = impl_Clone_for_i32::clone<'_0_1>
+    non-dyn-compatible
+}
+
+// Full name: core::clone::impls::{impl Clone for u8}::clone
+pub fn impl_Clone_for_u8::clone<'_0>(_1: &'_0 u8) -> u8
+= <opaque>
+
+// Full name: core::clone::impls::{impl Clone for u8}
+impl "impl_Clone_for_u8" Clone for u8 {
+    proof ImpliedClause0: (u8: Sized) = {built_in impl Sized for u8}
+    fn clone<'_0_1> = impl_Clone_for_u8::clone<'_0_1>
     non-dyn-compatible
 }
 

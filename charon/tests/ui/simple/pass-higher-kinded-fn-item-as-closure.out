@@ -88,40 +88,6 @@ pub fn flabada<'a>(x: &'a ()) -> &'a ()
     return
 }
 
-// Full name: test_crate::{impl Fn<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call
-pub extern "rust-call" fn {impl Fn<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call<'a, '_1>(_1: &'_1 for<'a> flabada<'a>, _2: (&'a (),)) -> &'a ()
-{
-    let mut _0: &'1 (); // return
-    let _1: &'3 for<'a> flabada<'a>; // arg #1
-    let _2: (&'5 (),); // arg #2
-
-    storage_live(_0)
-    _0 = flabada<'6>(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
-// Full name: test_crate::{impl FnMut<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call_mut
-pub extern "rust-call" fn call_mut<'a, '_1>(_1: &'_1 mut for<'a> flabada<'a>, _2: (&'a (),)) -> &'a ()
-{
-    let mut _0: &'1 (); // return
-    let _1: &'3 mut for<'a> flabada<'a>; // arg #1
-    let _2: (&'5 (),); // arg #2
-
-    storage_live(_0)
-    _0 = flabada<'6>(move _2._0)
-    ↳⚡ storage_dead(_2)
-        storage_dead(_1)
-        unwind_continue
-    storage_dead(_2)
-    storage_dead(_1)
-    return
-}
-
 // Full name: test_crate::{impl FnOnce<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call_once
 pub extern "rust-call" fn call_once<'a>(_1: for<'a> flabada<'a>, _2: (&'a (),)) -> &'a ()
 {
@@ -149,6 +115,23 @@ impl<'a> FnOnce<(&'a (),), &'a ()> for for<'a> flabada<'a> {
     vtable: lazy
 }
 
+// Full name: test_crate::{impl FnMut<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call_mut
+pub extern "rust-call" fn call_mut<'a, '_1>(_1: &'_1 mut for<'a> flabada<'a>, _2: (&'a (),)) -> &'a ()
+{
+    let mut _0: &'1 (); // return
+    let _1: &'3 mut for<'a> flabada<'a>; // arg #1
+    let _2: (&'5 (),); // arg #2
+
+    storage_live(_0)
+    _0 = flabada<'6>(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
+}
+
 // Full name: test_crate::{impl FnMut<(&'a (),), &'a ()> for for<'a> flabada<'a>}
 impl<'a> FnMut<(&'a (),), &'a ()> for for<'a> flabada<'a> {
     proof ImpliedClause0: (for<'a> flabada<'a>: MetaSized) = {built_in impl MetaSized for for<'a> flabada<'a>}
@@ -157,6 +140,23 @@ impl<'a> FnMut<(&'a (),), &'a ()> for for<'a> flabada<'a> {
     proof ImpliedClause3: ((&'a (),): Tuple) = {built_in impl Tuple for (&'a (),)}
     fn call_mut<'_0_1> = call_mut<'a, '_0_1>
     vtable: lazy
+}
+
+// Full name: test_crate::{impl Fn<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call
+pub extern "rust-call" fn {impl Fn<(&'a (),), &'a ()> for for<'a> flabada<'a>}::call<'a, '_1>(_1: &'_1 for<'a> flabada<'a>, _2: (&'a (),)) -> &'a ()
+{
+    let mut _0: &'1 (); // return
+    let _1: &'3 for<'a> flabada<'a>; // arg #1
+    let _2: (&'5 (),); // arg #2
+
+    storage_live(_0)
+    _0 = flabada<'6>(move _2._0)
+    ↳⚡ storage_dead(_2)
+        storage_dead(_1)
+        unwind_continue
+    storage_dead(_2)
+    storage_dead(_1)
+    return
 }
 
 // Full name: test_crate::{impl Fn<(&'a (),), &'a ()> for for<'a> flabada<'a>}

@@ -102,16 +102,16 @@ where
     Outlives1: (U: '_1),
 = <opaque>
 
-struct (_,)<A> {
-  _0: A,
-}
-
 struct (_, _)<A, B>
 where
     TraitClause0: (A: Sized),
 {
   _0: A,
   _1: B,
+}
+
+struct (_,)<A> {
+  _0: A,
 }
 
 // Full name: (_,)::{impl Destruct for (A,)}::drop_glue

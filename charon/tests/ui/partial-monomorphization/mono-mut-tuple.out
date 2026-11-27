@@ -52,6 +52,13 @@ pub trait Destruct<Self>
     non-dyn-compatible
 }
 
+#[lang_item(Destruct)]
+pub trait core::marker::Destruct::<&_ mut _><'_0, T0>
+{
+    fn drop_glue<'_0_1, Outlives0: (&'_0 mut T0: '_0_1)>;
+    non-dyn-compatible
+}
+
 struct (_, _)::<&_ mut _, _><'_0, T0, T1>
 where
     TraitClause0: (T0: core::marker::Sized::<&_ mut _><'_0>),
@@ -66,13 +73,6 @@ where
     TraitClause0: (T0: core::marker::Sized::<&_ mut _><'_0>),
 {
     fn drop_glue<'_0_1, Outlives0: ((&'_0 mut T0, T1): '_0_1)>;
-    non-dyn-compatible
-}
-
-#[lang_item(Destruct)]
-pub trait core::marker::Destruct::<&_ mut _><'_0, T0>
-{
-    fn drop_glue<'_0_1, Outlives0: (&'_0 mut T0: '_0_1)>;
     non-dyn-compatible
 }
 

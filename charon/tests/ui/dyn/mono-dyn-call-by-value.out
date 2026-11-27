@@ -29,35 +29,35 @@ fn panic_in_cleanup() -> !
 #[lang_item(OwnedBox)]
 pub opaque type Box::<(), Global>
 
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<(), Global>}::drop_glue::<(), Global>
-unsafe fn {impl Destruct for Box::<(), Global>}::drop_glue::<(), Global><'_0>(_1: &'_0 mut Box::<(), Global>)
-= <opaque>
-
-// Full name: alloc::boxed::Box::<Foo::<(dyn T)>, Global>
+// Full name: alloc::boxed::Box::<(dyn T), Global>
 #[fundamental]
 #[lang_item(OwnedBox)]
-pub opaque type Box::<Foo::<(dyn T)>, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global>
-unsafe fn {impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'_0>(_1: &'_0 mut Box::<Foo::<(dyn T)>, Global>)
-= <opaque>
+pub opaque type Box::<(dyn T), Global>
 
 // Full name: alloc::boxed::Box::<Foo::<()>, Global>
 #[fundamental]
 #[lang_item(OwnedBox)]
 pub opaque type Box::<Foo::<()>, Global>
 
+// Full name: alloc::boxed::Box::<Foo::<(dyn T)>, Global>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<Foo::<(dyn T)>, Global>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<(), Global>}::drop_glue::<(), Global>
+unsafe fn {impl Destruct for Box::<(), Global>}::drop_glue::<(), Global><'_0>(_1: &'_0 mut Box::<(), Global>)
+= <opaque>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global>
+unsafe fn {impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'_0>(_1: &'_0 mut Box::<(dyn T), Global>)
+= <opaque>
+
 // Full name: alloc::boxed::Box::{impl Destruct for Box::<Foo::<()>, Global>}::drop_glue::<Foo::<()>, Global>
 unsafe fn {impl Destruct for Box::<Foo::<()>, Global>}::drop_glue::<Foo::<()>, Global><'_0>(_1: &'_0 mut Box::<Foo::<()>, Global>)
 = <opaque>
 
-// Full name: alloc::boxed::Box::<(dyn T), Global>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<(dyn T), Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global>
-unsafe fn {impl Destruct for Box::<(dyn T), Global>}::drop_glue::<(dyn T), Global><'_0>(_1: &'_0 mut Box::<(dyn T), Global>)
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global>
+unsafe fn {impl Destruct for Box::<Foo::<(dyn T)>, Global>}::drop_glue::<Foo::<(dyn T)>, Global><'_0>(_1: &'_0 mut Box::<Foo::<(dyn T)>, Global>)
 = <opaque>
 
 #[track_caller]

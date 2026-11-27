@@ -194,14 +194,6 @@ where
     non-dyn-compatible
 }
 
-struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
-  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -214,6 +206,14 @@ pub trait FnOnce<Self, Args>
     type Output
     fn call_once;
     vtable: core::ops::function::FnOnce::{vtable}<Args, Self::Output>
+}
+
+struct core::ops::function::FnOnce::{vtable}<Args, Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn FnOnce<Args, Output = Ty0>)),
+  method_call_once: extern "rust-call" fn(*mut (dyn FnOnce<Args, Output = Ty0>), Args) -> Ty0,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: core::panicking::panic_in_cleanup

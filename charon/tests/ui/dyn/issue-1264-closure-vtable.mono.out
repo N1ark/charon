@@ -18,13 +18,13 @@ pub trait Sized<Self>
 
 struct () {}
 
-vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure#2}>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
-
-vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure}>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
-
 vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure#1}<'_>>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
+vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure#2}>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
 vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure#3}>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
+
+vtable core::marker::MetaSized::{vtable}::<test_crate::main::{closure}>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
 vtable core::marker::MetaSized::{vtable}::<test_crate::wrap::{closure}::<u32>>: core::marker::MetaSized::{vtable} = Opaque(VTable was chosen to be opaque)
 
@@ -53,24 +53,6 @@ struct core::ops::function::FnOnce::{vtable} {
   super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
-struct core::ops::function::FnMut::{vtable} {
-  size: usize,
-  align: usize,
-  drop: *const (),
-  method_call_mut: *const (),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnOnce::{vtable},
-}
-
-struct core::ops::function::Fn::{vtable} {
-  size: usize,
-  align: usize,
-  drop: *const (),
-  method_call: *const (),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static core::ops::function::FnMut::{vtable},
-}
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -80,6 +62,15 @@ pub trait FnOnce<Self, Args>
     proof ImpliedClause1: (Args: Sized)
     proof ImpliedClause2: (Args: Tuple)
     vtable: core::ops::function::FnOnce::{vtable}
+}
+
+struct core::ops::function::FnMut::{vtable} {
+  size: usize,
+  align: usize,
+  drop: *const (),
+  method_call_mut: *const (),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnOnce::{vtable},
 }
 
 // Full name: core::ops::function::FnMut
@@ -92,6 +83,15 @@ pub trait FnMut<Self, Args>
     proof ImpliedClause2: (Args: Sized)
     proof ImpliedClause3: (Args: Tuple)
     vtable: core::ops::function::FnMut::{vtable}
+}
+
+struct core::ops::function::Fn::{vtable} {
+  size: usize,
+  align: usize,
+  drop: *const (),
+  method_call: *const (),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static core::ops::function::FnMut::{vtable},
 }
 
 // Full name: core::ops::function::Fn
@@ -111,40 +111,40 @@ pub trait Fn<Self, Args>
 fn panic_in_cleanup() -> !
 = <opaque>
 
-// Full name: alloc::boxed::Box::<test_crate::main::{closure#2}>
+// Full name: alloc::boxed::Box::<(dyn FnOnce<(), Output = Droppable>)>
 #[fundamental]
 #[lang_item(OwnedBox)]
-pub opaque type Box::<test_crate::main::{closure#2}, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<test_crate::main::{closure#2}, Global>}::drop_glue::<test_crate::main::{closure#2}, Global>
-unsafe fn {impl Destruct for Box::<test_crate::main::{closure#2}, Global>}::drop_glue::<test_crate::main::{closure#2}, Global><'_0>(_1: &'_0 mut Box::<test_crate::main::{closure#2}, Global>)
-= <opaque>
-
-// Full name: alloc::boxed::Box::<test_crate::wrap::{closure}::<u32>>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<test_crate::wrap::{closure}::<u32>, Global>
-
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<test_crate::wrap::{closure}::<u32>, Global>}::drop_glue::<test_crate::wrap::{closure}::<u32>, Global>
-unsafe fn {impl Destruct for Box::<test_crate::wrap::{closure}::<u32>, Global>}::drop_glue::<test_crate::wrap::{closure}::<u32>, Global><'_0>(_1: &'_0 mut Box::<test_crate::wrap::{closure}::<u32>, Global>)
-= <opaque>
+pub opaque type Box::<(dyn FnOnce<(), Output = Droppable>), Global>
 
 // Full name: alloc::boxed::Box::<(dyn FnOnce<(), Output = u32>)>
 #[fundamental]
 #[lang_item(OwnedBox)]
 pub opaque type Box::<(dyn FnOnce<(), Output = u32>), Global>
 
+// Full name: alloc::boxed::Box::<test_crate::main::{closure#2}>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<test_crate::main::{closure#2}, Global>
+
+// Full name: alloc::boxed::Box::<test_crate::wrap::{closure}::<u32>>
+#[fundamental]
+#[lang_item(OwnedBox)]
+pub opaque type Box::<test_crate::wrap::{closure}::<u32>, Global>
+
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn FnOnce<(), Output = Droppable>), Global>}::drop_glue::<(dyn FnOnce<(), Output = Droppable>), Global>
+unsafe fn {impl Destruct for Box::<(dyn FnOnce<(), Output = Droppable>), Global>}::drop_glue::<(dyn FnOnce<(), Output = Droppable>), Global><'_0>(_1: &'_0 mut Box::<(dyn FnOnce<(), Output = Droppable>), Global>)
+= <opaque>
+
 // Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn FnOnce<(), Output = u32>), Global>}::drop_glue::<(dyn FnOnce<(), Output = u32>), Global>
 unsafe fn {impl Destruct for Box::<(dyn FnOnce<(), Output = u32>), Global>}::drop_glue::<(dyn FnOnce<(), Output = u32>), Global><'_0>(_1: &'_0 mut Box::<(dyn FnOnce<(), Output = u32>), Global>)
 = <opaque>
 
-// Full name: alloc::boxed::Box::<(dyn FnOnce<(), Output = Droppable>)>
-#[fundamental]
-#[lang_item(OwnedBox)]
-pub opaque type Box::<(dyn FnOnce<(), Output = Droppable>), Global>
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<test_crate::main::{closure#2}, Global>}::drop_glue::<test_crate::main::{closure#2}, Global>
+unsafe fn {impl Destruct for Box::<test_crate::main::{closure#2}, Global>}::drop_glue::<test_crate::main::{closure#2}, Global><'_0>(_1: &'_0 mut Box::<test_crate::main::{closure#2}, Global>)
+= <opaque>
 
-// Full name: alloc::boxed::Box::{impl Destruct for Box::<(dyn FnOnce<(), Output = Droppable>), Global>}::drop_glue::<(dyn FnOnce<(), Output = Droppable>), Global>
-unsafe fn {impl Destruct for Box::<(dyn FnOnce<(), Output = Droppable>), Global>}::drop_glue::<(dyn FnOnce<(), Output = Droppable>), Global><'_0>(_1: &'_0 mut Box::<(dyn FnOnce<(), Output = Droppable>), Global>)
+// Full name: alloc::boxed::Box::{impl Destruct for Box::<test_crate::wrap::{closure}::<u32>, Global>}::drop_glue::<test_crate::wrap::{closure}::<u32>, Global>
+unsafe fn {impl Destruct for Box::<test_crate::wrap::{closure}::<u32>, Global>}::drop_glue::<test_crate::wrap::{closure}::<u32>, Global><'_0>(_1: &'_0 mut Box::<test_crate::wrap::{closure}::<u32>, Global>)
 = <opaque>
 
 // Full name: test_crate::Droppable
@@ -170,12 +170,12 @@ struct test_crate::wrap::{closure}::<u32> {
 pub fn alloc::boxed::{Box::<test_crate::wrap::{closure}::<u32>, Global>}::new::<test_crate::wrap::{closure}::<u32>>(_1: test_crate::wrap::{closure}::<u32>) -> Box::<test_crate::wrap::{closure}::<u32>, Global>
 = <opaque>
 
-struct (_,)::<u32> {
-  _0: u32,
-}
-
 struct (_,)::<&'_ u32> {
   _0: &'_ u32,
+}
+
+struct (_,)::<u32> {
+  _0: u32,
 }
 
 // Full name: test_crate::{impl Drop for Droppable}::drop

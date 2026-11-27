@@ -23,8 +23,6 @@ pub trait Tuple<Self>
     non-dyn-compatible
 }
 
-opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
-
 // Full name: core::ops::function::FnOnce
 #[fundamental]
 #[lang_item(FnOnce)]
@@ -51,6 +49,8 @@ pub trait FnMut<Self, Args>
     fn call_mut<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: core::ops::function::FnMut::{vtable}<Args, Self::ImpliedClause1::Output>
 }
+
+opaque type core::ops::function::Fn::{vtable}<Args, Ty0>
 
 // Full name: core::ops::function::Fn
 #[fundamental]
@@ -113,18 +113,18 @@ where
     return
 }
 
+struct test_crate::foo::{closure}::{closure}<'a, '_1, '_2, '_3, '_4, '_5, '_6, T>
+where
+    TraitClause0: (T: Sized),
+    Outlives0: (T: 'a),
+{}
+
 // Full name: test_crate::foo::{closure}::{impl Fn<(&'_7 u8,)> for test_crate::foo::{closure}::{closure}<'a, '_1, '_2, '_3, '_4, '_5, '_6, T>[TraitClause0]}::{vtable}
 vtable impl_Fn_tuple_for_closure::{vtable}<'a, '_1, '_2, '_3, '_4, '_5, '_6, '_7, T>: core::ops::function::Fn::{vtable}<(&'_7 u8,), (&'_ u8, Option<&'_ T>[{built_in impl Sized for &'_ T}])>
 where
     TraitClause0: (T: Sized),
     Outlives0: (T: 'a),
  = Opaque(VTable was chosen to be opaque)
-
-struct test_crate::foo::{closure}::{closure}<'a, '_1, '_2, '_3, '_4, '_5, '_6, T>
-where
-    TraitClause0: (T: Sized),
-    Outlives0: (T: 'a),
-{}
 
 // Full name: test_crate::foo::{closure}::{impl Fn<(&'_7 u8,)> for test_crate::foo::{closure}::{closure}<'a, '_1, '_2, '_3, '_4, '_5, '_6, T>[TraitClause0]}::call
 extern "rust-call" fn impl_Fn_tuple_for_closure::call<'a, '_1, '_2, '_3, '_4, '_5, '_6, '_7, '_8, T>(_1: &'_8 test_crate::foo::{closure}::{closure}<'a, '_1, '_2, '_3, '_4, '_5, '_6, T>[TraitClause0], tupled_args: (&'_7 u8,)) -> (&'_7 u8, Option<&'_6 T>[{built_in impl Sized for &'_6 T}])

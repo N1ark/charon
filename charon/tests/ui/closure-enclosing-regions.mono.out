@@ -10,14 +10,14 @@ pub enum Option::<&'_ u32> {
 
 struct () {}
 
-struct (_,)::<&'_ u32> {
-  _0: &'_ u32,
-}
-
 struct (_, _, _)::<&'_ u32, &'_ u32, &'_ u32> {
   _0: &'_ u32,
   _1: &'_ u32,
   _2: &'_ u32,
+}
+
+struct (_,)::<&'_ u32> {
+  _0: &'_ u32,
 }
 
 struct test_crate::local_annotation::{closure}<'a, '_1, '_2>

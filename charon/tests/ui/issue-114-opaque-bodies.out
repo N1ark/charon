@@ -116,11 +116,11 @@ struct str {
   _0: [u8],
 }
 
-// Full name: core::convert::num::{impl From<i32> for i64}::from::{promoted_const#1}
-pub const core::convert::num::impl_From_i32_for_i64::from::{promoted_const#1}: str = "assertion failed: <i32>::MAX as u128 <= <i64>::MAX as u128" with_metadata(58usize)
-
 // Full name: core::convert::num::{impl From<i32> for i64}::from::{promoted_const}
 pub const core::convert::num::impl_From_i32_for_i64::from::{promoted_const}: str = "assertion failed: <i64>::MIN as i128 <= <i32>::MIN as i128" with_metadata(58usize)
+
+// Full name: core::convert::num::{impl From<i32> for i64}::from::{promoted_const#1}
+pub const core::convert::num::impl_From_i32_for_i64::from::{promoted_const#1}: str = "assertion failed: <i32>::MAX as u128 <= <i64>::MAX as u128" with_metadata(58usize)
 
 // Full name: core::ptr::non_null::NonNull
 #[rustc_nonnull_optimization_guaranteed]

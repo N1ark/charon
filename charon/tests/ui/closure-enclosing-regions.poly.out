@@ -27,10 +27,6 @@ where
 
 struct () {}
 
-struct (_,)<A> {
-  _0: A,
-}
-
 struct (_, _, _)<A, B, C>
 where
     TraitClause0: (A: Sized),
@@ -39,6 +35,10 @@ where
   _0: A,
   _1: B,
   _2: C,
+}
+
+struct (_,)<A> {
+  _0: A,
 }
 
 struct test_crate::local_annotation::{closure}<'a, '_1, '_2>

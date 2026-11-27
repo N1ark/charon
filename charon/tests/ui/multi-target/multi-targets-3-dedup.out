@@ -22,15 +22,6 @@ fn clone_it<'_0>(x: &'_0 u32) -> u32
     return
 }
 
-fn test_crate::platform_specific::x86_64-pc-windows-msvc() -> u32
-{
-    let mut _0: u32; // return
-
-    storage_live(_0)
-    _0 = const 42u32
-    return
-}
-
 fn test_crate::platform_specific::i686-unknown-linux-gnu() -> u32
 {
     let mut _0: u32; // return
@@ -46,6 +37,15 @@ fn test_crate::platform_specific::aarch64-apple-darwin() -> u32
 
     storage_live(_0)
     _0 = const 43u32
+    return
+}
+
+fn test_crate::platform_specific::x86_64-pc-windows-msvc() -> u32
+{
+    let mut _0: u32; // return
+
+    storage_live(_0)
+    _0 = const 42u32
     return
 }
 

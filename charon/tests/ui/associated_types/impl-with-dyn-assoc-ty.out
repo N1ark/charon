@@ -18,19 +18,19 @@ pub trait Sized<Self>
 
 struct () {}
 
-struct test_crate::DynableTrait::{vtable}<Ty0> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn DynableTrait<Ty0>)),
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::DynableTrait
 trait DynableTrait<Self, Self_DynableTraitType>
 {
     proof ImpliedClause0: (Self: MetaSized)
     proof ImpliedClause1: (Self_DynableTraitType: Sized)
     vtable: test_crate::DynableTrait::{vtable}<Self_DynableTraitType>
+}
+
+struct test_crate::DynableTrait::{vtable}<Ty0> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn DynableTrait<Ty0>)),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::Trait

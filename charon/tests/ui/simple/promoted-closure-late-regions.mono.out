@@ -1,12 +1,12 @@
 # Final LLBC before serialization:
 
-struct (_,)::<&'_ u8> {
-  _0: &'_ u8,
-}
-
 struct (_, _)::<&'_ u8, &'_ u8> {
   _0: &'_ u8,
   _1: &'_ u8,
+}
+
+struct (_,)::<&'_ u8> {
+  _0: &'_ u8,
 }
 
 // Full name: test_crate::foo::{closure}

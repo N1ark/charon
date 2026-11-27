@@ -54,15 +54,6 @@ where
     TraitClause0: (T: Sized),
 = <opaque>
 
-struct test_crate::Consume::{vtable} {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Consume)),
-  method_consume: fn(*mut (dyn Consume)) -> u32,
-  method_read: fn<'_0_1>(&'_0_1 (dyn Consume)) -> u32,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Consume
 trait Consume<Self>
 {
@@ -70,6 +61,15 @@ trait Consume<Self>
     fn consume;
     fn read<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Consume::{vtable}
+}
+
+struct test_crate::Consume::{vtable} {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Consume)),
+  method_consume: fn(*mut (dyn Consume)) -> u32,
+  method_read: fn<'_0_1>(&'_0_1 (dyn Consume)) -> u32,
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
 // Full name: test_crate::S

@@ -25,9 +25,9 @@ struct str {
   _0: [u8],
 }
 
-static test_crate::{promoted_const}: [u8; 5usize] = [104u8, 101u8, 108u8, 108u8, 111u8]
-
 static test_crate::{promoted_const#1}: [u8; 3usize] = [104u8, 105u8, 0u8]
+
+static test_crate::{promoted_const}: [u8; 5usize] = [104u8, 101u8, 108u8, 108u8, 111u8]
 
 // Full name: test_crate::STR
 pub static STR: &'static str = unsize_cast<&'_ str, 5usize>(&raw const test_crate::{promoted_const})

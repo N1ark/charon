@@ -33,14 +33,6 @@ where
   _1: B,
 }
 
-struct test_crate::Super::{vtable}<T> {
-  size: usize,
-  align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Super<T>)),
-  method_super_method: fn<'_0_1>(&'_0_1 (dyn Super<T>), T) -> i32,
-  super_trait_0: &'static core::marker::MetaSized::{vtable},
-}
-
 // Full name: test_crate::Super
 trait Super<Self, T>
 {
@@ -50,11 +42,11 @@ trait Super<Self, T>
     vtable: test_crate::Super::{vtable}<T>
 }
 
-struct test_crate::Internal::{vtable}<Ty0> {
+struct test_crate::Super::{vtable}<T> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Internal<Internal = Ty0>)),
-  method_internal_method: fn<'_0_1>(&'_0_1 (dyn Internal<Internal = Ty0>)) -> Ty0,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Super<T>)),
+  method_super_method: fn<'_0_1>(&'_0_1 (dyn Super<T>), T) -> i32,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
 }
 
@@ -68,13 +60,12 @@ trait Internal<Self>
     vtable: test_crate::Internal::{vtable}<Self::Internal>
 }
 
-struct test_crate::Left::{vtable}<Ty0, Ty1> {
+struct test_crate::Internal::{vtable}<Ty0> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Left<ImpliedClause1::Internal = Ty0, Left = Ty1>)),
-  method_left_method: fn<'_0_1>(&'_0_1 (dyn Left<ImpliedClause1::Internal = Ty0, Left = Ty1>)) -> Ty1,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Internal<Internal = Ty0>)),
+  method_internal_method: fn<'_0_1>(&'_0_1 (dyn Internal<Internal = Ty0>)) -> Ty0,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Internal::{vtable}<Ty0>,
 }
 
 // Full name: test_crate::Left
@@ -88,14 +79,13 @@ trait Left<Self>
     vtable: test_crate::Left::{vtable}<Self::Left, Self::ImpliedClause1::Internal>
 }
 
-struct test_crate::Right::{vtable}<T, Ty0, Ty1> {
+struct test_crate::Left::{vtable}<Ty0, Ty1> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Right<T, ImpliedClause1::Internal = Ty0, Right = Ty1>)),
-  method_right_method: fn<'_0_1>(&'_0_1 (dyn Right<T, ImpliedClause1::Internal = Ty0, Right = Ty1>)) -> Ty1,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Left<ImpliedClause1::Internal = Ty0, Left = Ty1>)),
+  method_left_method: fn<'_0_1>(&'_0_1 (dyn Left<ImpliedClause1::Internal = Ty0, Left = Ty1>)) -> Ty1,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
   super_trait_1: &'static test_crate::Internal::{vtable}<Ty0>,
-  super_trait_2: &'static test_crate::Super::{vtable}<T>,
 }
 
 // Full name: test_crate::Right
@@ -111,14 +101,14 @@ trait Right<Self, T>
     vtable: test_crate::Right::{vtable}<T, Self::Right, Self::ImpliedClause1::Internal>
 }
 
-struct test_crate::Join::{vtable}<T, Ty0, Ty1, Ty2, Ty3> {
+struct test_crate::Right::{vtable}<T, Ty0, Ty1> {
   size: usize,
   align: usize,
-  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Join<T, ImpliedClause1::ImpliedClause1::Internal = Ty0, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::Left = Ty2, ImpliedClause2::Right = Ty3>)),
-  method_join_method: fn<'_0_1>(&'_0_1 (dyn Join<T, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::Left = Ty2, ImpliedClause2::Right = Ty3>)) -> (Ty2, Ty3),
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Right<T, ImpliedClause1::Internal = Ty0, Right = Ty1>)),
+  method_right_method: fn<'_0_1>(&'_0_1 (dyn Right<T, ImpliedClause1::Internal = Ty0, Right = Ty1>)) -> Ty1,
   super_trait_0: &'static core::marker::MetaSized::{vtable},
-  super_trait_1: &'static test_crate::Left::{vtable}<Ty2, Ty1>,
-  super_trait_2: &'static test_crate::Right::{vtable}<T, Ty3, Ty1>,
+  super_trait_1: &'static test_crate::Internal::{vtable}<Ty0>,
+  super_trait_2: &'static test_crate::Super::{vtable}<T>,
 }
 
 // Full name: test_crate::Join
@@ -130,6 +120,16 @@ trait Join<Self, T>
     proof ImpliedClause3: (T: Sized)
     fn join_method<'_0_1, Outlives0: (Self: '_0_1)>;
     vtable: test_crate::Join::{vtable}<T, Self::ImpliedClause1::Left, Self::ImpliedClause1::ImpliedClause1::Internal, Self::ImpliedClause2::Right, Self::ImpliedClause1::ImpliedClause1::Internal>
+}
+
+struct test_crate::Join::{vtable}<T, Ty0, Ty1, Ty2, Ty3> {
+  size: usize,
+  align: usize,
+  drop: unsafe fn<'_0_1>(&'_0_1 mut (dyn Join<T, ImpliedClause1::ImpliedClause1::Internal = Ty0, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::Left = Ty2, ImpliedClause2::Right = Ty3>)),
+  method_join_method: fn<'_0_1>(&'_0_1 (dyn Join<T, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::ImpliedClause1::Internal = Ty1, ImpliedClause1::Left = Ty2, ImpliedClause2::Right = Ty3>)) -> (Ty2, Ty3),
+  super_trait_0: &'static core::marker::MetaSized::{vtable},
+  super_trait_1: &'static test_crate::Left::{vtable}<Ty2, Ty1>,
+  super_trait_2: &'static test_crate::Right::{vtable}<T, Ty3, Ty1>,
 }
 
 // Full name: test_crate::{impl Super<i32> for i32}::super_method
