@@ -112,11 +112,10 @@ pub fn promoted_body<'tcx, R>(
     f: impl FnOnce(&mir::Body<'tcx>) -> R,
 ) -> R {
     // The promoteds of a local item are stolen once its MIR is optimized.
-    if let Some(local_def_id) = def_id.as_local() {
-        let (_, promoteds) = tcx.mir_promoted(local_def_id);
-        if !promoteds.is_stolen() {
-            return f(&promoteds.borrow()[promoted]);
-        }
+    if let Some(local_def_id) = def_id.as_local()
+        && let Some(body) = steal::read_promoted(tcx.mir_promoted(local_def_id).1, promoted)
+    {
+        return f(&body);
     }
     f(&tcx.promoted_mir(def_id)[promoted])
 }

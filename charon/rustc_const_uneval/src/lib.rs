@@ -9,12 +9,14 @@ extern crate rustc_attr_ir;
 extern crate rustc_const_eval;
 extern crate rustc_data_structures;
 extern crate rustc_hir;
+extern crate rustc_index;
 extern crate rustc_middle;
 extern crate rustc_span;
 
 mod eval;
 mod memory;
 mod pointer;
+pub mod steal;
 mod valtree;
 
 pub use eval::promoted_body;

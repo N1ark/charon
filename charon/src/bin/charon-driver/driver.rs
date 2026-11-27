@@ -99,14 +99,7 @@ fn setup_compiler(
 
         config.override_queries = Some(|_sess, providers| {
             skip_borrowck_if_set(providers);
-
-            // TODO: catch the MIR in-flight to avoid stealing issues?
-            // providers.mir_built = |tcx, def_id| {
-            //     let mir = (rustc_interface::DEFAULT_QUERY_PROVIDERS.mir_built)(tcx, def_id);
-            //     let mut mir = mir.steal();
-            //     // use the mir
-            //     tcx.alloc_steal_mir(mir)
-            // };
+            copy_mir_before_stealing(providers);
         });
 
         config.opts.unstable_opts.no_codegen = !codegen;
@@ -116,6 +109,51 @@ fn setup_compiler(
         set_parallel_frontend(config);
     }
     set_mir_options(config);
+}
+
+/// Make the queries that steal MIR copy it first, so that we can read it while they run (see
+/// `rustc_const_uneval::steal`).
+fn copy_mir_before_stealing(providers: &mut Providers) {
+    use rustc_const_uneval::steal::{MirLevel, copy_body, copy_promoteds};
+    use rustc_interface::DEFAULT_QUERY_PROVIDERS;
+    providers.queries.mir_promoted = |tcx, def| {
+        copy_body(MirLevel::Built, tcx.mir_built(def));
+        (DEFAULT_QUERY_PROVIDERS.queries.mir_promoted)(tcx, def)
+    };
+    providers.queries.mir_drops_elaborated_and_const_checked = |tcx, def| {
+        copy_body(MirLevel::Promoted, tcx.mir_promoted(def).0);
+        (DEFAULT_QUERY_PROVIDERS
+            .queries
+            .mir_drops_elaborated_and_const_checked)(tcx, def)
+    };
+    providers.queries.promoted_mir = |tcx, def| {
+        if !tcx.is_constructor(def.to_def_id()) {
+            copy_promoteds(tcx.mir_promoted(def).1);
+        }
+        (DEFAULT_QUERY_PROVIDERS.queries.promoted_mir)(tcx, def)
+    };
+    providers.queries.mir_for_ctfe = |tcx, def| {
+        // Only the bodies of consts and statics are stolen, the ones of const fns are cloned.
+        if matches!(
+            tcx.hir_body_const_context(def),
+            Some(rustc_hir::ConstContext::Const { .. } | rustc_hir::ConstContext::Static(_))
+        ) {
+            copy_body(
+                MirLevel::Elaborated,
+                tcx.mir_drops_elaborated_and_const_checked(def),
+            );
+        }
+        (DEFAULT_QUERY_PROVIDERS.queries.mir_for_ctfe)(tcx, def)
+    };
+    providers.queries.optimized_mir = |tcx, def| {
+        if !tcx.is_constructor(def.to_def_id()) {
+            copy_body(
+                MirLevel::Elaborated,
+                tcx.mir_drops_elaborated_and_const_checked(def),
+            );
+        }
+        (DEFAULT_QUERY_PROVIDERS.queries.optimized_mir)(tcx, def)
+    };
 }
 
 /// Run a couple of rustc queries that don't involve MIR (so that they don't steal it). Returns
@@ -148,9 +186,17 @@ fn precheck_rustc_errors(tcx: TyCtxt<'_>) -> bool {
     tcx.dcx().has_errors().is_some()
 }
 
-/// Compute, in parallel, the MIR of the local bodies at the level the translation reads them.
-/// rustc computes them after the translation anyway.
-fn prefetch_local_mir(tcx: TyCtxt<'_>, level: MirLevel) {
+/// Start reading the MIR of local bodies at `level`: from now on the queries that steal it keep a
+/// copy (see `copy_mir_before_stealing`), and we compute the bodies in parallel. rustc computes
+/// them after the translation anyway.
+fn start_reading_mir(tcx: TyCtxt<'_>, level: MirLevel) {
+    use rustc_const_uneval::steal;
+    steal::start_reading(match level {
+        MirLevel::Built => Some(steal::MirLevel::Built),
+        MirLevel::Promoted => Some(steal::MirLevel::Promoted),
+        MirLevel::Elaborated => Some(steal::MirLevel::Elaborated),
+        MirLevel::Optimized => None,
+    });
     tcx.par_hir_body_owners(|def_id| {
         if tcx.is_intrinsic_that_must_be_overridden(def_id) {
             return;
@@ -322,7 +368,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
             return Compilation::Continue;
         }
         charon_lib::timing::time("rustc-prefetch-mir", || {
-            prefetch_local_mir(tcx, self.options.mir_level())
+            start_reading_mir(tcx, self.options.mir_level())
         });
 
         self.transform_ctx = charon_lib::timing::time("translate-crate", || {
@@ -334,6 +380,7 @@ impl<'a> Callbacks for CharonCallbacks<'a> {
             )
         })
         .ok();
+        rustc_const_uneval::steal::stop_reading();
 
         Compilation::Continue
     }

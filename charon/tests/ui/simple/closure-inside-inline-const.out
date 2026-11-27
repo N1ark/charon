@@ -43,6 +43,7 @@ where
     storage_live(_2)
     storage_live(_f)
     _f = {closure} {  }
+    fake_read(_f)
     _2 = size_of<T>[TraitClause0]()
     ↳⚡ undefined_behavior
     storage_dead(_f)

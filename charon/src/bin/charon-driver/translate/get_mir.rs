@@ -11,6 +11,7 @@ use charon_lib::ast::*;
 use charon_lib::options::MirLevel;
 
 use super::translate_ctx::ItemTransCtx;
+use rustc_const_uneval::steal;
 
 impl<'tcx> ItemTransCtx<'tcx, '_> {
     pub fn get_mir(
@@ -65,20 +66,20 @@ fn get_mir_for_def_id_and_level<'tcx>(
                 match level {
                     MirLevel::Built => {
                         let body = tcx.mir_built(local_def_id);
-                        if !body.is_stolen() {
-                            return Some(body.borrow().clone());
+                        if let Some(body) = steal::read_body(body) {
+                            return Some(body);
                         }
                     }
                     MirLevel::Promoted => {
                         let (body, _) = tcx.mir_promoted(local_def_id);
-                        if !body.is_stolen() {
-                            return Some(body.borrow().clone());
+                        if let Some(body) = steal::read_body(body) {
+                            return Some(body);
                         }
                     }
                     MirLevel::Elaborated => {
                         let body = tcx.mir_drops_elaborated_and_const_checked(local_def_id);
-                        if !body.is_stolen() {
-                            return Some(body.borrow().clone());
+                        if let Some(body) = steal::read_body(body) {
+                            return Some(body);
                         }
                     }
                     MirLevel::Optimized => {}
