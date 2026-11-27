@@ -31,7 +31,7 @@ where
     TraitClause0: (T: Sized),
 = <opaque>
 
-static test_crate::{promoted_const}: [u8; 1usize] = [0u8]
+static test_crate::{promoted_const}: u8 = 0u8
 
 // Full name: test_crate::Wrapper
 pub struct Wrapper {
@@ -43,7 +43,7 @@ unsafe impl "impl_Sync_for_Wrapper" Sync for Wrapper {
     vtable: lazy
 }
 
-const test_crate::HUGE::{promoted_const}: &'_ u8 = &test_crate::{promoted_const}[0usize]
+const test_crate::HUGE::{promoted_const}: &'_ u8 = &test_crate::{promoted_const}
 
 // Full name: test_crate::HUGE
 pub fn HUGE() -> Wrapper

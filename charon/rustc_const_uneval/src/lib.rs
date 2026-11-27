@@ -43,9 +43,12 @@ pub struct ReaderState<'tcx>(std::sync::Arc<rustc_data_structures::sync::Lock<Al
 
 #[derive(Default)]
 struct Allocs<'tcx> {
-    /// The global we emit for the anonymous allocations of each key: the allocation it stands
-    /// for, and the type at which we view it.
-    globals: FxHashMap<AllocKey, (interpret::AllocId, Ty<'tcx>)>,
+    /// The global we emit for the anonymous allocations of each key and view type: the allocation
+    /// it stands for, and the type at which we view it. A unique allocation has one global, whose
+    /// view type is `None` in the key.
+    globals: FxHashMap<(AllocKey, Option<Ty<'tcx>>), (interpret::AllocId, Ty<'tcx>)>,
+    /// The type at which each of these globals views its allocation.
+    views: FxHashMap<interpret::AllocId, Ty<'tcx>>,
     /// Cache of the key of each allocation, to avoid rehashing possibly large contents.
     keys: FxHashMap<interpret::AllocId, AllocKey>,
 }
@@ -55,8 +58,9 @@ struct Allocs<'tcx> {
 enum AllocKey {
     /// A unique allocation whose identity is itself.
     Unique(interpret::AllocId),
-    /// Immutable anon consts are identified by their content. This lets us deduplicate anon consts
-    /// that have the same contents, which is sound given they have no guarantee of address identity.
+    /// Immutable anon consts are identified by their content, and have one global per type at
+    /// which we view them. This lets us deduplicate anon consts that have the same contents, which
+    /// is sound given they have no guarantee of address identity.
     Deduplicatable(rustc_data_structures::fingerprint::Fingerprint),
 }
 

@@ -7,6 +7,7 @@ use rustc_data_structures::stable_hash::{StableHash, StableHasher};
 use rustc_middle::ty::TypeVisitableExt;
 use rustc_span::Span;
 use rustc_trait_elaboration::normalize;
+use std::collections::hash_map::Entry;
 
 /// An evaluated constant.
 enum Evaluated<'tcx> {
@@ -70,14 +71,11 @@ impl<'tcx> ReaderState<'tcx> {
             };
             *self.0.lock().keys.entry(alloc_id).or_insert(key)
         });
-        if let Some(global) = self.0.lock().globals.get(&key) {
-            return *global;
-        }
-        let global = 'global: {
+        let view = 'view: {
             if let Some(ty) = ty
                 && ConstReader::ty_covers_alloca(tcx, alloc_id, ty)
             {
-                break 'global (alloc_id, ty);
+                break 'view ty;
             }
             let size = GlobalRef::Alloc(alloc_id)
                 .memory(tcx)
@@ -87,20 +85,40 @@ impl<'tcx> ReaderState<'tcx> {
             let bytes = Ty::new_array(tcx, tcx.types.u8, size.bytes());
             // try avoiding `MaybeUninit<[u8; N]>` if `[u8; N]` suffices
             if ConstReader::ty_covers_alloca(tcx, alloc_id, bytes) {
-                break 'global (alloc_id, bytes);
+                break 'view bytes;
             }
             let maybe_uninit = tcx.require_lang_item(LangItem::MaybeUninit, rustc_span::DUMMY_SP);
-            let maybe_uninit =
-                Ty::new_adt(tcx, tcx.adt_def(maybe_uninit), tcx.mk_args(&[bytes.into()]));
-            (alloc_id, maybe_uninit)
+            Ty::new_adt(tcx, tcx.adt_def(maybe_uninit), tcx.mk_args(&[bytes.into()]))
         };
-        *self.0.lock().globals.entry(key).or_insert(global)
+        let global_key = match key {
+            AllocKey::Unique(_) => (key, None),
+            AllocKey::Deduplicatable(_) => (key, Some(view)),
+        };
+        {
+            let mut allocs = self.0.lock();
+            if let Some(global) = allocs.globals.get(&global_key) {
+                return *global;
+            }
+            if let Entry::Vacant(entry) = allocs.views.entry(alloc_id) {
+                entry.insert(view);
+                allocs.globals.insert(global_key, (alloc_id, view));
+                return (alloc_id, view);
+            }
+        }
+        // The allocation already stands for a global viewed at another type: this one gets a copy.
+        let memory = GlobalRef::Alloc(alloc_id).memory(tcx).unwrap();
+        let copy = tcx.reserve_and_set_memory_alloc(memory);
+        let mut allocs = self.0.lock();
+        let global = *allocs.globals.entry(global_key).or_insert((copy, view));
+        allocs.views.insert(global.0, global.1);
+        global
     }
 
     /// The type at which we view the allocation `alloc_id`. If no type has been decided,
     /// picks the default: `[u8; N]` or `MaybeUninit<[u8; N]>`.
     pub fn ty_or_default(&self, tcx: TyCtxt<'tcx>, alloc_id: interpret::AllocId) -> Ty<'tcx> {
-        self.register(tcx, alloc_id, None).1
+        let view = self.0.lock().views.get(&alloc_id).copied();
+        view.unwrap_or_else(|| self.register(tcx, alloc_id, None).1)
     }
 }
 
