@@ -523,7 +523,20 @@ impl<'tcx> TranslateCtx<'tcx> {
         Ok(name)
     }
 
-    pub(crate) fn opacity_for_name(&self, name: &Name) -> ItemOpacity {
+    pub(crate) fn opacity_for_name(&mut self, name: &Name) -> ItemOpacity {
+        // Patterns match a trait impl by its trait ref, so we need the impl translated (unless it is
+        // excluded).
+        for elem in &name.name {
+            if let PathElem::Impl(ImplElem::Trait(impl_id)) = *elem
+                && self.translated.excluded_trait_impls.get(impl_id).is_none()
+                && let impl_id = ItemId::TraitImpl(impl_id)
+                && !self
+                    .translate_stack
+                    .contains(&ItemOrModuleId::Item(impl_id))
+            {
+                let _ = self.get_or_translate(impl_id);
+            }
+        }
         self.options.opacity_for_name(&self.translated, name)
     }
 }

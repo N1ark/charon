@@ -724,8 +724,8 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             return Ok(VTableDecl::NotDynCompatible);
         };
         // The vtable initializer needs the fields of the vtable struct.
-        let struct_name = &self.translated.item_names[&ItemId::Type(vtable_struct.id)];
-        if self.opacity_for_name(struct_name).is_invisible() {
+        let struct_name = self.translated.item_names[&ItemId::Type(vtable_struct.id)].clone();
+        if self.opacity_for_name(&struct_name).is_invisible() {
             return Ok(VTableDecl::Unknown(
                 "the vtable struct of the trait is excluded".into(),
             ));
