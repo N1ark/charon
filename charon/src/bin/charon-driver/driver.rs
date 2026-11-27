@@ -43,14 +43,15 @@ fn set_mir_options(config: &mut Config) {
     }
 }
 
-/// Enable rustc's parallel front-end.
+/// Enable rustc's parallel front-end on as many threads as cores, up to `MAX_THREADS`, unless the
+/// user chose a number of threads with `-Zthreads`. Rustc's default is parallel on fewer threads.
 fn set_parallel_frontend(config: &mut Config) {
-    if !config.opts.jobs.frontend.is_parallel() {
-        // Match rustc's `--jobs-frontend=0` behavior.
-        const RUSTC_MAX_THREADS_CAP: usize = u8::MAX as usize;
+    // Each thread costs memory, and more threads gain little.
+    const MAX_THREADS: usize = 8;
+    if config.opts.unstable_opts.threads.is_none() {
         let threads = std::thread::available_parallelism()
             .map_or(1, |n| n.get())
-            .min(RUSTC_MAX_THREADS_CAP);
+            .min(MAX_THREADS);
         if let Some(threads) = NonZero::new(threads).filter(|n| n.get() > 1) {
             config.opts.jobs.frontend = JobsMode::Parallel(threads);
         }
