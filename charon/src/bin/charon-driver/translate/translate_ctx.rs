@@ -9,6 +9,7 @@ use charon_lib::formatter::{FmtCtx, IntoFormatter};
 use charon_lib::ids::IndexVec;
 use charon_lib::options::TranslateOptions;
 use petgraph::graphmap::DiGraphMap;
+use rustc_data_structures::marker::{DynSend, DynSync};
 use rustc_data_structures::sharded::Sharded;
 use rustc_data_structures::sync::Lock;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -178,6 +179,13 @@ pub struct SharedCtx<'tcx> {
     pub exported_fns: OnceLock<HashMap<String, ExportedFns<'tcx>>>,
 }
 
+// SAFETY: the fields are `DynSend`, or `Send` types that rustc doesn't know, like charon's.
+unsafe impl DynSend for TranslateCtx<'_> {}
+// SAFETY: the fields are `DynSend` and `DynSync`, or `Send` and `Sync` types that rustc doesn't
+// know, like charon's.
+unsafe impl DynSend for SharedCtx<'_> {}
+unsafe impl DynSync for SharedCtx<'_> {}
+
 /// The functions exported under a given symbol.
 #[derive(Debug, Default, Clone)]
 pub enum ExportedFns<'tcx> {
@@ -263,6 +271,62 @@ pub(crate) struct ItemTransCtx<'tcx, 'ctx> {
 }
 
 impl<'tcx> TranslateCtx<'tcx> {
+    pub fn new(
+        tcx: TyCtxt<'tcx>,
+        sysroot: PathBuf,
+        hax_state: hax::StateWithBase<'tcx>,
+        options: TranslateOptions,
+        translated: TranslatedCrate,
+        shared: Arc<SharedCtx<'tcx>>,
+        errors: ErrorCtx,
+    ) -> Self {
+        let mut ctx = TranslateCtx {
+            tcx,
+            sysroot,
+            hax_state,
+            options,
+            translated,
+            shared,
+            errors: RefCell::new(errors),
+            translate_stack: Default::default(),
+            naming: Default::default(),
+            cached_spans: Default::default(),
+            cached_span_datas: Default::default(),
+            cached_file_ids: Default::default(),
+            cached_names: Default::default(),
+            exported_foreign_items: Default::default(),
+            lt_mutability_computer: Default::default(),
+            monomorphic_layouts: Default::default(),
+            intrinsic_def_ids: Default::default(),
+            translated_vtables: Default::default(),
+        };
+        ctx.register_target_info();
+        ctx
+    }
+
+    /// A context for another translation thread.
+    pub(crate) fn new_thread_ctx(&self) -> Self {
+        let mut errors = ErrorCtx::new();
+        errors.continue_on_failure = self.errors.borrow().continue_on_failure;
+        errors.error_on_warnings = self.errors.borrow().error_on_warnings;
+        let krate = &self.translated;
+        let translated = TranslatedCrate {
+            crate_name: krate.crate_name.clone(),
+            preset: krate.preset,
+            runtime_checks: krate.runtime_checks,
+            ..TranslatedCrate::default()
+        };
+        TranslateCtx::new(
+            self.tcx,
+            self.sysroot.clone(),
+            self.hax_state.clone(),
+            self.options.clone(),
+            translated,
+            self.shared.clone(),
+            errors,
+        )
+    }
+
     /// Span an error and register the error.
     pub fn span_err(&mut self, span: Span, msg: &str, level: Level) -> Error {
         self.copy_files();

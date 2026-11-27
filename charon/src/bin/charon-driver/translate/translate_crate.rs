@@ -18,14 +18,14 @@ use itertools::Itertools;
 use petgraph::visit::{Dfs, Walker};
 use rustc_data_structures::fingerprint::Fingerprint;
 use rustc_data_structures::stable_hash::{StableHash, StableHasher};
-use rustc_data_structures::sync::Lock;
+use rustc_data_structures::sync::{FromDyn, Lock, check_dyn_thread_safe};
 use rustc_hash::{FxHashMap, FxHashSet as HashSet};
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::{def_id::DefId, sym};
-use std::cell::RefCell;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::translate_ctx::*;
 use crate::hax;
@@ -36,6 +36,11 @@ use charon_lib::name_matcher::NamePattern;
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
 use charon_lib::pretty::FmtWithCtx;
 use charon_lib::transform::TransformCtx;
+
+thread_local! {
+    /// Whether this thread is translating items.
+    static TRANSLATING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 /// The id of an untranslated item. Note that a given `DefId` may show up as multiple different
 /// item sources, e.g. a constant will have both a `Global` version (for the constant itself) and a
@@ -664,18 +669,97 @@ impl<'tcx> TranslateCtx<'tcx> {
         None
     }
 
-    /// Move the items we translated into the shared crate, which becomes ours.
-    fn merge_translated(&mut self) {
+    /// Translate the queued items and the items they enqueue, on as many threads as rustc's
+    /// front-end uses. Returns the contexts of the other threads.
+    fn translate_queue(&mut self) -> Vec<TranslateCtx<'tcx>> {
+        let Some(thread_safe) = check_dyn_thread_safe() else {
+            while let Some(item_src) = self.pop_item() {
+                self.translate_item(&item_src);
+            }
+            return Vec::new();
+        };
+        let threads = rustc_thread_pool::current_num_threads();
+        let idle = Lock::new((1..threads).map(|_| self.new_thread_ctx()).collect_vec());
+        let helpers = AtomicUsize::new(0);
+        let env = thread_safe.derive((&mut *self, &idle, &helpers));
+        rustc_thread_pool::scope(move |scope| {
+            let (this, idle, helpers) = env.into_inner();
+            this.translate_items(thread_safe, scope, idle, helpers);
+        });
+        idle.into_inner()
+    }
+
+    /// Translate queued items until the queue is empty. While more items are queued, we spawn
+    /// helpers that translate them with the contexts in `idle`, up to one per thread of the pool.
+    /// We never wait for other threads: a helper that finds the queue empty returns to the pool.
+    fn translate_items<'s>(
+        &mut self,
+        thread_safe: FromDyn<()>,
+        scope: &rustc_thread_pool::Scope<'s>,
+        idle: &'s Lock<Vec<TranslateCtx<'tcx>>>,
+        helpers: &'s AtomicUsize,
+    ) {
+        TRANSLATING.set(true);
+        while let Some(item_src) = self.pop_item() {
+            loop {
+                let running = helpers.load(Ordering::Relaxed);
+                if running + 1 >= rustc_thread_pool::current_num_threads()
+                    || self.shared.queue.lock().0.is_empty()
+                {
+                    break;
+                }
+                if helpers
+                    .compare_exchange(running, running + 1, Ordering::Relaxed, Ordering::Relaxed)
+                    .is_ok()
+                {
+                    let env = thread_safe.derive((idle, helpers));
+                    scope.spawn(move |scope| {
+                        let (idle, helpers) = env.into_inner();
+                        // A thread that waits inside rustc may run this job on top of its stack:
+                        // if it was translating, we give up rather than translate in a nested way.
+                        if !TRANSLATING.get() {
+                            let mut ctx = idle.lock().pop().unwrap();
+                            ctx.translate_items(thread_safe, scope, idle, helpers);
+                            idle.lock().push(ctx);
+                        }
+                        helpers.fetch_sub(1, Ordering::Relaxed);
+                    });
+                }
+            }
+            self.translate_item(&item_src);
+        }
+        TRANSLATING.set(false);
+    }
+
+    /// Move the items the contexts translated into the shared crate, which becomes ours.
+    fn merge_translated(&mut self, others: Vec<TranslateCtx<'tcx>>) {
         let mut krate = std::mem::take(&mut *self.shared.krate.lock());
-        let mut translated = std::mem::take(&mut self.translated);
-        for id in translated.all_ids() {
-            if let Some(item) = translated.remove_item_temporarily(id) {
-                krate.put_item_back(id, item);
+        krate.target_information = std::mem::take(&mut self.translated.target_information);
+        let mut translated = vec![std::mem::take(&mut self.translated)];
+        for other in others {
+            self.errors.get_mut().merge(other.errors.into_inner());
+            self.monomorphic_layouts.extend(other.monomorphic_layouts);
+            self.translated_vtables.extend(other.translated_vtables);
+            translated.push(other.translated);
+        }
+        for mut from in translated {
+            for id in from.all_ids() {
+                // Several threads may have translated an item, with the same result.
+                if let Some(item) = from.remove_item_temporarily(id)
+                    && krate.get_item(id).is_none()
+                {
+                    krate.put_item_back(id, item);
+                }
+            }
+            for (trait_id, names) in from.assoc_item_names.into_iter_indexed() {
+                if krate.assoc_item_names.get(trait_id).is_none() {
+                    krate.assoc_item_names.set_slot_extend(trait_id, names);
+                }
+            }
+            for (impl_id, impl_trait) in from.excluded_trait_impls.into_iter_indexed() {
+                krate.excluded_trait_impls.insert(impl_id, impl_trait);
             }
         }
-        krate.target_information = translated.target_information;
-        krate.assoc_item_names = translated.assoc_item_names;
-        krate.excluded_trait_impls = translated.excluded_trait_impls;
         self.translated = krate;
     }
 
@@ -1491,27 +1575,15 @@ pub fn translate<'tcx>(
         containment_graph: Default::default(),
         exported_fns: Default::default(),
     };
-    let mut ctx = TranslateCtx {
+    let mut ctx = TranslateCtx::new(
         tcx,
         sysroot,
         hax_state,
-        options: translate_options,
-        translated: krate,
-        shared: Arc::new(shared),
-        errors: RefCell::new(error_ctx),
-        translate_stack: Default::default(),
-        naming: Default::default(),
-        cached_spans: Default::default(),
-        cached_span_datas: Default::default(),
-        cached_file_ids: Default::default(),
-        cached_names: Default::default(),
-        exported_foreign_items: Default::default(),
-        lt_mutability_computer: Default::default(),
-        monomorphic_layouts: Default::default(),
-        intrinsic_def_ids: Default::default(),
-        translated_vtables: Default::default(),
-    };
-    ctx.register_target_info();
+        translate_options,
+        krate,
+        Arc::new(shared),
+        error_ctx,
+    );
     ctx.reserve_unit_decl();
     ctx.register_builtin_functions()?;
 
@@ -1660,10 +1732,8 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
-    while let Some(item_src) = ctx.pop_item() {
-        ctx.translate_item(&item_src);
-    }
-    ctx.merge_translated();
+    let others = ctx.translate_queue();
+    ctx.merge_translated(others);
     ctx.number_anon_allocs();
     ctx.settle_vtables();
 

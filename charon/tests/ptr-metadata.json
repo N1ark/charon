@@ -1,12 +1,23 @@
 {
+  "<str>": "Length",
   "<unit>": "None",
+  "alloc::alloc::Global": "None",
+  "alloc::boxed::Box": "None",
+  "core::alloc::AllocError": "None",
+  "core::alloc::layout::Layout": "None",
+  "core::cmp::Ordering": "None",
+  "core::fmt::Error": "None",
+  "core::fmt::Formatter": "None",
+  "core::ops::control_flow::ControlFlow": "None",
+  "core::option::Option": "None",
+  "core::ptr::non_null::NonNull": "None",
+  "core::result::Result": "None",
   "test_crate::Alias": "Length",
-  "test_crate::StrDst": "Length",
-  "test_crate::SliceDst": "Length",
-  "test_crate::Point": "None",
-  "test_crate::MoreSliceDst": "Length",
   "test_crate::Embedded": "Length",
+  "test_crate::GenericBehindIndirection": "None",
+  "test_crate::GenericBehindIndirectionUnsized": "None",
   "test_crate::GenericInLastField": "None",
+  "test_crate::GenericNotLastField": "None",
   "test_crate::GenericWithUnsize": {
     "InheritFrom": {
       "Untagged": {
@@ -19,20 +30,9 @@
       }
     }
   },
-  "test_crate::GenericNotLastField": "None",
-  "test_crate::GenericBehindIndirection": "None",
-  "test_crate::GenericBehindIndirectionUnsized": "None",
-  "test_crate::ThinGeneric": "None",
-  "<str>": "Length",
-  "alloc::boxed::Box": "None",
-  "alloc::alloc::Global": "None",
-  "core::alloc::layout::Layout": "None",
-  "core::result::Result": "None",
-  "core::ptr::non_null::NonNull": "None",
-  "core::alloc::AllocError": "None",
-  "core::fmt::Formatter": "None",
-  "core::fmt::Error": "None",
-  "core::cmp::Ordering": "None",
-  "core::option::Option": "None",
-  "core::ops::control_flow::ControlFlow": "None"
+  "test_crate::MoreSliceDst": "Length",
+  "test_crate::Point": "None",
+  "test_crate::SliceDst": "Length",
+  "test_crate::StrDst": "Length",
+  "test_crate::ThinGeneric": "None"
 }

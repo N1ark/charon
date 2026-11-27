@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use charon_lib::ast::*;
+use itertools::Itertools;
 
 mod util;
 use util::*;
@@ -73,6 +74,7 @@ fn ptr_metadata() -> anyhow::Result<()> {
         .type_decls
         .iter()
         .map(|td| (td.item_meta.name.debug_repr(&crate_data), &td.ptr_metadata))
+        .sorted_by(|(a, _), (b, _)| a.cmp(b))
         .collect();
     let str = serde_json::to_string_pretty(&meta_kinds)?;
     compare_or_overwrite(str, &PathBuf::from("./tests/ptr-metadata.json"))?;

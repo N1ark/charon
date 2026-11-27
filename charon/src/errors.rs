@@ -233,6 +233,15 @@ impl ErrorCtx {
         }
     }
 
+    /// Add the errors registered in `other`.
+    pub fn merge(&mut self, other: Self) {
+        self.items_with_errors.extend(other.items_with_errors);
+        self.external_dep_graph
+            .edges
+            .extend(other.external_dep_graph.edges);
+        self.error_count += other.error_count;
+    }
+
     pub fn continue_on_failure(&self) -> bool {
         self.continue_on_failure
     }

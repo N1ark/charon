@@ -808,6 +808,7 @@ pub enum StartFrom {
 }
 
 /// The options that control translation and transformation.
+#[derive(Clone)]
 pub struct TranslateOptions {
     /// Items from which to start translation.
     pub start_from: Vec<StartFrom>,

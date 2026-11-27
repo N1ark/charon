@@ -147,6 +147,13 @@ pub fn run(args: UiTestArgs) -> Result<ExitStatus> {
 
     // Rustc args.
     cmd.arg("--");
+    if matches!(
+        magic_comments.expected,
+        ExpectedResult::KnownFailure | ExpectedResult::KnownPanic
+    ) {
+        // Translate on one thread, so that errors come in a deterministic order.
+        cmd.arg("-Zthreads=1");
+    }
     cmd.arg(&args.file);
     cmd.arg("--crate-name=test_crate");
     if !magic_comments

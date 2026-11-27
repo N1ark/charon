@@ -163,7 +163,7 @@ fn expected_output(path: &Path) -> Result<String> {
     }
 }
 
-fn run_case(case: &Case, intrinsics_crate: &Path) -> Result<()> {
+fn run_case(case: &Case, intrinsics_crate: &Path, one_thread: bool) -> Result<()> {
     let mut child = Command::cargo_bin("charon")?
         .args([
             "rustc",
@@ -189,6 +189,7 @@ fn run_case(case: &Case, intrinsics_crate: &Path) -> Result<()> {
             intrinsics_crate.display()
         ))
         .args(&case.flags)
+        .args(one_thread.then_some("-Zthreads=1"))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
@@ -302,7 +303,10 @@ fn main() -> Result<()> {
                 let intrinsics_rlib = intrinsics_rlib.clone();
                 trials.push(
                     Trial::test(case.name.clone(), move || {
-                        let result: Result<()> = match run_case(&case, &intrinsics_rlib) {
+                        // Translate expected failures on one thread, so that they fail the same way.
+                        let one_thread = !reasons.is_empty();
+                        let result: Result<()> = match run_case(&case, &intrinsics_rlib, one_thread)
+                        {
                             Ok(()) if !reasons.is_empty() => Err(anyhow::anyhow!(
                                 "unexpectedly passed; expected failure containing one of {reasons:?}"
                             )),

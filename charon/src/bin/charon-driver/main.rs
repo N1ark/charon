@@ -32,6 +32,7 @@ extern crate rustc_span;
 extern crate rustc_structures;
 extern crate rustc_symbol_mangling;
 extern crate rustc_target;
+extern crate rustc_thread_pool;
 extern crate rustc_trait_selection;
 
 #[macro_use]
