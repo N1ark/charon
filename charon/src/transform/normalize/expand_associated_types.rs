@@ -1484,6 +1484,29 @@ impl TransformPass for Transform {
         // types.
         let item_modifications: HashMap<GenericsSource, ItemModifications> = {
             let mut computer = ComputeItemModifications::new(ctx);
+            // Which of mutually recursive traits gets the parameters depends on the one we start
+            // from: we start from the traits in source order, which unlike their ids doesn't
+            // depend on the order of translation.
+            let fmt = &ctx.into_fmt();
+            for (.., id) in ctx
+                .translated
+                .trait_decls
+                .iter()
+                .map(|tdecl| {
+                    let meta = &tdecl.item_meta;
+                    let span = meta.span.data();
+                    let file = ctx.translated.files.get(span.file_id).map(|f| &f.name);
+                    (
+                        file,
+                        span.beg,
+                        meta.name.with_ctx(fmt).to_string(),
+                        tdecl.def_id,
+                    )
+                })
+                .sorted()
+            {
+                computer.compute_trait_modifications(id);
+            }
             let mut item_modifications = HashMap::default();
             for (id, item) in ctx.translated.all_items_with_ids() {
                 let modifications = computer.compute_item_modifications(item);
