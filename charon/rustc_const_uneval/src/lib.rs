@@ -33,9 +33,11 @@ pub struct Config {
     pub anon_allocs_as_globals: bool,
 }
 
-/// What we decided about anonymous allocations.
+/// What we decided about anonymous allocations. Several threads may read constants at once: we
+/// must not hold the lock while we run rustc queries, since a thread waiting for a lock keeps its
+/// rustc thread slot, which the query may need.
 #[derive(Default, Clone)]
-pub struct ReaderState<'tcx>(std::rc::Rc<std::cell::RefCell<Allocs<'tcx>>>);
+pub struct ReaderState<'tcx>(std::sync::Arc<rustc_data_structures::sync::Lock<Allocs<'tcx>>>);
 
 #[derive(Default)]
 struct Allocs<'tcx> {

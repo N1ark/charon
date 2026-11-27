@@ -1,8 +1,8 @@
-use rustc_data_structures::sharded::ShardedHashMap;
+use rustc_data_structures::sharded::Sharded;
+use rustc_data_structures::sync::Lock;
 use rustc_hash::FxHashMap;
 use rustc_hir::def_id::DefId;
 use rustc_middle::ty;
-use std::cell::{RefCell, RefMut};
 
 use crate::{
     AssocItemResolution, BoundsOptions, ItemId, ItemPredicates, ItemRef, PredicateSearcher,
@@ -13,20 +13,21 @@ pub mod intern {
     use rustc_arena::TypedArena;
     use rustc_data_structures::intern::Interned;
     use rustc_data_structures::sharded::{IntoPointer, ShardedHashMap};
+    use rustc_data_structures::sync::WorkerLocal;
     use std::borrow::Borrow;
     use std::hash::{Hash, Hasher};
 
     /// Storage for deduplicated values. The values handed out are compared by address.
     pub struct Interner<'tcx, T: Eq + Hash> {
         values: ShardedHashMap<InternedValue<'tcx, T>, ()>,
-        arena: TypedArena<T>,
+        arena: WorkerLocal<TypedArena<T>>,
     }
 
     impl<'tcx, T: Eq + Hash> Default for Interner<'tcx, T> {
         fn default() -> Self {
             Self {
                 values: Default::default(),
-                arena: Default::default(),
+                arena: WorkerLocal::new(|_| Default::default()),
             }
         }
     }
@@ -98,9 +99,10 @@ pub type ItemRefKey<'tcx, Id> = (Id, ty::GenericArgs<'tcx>, AssocItemResolution)
 struct ElaborationData<'tcx, Id: ItemId = DefId> {
     bounds_options: BoundsOptions,
     trait_proofs: intern::Interner<'tcx, TraitProofContents<'tcx, Id>>,
-    predicate_searchers: RefCell<FxHashMap<Id, PredicateSearcher<'tcx, Id>>>,
-    concrete_item_refs: RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
-    concrete_trait_proofs: RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
+    /// The predicate searchers not in use. See `SearcherGuard`.
+    predicate_searchers: Lock<FxHashMap<Id, PredicateSearcher<'tcx, Id>>>,
+    concrete_item_refs: Lock<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>>,
+    concrete_trait_proofs: Lock<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>>,
     required_predicates: PredicateCache<'tcx, Id>,
     required_recursively_predicates: PredicateCache<'tcx, Id>,
     implied_predicates: PredicateCache<'tcx, Id>,
@@ -122,7 +124,7 @@ impl<'tcx, Id: ItemId> Default for ElaborationData<'tcx, Id> {
 }
 
 struct PredicateCache<'tcx, Id: ItemId> {
-    values: ShardedHashMap<Id, ItemPredicates<'tcx, Id>>,
+    values: Sharded<FxHashMap<Id, ItemPredicates<'tcx, Id>>>,
 }
 
 impl<'tcx, Id: ItemId> Default for PredicateCache<'tcx, Id> {
@@ -139,12 +141,13 @@ impl<'tcx, Id: ItemId> PredicateCache<'tcx, Id> {
         def_id: Id,
         compute: impl FnOnce() -> ItemPredicates<'tcx, Id>,
     ) -> ItemPredicates<'tcx, Id> {
-        if let Some(predicates) = self.values.get(&def_id) {
-            return predicates;
+        if let Some(predicates) = self.values.lock_shard_by_value(&def_id).get(&def_id) {
+            return predicates.clone();
         }
+        // We don't hold the lock while computing, see `SearcherGuard`.
         let predicates = compute();
-        self.values.insert_unique(def_id, predicates.clone());
-        predicates
+        let mut values = self.values.lock_shard_by_value(&def_id);
+        values.entry(def_id).or_insert(predicates).clone()
     }
 }
 
@@ -155,6 +158,39 @@ impl<'tcx, Id: ItemId> ElaborationData<'tcx, Id> {
     ) -> TraitProof<'tcx, Id> {
         let interned = self.trait_proofs.intern(contents);
         TraitProof { contents: interned }
+    }
+}
+
+/// The predicate searcher of an item, taken out of the shared ones while we use it: resolving runs
+/// rustc queries, during which we must not hold a lock that other threads may wait for (they
+/// would keep their rustc thread slot, which the queries may need). If another thread is using
+/// it, we make a new one. We put it back when done.
+pub struct SearcherGuard<'tcx, Id: ItemId> {
+    searchers: &'tcx Lock<FxHashMap<Id, PredicateSearcher<'tcx, Id>>>,
+    searcher: Option<PredicateSearcher<'tcx, Id>>,
+    def_id: Id,
+}
+
+impl<'tcx, Id: ItemId> std::ops::Deref for SearcherGuard<'tcx, Id> {
+    type Target = PredicateSearcher<'tcx, Id>;
+    fn deref(&self) -> &Self::Target {
+        self.searcher.as_ref().unwrap()
+    }
+}
+
+impl<'tcx, Id: ItemId> std::ops::DerefMut for SearcherGuard<'tcx, Id> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.searcher.as_mut().unwrap()
+    }
+}
+
+impl<'tcx, Id: ItemId> Drop for SearcherGuard<'tcx, Id> {
+    fn drop(&mut self) {
+        let searcher = self.searcher.take().unwrap();
+        self.searchers
+            .lock()
+            .entry(self.def_id.clone())
+            .or_insert(searcher);
     }
 }
 
@@ -177,13 +213,13 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
 
     pub(crate) fn concrete_item_refs(
         &self,
-    ) -> &'tcx RefCell<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>> {
+    ) -> &'tcx Lock<FxHashMap<ItemRefKey<'tcx, Id>, ItemRef<'tcx, Id>>> {
         &self.data.concrete_item_refs
     }
 
     pub(crate) fn concrete_trait_proofs(
         &self,
-    ) -> &'tcx RefCell<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>> {
+    ) -> &'tcx Lock<FxHashMap<ty::PolyTraitRef<'tcx>, TraitProof<'tcx, Id>>> {
         &self.data.concrete_trait_proofs
     }
 
@@ -198,7 +234,7 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         state: &Id::State<'tcx>,
         def_id: Id,
-    ) -> RefMut<'_, PredicateSearcher<'tcx, Id>> {
+    ) -> SearcherGuard<'tcx, Id> {
         self.predicate_searcher_for_with(def_id.clone(), || {
             PredicateSearcher::new_for_owner(*self, state, def_id)
         })
@@ -208,14 +244,13 @@ impl<'tcx, Id: ItemId> ElaborationCtx<'tcx, Id> {
         &self,
         def_id: Id,
         make: impl FnOnce() -> PredicateSearcher<'tcx, Id>,
-    ) -> RefMut<'_, PredicateSearcher<'tcx, Id>> {
-        let mut predicate_searchers = self.data.predicate_searchers.borrow_mut();
-        predicate_searchers
-            .entry(def_id.clone())
-            .or_insert_with(make);
-        RefMut::map(predicate_searchers, |predicate_searchers| {
-            predicate_searchers.get_mut(&def_id).unwrap()
-        })
+    ) -> SearcherGuard<'tcx, Id> {
+        let searcher = self.data.predicate_searchers.lock().remove(&def_id);
+        SearcherGuard {
+            searchers: &self.data.predicate_searchers,
+            searcher: Some(searcher.unwrap_or_else(make)),
+            def_id,
+        }
     }
 
     pub(crate) fn cached_required_predicates(

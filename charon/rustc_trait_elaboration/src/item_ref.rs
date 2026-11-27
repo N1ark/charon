@@ -241,7 +241,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         }
 
         let concrete = self.has_no_concrete_clauses && !generics.has_non_region_param();
-        if concrete && let Some(entry) = self.elab_ctx.concrete_item_refs().borrow().get(&key) {
+        if concrete && let Some(entry) = self.elab_ctx.concrete_item_refs().lock().get(&key) {
             return entry.clone();
         }
         let item_ref =
@@ -249,7 +249,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         if concrete {
             self.elab_ctx
                 .concrete_item_refs()
-                .borrow_mut()
+                .lock()
                 .insert(key.clone(), item_ref.clone());
         }
         self.item_refs_cache.insert(key, item_ref.clone());

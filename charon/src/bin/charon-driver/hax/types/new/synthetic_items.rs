@@ -205,24 +205,27 @@ impl SyntheticItem {
     }
 
     fn data<'tcx>(&self, s: &impl BaseState<'tcx>) -> SyntheticItemData<'tcx> {
-        if let Some(data) = s.with_global_cache(|c| c.synthetic_item_data.get(self).copied()) {
+        let cache = s.global_cache();
+        if let Some(data) = cache.synthetic_item_data.lock().get(self).copied() {
             return data;
         }
         let borrowed_param_def_ids = GenericParamDefIds::construct(s);
-        s.with_global_cache(|c| c.synthetic_data(s, *self, borrowed_param_def_ids))
+        let data = cache.synthetic_data(s, *self, borrowed_param_def_ids);
+        *cache
+            .synthetic_item_data
+            .lock()
+            .entry(*self)
+            .or_insert(data)
     }
 }
 
 impl<'tcx> GlobalCache<'tcx> {
     fn synthetic_data(
-        &mut self,
+        &self,
         s: &impl BaseState<'tcx>,
         item: SyntheticItem,
         borrowed_param_def_ids: GenericParamDefIds,
     ) -> SyntheticItemData<'tcx> {
-        if let Some(data) = self.synthetic_item_data.get(&item) {
-            return *data;
-        }
         let tcx = s.base().tcx;
         let mut generics = ty::Generics {
             parent: None,
@@ -445,7 +448,7 @@ impl<'tcx> GlobalCache<'tcx> {
         }
 
         let clauses = tcx.arena.alloc_from_iter(clauses);
-        let data = SyntheticItemData {
+        SyntheticItemData {
             generics: Box::leak(Box::new(generics)),
             clauses,
             param_env: ty::ParamEnv::new(
@@ -454,9 +457,7 @@ impl<'tcx> GlobalCache<'tcx> {
             ),
             late_bound_scope: matches!(item, SyntheticItem::FnPtr(_))
                 .then(|| tcx.parent(borrowed_param_def_ids.lt)),
-        };
-        self.synthetic_item_data.insert(item, data);
-        data
+        }
     }
 }
 

@@ -51,26 +51,33 @@ impl<'tcx> ReaderState<'tcx> {
         alloc_id: interpret::AllocId,
         ty: Option<Ty<'tcx>>,
     ) -> (interpret::AllocId, Ty<'tcx>) {
-        let allocs = &mut *self.0.borrow_mut();
-        let key = *allocs.keys.entry(alloc_id).or_insert_with(|| {
-            let interpret::GlobalAlloc::Memory(alloc) = tcx.global_alloc(alloc_id) else {
-                return AllocKey::Unique(alloc_id);
+        // We don't hold the lock while running queries, see `ReaderState`.
+        let key = self.0.lock().keys.get(&alloc_id).copied();
+        let key = key.unwrap_or_else(|| {
+            let key = 'key: {
+                let interpret::GlobalAlloc::Memory(alloc) = tcx.global_alloc(alloc_id) else {
+                    break 'key AllocKey::Unique(alloc_id);
+                };
+                if alloc.inner().mutability.is_mut() {
+                    break 'key AllocKey::Unique(alloc_id);
+                }
+                AllocKey::Deduplicatable(tcx.with_stable_hashing_context(|mut hcx| {
+                    let mut hasher = StableHasher::new();
+                    // this hashes the contents of the allocation
+                    alloc_id.stable_hash(&mut hcx, &mut hasher);
+                    hasher.finish()
+                }))
             };
-            if alloc.inner().mutability.is_mut() {
-                return AllocKey::Unique(alloc_id);
-            }
-            AllocKey::Deduplicatable(tcx.with_stable_hashing_context(|mut hcx| {
-                let mut hasher = StableHasher::new();
-                // this hashes the contents of the allocation
-                alloc_id.stable_hash(&mut hcx, &mut hasher);
-                hasher.finish()
-            }))
+            *self.0.lock().keys.entry(alloc_id).or_insert(key)
         });
-        *allocs.globals.entry(key).or_insert_with(|| {
+        if let Some(global) = self.0.lock().globals.get(&key) {
+            return *global;
+        }
+        let global = 'global: {
             if let Some(ty) = ty
                 && ConstReader::ty_covers_alloca(tcx, alloc_id, ty)
             {
-                return (alloc_id, ty);
+                break 'global (alloc_id, ty);
             }
             let size = GlobalRef::Alloc(alloc_id)
                 .memory(tcx)
@@ -80,13 +87,14 @@ impl<'tcx> ReaderState<'tcx> {
             let bytes = Ty::new_array(tcx, tcx.types.u8, size.bytes());
             // try avoiding `MaybeUninit<[u8; N]>` if `[u8; N]` suffices
             if ConstReader::ty_covers_alloca(tcx, alloc_id, bytes) {
-                return (alloc_id, bytes);
+                break 'global (alloc_id, bytes);
             }
             let maybe_uninit = tcx.require_lang_item(LangItem::MaybeUninit, rustc_span::DUMMY_SP);
             let maybe_uninit =
                 Ty::new_adt(tcx, tcx.adt_def(maybe_uninit), tcx.mk_args(&[bytes.into()]));
             (alloc_id, maybe_uninit)
-        })
+        };
+        *self.0.lock().globals.entry(key).or_insert(global)
     }
 
     /// The type at which we view the allocation `alloc_id`. If no type has been decided,

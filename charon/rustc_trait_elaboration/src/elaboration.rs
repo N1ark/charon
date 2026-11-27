@@ -458,7 +458,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         // Concrete trait refs resolve the same in every owner without concrete clauses.
         let concrete = self.has_no_concrete_clauses && !tref.has_non_region_param();
         if concrete
-            && let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().borrow().get(tref)
+            && let Some(trait_proof) = self.elab_ctx.concrete_trait_proofs().lock().get(tref)
         {
             return *trait_proof;
         }
@@ -466,7 +466,7 @@ impl<'tcx, Id: ItemId> PredicateSearcher<'tcx, Id> {
         if concrete {
             self.elab_ctx
                 .concrete_trait_proofs()
-                .borrow_mut()
+                .lock()
                 .insert(*tref, trait_proof);
         }
         trait_proof

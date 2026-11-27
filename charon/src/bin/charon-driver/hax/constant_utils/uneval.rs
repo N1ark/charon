@@ -120,7 +120,7 @@ fn const_reader<'tcx, S: UnderOwnerState<'tcx>>(s: &S) -> ConstReader<'tcx> {
         tcx: s.base().tcx,
         typing_env: s.typing_env(),
         config: s.base().options.consts,
-        state: s.with_global_cache(|cache| cache.const_reader_state.clone()),
+        state: s.global_cache().const_reader_state.clone(),
     }
 }
 

@@ -1,17 +1,20 @@
 use crate::hax::prelude::*;
 use annotate_snippets::Level;
+use rustc_data_structures::sync::Lock;
 use rustc_middle::ty::{self, TyCtxt};
-use std::cell::RefCell;
+use std::sync::Arc;
 
 mod base {
     use crate::hax::prelude::*;
     use itertools::Itertools;
+    use rustc_data_structures::sharded::Sharded;
+    use rustc_data_structures::sync::Lock;
     use rustc_hash::FxHashMap;
     use rustc_hir::def_id::{CrateNum, LOCAL_CRATE};
     use rustc_middle::ty;
     use rustc_span::symbol::Symbol;
     use rustc_trait_elaboration::{ElaborationCtx, ItemRefKey, intern::Interner};
-    use std::{cell::RefCell, sync::Arc};
+    use std::sync::{Arc, OnceLock};
 
     pub struct LocalContextS {
         pub vars: HashMap<rustc_middle::thir::LocalVarId, String>,
@@ -31,28 +34,30 @@ mod base {
         }
     }
 
-    /// Global caches
+    /// Global caches. Several threads may use them at once: we must not hold their locks while we
+    /// run rustc queries, since a thread waiting for a lock keeps its rustc thread slot, which the
+    /// query may need.
     #[derive(Default)]
     pub struct GlobalCache<'tcx> {
         /// Per-item cache.
-        pub per_item: HashMap<DefId, Rc<RefCell<ItemCache<'tcx>>>>,
+        pub per_item: Sharded<HashMap<DefId, Arc<Lock<ItemCache<'tcx>>>>>,
         /// Map rustc def ids to their hax counterpart.
-        pub def_ids: HashMap<RDefId, DefId>,
+        pub def_ids: Sharded<HashMap<RDefId, DefId>>,
         /// Data for synthetic items. See the `synthetic_items` module.
-        pub synthetic_item_data: HashMap<SyntheticItem, SyntheticItemData<'tcx>>,
+        pub synthetic_item_data: Lock<HashMap<SyntheticItem, SyntheticItemData<'tcx>>>,
         /// Anonymous allocations we turned into globals, in encounter order. Used to keep
         /// the order of globals stable across runs.
-        pub anon_allocs: indexmap::IndexSet<RAllocId, rustc_hash::FxBuildHasher>,
+        pub anon_allocs: Lock<indexmap::IndexSet<RAllocId, rustc_hash::FxBuildHasher>>,
         /// The state shared by the constant readers.
         pub const_reader_state: rustc_const_uneval::ReaderState<'tcx>,
         /// Cached names and disambiguators for crate names.
-        pub disambiguated_crate_names: Option<FxHashMap<CrateNum, (Symbol, u32)>>,
+        pub disambiguated_crate_names: OnceLock<FxHashMap<CrateNum, (Symbol, u32)>>,
     }
 
     impl<'tcx> GlobalCache<'tcx> {
-        pub fn crate_name(&mut self, tcx: ty::TyCtxt<'tcx>, krate: CrateNum) -> (Symbol, u32) {
+        pub fn crate_name(&self, tcx: ty::TyCtxt<'tcx>, krate: CrateNum) -> (Symbol, u32) {
             self.disambiguated_crate_names
-                .get_or_insert_with(|| {
+                .get_or_compute(|| {
                     std::iter::once(LOCAL_CRATE)
                         .chain(tcx.crates(()).iter().copied())
                         .into_group_map_by(|&cnum| tcx.crate_name(cnum))
@@ -116,10 +121,10 @@ mod base {
         pub ty_interner: &'tcx Interner<'tcx, TyKind<'tcx>>,
         pub trait_proof_interner: &'tcx Interner<'tcx, TraitProofContents<'tcx>>,
         pub item_ref_interner: &'tcx Interner<'tcx, ItemRefContents<'tcx>>,
-        pub options: Rc<crate::hax::options::Options>,
-        pub local_ctx: Rc<RefCell<LocalContextS>>,
+        pub options: Arc<crate::hax::options::Options>,
+        pub local_ctx: Arc<Lock<LocalContextS>>,
         pub opt_def_id: Option<rustc_hir::def_id::DefId>,
-        pub cache: Rc<RefCell<GlobalCache<'tcx>>>,
+        pub cache: Arc<GlobalCache<'tcx>>,
         pub elab_ctx: crate::hax::traits::ElaborationCtx<'tcx, DefId>,
         pub tcx: ty::TyCtxt<'tcx>,
     }
@@ -136,11 +141,11 @@ mod base {
                 trait_proof_interner: Box::leak(Box::default()),
                 item_ref_interner: Box::leak(Box::default()),
                 cache: Default::default(),
-                options: Rc::new(options),
+                options: Arc::new(options),
                 // Always prefer `s.owner_id()` to `s.base().opt_def_id`.
                 // `opt_def_id` is used in `utils` for error reporting
                 opt_def_id: None,
-                local_ctx: Rc::new(RefCell::new(LocalContextS::new())),
+                local_ctx: Arc::new(Lock::new(LocalContextS::new())),
                 elab_ctx: ElaborationCtx::new(tcx, bounds_options),
             }
         }
@@ -148,6 +153,23 @@ mod base {
 }
 
 pub use self::base::*;
+
+/// Lazy initialization that doesn't make other threads wait: they may compute the value too, and
+/// the first one stored wins. A thread waiting for another one to run rustc queries would keep its
+/// rustc thread slot, which these queries may need.
+pub trait GetOrCompute<T> {
+    fn get_or_compute(&self, f: impl FnOnce() -> T) -> &T;
+}
+
+impl<T> GetOrCompute<T> for std::sync::OnceLock<T> {
+    fn get_or_compute(&self, f: impl FnOnce() -> T) -> &T {
+        if let Some(value) = self.get() {
+            return value;
+        }
+        let _ = self.set(f());
+        self.get().unwrap()
+    }
+}
 
 pub trait BaseState<'tcx>: Sized {
     fn base(&self) -> &Base<'tcx>;
@@ -194,27 +216,24 @@ pub trait BaseState<'tcx>: Sized {
         }
     }
 
-    /// Access the global cache. You must not call `sinto` within this function as this will likely
-    /// result in `BorrowMut` panics.
-    fn with_global_cache<T>(&self, f: impl FnOnce(&mut GlobalCache<'tcx>) -> T) -> T {
-        let base = self.base();
-        let mut cache = base.cache.borrow_mut();
-        f(&mut cache)
+    fn global_cache(&self) -> &GlobalCache<'tcx> {
+        &self.base().cache
     }
     /// The cache for a given item.
-    fn item_cache(&self, def_id: &DefId) -> Rc<RefCell<ItemCache<'tcx>>> {
-        self.with_global_cache(|cache| cache.per_item.entry(def_id.clone()).or_default().clone())
+    fn item_cache(&self, def_id: &DefId) -> Arc<Lock<ItemCache<'tcx>>> {
+        let mut per_item = self.global_cache().per_item.lock_shard_by_value(def_id);
+        per_item.entry(def_id.clone()).or_default().clone()
     }
-    /// Access the cache for a given item. You must not call `sinto` within this function as this
-    /// will likely result in `BorrowMut` panics.
+    /// Access the cache for a given item. This locks the cache: you must not call `sinto` or run
+    /// rustc queries within this function.
     fn with_item_cache<T>(&self, def_id: &DefId, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        f(&mut self.item_cache(def_id).borrow_mut())
+        f(&mut self.item_cache(def_id).lock())
     }
 }
 
 pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
     fn owner(&self) -> DefId;
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>>;
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>>;
 
     fn param_env(&self) -> ty::ParamEnv<'tcx> {
         self.owner().param_env(self)
@@ -233,10 +252,10 @@ pub trait UnderOwnerState<'tcx>: BaseState<'tcx> {
         }
     }
 
-    /// Access the cache for the current item. You must not call `sinto` within this function as
-    /// this will likely result in `BorrowMut` panics.
+    /// Access the cache for the current item. This locks the cache: you must not call `sinto` or
+    /// run rustc queries within this function.
     fn with_cache<T>(&self, f: impl FnOnce(&mut ItemCache<'tcx>) -> T) -> T {
-        f(&mut self.owner_cache().borrow_mut())
+        f(&mut self.owner_cache().lock())
     }
     fn with_predicate_searcher<T>(
         &self,
@@ -262,7 +281,7 @@ pub struct State<'tcx, Owner> {
 #[derive(Clone)]
 pub struct Owner<'tcx> {
     def_id: DefId,
-    cache: Rc<RefCell<ItemCache<'tcx>>>,
+    cache: Arc<Lock<ItemCache<'tcx>>>,
 }
 
 pub type StateWithBase<'tcx> = State<'tcx, ()>;
@@ -289,7 +308,7 @@ impl<'tcx> UnderOwnerState<'tcx> for StateWithOwner<'tcx> {
     fn owner(&self) -> DefId {
         self.owner.def_id.clone()
     }
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
         &self.owner.cache
     }
 }
@@ -303,7 +322,7 @@ impl<'tcx, A: UnderOwnerState<'tcx>, B> UnderOwnerState<'tcx> for (A, B) {
     fn owner(&self) -> DefId {
         self.0.owner()
     }
-    fn owner_cache(&self) -> &Rc<RefCell<ItemCache<'tcx>>> {
+    fn owner_cache(&self) -> &Arc<Lock<ItemCache<'tcx>>> {
         self.0.owner_cache()
     }
 }
