@@ -1452,6 +1452,7 @@ pub fn translate<'tcx>(
         lt_mutability_computer: Default::default(),
         monomorphic_layouts: Default::default(),
         intrinsic_def_ids: Default::default(),
+        translated_vtables: Default::default(),
     };
     ctx.register_target_info();
     ctx.reserve_unit_decl();
@@ -1606,6 +1607,7 @@ pub fn translate<'tcx>(
         ctx.translate_item(&item_src);
     }
     ctx.merge_translated();
+    ctx.settle_vtables();
 
     // Save all the monomorphic layouts we encountered during translation.
     let target = ctx.get_target_triple();

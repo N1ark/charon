@@ -135,6 +135,8 @@ pub struct TranslateCtx<'tcx> {
     pub monomorphic_layouts: SeqHashMap<TypeDeclRef, Layout>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, RDefId>,
+    /// The vtables we translated, with the impl they are for, see `settle_vtables`.
+    pub translated_vtables: Vec<(TraitImplId, GlobalDeclRef)>,
 }
 
 /// The state shared by the translation threads: what identifies items, and the queue of items to

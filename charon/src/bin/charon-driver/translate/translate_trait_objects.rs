@@ -827,7 +827,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
     ) -> Result<GlobalDecl, Error> {
         let span = item_meta.span;
 
-        // Update the impl, in case it's vtable was lazy.
+        // The impl refers to this vtable if its vtable was lazy, see `settle_vtables`.
         if impl_kind != TransImplSource::Marker {
             let impl_id: TraitImplId = self.register_item_maybe_enqueue(
                 span,
@@ -839,11 +839,7 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
                 id: global_id,
                 generics: Box::new(self.outermost_generics().identity_args()),
             };
-            if let Some(timpl) = self.t_ctx.translated.trait_impls.get_mut(impl_id)
-                && timpl.vtable.is_lazy()
-            {
-                timpl.vtable = VTableDecl::VTable(vtable_ref);
-            }
+            self.t_ctx.translated_vtables.push((impl_id, vtable_ref));
         }
 
         let (src, vtable_struct_ref) = self.get_vtable_instance_info(span, impl_def, impl_kind)?;
@@ -1438,5 +1434,35 @@ impl<'tcx> ItemTransCtx<'tcx, '_> {
             src: FunSource::VTableShim,
             body,
         })
+    }
+}
+
+impl<'tcx> TranslateCtx<'tcx> {
+    /// An impl whose vtable we hadn't translated when we translated the impl refers to the vtable
+    /// we translated for it, if any. In mono mode a vtable can have several item sources: we pick
+    /// the least by its printed form.
+    pub(crate) fn settle_vtables(&mut self) {
+        let krate = &self.translated;
+        let fmt = &krate.into_fmt();
+        let mut vtables: rustc_hash::FxHashMap<TraitImplId, GlobalDeclRef> = Default::default();
+        for (impl_id, vtable) in mem::take(&mut self.translated_vtables) {
+            if krate.global_decls.get(vtable.id).is_none() {
+                continue;
+            }
+            match vtables.get(&impl_id) {
+                Some(other)
+                    if other.with_ctx(fmt).to_string() <= vtable.with_ctx(fmt).to_string() => {}
+                _ => {
+                    vtables.insert(impl_id, vtable);
+                }
+            }
+        }
+        for (impl_id, vtable) in vtables {
+            if let Some(timpl) = self.translated.trait_impls.get_mut(impl_id)
+                && timpl.vtable.is_lazy()
+            {
+                timpl.vtable = VTableDecl::VTable(vtable);
+            }
+        }
     }
 }
