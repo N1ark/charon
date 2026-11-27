@@ -212,7 +212,7 @@ impl<'tcx> TranslateCtx<'tcx> {
     }
 
     fn translate_borrow_kind(
-        &self,
+        &mut self,
         span: Span,
         borrow_kind: mir::BorrowKind,
     ) -> Result<BorrowKind, Error> {

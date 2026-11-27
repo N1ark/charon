@@ -9,6 +9,8 @@ use charon_lib::formatter::{FmtCtx, IntoFormatter};
 use charon_lib::ids::IndexVec;
 use charon_lib::options::TranslateOptions;
 use petgraph::graphmap::DiGraphMap;
+use rustc_data_structures::sharded::Sharded;
+use rustc_data_structures::sync::Lock;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::DefId as RDefId;
@@ -18,7 +20,7 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::{fmt, mem};
 
 // Re-export to avoid having to fix imports.
@@ -93,7 +95,8 @@ impl From<ItemId> for ContainmentNode {
     }
 }
 
-/// Translation context used while translating the crate data into our representation.
+/// Translation context used while translating the crate data into our representation. Each
+/// translation thread has its own, see `SharedCtx`.
 pub struct TranslateCtx<'tcx> {
     /// The Rust compiler type context
     pub tcx: TyCtxt<'tcx>,
@@ -104,40 +107,17 @@ pub struct TranslateCtx<'tcx> {
 
     /// The options that control translation.
     pub options: TranslateOptions,
-    /// The translated data.
+    /// The items this thread translated, and the names of the items it knows of.
     pub translated: TranslatedCrate,
-
-    /// Record data for each method whether it is ever used (called or implemented) and the
-    /// `FunDeclId`s of the implementations. We use this to lazily translate methods, so that we
-    /// skip unused default methods of large traits like `Iterator`.
-    ///
-    /// The complete scheme works as follows: by default we enqueue no methods for translation.
-    /// When we find a use of a method, we mark it "used" using `mark_method_as_used`. This
-    /// enqueues all known and future impls of this method. We also mark a method as used if we
-    /// find an implementation of it in a non-opaque impl, and if the method is a required method.
-    pub method_status: IndexMap<TraitDeclId, IndexVec<TraitMethodId, MethodStatus>>,
-
-    /// The map from rustc id to translated id.
-    pub id_map: HashMap<TransItemSource<'tcx>, ItemId>,
-    /// The reverse map of ids.
-    pub reverse_id_map: HashMap<ItemId, TransItemSource<'tcx>>,
-    /// Map from rustc id to associated item id
-    pub assoc_item_id_map: HashMap<hax::DefId, AssocItemId>,
-    /// The reverse filename map.
-    pub file_to_id: HashMap<FileName, FileId>,
+    /// The state the translation threads share.
+    pub shared: Arc<SharedCtx<'tcx>>,
 
     /// Context for tracking and reporting errors.
     pub errors: RefCell<ErrorCtx>,
-    /// The declarations we came accross and which we haven't translated yet.
-    pub items_to_translate: VecDeque<TransItemSource<'tcx>>,
-    /// The declaration we've already processed (successfully or not).
-    pub processed: HashSet<TransItemSource<'tcx>>,
-    /// While translating, record which item is "contained" by another, in the sense that
-    /// `--start-from` the parent should make the child be considered started from too. We use this
-    /// to compute `ItemMeta.started_from` at the end of translation.
-    pub containment_graph: DiGraphMap<ContainmentNode, (), rustc_hash::FxBuildHasher>,
     /// Stack of the translations currently happening. Used to avoid accidental cycles.
     pub translate_stack: Vec<ItemOrModuleId>,
+    /// The items whose names we are computing, see `register_no_enqueue`.
+    pub naming: Vec<ItemId>,
     /// Cache of the translated spans, as translating one is costly.
     pub cached_spans: HashMap<rustc_span::Span, Span>,
     /// Cache of the translated span datas.
@@ -146,9 +126,6 @@ pub struct TranslateCtx<'tcx> {
     pub cached_file_ids: HashMap<rustc_span::StableSourceFileId, FileId>,
     /// Cache the names to compute them only once each.
     pub cached_names: HashMap<RustcItem<'tcx>, Name>,
-    /// The functions that extern functions can link to, by symbol.
-    /// Computed lazily by `exported_fns`.
-    pub exported_fns: Option<HashMap<String, ExportedFns<'tcx>>>,
     /// For each foreign crate we've looked at, the set of its items that are nameable from outside
     /// it. Computed lazily by `is_exported`.
     pub exported_foreign_items: HashMap<rustc_span::def_id::CrateNum, HashSet<RDefId>>,
@@ -158,6 +135,45 @@ pub struct TranslateCtx<'tcx> {
     pub monomorphic_layouts: SeqHashMap<TypeDeclRef, Layout>,
     /// The `DefId`s of the intrinsics we resolved by name.
     pub intrinsic_def_ids: HashMap<rustc_span::Symbol, RDefId>,
+}
+
+/// The state shared by the translation threads: what identifies items, and the queue of items to
+/// translate. We don't hold its locks while running rustc queries, see `hax::GlobalCache`.
+pub struct SharedCtx<'tcx> {
+    /// The crate we translate into. Until translation is done, it only has the names of the
+    /// items, their files, and the slots of their ids; the items are in the crate of the thread
+    /// that translated them.
+    pub krate: Lock<TranslatedCrate>,
+    /// Record data for each method whether it is ever used (called or implemented) and the
+    /// `FunDeclId`s of the implementations. We use this to lazily translate methods, so that we
+    /// skip unused default methods of large traits like `Iterator`.
+    ///
+    /// The complete scheme works as follows: by default we enqueue no methods for translation.
+    /// When we find a use of a method, we mark it "used" using `mark_method_as_used`. This
+    /// enqueues all known and future impls of this method. We also mark a method as used if we
+    /// find an implementation of it in a non-opaque impl, and if the method is a required method.
+    pub method_status: Lock<IndexMap<TraitDeclId, IndexVec<TraitMethodId, MethodStatus>>>,
+    /// The map from rustc id to translated id.
+    pub id_map: Sharded<HashMap<TransItemSource<'tcx>, ItemId>>,
+    /// The reverse map of ids.
+    pub reverse_id_map: Lock<HashMap<ItemId, TransItemSource<'tcx>>>,
+    /// Map from rustc id to associated item id
+    pub assoc_item_id_map: Lock<HashMap<hax::DefId, AssocItemId>>,
+    /// The reverse filename map.
+    pub file_to_id: Lock<HashMap<FileName, FileId>>,
+    /// The declarations we came accross and which we haven't translated yet, and the ones we've
+    /// already processed (successfully or not).
+    pub queue: Lock<(
+        VecDeque<TransItemSource<'tcx>>,
+        HashSet<TransItemSource<'tcx>>,
+    )>,
+    /// While translating, record which item is "contained" by another, in the sense that
+    /// `--start-from` the parent should make the child be considered started from too. We use this
+    /// to compute `ItemMeta.started_from` at the end of translation.
+    pub containment_graph: Lock<DiGraphMap<ContainmentNode, (), rustc_hash::FxBuildHasher>>,
+    /// The functions that extern functions can link to, by symbol.
+    /// Computed lazily by `exported_fns`.
+    pub exported_fns: OnceLock<HashMap<String, ExportedFns<'tcx>>>,
 }
 
 /// The functions exported under a given symbol.
@@ -244,35 +260,21 @@ pub(crate) struct ItemTransCtx<'tcx, 'ctx> {
     pub recording_mono_layouts: bool,
 }
 
-/// Translates `T` into `U` using `hax`'s `SInto` trait, catching any hax panics.
-pub fn catch_sinto<S, T, U>(
-    s: &S,
-    err: &mut ErrorCtx,
-    krate: &TranslatedCrate,
-    span: Span,
-    x: &T,
-) -> Result<U, Error>
-where
-    T: Debug + SInto<S, U>,
-{
-    let unwind_safe_s = std::panic::AssertUnwindSafe(s);
-    let unwind_safe_x = std::panic::AssertUnwindSafe(x);
-    std::panic::catch_unwind(move || unwind_safe_x.sinto(*unwind_safe_s)).or_else(|_| {
-        raise_error!(
-            err,
-            crate(krate),
-            span,
-            "Hax panicked when translating `{x:?}`."
-        )
-    })
-}
-
 impl<'tcx> TranslateCtx<'tcx> {
     /// Span an error and register the error.
-    pub fn span_err(&self, span: Span, msg: &str, level: Level) -> Error {
+    pub fn span_err(&mut self, span: Span, msg: &str, level: Level) -> Error {
+        self.copy_files();
         self.errors
             .borrow_mut()
             .span_err(&self.translated, span, msg, level)
+    }
+
+    /// Copy the files of the shared crate that our crate is missing, to render errors.
+    fn copy_files(&mut self) {
+        let krate = self.shared.krate.lock();
+        let files = &mut self.translated.files;
+        let known = files.len();
+        files.extend(krate.files.iter().skip(known).cloned());
     }
 
     pub fn get_target_triple(&self) -> TargetTriple {
@@ -284,7 +286,10 @@ impl<'tcx> TranslateCtx<'tcx> {
     where
         T: Debug + SInto<S, U>,
     {
-        catch_sinto(s, &mut self.errors.borrow_mut(), &self.translated, span, x)
+        let unwind_safe_s = std::panic::AssertUnwindSafe(s);
+        let unwind_safe_x = std::panic::AssertUnwindSafe(x);
+        std::panic::catch_unwind(move || unwind_safe_x.sinto(*unwind_safe_s))
+            .or_else(|_| raise_error!(self, span, "Hax panicked when translating `{x:?}`."))
     }
 
     /// Return the polymorphic definition for this item. Use with care, prefer `hax_def` whenever
@@ -390,7 +395,7 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
         self.options.monomorphize_with_hax && (kind.is_for_trait() || !item.has_non_lt_param)
     }
 
-    pub fn span_err(&self, span: Span, msg: &str, level: Level) -> Error {
+    pub fn span_err(&mut self, span: Span, msg: &str, level: Level) -> Error {
         self.t_ctx.span_err(span, msg, level)
     }
 

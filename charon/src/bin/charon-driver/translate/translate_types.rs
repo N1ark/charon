@@ -1108,7 +1108,11 @@ impl<'tcx, 'ctx> ItemTransCtx<'tcx, 'ctx> {
     }
 
     /// Generate a naive layout for this type.
-    pub fn generate_naive_layout(&self, span: Span, ty: &TypeDeclKind) -> Result<Layout, Error> {
+    pub fn generate_naive_layout(
+        &mut self,
+        span: Span,
+        ty: &TypeDeclKind,
+    ) -> Result<Layout, Error> {
         match ty {
             TypeDeclKind::Struct(fields) => {
                 let mut size = 0;

@@ -22,19 +22,22 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// `span` must be a span from which we obtained that filename.
     fn register_file(&mut self, filename: FileName, span: rustc_span::Span) -> FileId {
         // Lookup the file if it was already registered
-        match self.file_to_id.get(&filename) {
-            Some(id) => *id,
+        let id = self.shared.file_to_id.lock().get(&filename).copied();
+        match id {
+            Some(id) => id,
             None => {
                 let source_file = self.tcx.sess.source_map().lookup_source_file(span.lo());
                 let crate_name = self.tcx.crate_name(source_file.cnum).to_string();
-                let id = self.translated.files.push_with(|id| File {
-                    id,
-                    name: filename.clone(),
-                    crate_name,
-                    contents: source_file.src.as_deref().cloned(),
-                });
-                self.file_to_id.insert(filename, id);
-                id
+                // Another thread may have registered it meanwhile.
+                let mut file_to_id = self.shared.file_to_id.lock();
+                *file_to_id.entry(filename.clone()).or_insert_with(|| {
+                    self.shared.krate.lock().files.push_with(|id| File {
+                        id,
+                        name: filename,
+                        crate_name,
+                        contents: source_file.src.as_deref().cloned(),
+                    })
+                })
             }
         }
     }

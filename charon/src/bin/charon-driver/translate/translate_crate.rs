@@ -16,16 +16,18 @@
 //! signature) but not its contents.
 use itertools::Itertools;
 use petgraph::visit::{Dfs, Walker};
+use rustc_data_structures::sync::Lock;
 use rustc_hash::{FxHashMap, FxHashSet as HashSet};
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_span::{def_id::DefId, sym};
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::translate_ctx::*;
 use crate::hax;
-use crate::hax::{BaseState, SInto};
+use crate::hax::{BaseState, GetOrCompute, SInto};
 use charon_lib::ast::*;
 use charon_lib::name_matcher::NamePattern;
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
@@ -276,7 +278,7 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// Resolve a path to a list of matching `DefId`s.
     pub fn resolve_path(
-        &self,
+        &mut self,
         span: Span,
         pat: &NamePattern,
         strict: bool,
@@ -288,7 +290,7 @@ impl<'tcx> TranslateCtx<'tcx> {
 
     /// Resolve a path that is expected to name exactly one item.
     pub fn resolve_single_path(
-        &self,
+        &mut self,
         span: Span,
         pat: &NamePattern,
     ) -> Result<rustc_span::def_id::DefId, Error> {
@@ -440,7 +442,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         use rustc_middle::middle::exported_symbols::ExportedSymbol;
         use rustc_symbol_mangling::mangle_internal_symbol;
         let tcx = self.tcx;
-        let exported_fns = self.exported_fns.get_or_insert_with(|| {
+        let exported_fns = self.shared.exported_fns.get_or_compute(|| {
             let local = tcx
                 .hir_crate_items(())
                 .definitions()
@@ -543,7 +545,9 @@ impl<'tcx> TranslateCtx<'tcx> {
         parent: impl Into<ContainmentNode>,
         child: impl Into<ContainmentNode>,
     ) {
-        self.containment_graph
+        self.shared
+            .containment_graph
+            .lock()
             .add_edge(parent.into(), child.into(), ());
     }
 
@@ -551,9 +555,11 @@ impl<'tcx> TranslateCtx<'tcx> {
     /// targeted by `--start-from`, which then affects which items are used to compute used
     /// declarations.
     fn compute_started_from(&mut self) {
-        let reachable: HashSet<_> = Dfs::new(&self.containment_graph, ContainmentNode::Start)
-            .iter(&self.containment_graph)
+        let graph = self.shared.containment_graph.lock();
+        let reachable: HashSet<_> = Dfs::new(&*graph, ContainmentNode::Start)
+            .iter(&*graph)
             .collect();
+        drop(graph);
         for node in &reachable {
             if let ContainmentNode::Item(ItemOrModuleId::Item(id)) = node
                 && let Some(mut item) = self.translated.get_item_mut(*id)
@@ -580,39 +586,93 @@ impl<'tcx> TranslateCtx<'tcx> {
         dep_src: &Option<DepSource>,
         src: &TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
-        let item_id = match self.id_map.get(src) {
-            Some(tid) => *tid,
-            None => {
-                use TransItemSourceKind::*;
-                let trans_id = match src.kind {
-                    Type | VTable => ItemId::Type(self.translated.type_decls.reserve_slot()),
-                    TraitDecl => ItemId::TraitDecl(self.translated.trait_decls.reserve_slot()),
-                    TraitImpl(..) => ItemId::TraitImpl(self.translated.trait_impls.reserve_slot()),
-                    Global | VTableInstance(..) => {
-                        ItemId::Global(self.translated.global_decls.reserve_slot())
-                    }
-                    Fun | ClosureAsFnCast | VirtualMethod(..) | VTableMethod(..)
-                    | VTableDropShim(..) | IntrinsicFallback => {
-                        ItemId::Fun(self.translated.fun_decls.reserve_slot())
-                    }
-                    InherentImpl | Module => {
-                        return ItemOrModuleId::Module(src.def_id().real_rust_def_id());
-                    }
-                };
-                // Add the id to the queue of declarations to translate
-                self.id_map.insert(src.clone(), trans_id);
-                self.reverse_id_map.insert(trans_id, src.clone());
-                // Store the name early so the name matcher can identify paths.
-                if let Ok(name) = self.translate_name(src) {
-                    self.translated.item_names.insert(trans_id, name);
+        let item_id = {
+            let mut id_map = self.shared.id_map.lock_shard_by_value(src);
+            match id_map.get(src) {
+                Some(tid) => *tid,
+                None => {
+                    use TransItemSourceKind::*;
+                    let mut krate = self.shared.krate.lock();
+                    let trans_id = match src.kind {
+                        Type | VTable => ItemId::Type(krate.type_decls.reserve_slot()),
+                        TraitDecl => ItemId::TraitDecl(krate.trait_decls.reserve_slot()),
+                        TraitImpl(..) => ItemId::TraitImpl(krate.trait_impls.reserve_slot()),
+                        Global | VTableInstance(..) => {
+                            ItemId::Global(krate.global_decls.reserve_slot())
+                        }
+                        Fun | ClosureAsFnCast | VirtualMethod(..) | VTableMethod(..)
+                        | VTableDropShim(..) | IntrinsicFallback => {
+                            ItemId::Fun(krate.fun_decls.reserve_slot())
+                        }
+                        InherentImpl | Module => {
+                            return ItemOrModuleId::Module(src.def_id().real_rust_def_id());
+                        }
+                    };
+                    // Before other threads can find the id.
+                    self.shared
+                        .reverse_id_map
+                        .lock()
+                        .insert(trans_id, src.clone());
+                    id_map.insert(src.clone(), trans_id);
+                    trans_id
                 }
-                trans_id
             }
         };
+        // Store the name early so the name matcher can identify paths. Computing it may register
+        // this item again. If another thread registered the item and hasn't stored its name yet,
+        // we compute it too.
+        let name = if self.translated.item_names.contains_key(&item_id)
+            || self.naming.contains(&item_id)
+        {
+            None
+        } else {
+            let shared_name = self.shared.krate.lock().item_names.get(&item_id).cloned();
+            shared_name.or_else(|| {
+                self.naming.push(item_id);
+                let name = self.translate_name(src).ok();
+                self.naming.pop();
+                name
+            })
+        };
+        if let Some(name) = name {
+            self.shared
+                .krate
+                .lock()
+                .item_names
+                .entry(item_id)
+                .or_insert_with(|| name.clone());
+            self.translated.item_names.insert(item_id, name);
+        }
         self.errors
             .borrow_mut()
             .register_dep_source(dep_src, item_id, src.def_id().is_local());
         ItemOrModuleId::Item(item_id)
+    }
+
+    /// Pop the next item to translate, if any.
+    pub(crate) fn pop_item(&self) -> Option<TransItemSource<'tcx>> {
+        let (queue, processed) = &mut *self.shared.queue.lock();
+        while let Some(item_src) = queue.pop_front() {
+            if processed.insert(item_src.clone()) {
+                return Some(item_src);
+            }
+        }
+        None
+    }
+
+    /// Move the items we translated into the shared crate, which becomes ours.
+    fn merge_translated(&mut self) {
+        let mut krate = std::mem::take(&mut *self.shared.krate.lock());
+        let mut translated = std::mem::take(&mut self.translated);
+        for id in translated.all_ids() {
+            if let Some(item) = translated.remove_item_temporarily(id) {
+                krate.put_item_back(id, item);
+            }
+        }
+        krate.target_information = translated.target_information;
+        krate.assoc_item_names = translated.assoc_item_names;
+        krate.excluded_trait_impls = translated.excluded_trait_impls;
+        self.translated = krate;
     }
 
     /// Register this item source and enqueue it for translation.
@@ -622,7 +682,7 @@ impl<'tcx> TranslateCtx<'tcx> {
         item_src: TransItemSource<'tcx>,
     ) -> ItemOrModuleId {
         let id = self.register_no_enqueue(dep_src, &item_src);
-        self.items_to_translate.push_back(item_src);
+        self.shared.queue.lock().0.push_back(item_src);
         id
     }
 
@@ -630,8 +690,8 @@ impl<'tcx> TranslateCtx<'tcx> {
     pub(crate) fn enqueue_id(&mut self, id: impl Into<ItemId>) {
         let id = id.into();
         if self.translated.get_item(id).is_none() {
-            let item_src = self.reverse_id_map[&id].clone();
-            self.items_to_translate.push_back(item_src);
+            let item_src = self.shared.reverse_id_map.lock()[&id].clone();
+            self.shared.queue.lock().0.push_back(item_src);
         }
     }
 
@@ -641,18 +701,21 @@ impl<'tcx> TranslateCtx<'tcx> {
         trait_def_id: &hax::DefId,
         trait_id: TraitDeclId,
     ) -> Result<(), Error> {
-        if self.method_status.get(trait_id).is_some() {
+        if self.translated.assoc_item_names.get(trait_id).is_some() {
             return Ok(());
         }
         let trait_def = self.poly_hax_def(trait_def_id)?;
         let hax::FullDefKind::Trait(t) = trait_def.kind() else {
             unreachable!()
         };
+        // Each thread computes the names; the shared maps keep the first ones, which are the same.
         let names = self
             .translated
             .assoc_item_names
             .get_or_insert_with(trait_id, Default::default);
-        for item in t.items(&self.hax_state) {
+        let items = t.items(&self.hax_state);
+        let mut assoc_item_id_map = self.shared.assoc_item_id_map.lock();
+        for item in items {
             let name = TraitItemName(
                 item.name
                     .as_ref()
@@ -664,16 +727,20 @@ impl<'tcx> TranslateCtx<'tcx> {
                 hax::AssocKind::Fn { .. } => names.methods.push(name).into(),
                 hax::AssocKind::Const { .. } => names.consts.push(name).into(),
             };
-            self.assoc_item_id_map.insert(item.def_id.clone(), id);
+            assoc_item_id_map.insert(item.def_id.clone(), id);
         }
+        drop(assoc_item_id_map);
         // Add a virtual method to the `Destruct` trait.
         if trait_def.lang_item == Some(sym::destruct) {
             let method_name = TraitItemName("drop_glue".into());
             names.methods.push(method_name);
         }
-        self.method_status.get_or_insert_with(trait_id, || {
-            names.methods.map_ref(|_| MethodStatus::default())
-        });
+        self.shared
+            .method_status
+            .lock()
+            .get_or_insert_with(trait_id, || {
+                names.methods.map_ref(|_| MethodStatus::default())
+            });
         Ok(())
     }
 
@@ -687,8 +754,14 @@ impl<'tcx> TranslateCtx<'tcx> {
         // The same assoc item `DefId` could belong to several `TraitDeclId`s because of
         // monomorphization, so we only return the item id if we know this trait's data is
         // initialized.
-        if let Some(&item_id) = self.assoc_item_id_map.get(item_def_id)
-            && self.method_status.get(trait_id).is_some()
+        let known = self
+            .shared
+            .assoc_item_id_map
+            .lock()
+            .get(item_def_id)
+            .copied();
+        if let Some(item_id) = known
+            && self.translated.assoc_item_names.get(trait_id).is_some()
         {
             return Ok(item_id);
         }
@@ -702,17 +775,31 @@ impl<'tcx> TranslateCtx<'tcx> {
         };
         let decl_def_id = assoc.implemented_trait_item_id();
 
+        let known = self
+            .shared
+            .assoc_item_id_map
+            .lock()
+            .get(decl_def_id)
+            .copied();
         if decl_def_id != item_def_id
-            && let Some(&item_id) = self.assoc_item_id_map.get(decl_def_id)
-            && self.method_status.get(trait_id).is_some()
+            && let Some(item_id) = known
+            && self.translated.assoc_item_names.get(trait_id).is_some()
         {
-            self.assoc_item_id_map.insert(item_def_id.clone(), item_id);
+            self.shared
+                .assoc_item_id_map
+                .lock()
+                .insert(item_def_id.clone(), item_id);
             return Ok(item_id);
         }
 
         let trait_def_id = decl_def_id.parent(&self.hax_state).unwrap();
         self.register_assoc_items(&trait_def_id, trait_id)?;
-        let item_id = *self.assoc_item_id_map.get(decl_def_id).unwrap();
+        let item_id = *self
+            .shared
+            .assoc_item_id_map
+            .lock()
+            .get(decl_def_id)
+            .unwrap();
         Ok(item_id)
     }
 
@@ -1326,36 +1413,41 @@ pub fn translate<'tcx>(
     let crate_name = crate_def_id.crate_name(&hax_state).to_string();
     trace!("# Crate: {}", crate_name);
 
+    let krate = TranslatedCrate {
+        crate_name,
+        preset: cli_options.preset,
+        runtime_checks: RuntimeChecks {
+            ub_checks: tcx.sess.ub_checks(),
+            overflow_checks: tcx.sess.overflow_checks(),
+            contract_checks: tcx.sess.contract_checks(),
+        },
+        ..TranslatedCrate::default()
+    };
+    let shared = SharedCtx {
+        krate: Lock::new(krate.clone()),
+        method_status: Default::default(),
+        id_map: Default::default(),
+        reverse_id_map: Default::default(),
+        assoc_item_id_map: Default::default(),
+        file_to_id: Default::default(),
+        queue: Default::default(),
+        containment_graph: Default::default(),
+        exported_fns: Default::default(),
+    };
     let mut ctx = TranslateCtx {
         tcx,
         sysroot,
         hax_state,
         options: translate_options,
+        translated: krate,
+        shared: Arc::new(shared),
         errors: RefCell::new(error_ctx),
-        translated: TranslatedCrate {
-            crate_name,
-            preset: cli_options.preset,
-            runtime_checks: RuntimeChecks {
-                ub_checks: tcx.sess.ub_checks(),
-                overflow_checks: tcx.sess.overflow_checks(),
-                contract_checks: tcx.sess.contract_checks(),
-            },
-            ..TranslatedCrate::default()
-        },
-        method_status: Default::default(),
-        assoc_item_id_map: Default::default(),
-        id_map: Default::default(),
-        reverse_id_map: Default::default(),
-        file_to_id: Default::default(),
-        items_to_translate: Default::default(),
-        processed: Default::default(),
-        containment_graph: Default::default(),
         translate_stack: Default::default(),
+        naming: Default::default(),
         cached_spans: Default::default(),
         cached_span_datas: Default::default(),
         cached_file_ids: Default::default(),
         cached_names: Default::default(),
-        exported_fns: Default::default(),
         exported_foreign_items: Default::default(),
         lt_mutability_computer: Default::default(),
         monomorphic_layouts: Default::default(),
@@ -1498,7 +1590,7 @@ pub fn translate<'tcx>(
 
     trace!(
         "Queue after we explored the crate:\n{:?}",
-        &ctx.items_to_translate
+        &ctx.shared.queue.lock().0
     );
 
     // Translate.
@@ -1510,11 +1602,10 @@ pub fn translate<'tcx>(
     // Note that the order in which we translate the definitions doesn't matter:
     // we never need to lookup a translated definition, and only use the map
     // from Rust ids to translated ids.
-    while let Some(item_src) = ctx.items_to_translate.pop_front() {
-        if ctx.processed.insert(item_src.clone()) {
-            ctx.translate_item(&item_src);
-        }
+    while let Some(item_src) = ctx.pop_item() {
+        ctx.translate_item(&item_src);
     }
+    ctx.merge_translated();
 
     // Save all the monomorphic layouts we encountered during translation.
     let target = ctx.get_target_triple();
