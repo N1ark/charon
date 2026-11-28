@@ -1667,9 +1667,15 @@ pub fn translate<'tcx>(
     ctx.number_anon_allocs();
     ctx.settle_vtables();
 
-    // Save all the monomorphic layouts we encountered during translation.
+    // Save all the monomorphic layouts we encountered during translation, ordered by their type
+    // rather than by when we encountered them.
     let target = ctx.get_target_triple();
-    for (tref, layout) in std::mem::take(&mut ctx.monomorphic_layouts) {
+    let fmt = &ctx.translated.into_fmt();
+    let layouts = std::mem::take(&mut ctx.monomorphic_layouts)
+        .into_iter()
+        .sorted_by_cached_key(|(tref, _)| tref.with_ctx(fmt).to_string())
+        .collect_vec();
+    for (tref, layout) in layouts {
         if let Some(decl) = ctx.translated.type_decls.get_mut(tref.id) {
             decl.monomorphic_layouts
                 .entry(*tref.generics)

@@ -65,6 +65,23 @@ where
 //         },
 //     ],
 //     repr(Rust),
+// layout of `Option<&'_ u64>[{built_in impl Sized for &'_ u64}]`:
+//     size: 8usize,
+//     align: 8usize,
+//     discriminator: read at offset 0 { 0isize => None, _ => Some },
+//     inhabited: true,
+//     variants: [
+//         None: {
+//             inhabited: true,
+//             tagger: [0 := 0isize],
+//         },
+//         Some: {
+//             offset of _0: 0,
+//             inhabited: true,
+//             tagger: [],
+//         },
+//     ],
+//     repr(Rust),
 // layout of `Option<bool>[{built_in impl Sized for bool}]`:
 //     size: 1usize,
 //     align: 1usize,
@@ -96,23 +113,6 @@ where
 //             offset of _0: 1,
 //             inhabited: true,
 //             tagger: [0 := 1u8],
-//         },
-//     ],
-//     repr(Rust),
-// layout of `Option<&'_ u64>[{built_in impl Sized for &'_ u64}]`:
-//     size: 8usize,
-//     align: 8usize,
-//     discriminator: read at offset 0 { 0isize => None, _ => Some },
-//     inhabited: true,
-//     variants: [
-//         None: {
-//             inhabited: true,
-//             tagger: [0 := 0isize],
-//         },
-//         Some: {
-//             offset of _0: 0,
-//             inhabited: true,
-//             tagger: [],
 //         },
 //     ],
 //     repr(Rust),
