@@ -16,6 +16,8 @@
 //! signature) but not its contents.
 use itertools::Itertools;
 use petgraph::visit::{Dfs, Walker};
+use rustc_data_structures::fingerprint::Fingerprint;
+use rustc_data_structures::stable_hash::{StableHash, StableHasher};
 use rustc_data_structures::sync::Lock;
 use rustc_hash::{FxHashMap, FxHashSet as HashSet};
 use rustc_hir::def_id::LOCAL_CRATE;
@@ -29,8 +31,10 @@ use super::translate_ctx::*;
 use crate::hax;
 use crate::hax::{BaseState, GetOrCompute, SInto};
 use charon_lib::ast::*;
+use charon_lib::formatter::IntoFormatter;
 use charon_lib::name_matcher::NamePattern;
 use charon_lib::options::{CliOpts, ConstHandling, StartFrom, TranslateOptions};
+use charon_lib::pretty::FmtWithCtx;
 use charon_lib::transform::TransformCtx;
 
 /// The id of an untranslated item. Note that a given `DefId` may show up as multiple different
@@ -673,6 +677,59 @@ impl<'tcx> TranslateCtx<'tcx> {
         krate.assoc_item_names = translated.assoc_item_names;
         krate.excluded_trait_impls = translated.excluded_trait_impls;
         self.translated = krate;
+    }
+
+    /// Number the anonymous allocations by their type and contents rather than in the order we
+    /// found them, which depends on the order of translation.
+    fn number_anon_allocs(&mut self) {
+        let fmt = &self.translated.into_fmt();
+        let mut anon_allocs = self
+            .shared
+            .reverse_id_map
+            .lock()
+            .iter()
+            .filter_map(|(&id, src)| match src.def_id().base {
+                hax::DefIdBase::Alloc(alloc_id) => Some((id, alloc_id)),
+                _ => None,
+            })
+            .collect_vec();
+        anon_allocs.sort_by_cached_key(|&(id, alloc_id)| {
+            let ty = match self.translated.get_item(id) {
+                Some(ItemRef::Global(global)) => global.ty.with_ctx(fmt).to_string(),
+                _ => String::new(),
+            };
+            let alloc = rustc_const_uneval::GlobalRef::Alloc(alloc_id).memory(self.tcx);
+            let bytes = alloc.map(|alloc| {
+                let alloc = alloc.inner();
+                alloc
+                    .inspect_with_uninit_and_ptr_outside_interpreter(0..alloc.len())
+                    .to_vec()
+            });
+            // This hashes the contents, including what the pointers in it point to.
+            let hash: Fingerprint = self.tcx.with_stable_hashing_context(|mut hcx| {
+                let mut hasher = StableHasher::new();
+                alloc_id.stable_hash(&mut hcx, &mut hasher);
+                hasher.finish()
+            });
+            (ty, bytes, hash)
+        });
+        for (i, (id, _)) in anon_allocs.into_iter().enumerate() {
+            let disambiguator = Disambiguator::new(i);
+            let rename = |name: &mut Name| {
+                for elem in name.name.iter_mut().rev() {
+                    if let PathElem::Builtin(BuiltinPathElem::PromotedConst, d) = elem {
+                        *d = disambiguator;
+                        return;
+                    }
+                }
+            };
+            if let Some(name) = self.translated.item_names.get_mut(&id) {
+                rename(name);
+            }
+            if let Some(mut item) = self.translated.get_item_mut(id) {
+                rename(&mut item.item_meta().name);
+            }
+        }
     }
 
     /// Register this item source and enqueue it for translation.
@@ -1607,6 +1664,7 @@ pub fn translate<'tcx>(
         ctx.translate_item(&item_src);
     }
     ctx.merge_translated();
+    ctx.number_anon_allocs();
     ctx.settle_vtables();
 
     // Save all the monomorphic layouts we encountered during translation.

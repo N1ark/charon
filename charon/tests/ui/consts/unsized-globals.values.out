@@ -49,15 +49,15 @@ struct str {
 
 static test_crate::{promoted_const#1}: [u8; 3usize] = [5u8, 97u8, 98u8]
 
-static test_crate::{promoted_const#2}: u8 = 8u8
+static test_crate::{promoted_const#2}: MaybeUninit<[u8; 12usize]>[{built_in impl Sized for [u8; 12usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, --, 0x03, 0x00, 0x04, 0x00, --, --)
 
 static test_crate::{promoted_const#3}: i32 = 42i32
 
-static test_crate::{promoted_const#4}: [u8; 2usize] = [9u8, 10u8]
+static test_crate::{promoted_const#4}: u8 = 8u8
 
 static test_crate::{promoted_const#5}: u8 = 11u8
 
-static test_crate::{promoted_const}: MaybeUninit<[u8; 12usize]>[{built_in impl Sized for [u8; 12usize]}] = RawMemory(0x01, 0x00, 0x00, 0x00, 0x02, --, 0x03, 0x00, 0x04, 0x00, --, --)
+static test_crate::{promoted_const}: [u8; 2usize] = [9u8, 10u8]
 
 // Full name: test_crate::Wrap
 pub struct Wrap<T>
@@ -78,7 +78,7 @@ where
 }
 
 // Full name: test_crate::OUTER
-pub const OUTER: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const})
+pub const OUTER: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const#2})
 
 // Full name: test_crate::WRAP
 const WRAP: &'static Wrap<[u8]>[{built_in impl MetaSized for [u8]}] = unsize_cast<&'_ Wrap<[u8]>[{built_in impl MetaSized for [u8]}], 2usize>(&raw const test_crate::{promoted_const#1})
@@ -90,13 +90,13 @@ pub const TUPLE: &'static (u8, [u8]) = unsize_cast<&'_ (u8, [u8]), 2usize>(&raw 
 pub const STR_TAIL: &'static Wrap<str>[{built_in impl MetaSized for str}] = unsize_cast<&'_ Wrap<str>[{built_in impl MetaSized for str}], 2usize>(&raw const test_crate::{promoted_const#1})
 
 // Full name: test_crate::NESTED
-pub const NESTED: (u8, &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}]) = (7u8, unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const}))
+pub const NESTED: (u8, &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}]) = (7u8, unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const#2}))
 
 // Full name: test_crate::STATIC
-pub static STATIC: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const})
+pub static STATIC: &'static Outer<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const#2})
 
 // Full name: test_crate::INTERIOR
-pub static INTERIOR: &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Wrap<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const}.offset!(4isize))
+pub static INTERIOR: &'static Wrap<[u16]>[{built_in impl MetaSized for [u16]}] = unsize_cast<&'_ Wrap<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(&raw const test_crate::{promoted_const#2}.offset!(4isize))
 
 // Full name: test_crate::SIZED
 pub static SIZED: Outer<[u16; 2usize]>[{built_in impl MetaSized for [u16; 2usize]}] = Outer { x: 1u32, w: Wrap { a: 2u8, b: [3u16, 4u16] } }
@@ -157,13 +157,13 @@ unsafe impl "impl_Sync_for_RawPtr" Sync for RawPtr {
 }
 
 // Full name: test_crate::DYN
-pub static DYN: &'static (dyn Trait + 'static) = &test_crate::{promoted_const#2} with_metadata(&impl_Trait_for_u8::{vtable})
+pub static DYN: &'static (dyn Trait + 'static) = &test_crate::{promoted_const#4} with_metadata(&impl_Trait_for_u8::{vtable})
 
 // Full name: test_crate::FOO
 pub static FOO: &'static (dyn Debug + Sync + 'static) = &test_crate::{promoted_const#3} with_metadata(&{impl Debug for i32}::{vtable})
 
 // Full name: test_crate::DYN_TAIL
-pub static DYN_TAIL: &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSized for (dyn Trait + 'static)}] = unsize_cast<&'_ Wrap<(dyn Trait)>[{built_in impl MetaSized for (dyn Trait)}], &impl_Trait_for_u8::{vtable}>(&raw const test_crate::{promoted_const#4})
+pub static DYN_TAIL: &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSized for (dyn Trait + 'static)}] = unsize_cast<&'_ Wrap<(dyn Trait)>[{built_in impl MetaSized for (dyn Trait)}], &impl_Trait_for_u8::{vtable}>(&raw const test_crate::{promoted_const})
 
 // Full name: test_crate::RAW_DYN
 pub static RAW_DYN: RawPtr = RawPtr { _0: &raw const test_crate::{promoted_const#5} with_metadata(&impl_Trait_for_u8::{vtable}) }
@@ -183,7 +183,7 @@ pub fn inline_const()
     storage_live(_0)
     storage_live(_1)
     storage_live(_2)
-    _2 = &raw const test_crate::{promoted_const}
+    _2 = &raw const test_crate::{promoted_const#2}
     storage_live(_3)
     _3 = unsize_cast<*const Outer<[u16]>[{built_in impl MetaSized for [u16]}], 2usize>(move _2)
     _1 = &(*_3) with_metadata(read _3.metadata)

@@ -34,15 +34,15 @@ where
   _1: B,
 }
 
-static test_crate::{promoted_const#1}: [u8; 4usize] = [5u8, 0u8, 6u8, 0u8]
+static test_crate::{promoted_const#1}: [u8; 2usize] = [7u8, 8u8]
 
-static test_crate::{promoted_const#2}: [u8; 2usize] = [7u8, 8u8]
+static test_crate::{promoted_const#2}: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
 
-static test_crate::{promoted_const#3}: [u32; 3usize] = [1u32, 2u32, 3u32]
+static test_crate::{promoted_const#3}: [u8; 4usize] = [5u8, 0u8, 6u8, 0u8]
 
 static test_crate::{promoted_const#4}: MaybeUninit<[u8; 8usize]>[{built_in impl Sized for [u8; 8usize]}] = RawMemory(0x01, --, --, --, 0x02, 0x00, 0x00, 0x00)
 
-static test_crate::{promoted_const}: [u8; 4usize] = [1u8, 2u8, 3u8, 4u8]
+static test_crate::{promoted_const}: [u32; 3usize] = [1u32, 2u32, 3u32]
 
 struct test_crate::Sync<T>
 where
@@ -60,24 +60,24 @@ where
 }
 
 // Full name: test_crate::BYTES
-static BYTES: &'static [u8; 4usize] = &test_crate::{promoted_const}
+static BYTES: &'static [u8; 4usize] = &test_crate::{promoted_const#2}
 
 // Full name: test_crate::SECOND
-static SECOND: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: &raw const test_crate::{promoted_const}[1usize] }
+static SECOND: test_crate::Sync<*const u8>[{built_in impl Sized for *const u8}] = test_crate::Sync { _0: &raw const test_crate::{promoted_const#2}[1usize] }
 
 // Full name: test_crate::HALF
-static HALF: test_crate::Sync<*const u16>[{built_in impl Sized for *const u16}] = test_crate::Sync { _0: cast<*const u16>(&raw const test_crate::{promoted_const#1}) }
+static HALF: test_crate::Sync<*const u16>[{built_in impl Sized for *const u16}] = test_crate::Sync { _0: cast<*const u16>(&raw const test_crate::{promoted_const#3}) }
 
 // Full name: test_crate::PAIR
-static PAIR: &'static (u16, u16) = cast<&'_ (u16, u16)>(&raw const test_crate::{promoted_const#1})
+static PAIR: &'static (u16, u16) = cast<&'_ (u16, u16)>(&raw const test_crate::{promoted_const#3})
 
 // Full name: test_crate::RAW
-static RAW: MaybeUninit<&'static (u8, u8)>[{built_in impl Sized for &'static (u8, u8)}] = RawMemory(&test_crate::{promoted_const#2}[0], &test_crate::{promoted_const#2}[1], &test_crate::{promoted_const#2}[2], &test_crate::{promoted_const#2}[3], &test_crate::{promoted_const#2}[4], &test_crate::{promoted_const#2}[5], &test_crate::{promoted_const#2}[6], &test_crate::{promoted_const#2}[7])
+static RAW: MaybeUninit<&'static (u8, u8)>[{built_in impl Sized for &'static (u8, u8)}] = RawMemory(&test_crate::{promoted_const#1}[0], &test_crate::{promoted_const#1}[1], &test_crate::{promoted_const#1}[2], &test_crate::{promoted_const#1}[3], &test_crate::{promoted_const#1}[4], &test_crate::{promoted_const#1}[5], &test_crate::{promoted_const#1}[6], &test_crate::{promoted_const#1}[7])
 
 // Full name: test_crate::RAW_REF
-static RAW_REF: &'static (u8, u8) = cast<&'_ (u8, u8)>(&raw const test_crate::{promoted_const#2})
+static RAW_REF: &'static (u8, u8) = cast<&'_ (u8, u8)>(&raw const test_crate::{promoted_const#1})
 
-const test_crate::first::{promoted_const}: &'_ [u32; 3usize] = &test_crate::{promoted_const#3}
+const test_crate::first::{promoted_const}: &'_ [u32; 3usize] = &test_crate::{promoted_const}
 
 // Full name: test_crate::first
 pub fn first() -> &'static [u32; 3usize]
@@ -97,7 +97,7 @@ pub fn first() -> &'static [u32; 3usize]
     return
 }
 
-const test_crate::second::{promoted_const}: &'_ [u32; 3usize] = &test_crate::{promoted_const#3}
+const test_crate::second::{promoted_const}: &'_ [u32; 3usize] = &test_crate::{promoted_const}
 
 // Full name: test_crate::second
 pub fn second() -> &'static [u32; 3usize]

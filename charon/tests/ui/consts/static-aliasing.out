@@ -36,9 +36,9 @@ where
   _1: B,
 }
 
-static test_crate::{promoted_const#1}: [u8; 2usize] = [42u8, 12u8]
+static test_crate::{promoted_const#1}: [u8; 8usize] = [1u8, 0u8, 0u8, 0u8, 2u8, 0u8, 0u8, 0u8]
 
-static test_crate::{promoted_const}: [u8; 8usize] = [1u8, 0u8, 0u8, 0u8, 2u8, 0u8, 0u8, 0u8]
+static test_crate::{promoted_const}: [u8; 2usize] = [42u8, 12u8]
 
 struct test_crate::Sync<T>
 where
@@ -86,10 +86,10 @@ static E0: E = E::B { _0: 4u16, _1: 5u32 }
 static E0_FIELD: &'static u32 = &(E0 as variant E::B)._1
 
 // Full name: test_crate::ANON
-static ANON: &'static (u32, u32) = cast<&'_ (u32, u32)>(&raw const test_crate::{promoted_const})
+static ANON: &'static (u32, u32) = cast<&'_ (u32, u32)>(&raw const test_crate::{promoted_const#1})
 
 // Full name: test_crate::ANON_SECOND
-static ANON_SECOND: &'static u32 = &test_crate::{promoted_const}.offset!(1isize * size_of::<u32>())
+static ANON_SECOND: &'static u32 = &test_crate::{promoted_const#1}.offset!(1isize * size_of::<u32>())
 
 // Full name: test_crate::Trait
 trait Trait<Self>
@@ -134,7 +134,7 @@ impl "impl_Trait_for_u8" Trait for u8 {
 }
 
 // Full name: test_crate::ANON_DYN
-static ANON_DYN: &'static (dyn Trait + 'static) = &test_crate::{promoted_const#1}[1usize] with_metadata(&impl_Trait_for_u8::{vtable})
+static ANON_DYN: &'static (dyn Trait + 'static) = &test_crate::{promoted_const}[1usize] with_metadata(&impl_Trait_for_u8::{vtable})
 
 // Full name: test_crate::foo
 fn foo()
