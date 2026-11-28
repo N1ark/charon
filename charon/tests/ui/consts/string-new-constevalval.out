@@ -15,7 +15,7 @@ where
 // Full name: alloc::string::String
 #[lang_item(String)]
 pub struct String {
-  vec: Vec<u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {impl#1}],
+  vec: Vec<u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {impl Allocator for Global}],
 }
 
 // Full name: alloc::string::String::{impl Destruct for String}
@@ -24,16 +24,16 @@ impl "impl_Destruct_for_String" Destruct for String {
 }
 
 #[diagnostic_item("vec_new")]
-pub fn alloc::vec::{Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]}::new<T>() -> Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]
+pub fn alloc::vec::{Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]}::new<T>() -> Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]
 where
     TraitClause0: (T: Sized),
 {
-    let mut _0: Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]; // return
-    let mut _1: RawVec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]; // anonymous local
+    let mut _0: Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]; // return
+    let mut _1: RawVec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = alloc::raw_vec::{RawVec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]}::new<T>[TraitClause0]()
+    _1 = alloc::raw_vec::{RawVec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]}::new<T>[TraitClause0]()
     ↳⚡ unwind_continue
     _0 = Vec { buf: move _1, len: const 0usize }
     storage_dead(_1)
@@ -44,11 +44,11 @@ where
 pub fn alloc::string::{String}::new() -> String
 {
     let mut _0: String; // return
-    let mut _1: Vec<u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {impl#1}]; // anonymous local
+    let mut _1: Vec<u8, Global>[{built_in impl Sized for u8}, {built_in impl Sized for Global}, {impl Allocator for Global}]; // anonymous local
 
     storage_live(_0)
     storage_live(_1)
-    _1 = alloc::vec::{Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl#1}]}::new<u8>[{built_in impl Sized for u8}]()
+    _1 = alloc::vec::{Vec<T, Global>[TraitClause0, {built_in impl Sized for Global}, {impl Allocator for Global}]}::new<u8>[{built_in impl Sized for u8}]()
     ↳⚡ unwind_continue
     _0 = String { vec: move _1 }
     storage_dead(_1)

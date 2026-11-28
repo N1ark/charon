@@ -18,7 +18,9 @@ impl TransformPass for Transform {
             .collect();
 
         for id in exclude {
-            ctx.translated.trait_impls.remove(id);
+            let timpl = ctx.translated.trait_impls.remove(id).unwrap();
+            let impl_trait = Binder::new(BinderKind::Other, timpl.generics, timpl.impl_trait);
+            ctx.translated.excluded_trait_impls.insert(id, impl_trait);
         }
     }
 }

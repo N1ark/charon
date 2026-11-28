@@ -44,5 +44,6 @@ type crate = {
   global_decls : global_decl GlobalDeclId.Map.t;
   trait_decls : trait_decl TraitDeclId.Map.t;
   trait_impls : trait_impl TraitImplId.Map.t;
+  excluded_trait_impls : trait_decl_ref binder TraitImplId.Map.t;
 }
 [@@deriving show]

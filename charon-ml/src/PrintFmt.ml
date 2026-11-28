@@ -1053,7 +1053,6 @@ and pp_impl_elem (env : fmt_env) (fmt : Format.formatter) (elem : impl_elem) :
       pp_ty env fmt bound_ty.binder_value
   | ImplElemTrait impl_id -> begin
       match TraitImplId.Map.find_opt impl_id env.crate.trait_impls with
-      | None -> Format.fprintf fmt "impl#%s" (TraitImplId.to_string impl_id)
       | Some impl ->
           (* Locally replace the generics and the predicates *)
           let env = fmt_env_push_generics_and_preds env impl.generics in
@@ -1061,6 +1060,18 @@ and pp_impl_elem (env : fmt_env) (fmt : Format.formatter) (elem : impl_elem) :
           Format.fprintf fmt "impl %s%a" negative
             (pp_trait_decl_ref_as_impl env)
             impl.impl_trait
+      | None -> (
+          match
+            TraitImplId.Map.find_opt impl_id env.crate.excluded_trait_impls
+          with
+          | Some impl_trait ->
+              let env =
+                fmt_env_push_generics_and_preds env impl_trait.binder_params
+              in
+              Format.fprintf fmt "impl %a"
+                (pp_trait_decl_ref_as_impl env)
+                impl_trait.binder_value
+          | None -> Format.fprintf fmt "impl#%s" (TraitImplId.to_string impl_id))
     end
 
 and pp_path_elem (env : fmt_env) (fmt : Format.formatter) (e : path_elem) : unit

@@ -241,7 +241,7 @@ fn main()
     storage_live(_2)
     storage_live(_3)
     _3 = &raw const a
-    _2 = from_raw_parts<[u32], [u32; 2usize]>[{built_in impl Sized for [u32; 2usize]}, {impl#7}<[u32; 2usize]>[{built_in impl Pointee for [u32; 2usize] where Metadata  = ()}]](move _3, const 2usize)
+    _2 = from_raw_parts<[u32], [u32; 2usize]>[{built_in impl Sized for [u32; 2usize]}, {impl Thin for Self}<[u32; 2usize]>[{built_in impl Pointee for [u32; 2usize] where Metadata  = ()}]](move _3, const 2usize)
     ↳⚡ unwind_continue
     storage_dead(_3)
     storage_dead(_2)

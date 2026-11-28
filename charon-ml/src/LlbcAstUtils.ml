@@ -169,6 +169,7 @@ class ['self] map_crate =
         global_decls;
         trait_decls;
         trait_impls;
+        excluded_trait_impls;
         assoc_item_names;
         short_names;
       } =
@@ -209,6 +210,7 @@ class ['self] map_crate =
         global_decls;
         trait_decls;
         trait_impls;
+        excluded_trait_impls;
         assoc_item_names;
         short_names;
       }
@@ -311,6 +313,7 @@ class ['self] iter_crate =
         global_decls;
         trait_decls;
         trait_impls;
+        excluded_trait_impls = _;
         assoc_item_names = _;
         short_names = _;
       } =

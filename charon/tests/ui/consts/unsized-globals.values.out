@@ -160,7 +160,7 @@ unsafe impl "impl_Sync_for_RawPtr" Sync for RawPtr {
 pub static DYN: &'static (dyn Trait + 'static) = &test_crate::{promoted_const#2} with_metadata(&impl_Trait_for_u8::{vtable})
 
 // Full name: test_crate::FOO
-pub static FOO: &'static (dyn Debug + Sync + 'static) = &test_crate::{promoted_const#3} with_metadata(&{impl#8}::{vtable})
+pub static FOO: &'static (dyn Debug + Sync + 'static) = &test_crate::{promoted_const#3} with_metadata(&{impl Debug for i32}::{vtable})
 
 // Full name: test_crate::DYN_TAIL
 pub static DYN_TAIL: &'static Wrap<(dyn Trait + 'static)>[{built_in impl MetaSized for (dyn Trait + 'static)}] = unsize_cast<&'_ Wrap<(dyn Trait)>[{built_in impl MetaSized for (dyn Trait)}], &impl_Trait_for_u8::{vtable}>(&raw const test_crate::{promoted_const#4})

@@ -83,13 +83,15 @@ impl<'tcx> TranslateCtx<'tcx> {
             }
         };
         let opacity = self.opacity_for_name(&name);
-        if opacity.is_invisible() {
+        // References to an excluded trait impl print its trait ref, so we translate that.
+        let is_trait_impl = matches!(item_src.kind, TransItemSourceKind::TraitImpl(_));
+        if opacity.is_invisible() && !is_trait_impl {
             // Don't even start translating the item. In particular don't call `hax_def` on it.
             return Ok(());
         }
         let def = self.hax_def_for_item(&item_src.item)?;
         let item_meta = self.translate_item_meta(&def, item_src, name, opacity);
-        if item_meta.opacity.is_invisible() {
+        if item_meta.opacity.is_invisible() && !is_trait_impl {
             return Ok(());
         }
 
@@ -161,6 +163,25 @@ impl<'tcx> TranslateCtx<'tcx> {
                 let id = trans_id.expect_item();
                 let trait_decl = bt_ctx.translate_trait_decl(id, item_meta, &def)?;
                 self.translated.trait_decls.set_slot(id, trait_decl);
+            }
+            TransItemSourceKind::TraitImpl(kind) if item_meta.opacity.is_invisible() => {
+                let trait_pred = match (kind, def.kind()) {
+                    (TransImplSource::Normal, hax::FullDefKind::TraitImpl(timpl)) => {
+                        timpl.trait_pred()
+                    }
+                    (TransImplSource::TraitAlias, hax::FullDefKind::TraitAlias(t)) => {
+                        t.self_predicate()
+                    }
+                    (&TransImplSource::Virtual(kind), _) => {
+                        &def.virtual_impl(bt_ctx.hax_state(), kind.virtual_trait())
+                            .trait_pred
+                    }
+                    _ => unreachable!(),
+                };
+                let impl_trait = bt_ctx.translate_trait_predicate(item_meta.span, trait_pred)?;
+                let impl_trait = Binder::new(BinderKind::Other, bt_ctx.into_generics(), impl_trait);
+                let id = trans_id.expect_item();
+                self.translated.excluded_trait_impls.insert(id, impl_trait);
             }
             TransItemSourceKind::TraitImpl(kind) => {
                 let id = trans_id.expect_item();

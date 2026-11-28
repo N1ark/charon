@@ -407,6 +407,10 @@ and translated_crate = {
           locals. *)
   trait_decls : trait_decl trait_decl_id_map;  (** The trait declarations. *)
   trait_impls : trait_impl trait_impl_id_map;  (** The trait implementations. *)
+  excluded_trait_impls : trait_decl_ref binder trait_impl_id_map;
+      (** The trait refs of the trait implementations we removed because they
+          are excluded, with their parameters. Items may still refer to them,
+          and this is what we need to print them. *)
   ordered_decls : declaration_group list option;
       (** This contains a list of all the reachable items in the crate in a
           stable, logical order based on crate and file order, then further

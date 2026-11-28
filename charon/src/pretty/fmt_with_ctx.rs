@@ -1239,14 +1239,25 @@ impl<C: AstFormatter> FmtWithCtx<C> for ImplElem {
                 bound_ty.skip_binder.fmt_with_ctx(&ctx, f)?
             }
             ImplElem::Trait(impl_id) => {
-                match ctx.get_crate().and_then(|tr| tr.trait_impls.get(*impl_id)) {
+                let krate = ctx.get_crate();
+                let header = if let Some(timpl) = krate.and_then(|kr| kr.trait_impls.get(*impl_id))
+                {
+                    Some((&timpl.generics, timpl.is_negative, &timpl.impl_trait))
+                } else if let Some(excluded) =
+                    krate.and_then(|kr| kr.excluded_trait_impls.get(*impl_id))
+                {
+                    Some((&excluded.params, false, &excluded.skip_binder))
+                } else {
+                    None
+                };
+                match header {
                     None => write!(f, "impl#{impl_id}")?,
-                    Some(timpl) => {
+                    Some((generics, is_negative, impl_trait)) => {
                         // We need to put the first type parameter aside: it is the type for which
                         // we implement the trait.
-                        let ctx = &ctx.set_generics(&timpl.generics);
-                        let negative = if timpl.is_negative { "!" } else { "" };
-                        let mut impl_trait = timpl.impl_trait.clone();
+                        let ctx = &ctx.set_generics(generics);
+                        let negative = if is_negative { "!" } else { "" };
+                        let mut impl_trait = impl_trait.clone();
                         match impl_trait
                             .generics
                             .types

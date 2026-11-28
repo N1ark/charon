@@ -87,6 +87,9 @@ pub struct TranslatedCrate {
     pub trait_decls: IndexMap<TraitDeclId, TraitDecl>,
     /// The trait implementations.
     pub trait_impls: IndexMap<TraitImplId, TraitImpl>,
+    /// The trait refs of the trait implementations we removed because they are excluded, with
+    /// their parameters. Items may still refer to them, and this is what we need to print them.
+    pub excluded_trait_impls: IndexMap<TraitImplId, Binder<TraitDeclRef>>,
 
     /// This contains a list of all the reachable items in the crate in a stable, logical order
     /// based on crate and file order, then further grouped and sorted such that every item comes

@@ -139,7 +139,7 @@ where
         storage_live(_14)
         storage_live(_15)
         _15 = &(*args_11._0)
-        _14 = new_debug<'3, '136, &'4 T>[{built_in impl Sized for &'4 T}, {impl#6}<'2, T>[TraitClause1]](move _15)
+        _14 = new_debug<'3, '136, &'4 T>[{built_in impl Sized for &'4 T}, {impl Debug for &'_0 T}<'2, T>[TraitClause1]](move _15)
         ↳⚡ storage_dead(slice)
             storage_dead(_20)
             unwind_continue
@@ -219,7 +219,7 @@ fn main()
     _2 = as_slice<'_, i32, 3usize>[{built_in impl Sized for i32}](move _3)
     ↳⚡ undefined_behavior
     storage_dead(_3)
-    _1 = debug_slice<'11, i32>[{built_in impl Sized for i32}, {impl#10}](move _2)
+    _1 = debug_slice<'11, i32>[{built_in impl Sized for i32}, {impl Debug for i32}](move _2)
     ↳⚡ storage_dead(_5)
         storage_dead(_8)
         storage_dead(_7)
