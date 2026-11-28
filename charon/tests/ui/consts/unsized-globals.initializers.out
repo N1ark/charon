@@ -399,7 +399,7 @@ pub fn FOO() -> &'static (dyn Debug + Sync + 'static)
     _3 = move _4
     _2 = &(*_3)
     _1 = &(*_2)
-    _0 = unsize_cast<&'10 (dyn Debug + Sync + '11), &{impl#8}::{vtable}>(move _1)
+    _0 = unsize_cast<&'10 (dyn Debug + Sync + '11), &{impl Debug for i32}::{vtable}>(move _1)
     storage_dead(_2)
     storage_dead(_1)
     return

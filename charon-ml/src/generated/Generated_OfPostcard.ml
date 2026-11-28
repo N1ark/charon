@@ -3598,6 +3598,14 @@ and translated_crate_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
               trait_impl_of_postcard ctx st))
          ctx st
      in
+     let* excluded_trait_impls =
+       (fun ctx st ->
+         Result.map TraitImplId.map_of_indexed_list
+           (opt_indexed_map_of_postcard trait_impl_id_of_postcard
+              (binder_of_postcard trait_decl_ref_of_postcard)
+              ctx st))
+         ctx st
+     in
      let* ordered_decls =
        option_of_postcard
          (list_of_postcard declaration_group_of_postcard)
@@ -3618,6 +3626,7 @@ and translated_crate_of_postcard (ctx : of_postcard_ctx) (st : postcard_state) :
           global_decls;
           trait_decls;
           trait_impls;
+          excluded_trait_impls;
           ordered_decls;
         }
          : translated_crate))

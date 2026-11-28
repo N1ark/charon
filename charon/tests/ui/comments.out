@@ -717,7 +717,7 @@ fn foo()
         _29 = &(*_30)
         storage_live(_31)
         _31 = Option::None {  }
-        panic(assert_failed<'65, '66, '67, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, {impl#11}, {impl#11}](move _26, move _27, move _29, move _31))
+        panic(assert_failed<'65, '66, '67, u32, u32>[{built_in impl MetaSized for u32}, {built_in impl MetaSized for u32}, {impl Debug for u32}, {impl Debug for u32}](move _26, move _27, move _29, move _31))
         ↳⚡ storage_dead(_32)
             storage_dead(_31)
             storage_dead(_30)

@@ -4277,6 +4277,7 @@ and translated_crate_of_json (ctx : of_json_ctx) (js : json) :
           ("global_decls", global_decls);
           ("trait_decls", trait_decls);
           ("trait_impls", trait_impls);
+          ("excluded_trait_impls", excluded_trait_impls);
           ("ordered_decls", ordered_decls);
         ] ->
         let* crate_name = string_of_json ctx crate_name in
@@ -4337,6 +4338,14 @@ and translated_crate_of_json (ctx : of_json_ctx) (js : json) :
                  ctx json))
             ctx trait_impls
         in
+        let* excluded_trait_impls =
+          (fun ctx json ->
+            Result.map TraitImplId.map_of_indexed_list
+              (opt_indexed_map_of_json trait_impl_id_of_json
+                 (binder_of_json trait_decl_ref_of_json)
+                 ctx json))
+            ctx excluded_trait_impls
+        in
         let* ordered_decls =
           option_of_json
             (list_of_json declaration_group_of_json)
@@ -4357,6 +4366,7 @@ and translated_crate_of_json (ctx : of_json_ctx) (js : json) :
              global_decls;
              trait_decls;
              trait_impls;
+             excluded_trait_impls;
              ordered_decls;
            }
             : translated_crate)

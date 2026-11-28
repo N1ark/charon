@@ -734,7 +734,7 @@ fn select<'_0, '_1>(lhs: &'_0 [u8], rhs: &'_1 [u8])
             _20 = &(*_21)
             storage_live(_22)
             _22 = Option::None {  }
-            panic(assert_failed<'75, '76, '77, usize, usize>[{built_in impl MetaSized for usize}, {built_in impl MetaSized for usize}, {impl#15}, {impl#15}](move _17, move _18, move _20, move _22))
+            panic(assert_failed<'75, '76, '77, usize, usize>[{built_in impl MetaSized for usize}, {built_in impl MetaSized for usize}, {impl Debug for usize}, {impl Debug for usize}](move _17, move _18, move _20, move _22))
             ↳⚡ storage_dead(_22)
                 storage_dead(_21)
                 storage_dead(_20)

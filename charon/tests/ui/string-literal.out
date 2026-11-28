@@ -99,7 +99,7 @@ fn main()
     storage_live(_3)
     _3 = &test_crate::main::{promoted_const} with_metadata(const 5usize)
     _2 = &(*_3) with_metadata(read _3.metadata)
-    _s = to_string<'7, str>[{built_in impl MetaSized for str}, {impl#7}](move _2)
+    _s = to_string<'7, str>[{built_in impl MetaSized for str}, {impl Display for str}](move _2)
     ↳⚡ unwind_continue
     storage_dead(_2)
     fake_read(_s)

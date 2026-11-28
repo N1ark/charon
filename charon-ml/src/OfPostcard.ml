@@ -42,5 +42,6 @@ let crate_of_postcard_file (file : string) : (GAst.crate, string) result =
          global_decls = crate.global_decls;
          trait_decls = crate.trait_decls;
          trait_impls = crate.trait_impls;
+         excluded_trait_impls = crate.excluded_trait_impls;
        }
         : GAst.crate)
